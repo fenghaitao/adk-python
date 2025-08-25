@@ -11,26 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Defines the interface to support a model."""
-
-from .base_llm import BaseLlm
-from .github_copilot_llm import GitHubCopilotLlm
-from .google_llm import Gemini
-from .llm_request import LlmRequest
-from .llm_response import LlmResponse
-from .registry import LLMRegistry
-
-__all__ = [
-    'BaseLlm',
-    'Gemini',
-    'GitHubCopilotLlm',
-    'LLMRegistry',
-]
-
-
-for regex in Gemini.supported_models():
-  LLMRegistry.register(Gemini)
-
-# Register GitHub Copilot LLM
-LLMRegistry.register(GitHubCopilotLlm)
