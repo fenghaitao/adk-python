@@ -1,0 +1,148 @@
+{
+  "eval_set_id": "github_copilot_hello_world_eval_set_001",
+  "name": "GitHub Copilot Hello World Evaluation Set",
+  "description": "Basic evaluation set for GitHub Copilot hello world agent testing dice rolling and prime checking functionality",
+  "eval_cases": [
+    {
+      "eval_id": "github_copilot_hello_world_basic_intro",
+      "conversation": [
+        {
+          "invocation_id": "intro_test_001",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Hi, who are you?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "I'm a virtual assistant that can roll dice of various sizes and check if the numbers are prime"
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [],
+            "intermediate_responses": []
+          },
+          "creation_timestamp": 1747341775.8937013
+        }
+      ],
+      "session_input": null,
+      "creation_timestamp": 1747341775.8937826
+    },
+    {
+      "eval_id": "github_copilot_hello_world_capabilities",
+      "conversation": [
+        {
+          "invocation_id": "capabilities_test_001",
+          "user_content": {
+            "parts": [
+              {
+                "text": "What can you do?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "I can roll dice with any number of sides and tell you the outcome of the roll. Additionally, I can check whether a list of numbers (including results of rolls) contains prime numbers."
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [],
+            "intermediate_responses": []
+          },
+          "creation_timestamp": 1747341775.8937378
+        }
+      ],
+      "session_input": null,
+      "creation_timestamp": 1747341775.8937826
+    },
+    {
+      "eval_id": "github_copilot_hello_world_roll_die",
+      "conversation": [
+        {
+          "invocation_id": "roll_die_test_001",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Can you roll a die with 6 sides?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "I rolled a 6-sided die"
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "id": null,
+                "args": {
+                  "sides": 6
+                },
+                "name": "roll_die"
+              }
+            ],
+            "intermediate_responses": []
+          },
+          "creation_timestamp": 1747341775.8937788
+        }
+      ],
+      "session_input": null,
+      "creation_timestamp": 1747341775.8937826
+    },
+    {
+      "eval_id": "github_copilot_hello_world_check_prime_only",
+      "conversation": [
+        {
+          "invocation_id": "check_prime_test_001",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Check if the number 7 is prime"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "7 is a prime number"
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "id": null,
+                "args": {
+                  "nums": [7]
+                },
+                "name": "check_prime"
+              }
+            ],
+            "intermediate_responses": []
+          },
+          "creation_timestamp": 1747341775.8937788
+        }
+      ],
+      "session_input": null,
+      "creation_timestamp": 1747341775.8937826
+    }
+  ],
+  "creation_timestamp": 1747341775.8937957
+}
