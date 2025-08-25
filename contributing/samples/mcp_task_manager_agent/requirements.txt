@@ -1,0 +1,10 @@
+# MCP Task Manager Agent Requirements
+# Install with: pip install -r requirements.txt
+
+# Core MCP dependencies
+mcp>=1.0.0
+fastmcp>=0.9.0
+
+# Additional dependencies for enhanced functionality
+python-dateutil>=2.8.0  # For better date parsing
+aiohttp>=3.8.0         # For HTTP client functionality
