@@ -9,34 +9,34 @@ that uses Model Context Protocol servers for enhanced capabilities.
 
 import asyncio
 import os
-from google.adk.runners import Runner
-from google.adk.sessions.in_memory_session_service import InMemorySessionService
-from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
-from google.adk.auth.credential_service.in_memory_credential_service import InMemoryCredentialService
 
 # Import our MCP multi-agent system
 from agent import agent as root_agent
+from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
+from google.adk.auth.credential_service.in_memory_credential_service import InMemoryCredentialService
+from google.adk.runners import Runner
+from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
 
 async def demo_mcp_development_workflow():
     """Demonstrate the MCP-enhanced development workflow."""
-    
+
     print("🔧 MCP Multi-Agent Development Workflow Demo")
     print("=" * 60)
-    
+
     # Set up ADK services
     session_service = InMemorySessionService()
     artifact_service = InMemoryArtifactService()
     credential_service = InMemoryCredentialService()
-    
+
     # Create runner
     runner = Runner(
         agent=root_agent,
         session_service=session_service,
         artifact_service=artifact_service,
-        credential_service=credential_service
+        credential_service=credential_service,
     )
-    
+
     # Demo scenarios
     scenarios = [
         {
@@ -74,7 +74,7 @@ Create a Python calculator module with MCP-enhanced development:
 - Comprehensive error handling
 - Professional documentation
             """,
-            "description": "Creates a calculator using MCP servers for enhanced file operations, build tools, and git management."
+            "description": "Creates a calculator using MCP servers for enhanced file operations, build tools, and git management.",
         },
         {
             "title": "🌐 Web API with MCP Enhancement",
@@ -110,7 +110,7 @@ Create a RESTful API service with MCP-enhanced development workflow:
 - Performance and load testing
 - Security testing for authentication
             """,
-            "description": "Builds a complete web API using MCP servers for enhanced development capabilities."
+            "description": "Builds a complete web API using MCP servers for enhanced development capabilities.",
         },
         {
             "title": "🤖 CLI Tool with MCP Workflow",
@@ -146,7 +146,7 @@ Create a command-line productivity tool with full MCP integration:
 - Documentation with Sphinx
 - Professional packaging and distribution
             """,
-            "description": "Develops a CLI tool showcasing full MCP server integration throughout the development lifecycle."
+            "description": "Develops a CLI tool showcasing full MCP server integration throughout the development lifecycle.",
         },
         {
             "title": "📊 Data Processing Pipeline with MCP",
@@ -182,22 +182,22 @@ Create a data processing pipeline with MCP-enhanced development:
 - Performance benchmarking
 - Error scenario testing
             """,
-            "description": "Creates a data processing pipeline demonstrating MCP server capabilities for file handling and testing."
-        }
+            "description": "Creates a data processing pipeline demonstrating MCP server capabilities for file handling and testing.",
+        },
     ]
-    
+
     print("Available MCP development workflow demonstrations:")
     for i, scenario in enumerate(scenarios, 1):
         print(f"{i}. {scenario['title']}")
         print(f"   {scenario['description']}")
-    
+
     print(f"\nChoose a scenario (1-{len(scenarios)}) or 'q' to quit: ", end="")
     choice = input().strip()
-    
-    if choice.lower() == 'q':
+
+    if choice.lower() == "q":
         print("👋 Demo cancelled.")
         return
-    
+
     try:
         scenario_index = int(choice) - 1
         if scenario_index < 0 or scenario_index >= len(scenarios):
@@ -206,54 +206,63 @@ Create a data processing pipeline with MCP-enhanced development:
     except ValueError:
         print("❌ Invalid choice.")
         return
-    
+
     selected_scenario = scenarios[scenario_index]
-    
+
     print(f"\n🎯 Running: {selected_scenario['title']}")
     print("=" * 70)
     print(f"Specification: {selected_scenario['spec'][:200]}...")
     print(f"\n🔄 Processing with MCP-enhanced multi-agent system...")
-    
+
     try:
         # Create session
         session = await session_service.create_session(
-            app_name="mcp_dev_demo",
-            user_id="demo_user"
+            app_name="mcp_dev_demo", user_id="demo_user"
         )
-        
+
         # Run the specification through MCP-enhanced workflow
         response_parts = []
         async for response in runner.run_stream(
-            session=session,
-            user_input=selected_scenario['spec']
+            session=session, user_input=selected_scenario["spec"]
         ):
-            if hasattr(response, 'content') and response.content:
+            if hasattr(response, "content") and response.content:
                 for part in response.content.parts:
-                    if hasattr(part, 'text') and part.text:
+                    if hasattr(part, "text") and part.text:
                         response_parts.append(part.text)
                         # Print progress updates
-                        if any(keyword in part.text.lower() for keyword in 
-                               ['mcp', 'processing', 'analyzing', 'building', 'testing', 'committing']):
+                        if any(
+                            keyword in part.text.lower()
+                            for keyword in [
+                                "mcp",
+                                "processing",
+                                "analyzing",
+                                "building",
+                                "testing",
+                                "committing",
+                            ]
+                        ):
                             print(f"📍 {part.text[:100]}...")
-        
+
         print(f"\n✅ MCP development workflow completed!")
         print(f"📄 Full response:")
         print("=" * 70)
         for part in response_parts:
             print(part)
             print("-" * 50)
-            
+
     except Exception as e:
         print(f"❌ Error during MCP workflow: {str(e)}")
-        print("Note: This demo requires proper ADK setup with API keys and MCP servers.")
+        print(
+            "Note: This demo requires proper ADK setup with API keys and MCP servers."
+        )
 
 
 def explain_mcp_integration():
     """Explain MCP integration in the development workflow."""
-    
+
     print("🔧 MCP Integration in Development Workflow")
     print("=" * 50)
-    
+
     mcp_capabilities = [
         {
             "server": "MCP Filesystem Server",
@@ -263,31 +272,31 @@ def explain_mcp_integration():
                 "Safe file writing with directory creation",
                 "Directory listing with metadata",
                 "Path validation and access control",
-                "Encoding detection and handling"
+                "Encoding detection and handling",
             ],
             "benefits": [
                 "Improved error handling for file operations",
                 "Security through access control",
                 "Better performance with streaming",
-                "Metadata extraction and analysis"
-            ]
+                "Metadata extraction and analysis",
+            ],
         },
         {
-            "server": "MCP Build Server", 
+            "server": "MCP Build Server",
             "purpose": "Advanced Build Operations",
             "capabilities": [
                 "Command execution with timeout protection",
                 "Dependency installation and management",
                 "Code quality checks (mypy, black, isort)",
                 "Test execution with coverage analysis",
-                "Build artifact generation"
+                "Build artifact generation",
             ],
             "benefits": [
                 "Consistent build environments",
                 "Automated quality assurance",
                 "Parallel build processing",
-                "Comprehensive build reporting"
-            ]
+                "Comprehensive build reporting",
+            ],
         },
         {
             "server": "MCP Git Server",
@@ -297,44 +306,52 @@ def explain_mcp_integration():
                 "Intelligent commit message generation",
                 "Branch management and merging",
                 "Automated .gitignore creation",
-                "Repository analysis and reporting"
+                "Repository analysis and reporting",
             ],
             "benefits": [
                 "Consistent git workflows",
                 "Professional commit practices",
                 "Automated repository setup",
-                "Enhanced git operation safety"
-            ]
-        }
+                "Enhanced git operation safety",
+            ],
+        },
     ]
-    
+
     for i, mcp_info in enumerate(mcp_capabilities, 1):
         print(f"\n{i}. {mcp_info['server']}")
         print(f"   Purpose: {mcp_info['purpose']}")
         print("   " + "─" * 50)
-        
+
         print("   Capabilities:")
-        for capability in mcp_info['capabilities']:
+        for capability in mcp_info["capabilities"]:
             print(f"   • {capability}")
-        
+
         print("   Benefits:")
-        for benefit in mcp_info['benefits']:
+        for benefit in mcp_info["benefits"]:
             print(f"   ✓ {benefit}")
-    
+
     print(f"\n🔄 MCP Workflow Advantages:")
     print("• **Enhanced Reliability**: MCP servers provide robust, tested operations")
-    print("• **Improved Security**: Access control and validation at the protocol level")
+    print(
+        "• **Improved Security**: Access control and validation at the protocol level"
+    )
     print("• **Better Performance**: Optimized operations with caching and streaming")
     print("• **Consistent Environments**: Standardized tools across development stages")
     print("• **Professional Quality**: Enterprise-grade development operations")
-    
+
     print(f"\n🎯 Integration Points:")
-    print("• **Specification Reading**: MCP file operations for robust document parsing")
+    print(
+        "• **Specification Reading**: MCP file operations for robust document parsing"
+    )
     print("• **Code Generation**: MCP filesystem for safe code creation and validation")
     print("• **Test Creation**: MCP build tools for test framework integration")
-    print("• **Build Process**: MCP build server for reliable compilation and validation")
+    print(
+        "• **Build Process**: MCP build server for reliable compilation and validation"
+    )
     print("• **Test Execution**: MCP testing tools for comprehensive quality assurance")
-    print("• **Version Control**: MCP git operations for professional repository management")
+    print(
+        "• **Version Control**: MCP git operations for professional repository management"
+    )
 
 
 if __name__ == "__main__":
@@ -344,9 +361,9 @@ if __name__ == "__main__":
     print("1. Run MCP development workflow demo")
     print("2. Explain MCP integration benefits")
     print("3. Exit")
-    
+
     choice = input("\nEnter choice (1-3): ").strip()
-    
+
     if choice == "1":
         print("\n🚀 Starting MCP development workflow demo...")
         print("Note: This requires proper ADK setup with API keys and MCP servers.")
@@ -356,7 +373,9 @@ if __name__ == "__main__":
             print("\n👋 Demo interrupted by user.")
         except Exception as e:
             print(f"\n❌ Demo failed: {e}")
-            print("Make sure you have ADK properly installed and MCP servers configured.")
+            print(
+                "Make sure you have ADK properly installed and MCP servers configured."
+            )
     elif choice == "2":
         explain_mcp_integration()
     else:

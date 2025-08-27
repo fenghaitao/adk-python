@@ -7,7 +7,7 @@ google-adk>=0.1.0
 # Note: MCP toolset is included in ADK
 
 # Async operations for MCP servers
-asyncio-timeout>=4.0.0
+async-timeout>=4.0.0
 
 # Development tools that MCP servers can manage
 pytest>=7.0.0
@@ -49,4 +49,4 @@ build>=0.8.0
 rich>=12.0.0              # Rich terminal output
 click>=8.0.0              # CLI framework
 pydantic>=1.10.0          # Data validation
-pathlib                   # Path operations (built-in Python 3.4+)
+# pathlib                   # Path operations (built-in Python 3.4+, no need to install)
