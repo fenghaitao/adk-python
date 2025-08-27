@@ -1,0 +1,12 @@
+# Core ADK with extensions for RAG functionality
+google-adk[extensions]
+
+# Additional dependencies for the examples
+python-dotenv
+
+# Optional: For enhanced file processing
+beautifulsoup4
+lxml
+
+# Optional: For better embeddings in local files example
+sentence-transformers
