@@ -59,7 +59,6 @@ async def handle_list_tools() -> List[Tool]:
                     "working_directory": {
                         "type": "string",
                         "description": "Working directory for the command",
-                        "default": ".",
                     },
                 },
                 "required": ["command"],
@@ -74,7 +73,6 @@ async def handle_list_tools() -> List[Tool]:
                     "requirements_file": {
                         "type": "string",
                         "description": "Path to requirements file",
-                        "default": "requirements.txt",
                     }
                 },
             },
@@ -88,12 +86,10 @@ async def handle_list_tools() -> List[Tool]:
                     "test_path": {
                         "type": "string",
                         "description": "Path to test files or directory",
-                        "default": "tests/",
                     },
                     "coverage": {
                         "type": "boolean",
                         "description": "Run with coverage",
-                        "default": False,
                     },
                 },
             },
@@ -107,12 +103,10 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Path to lint",
-                        "default": ".",
                     },
                     "fix": {
                         "type": "boolean",
                         "description": "Auto-fix issues where possible",
-                        "default": False,
                     },
                 },
             },
@@ -127,7 +121,6 @@ async def handle_list_tools() -> List[Tool]:
                         "type": "string",
                         "enum": ["wheel", "sdist", "both"],
                         "description": "Type of build",
-                        "default": "wheel",
                     }
                 },
             },

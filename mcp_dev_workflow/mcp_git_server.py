@@ -52,7 +52,6 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Path to initialize repository",
-                        "default": ".",
                     }
                 },
             },
@@ -66,7 +65,6 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     }
                 },
             },
@@ -85,7 +83,6 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
                 "required": ["files"],
@@ -101,7 +98,6 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
                 "required": ["message"],
@@ -116,17 +112,14 @@ async def handle_list_tools() -> List[Tool]:
                     "max_count": {
                         "type": "integer",
                         "description": "Maximum number of commits to show",
-                        "default": 10,
                     },
                     "oneline": {
                         "type": "boolean",
                         "description": "Show one line per commit",
-                        "default": True,
                     },
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
             },
@@ -140,13 +133,11 @@ async def handle_list_tools() -> List[Tool]:
                     "staged": {
                         "type": "boolean",
                         "description": "Show staged changes",
-                        "default": False,
                     },
                     "file": {"type": "string", "description": "Specific file to diff"},
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
             },
@@ -161,7 +152,6 @@ async def handle_list_tools() -> List[Tool]:
                         "type": "string",
                         "enum": ["list", "create", "delete"],
                         "description": "Branch action",
-                        "default": "list",
                     },
                     "branch_name": {
                         "type": "string",
@@ -170,7 +160,6 @@ async def handle_list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
             },
@@ -188,12 +177,10 @@ async def handle_list_tools() -> List[Tool]:
                     "create_branch": {
                         "type": "boolean",
                         "description": "Create new branch",
-                        "default": False,
                     },
                     "path": {
                         "type": "string",
                         "description": "Repository path",
-                        "default": ".",
                     },
                 },
                 "required": ["branch_or_file"],

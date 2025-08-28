@@ -16,6 +16,7 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.auth.credential_service.in_memory_credential_service import InMemoryCredentialService
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
+from google.genai import types
 
 
 async def demo_mcp_development_workflow():
@@ -31,6 +32,7 @@ async def demo_mcp_development_workflow():
 
     # Create runner
     runner = Runner(
+        app_name="mcp_dev_demo",
         agent=root_agent,
         session_service=session_service,
         artifact_service=artifact_service,
@@ -191,21 +193,27 @@ Create a data processing pipeline with MCP-enhanced development:
         print(f"{i}. {scenario['title']}")
         print(f"   {scenario['description']}")
 
-    print(f"\nChoose a scenario (1-{len(scenarios)}) or 'q' to quit: ", end="")
-    choice = input().strip()
-
-    if choice.lower() == "q":
-        print("👋 Demo cancelled.")
-        return
-
-    try:
-        scenario_index = int(choice) - 1
-        if scenario_index < 0 or scenario_index >= len(scenarios):
-            print("❌ Invalid choice.")
-            return
-    except ValueError:
-        print("❌ Invalid choice.")
-        return
+    # For automated testing, use the first scenario (calculator)
+    scenario_index = 0
+    print(
+        f"\nAutomatically selecting scenario {scenario_index + 1} for automated testing."
+    )
+    # Comment out interactive input for automated testing:
+    # print(f"\nChoose a scenario (1-{len(scenarios)}) or 'q' to quit: ", end="")
+    # choice = input().strip()
+    #
+    # if choice.lower() == "q":
+    #     print("👋 Demo cancelled.")
+    #     return
+    #
+    # try:
+    #     scenario_index = int(choice) - 1
+    #     if scenario_index < 0 or scenario_index >= len(scenarios):
+    #         print("❌ Invalid choice.")
+    #         return
+    # except ValueError:
+    #     print("❌ Invalid choice.")
+    #     return
 
     selected_scenario = scenarios[scenario_index]
 
@@ -222,8 +230,13 @@ Create a data processing pipeline with MCP-enhanced development:
 
         # Run the specification through MCP-enhanced workflow
         response_parts = []
-        async for response in runner.run_stream(
-            session=session, user_input=selected_scenario["spec"]
+        content = types.Content(
+            role="user", parts=[types.Part(text=selected_scenario["spec"])]
+        )
+        async for response in runner.run_async(
+            user_id="demo_user",
+            session_id=session.id,
+            new_message=content,
         ):
             if hasattr(response, "content") and response.content:
                 for part in response.content.parts:
@@ -362,7 +375,9 @@ if __name__ == "__main__":
     print("2. Explain MCP integration benefits")
     print("3. Exit")
 
-    choice = input("\nEnter choice (1-3): ").strip()
+    # For automated testing, run option 1 directly
+    # choice = input("\nEnter choice (1-3): ").strip()
+    choice = "1"
 
     if choice == "1":
         print("\n🚀 Starting MCP development workflow demo...")

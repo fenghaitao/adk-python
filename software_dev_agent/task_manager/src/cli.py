@@ -1,53 +1,66 @@
+"""
+CLI for interacting with the Task Manager application.
+"""
+import sys
 import argparse
-from task_manager.task_manager import TaskManager
+from .task_manager import TaskManager
 
 def main():
-    manager = TaskManager()
+    # Initialize the TaskManager with the data file location
+    task_manager = TaskManager(data_file="data/tasks.json")
 
-    parser = argparse.ArgumentParser(description="Task Manager Command Line Interface")
-    
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser(description="Task Manager CLI")
 
-    # Add Task Command
-    add_parser = subparsers.add_parser("add", help="Add a new task.")
-    add_parser.add_argument("description", type=str, help="Description of the task.")
-    add_parser.add_argument("--due", type=str, help="Optional due date (YYYY-MM-DD).")
-    add_parser.add_argument("--priority", type=str, choices=["low", "medium", "high"], default="low", help="Task priority.")
+    subparsers = parser.add_subparsers(dest="command")
 
-    # List Tasks Command
-    list_parser = subparsers.add_parser("list", help="List tasks.")
-    list_parser.add_argument("--status", type=str, choices=["pending", "completed"], help="Filter by task status.")
+    # Add task command
+    add_parser = subparsers.add_parser("add", help="Add a new task")
+    add_parser.add_argument("description", type=str, help="Task description")
+    add_parser.add_argument("--due", type=str, help="Task due date in YYYY-MM-DD format", required=False)
+    add_parser.add_argument("--priority", type=str, choices=["low", "medium", "high"], help="Task priority", required=False)
 
-    # Complete Task Command
-    complete_parser = subparsers.add_parser("complete", help="Mark a task as completed.")
-    complete_parser.add_argument("task_id", type=str, help="ID of the task to complete.")
+    # List tasks command
+    list_parser = subparsers.add_parser("list", help="List tasks")
+    list_parser.add_argument("--status", type=str, choices=["pending", "completed"], help="Filter tasks by status", required=False)
+    list_parser.add_argument("--sort", type=str, choices=["created", "due", "priority"], help="Sort tasks by key", required=False)
 
-    # Remove Task Command
-    remove_parser = subparsers.add_parser("remove", help="Remove a task.")
-    remove_parser.add_argument("task_id", type=str, help="ID of the task to remove.")
+    # Complete task command
+    complete_parser = subparsers.add_parser("complete", help="Mark a task as completed")
+    complete_parser.add_argument("task_id", type=int, help="ID of the task to complete")
 
+    # Remove task command
+    remove_parser = subparsers.add_parser("remove", help="Remove a task")
+    remove_parser.add_argument("task_id", type=int, help="ID of the task to remove")
+
+    # Parse arguments
     args = parser.parse_args()
 
+    # Handle commands
     if args.command == "add":
-        task = manager.add_task(description=args.description, due_date=args.due, priority=args.priority)
+        task = task_manager.add_task(description=args.description, due_date=args.due, priority=args.priority)
         print(f"Task added: #{task.id} - {task.description}")
 
     elif args.command == "list":
-        tasks = manager.list_tasks(status=args.status)
+        tasks = task_manager.list_tasks(status=args.status, sort_key=args.sort)
         for task in tasks:
-            print(f"{task.id}. [{task.status.upper()}] {task.description} (Due: {task.due_date}, Priority: {task.priority})")
+            print(task)
 
     elif args.command == "complete":
-        if manager.complete_task(args.task_id):
-            print(f"Task #{args.task_id} marked as completed.")
+        success = task_manager.complete_task(args.task_id)
+        if success:
+            print(f"Task #{args.task_id} marked as completed")
         else:
-            print(f"Task with ID {args.task_id} not found.")
+            print(f"Task #{args.task_id} not found or already completed")
 
     elif args.command == "remove":
-        if manager.remove_task(args.task_id):
-            print(f"Task #{args.task_id} removed.")
+        success = task_manager.remove_task(args.task_id)
+        if success:
+            print(f"Task #{args.task_id} removed")
         else:
-            print(f"Task with ID {args.task_id} not found.")
+            print(f"Task #{args.task_id} not found")
+
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

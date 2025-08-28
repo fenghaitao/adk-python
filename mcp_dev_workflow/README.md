@@ -61,7 +61,7 @@ cd mcp_dev_workflow
 adk run .
 
 # Example interactions:
-"Create a Python calculator with MCP-enhanced development workflow including 
+" Python calculator with MCP-enhanced development workflow including 
 comprehensive testing, code quality checks, and professional git management."
 ```
 
@@ -91,7 +91,7 @@ adk web . --port 8080
 - **Robust Error Handling**: Comprehensive error recovery and reporting
 - **Metadata Extraction**: File size, encoding, and modification tracking
 - **Performance Optimization**: Streaming and caching for large files
-
+Create a
 ### **Advanced Build Capabilities**
 - **Timeout Protection**: Prevents hanging build processes
 - **Quality Assurance**: Automated code formatting and type checking

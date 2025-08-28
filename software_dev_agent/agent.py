@@ -256,12 +256,8 @@ code_generator_agent = LlmAgent(
     model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
     description="Generates implementation code based on specifications",
     instruction="""
-    You are a Senior Software Developer. Based on the specification analysis:
-    
-    Specification Analysis: {specification_analysis}
-    
-    Your job is to:
-    1. Create clean, well-structured implementation code
+    You are a Senior Software Developer. Your job is to:
+    1. Create clean, well-structured implementation code based on the specification analysis from the previous agent
     2. Follow best practices and coding standards
     3. Include proper error handling and input validation
     4. Add comprehensive docstrings and comments
@@ -276,6 +272,7 @@ code_generator_agent = LlmAgent(
     - Include proper logging where needed
     
     Generate complete, production-ready code that implements all specified requirements.
+    The specification analysis will be available from the previous agent's output.
     """,
     tools=[FunctionTool(write_code_file)],
     output_key="implementation_code"
@@ -287,13 +284,8 @@ test_generator_agent = LlmAgent(
     model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
     description="Creates comprehensive test suites",
     instruction="""
-    You are a Test Engineer specializing in comprehensive test coverage. Based on:
-    
-    Specification Analysis: {specification_analysis}
-    Implementation Code: {implementation_code}
-    
-    Your job is to:
-    1. Create comprehensive unit tests for all functions and classes
+    You are a Test Engineer specializing in comprehensive test coverage. Your job is to:
+    1. Create comprehensive unit tests for all functions and classes based on the specification analysis and implementation code from previous agents
     2. Write integration tests for component interactions
     3. Include edge case and error condition tests
     4. Create performance tests where appropriate
@@ -308,6 +300,7 @@ test_generator_agent = LlmAgent(
     - Test error handling and exception cases
     
     Generate a complete test suite that thoroughly validates the implementation.
+    The specification analysis and implementation code will be available from previous agents' outputs.
     """,
     tools=[FunctionTool(write_test_file)],
     output_key="test_suite"
@@ -319,13 +312,8 @@ build_agent = LlmAgent(
     model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
     description="Handles project building and dependency management",
     instruction="""
-    You are a Build Engineer responsible for project compilation and setup. Based on:
-    
-    Implementation Code: {implementation_code}
-    Test Suite: {test_suite}
-    
-    Your job is to:
-    1. Build the project and install dependencies
+    You are a Build Engineer responsible for project compilation and setup. Your job is to:
+    1. Build the project and install dependencies based on the implementation code and test suite from previous agents
     2. Check for syntax errors and compilation issues
     3. Verify that all imports and dependencies are available
     4. Ensure the project structure is correct
@@ -339,6 +327,7 @@ build_agent = LlmAgent(
     - Report build status clearly
     
     If build fails, provide specific error details and recommendations for fixes.
+    The implementation code and test suite will be available from previous agents' outputs.
     """,
     tools=[FunctionTool(build_project)],
     output_key="build_results"
@@ -350,13 +339,8 @@ test_runner_agent = LlmAgent(
     model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
     description="Executes tests and analyzes results",
     instruction="""
-    You are a Quality Assurance Engineer responsible for test execution. Based on:
-    
-    Build Results: {build_results}
-    Test Suite: {test_suite}
-    
-    Your job is to:
-    1. Execute the complete test suite
+    You are a Quality Assurance Engineer responsible for test execution. Your job is to:
+    1. Execute the complete test suite based on the build results and test suite from previous agents
     2. Analyze test results and coverage
     3. Identify any failing tests and their causes
     4. Provide recommendations for fixing issues
@@ -370,6 +354,7 @@ test_runner_agent = LlmAgent(
     - Provide actionable feedback for improvements
     
     Only proceed to the next step if tests are passing or provide clear guidance on fixes needed.
+    The build results and test suite will be available from previous agents' outputs.
     """,
     tools=[FunctionTool(run_tests), FunctionTool(analyze_test_results)],
     output_key="test_results"
@@ -381,13 +366,8 @@ git_agent = LlmAgent(
     model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
     description="Handles version control operations",
     instruction="""
-    You are a DevOps Engineer responsible for version control. Based on:
-    
-    Test Results: {test_results}
-    Implementation Code: {implementation_code}
-    
-    Your job is to:
-    1. Initialize git repository if needed
+    You are a DevOps Engineer responsible for version control. Your job is to:
+    1. Initialize git repository if needed based on the test results and implementation code from previous agents
     2. Stage all project files
     3. Create meaningful commit messages
     4. Perform the initial commit
@@ -401,6 +381,7 @@ git_agent = LlmAgent(
     - Document the commit properly
     
     Only commit if tests are passing and code quality is acceptable.
+    The test results and implementation code will be available from previous agents' outputs.
     """,
     tools=[FunctionTool(git_init_and_commit)],
     output_key="git_results"

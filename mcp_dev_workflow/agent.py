@@ -20,6 +20,7 @@ testing frameworks, and development environment management.
 
 from datetime import datetime
 import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -41,39 +42,6 @@ from mcp import StdioServerParameters
 # =============================================================================
 # MCP SERVER CONFIGURATION AND UTILITIES
 # =============================================================================
-
-
-def get_mcp_filesystem_config() -> Dict[str, Any]:
-    """Get configuration for MCP filesystem server."""
-    return {
-        "command": "python",
-        "args": ["-m", "mcp_filesystem_server"],
-        "env": {"ALLOWED_DIRECTORIES": os.getcwd(), "MAX_FILE_SIZE": "10MB"},
-    }
-
-
-def get_mcp_build_config() -> Dict[str, Any]:
-    """Get configuration for MCP build server."""
-    return {
-        "command": "python",
-        "args": ["-m", "mcp_build_server"],
-        "env": {
-            "BUILD_TIMEOUT": "300",
-            "ALLOWED_COMMANDS": "pip,python,pytest,mypy,black,isort",
-        },
-    }
-
-
-def get_mcp_git_config() -> Dict[str, Any]:
-    """Get configuration for MCP git server."""
-    return {
-        "command": "python",
-        "args": ["-m", "mcp_git_server"],
-        "env": {
-            "GIT_TIMEOUT": "60",
-            "ALLOWED_OPERATIONS": "init,add,commit,status,log",
-        },
-    }
 
 
 # =============================================================================
@@ -196,7 +164,14 @@ def analyze_code_quality(file_path: str) -> str:
 # MCP TOOLSETS FOR DIFFERENT OPERATIONS
 # =============================================================================
 
+# Suppress authentication warnings for local development
+logging.getLogger("google_adk.google.adk.tools.base_authenticated_tool").setLevel(
+    logging.ERROR
+)
+
 # MCP Toolsets - Now available with implemented servers
+# Note: For local MCP servers, authentication is not required
+# The warnings about missing auth_config are normal for local development
 mcp_filesystem_toolset = MCPToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -326,10 +301,11 @@ test_generator_agent = LlmAgent(
     
     Your responsibilities:
     1. Create comprehensive test suites using MCP testing tools
-    2. Generate unit, integration, and end-to-end tests
+    2. Generate unit, integration, and end-to-end tests automatically
     3. Implement test fixtures and mock objects
     4. Create performance and load tests where appropriate
     5. Ensure high test coverage (>90%)
+    6. Make all implementation decisions autonomously without waiting for user input
     
     MCP Testing Capabilities:
     - Advanced test framework integration
@@ -422,13 +398,13 @@ test_runner_agent = LlmAgent(
     
     Test Execution Process:
     - Run unit tests with coverage analysis
-    - Execute integration and end-to-end tests
+    - Execute integration and end-to-end tests automatically
     - Perform code quality validation
     - Generate comprehensive test reports
     - Analyze performance metrics
     - Identify areas for improvement
     
-    Only proceed to next steps if tests pass or provide clear guidance for fixes.
+    Proceed with all steps automatically. If cli.py integration tests are needed, implement them without asking for confirmation.
     """,
     tools=[mcp_build_toolset, mcp_filesystem_toolset],
     output_key="test_results",

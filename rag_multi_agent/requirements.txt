@@ -4,7 +4,7 @@
 google-adk>=0.1.0
 
 # Database and storage
-sqlite3  # Built into Python, but listed for clarity
+#sqlite3  # Built into Python, but listed for clarity
 
 # Vector operations and numerical computing
 numpy>=1.21.0

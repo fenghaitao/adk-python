@@ -28,7 +28,7 @@ from google.adk.agents.llm_agent import LlmAgent
 from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.agents.parallel_agent import ParallelAgent
 from google.adk.tools.function_tool import FunctionTool
-from google.adk.models.github_copilot_llm import GitHubCopilotLlm
+from google.adk.models.google_llm import Gemini
 from google.genai import types
 
 
@@ -495,7 +495,7 @@ def create_sample_documents() -> str:
 # 1. Document Ingestion Agent
 document_ingestion_agent = LlmAgent(
     name="document_ingestion_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Processes and ingests documents into the RAG system",
     instruction="""
     You are a Document Ingestion Specialist responsible for processing and indexing documents 
@@ -528,7 +528,7 @@ document_ingestion_agent = LlmAgent(
 # 2. Embedding Agent
 embedding_agent = LlmAgent(
     name="embedding_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Creates vector embeddings for documents and chunks",
     instruction="""
     You are an Embedding Specialist responsible for creating vector representations of documents 
@@ -561,7 +561,7 @@ embedding_agent = LlmAgent(
 # 3. Query Processing Agent
 query_processing_agent = LlmAgent(
     name="query_processing_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Analyzes user queries and determines retrieval strategies",
     instruction="""
     You are a Query Processing Specialist responsible for analyzing user queries and determining 
@@ -592,7 +592,7 @@ query_processing_agent = LlmAgent(
 # 4. Retrieval Agent
 retrieval_agent = LlmAgent(
     name="retrieval_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Retrieves relevant documents using vector similarity search",
     instruction="""
     You are a Document Retrieval Specialist responsible for finding the most relevant documents 
@@ -627,7 +627,7 @@ retrieval_agent = LlmAgent(
 # 5. Synthesis Agent
 synthesis_agent = LlmAgent(
     name="synthesis_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Synthesizes retrieved information with LLM generation",
     instruction="""
     You are an Information Synthesis Specialist responsible for combining retrieved documents 
@@ -659,7 +659,7 @@ synthesis_agent = LlmAgent(
 # 6. RAG Coordinator Agent
 rag_coordinator_agent = LlmAgent(
     name="rag_coordinator",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Coordinates the entire RAG workflow from query to response",
     instruction="""
     You are the RAG System Coordinator responsible for orchestrating the complete 
@@ -696,7 +696,7 @@ rag_coordinator_agent = LlmAgent(
 # Create separate agent instances for the sequential pipeline
 pipeline_query_processor = LlmAgent(
     name="pipeline_query_processor",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Analyzes user queries for the pipeline",
     instruction=query_processing_agent.instruction,
     output_key="query_analysis"
@@ -704,7 +704,7 @@ pipeline_query_processor = LlmAgent(
 
 pipeline_retrieval_agent = LlmAgent(
     name="pipeline_retrieval_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Retrieves documents for the pipeline",
     instruction=retrieval_agent.instruction,
     tools=retrieval_agent.tools,
@@ -713,7 +713,7 @@ pipeline_retrieval_agent = LlmAgent(
 
 pipeline_synthesis_agent = LlmAgent(
     name="pipeline_synthesis_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Synthesizes responses for the pipeline",
     instruction=synthesis_agent.instruction,
     output_key="synthesized_response"
@@ -737,7 +737,7 @@ rag_pipeline = SequentialAgent(
 # Parallel processing for multiple document ingestion
 parallel_ingestion_agent = LlmAgent(
     name="parallel_ingestion_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Handles document ingestion in parallel",
     instruction=document_ingestion_agent.instruction,
     tools=document_ingestion_agent.tools,
@@ -746,7 +746,7 @@ parallel_ingestion_agent = LlmAgent(
 
 parallel_embedding_agent = LlmAgent(
     name="parallel_embedding_agent",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Handles embedding generation in parallel",
     instruction=embedding_agent.instruction,
     tools=embedding_agent.tools,
@@ -766,7 +766,7 @@ document_processing_team = ParallelAgent(
 
 root_agent = LlmAgent(
     name="rag_system",
-    model=GitHubCopilotLlm(model="github_copilot/gpt-4o"),
+    model=Gemini(model="gemini-1.5-flash"),
     description="Multi-Agent RAG System with Document Indexing and Retrieval",
     instruction="""
     You are the Multi-Agent RAG (Retrieval-Augmented Generation) System that can index documents 
