@@ -32,6 +32,7 @@ from .tool_context import ToolContext
 from .transfer_to_agent_tool import transfer_to_agent
 from .url_context_tool import url_context
 from .vertex_ai_search_tool import VertexAiSearchTool
+from .agent_os_tools import create_agent_os_toolset
 
 __all__ = [
     'AgentTool',
@@ -52,6 +53,7 @@ __all__ = [
     'preload_memory',
     'ToolContext',
     'transfer_to_agent',
+    'create_agent_os_toolset',
 ]
 
 
