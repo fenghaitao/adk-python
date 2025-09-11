@@ -17,6 +17,7 @@
 from .base_llm import BaseLlm
 from .github_copilot_llm import GitHubCopilotLlm
 from .google_llm import Gemini
+from .iflow_llm import IFlowLlm
 from .llm_request import LlmRequest
 from .llm_response import LlmResponse
 from .registry import LLMRegistry
@@ -25,6 +26,7 @@ __all__ = [
     'BaseLlm',
     'Gemini',
     'GitHubCopilotLlm',
+    'IFlowLlm',
     'LLMRegistry',
 ]
 
@@ -34,3 +36,6 @@ for regex in Gemini.supported_models():
 
 # Register GitHub Copilot LLM
 LLMRegistry.register(GitHubCopilotLlm)
+
+# Register iFlow LLM
+LLMRegistry.register(IFlowLlm)
