@@ -33,7 +33,7 @@ async def main():
             agent_os_path=agent_os_path,
             project_path=project_path,
             name="agent_os_agent",
-            model="gemini-2.0-flash",
+            model="iflow/Qwen3-Coder",
         )
         print(f"✓ Created agent: {agent_os_agent.name}")
         print(f"✓ Model: {agent_os_agent.model}")

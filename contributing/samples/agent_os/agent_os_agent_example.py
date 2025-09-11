@@ -7,6 +7,7 @@ from pathlib import Path
 
 from google.adk.agents import AgentOsAgent
 from google.adk.runners import InMemoryRunner
+from google.genai import types
 
 
 async def main():
@@ -21,7 +22,7 @@ async def main():
         agent_os_path=agent_os_path,
         project_path=project_path,
         name="agent_os_agent",
-        model="github-copilot/gpt-5-mini",
+        model="iflow/Qwen3-Coder",
     )
     
     # Add Agent OS subagents
@@ -34,38 +35,58 @@ async def main():
     print("🤖 Agent OS Agent with Agent OS Integration")
     print("=" * 50)
     
+    # Create sessions for each example
+    session1 = await runner.session_service.create_session(
+        app_name="InMemoryRunner",
+        user_id="user1",
+        session_id="session1"
+    )
+    session2 = await runner.session_service.create_session(
+        app_name="InMemoryRunner",
+        user_id="user1",
+        session_id="session2"
+    )
+    session3 = await runner.session_service.create_session(
+        app_name="InMemoryRunner",
+        user_id="user1",
+        session_id="session3"
+    )
+    
     # Example 1: Plan a new product
     print("\n📋 Example 1: Planning a new product")
     print("-" * 30)
     
-    response = await runner.run_async(
-        agent=agent_os_agent,
-        user_input="I want to plan a new task management application. Can you help me create the product documentation using Agent OS workflows?"
-    )
-    
-    print("Response:", response)
+    print("Processing request...")
+    async for event in runner.run_async(
+        user_id="user1",
+        session_id="session1",
+        new_message=types.Content(parts=[types.Part(text="I want to plan a new task management application. Can you help me create the product documentation using Agent OS workflows?")])
+    ):
+        print(f"Event: {event}")
     
     # Example 2: Create a spec
     print("\n📝 Example 2: Creating a specification")
     print("-" * 30)
     
-    response = await runner.run_async(
-        agent=agent_os_agent,
-        user_input="Create a spec for user authentication feature with the following requirements: email/password login, password reset, and user registration."
-    )
-    
-    print("Response:", response)
+    print("Processing request...")
+    async for event in runner.run_async(
+        user_id="user1",
+        session_id="session2",
+        new_message=types.Content(parts=[types.Part(text="Create a spec for user authentication feature with the following requirements: email/password login, password reset, and user registration.")])
+    ):
+        print(f"Event: {event}")
     
     # Example 3: File operations
     print("\n📁 Example 3: File operations")
     print("-" * 30)
     
-    response = await runner.run_async(
-        agent=agent_os_agent,
-        user_input="Create a simple Python file called hello.py with a hello world function and run it to test."
-    )
-    
-    print("Response:", response)
+    print("Processing request...")
+    async for event in runner.run_async(
+        user_id="user1",
+        session_id="session3",
+        new_message=types.Content(parts=[types.Part(text="Create a simple Python file called hello.py with a hello world function and run it to test.")])
+    ):
+        print(f"Event: {event}")
 
 
 if __name__ == "__main__":
