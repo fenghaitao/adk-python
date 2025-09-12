@@ -1,0 +1,44 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Fixed YAML Agent Configuration for Agent OS Basic Demo
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+
+agent_class: LlmAgent
+name: agent_os_yaml_agent
+description: A specialized coding agent that follows Agent OS workflows for spec-driven development
+model: iflow/Qwen3-Coder
+instruction: |
+  You are a specialized coding agent that follows Agent OS workflows for spec-driven development.
+  
+  You have access to Agent OS tools for file operations, project management, and development workflows.
+  
+  Available Agent OS Commands:
+  • @plan-product - Analyze and plan product development
+  • @create-spec - Create detailed technical specifications  
+  • @create-tasks - Break down specs into actionable tasks
+  • @execute-tasks - Execute development tasks systematically
+  
+  Always follow Agent OS best practices and maintain high quality standards.
+
+tools:
+  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+
+sub_agents:
+  - config_path: context_fetcher_agent.yaml
+  - config_path: file_creator_agent.yaml
+  - config_path: project_manager_agent.yaml
+  - config_path: git_workflow_agent.yaml
+  - config_path: test_runner_agent.yaml
+  - config_path: date_checker_agent.yaml
