@@ -196,63 +196,6 @@ def demo_yaml_agent():
         return False
 
 
-def demo_simple_yaml_agent():
-    """Demo the simple YAML agent implementation."""
-    print("\n📄 Testing Simple YAML Agent (LlmAgent)")
-    print("-" * 50)
-    
-    try:
-        # Load simple YAML agent
-        yaml_agent_path = Path(__file__).parent / "yaml_agent" / "root_agent_simple.yaml"
-        agent = from_config(str(yaml_agent_path))
-        
-        print(f"✅ Simple YAML agent loaded successfully")
-        print(f"   Agent name: {agent.name}")
-        print(f"   Agent description: {agent.description}")
-        print(f"   Number of tools: {len(agent.tools)}")
-        print(f"   Number of sub-agents: {len(agent.sub_agents)}")
-        
-        # Show available tools
-        print(f"   Available tools:")
-        for i, tool in enumerate(agent.tools):
-            tool_name = getattr(tool, '__name__', str(tool))
-            print(f"     {i+1}. {tool_name}")
-        
-        print(f"\n📝 Agent OS Commands supported:")
-        print(f"   • @plan-product - Analyze and plan product development")
-        print(f"   • @create-spec - Create detailed technical specifications")
-        print(f"   • @create-tasks - Break down specs into actionable tasks")
-        print(f"   • @execute-tasks - Execute development tasks systematically")
-        
-        # Test Runner integration with actual execution
-        print(f"\n🤖 Testing Runner Integration with Live Execution:")
-        try:
-            runner = InMemoryRunner(agent)
-            print(f"✅ InMemoryRunner created successfully")
-            print(f"   App name: {runner.app_name}")
-            print(f"   Agent: {runner.agent.name}")
-            
-            # Execute a real prompt
-            prompt = "@analyze-project and suggest improvements for this Agent OS integration"
-            print(f"\n📝 Executing prompt: {prompt}")
-            print(f"🔄 Running agent...")
-            
-            response = run_agent_with_prompt(runner, prompt, "simple_yaml_demo")
-            print(f"\n✅ Agent Response:")
-            print(f"📄 {response}")
-            
-        except Exception as e:
-            print(f"⚠️  Execution failed: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error loading simple YAML agent: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
 
 def demo_comparative_execution():
@@ -320,7 +263,6 @@ def main():
     # Test individual agents with execution
     python_success = demo_python_agent()
     yaml_success = demo_yaml_agent()
-    simple_yaml_success = demo_simple_yaml_agent()
     
     # Show comparative execution if both work
     if python_success and yaml_success:
@@ -331,9 +273,8 @@ def main():
     print("📊 Demo Summary:")
     print(f"   Python Agent (AgentOsAgent): {'✅ Working' if python_success else '❌ Failed'}")
     print(f"   YAML Agent (LlmAgent): {'✅ Working' if yaml_success else '❌ Failed'}")
-    print(f"   Simple YAML Agent: {'✅ Working' if simple_yaml_success else '❌ Failed'}")
     
-    if python_success or yaml_success or simple_yaml_success:
+    if python_success or yaml_success:
         print("\n🎉 At least one agent successfully executed Agent OS workflows!")
         print("\n💡 Available Agent OS Commands:")
         print("   • @plan-product - Analyze and plan product development")
@@ -351,7 +292,7 @@ def main():
     else:
         print("\n❌ All agents failed. Check the error messages above.")
     
-    return 0 if (python_success or yaml_success or simple_yaml_success) else 1
+    return 0 if (python_success or yaml_success) else 1
 
 
 if __name__ == "__main__":
