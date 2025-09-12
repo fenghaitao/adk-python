@@ -15,7 +15,7 @@ The Agent OS integration brings structured development workflows to ADK, enablin
 ## Directory Structure
 
 ```
-contributing/samples/agent_os/
+contributing/samples/agent_os_basic/
 ├── python/                    # Self-contained Python configuration
 │   ├── __init__.py           # Package initialization
 │   ├── agent.py              # Main agent configuration
@@ -49,7 +49,7 @@ contributing/samples/agent_os/
 
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os/python
+adk run contributing/samples/agent_os_basic/python
 
 # Or import in code
 from contributing.samples.agent_os.python import root_agent
@@ -59,7 +59,7 @@ from contributing.samples.agent_os.python import root_agent
 
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os/yaml
+adk run contributing/samples/agent_os_basic/yaml
 
 # Or use the YAML loader
 from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
@@ -105,16 +105,16 @@ pip install google-adk
 
 ```bash
 # Test Python configuration
-cd contributing/samples/agent_os/test
+cd contributing/samples/agent_os_basic/test
 python test_simple.py
 python test_tools_simple.py
 
 # Test YAML configuration
-cd contributing/samples/agent_os/yaml
+cd contributing/samples/agent_os_basic/yaml
 python test_yaml_integration.py
 
 # Test examples
-cd contributing/samples/agent_os/examples
+cd contributing/samples/agent_os_basic/examples
 python agent_os_agent_example_safe.py
 ```
 
@@ -305,7 +305,7 @@ The Python configuration provides a self-contained setup:
 **Usage:**
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os/python
+adk run contributing/samples/agent_os_basic/python
 
 # Import in code
 from contributing.samples.agent_os.python import root_agent
@@ -322,7 +322,7 @@ The YAML configuration provides declarative setup:
 **Usage:**
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os/yaml
+adk run contributing/samples/agent_os_basic/yaml
 
 # Load from YAML
 from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
@@ -335,7 +335,7 @@ The integration includes comprehensive tests in the `test/` directory:
 
 ### Python Configuration Tests
 ```bash
-cd contributing/samples/agent_os/test
+cd contributing/samples/agent_os_basic/test
 python test_simple.py              # Basic agent test
 python test_tools_simple.py        # Tools test
 python test_python_config.py       # Full configuration test
@@ -343,7 +343,7 @@ python test_python_config.py       # Full configuration test
 
 ### Integration Tests
 ```bash
-cd contributing/samples/agent_os/test
+cd contributing/samples/agent_os_basic/test
 python test_agent_os_integration.py    # Full integration test
 python test_simple_integration.py      # Simple integration test
 python test_standalone.py              # Standalone tools test
@@ -351,13 +351,13 @@ python test_standalone.py              # Standalone tools test
 
 ### YAML Configuration Tests
 ```bash
-cd contributing/samples/agent_os/yaml
+cd contributing/samples/agent_os_basic/yaml
 python test_yaml_integration.py    # YAML configuration test
 ```
 
 ### Example Tests
 ```bash
-cd contributing/samples/agent_os/examples
+cd contributing/samples/agent_os_basic/examples
 python agent_os_agent_example_safe.py  # Safe example test
 ```
 
@@ -396,11 +396,11 @@ If you encounter import errors, check the folder structure:
 
 ```bash
 # Verify the structure
-ls -la contributing/samples/agent_os/
-ls -la contributing/samples/agent_os/python/
-ls -la contributing/samples/agent_os/yaml/
-ls -la contributing/samples/agent_os/test/
-ls -la contributing/samples/agent_os/examples/
+ls -la contributing/samples/agent_os_basic/
+ls -la contributing/samples/agent_os_basic/python/
+ls -la contributing/samples/agent_os_basic/yaml/
+ls -la contributing/samples/agent_os_basic/test/
+ls -la contributing/samples/agent_os_basic/examples/
 ```
 
 ## Contributing

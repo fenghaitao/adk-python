@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Simple test script for the Python configuration without LLM calls."""
+"""Test script for the Python configuration."""
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -24,8 +25,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 from agent import root_agent
 
 
-def test_agent():
-    """Test the Agent OS agent configuration without LLM calls."""
+async def test_agent():
+    """Test the Agent OS agent configuration."""
     print("🧪 Testing Agent OS Python Configuration")
     print("=" * 50)
     
@@ -45,11 +46,44 @@ def test_agent():
     for subagent in root_agent.sub_agents:
         print(f"  - {subagent.name}: {subagent.description}")
     
+    # Test basic functionality
+    print("\n🧪 Testing Basic Functionality:")
+    
+    # Test tool execution (safe operations)
+    try:
+        # Test read_file tool - look inside toolset
+        read_tool = None
+        for tool in root_agent.tools:
+            if hasattr(tool, 'tools'):  # This is a toolset
+                for sub_tool in tool.tools:
+                    if sub_tool.name == 'read_file':
+                        read_tool = sub_tool
+                        break
+                if read_tool:
+                    break
+        
+        if read_tool:
+            print("  ✅ Read file tool found")
+        else:
+            print("  ❌ Read file tool not found")
+            
+        # Test other tools
+        tools_found = []
+        for tool in root_agent.tools:
+            if hasattr(tool, 'tools'):  # This is a toolset
+                for sub_tool in tool.tools:
+                    tools_found.append(sub_tool.name)
+        
+        print(f"  ✅ Available tools: {', '.join(tools_found)}")
+            
+    except Exception as e:
+        print(f"  ❌ Error testing tools: {e}")
+    
     print("\n✅ Python configuration test completed successfully!")
     print("\n📝 Usage:")
-    print("  - Run with ADK: adk run contributing/samples/agent_os/python")
-    print("  - Import in code: from contributing.samples.agent_os.python import root_agent")
+    print("  - Run with ADK: adk run contributing/samples/agent_os_basic/python")
+    print("  - Import in code: from contributing.samples.agent_os_basic.python import root_agent")
 
 
 if __name__ == "__main__":
-    test_agent()
+    asyncio.run(test_agent())

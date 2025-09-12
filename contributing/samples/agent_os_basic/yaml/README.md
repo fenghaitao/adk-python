@@ -235,7 +235,7 @@ print(f"Steps: {' → '.join(workflow['steps'])}")
 Run the example script to test the YAML configuration:
 
 ```bash
-cd contributing/samples/agent_os/yaml
+cd contributing/samples/agent_os_basic/yaml
 python example_usage.py
 ```
 

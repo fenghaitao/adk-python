@@ -11,7 +11,7 @@ I have successfully integrated Agent OS with Google's Agent Development Kit (ADK
 - **Runner Integration**: Fixed Runner usage to use `InMemoryRunner` for proper initialization
 - **Subagent Models**: All subagents now use the same model for consistency
 
-### 2. Agent OS Tools for ADK (`contributing/samples/agent_os/python/agent_os_tools.py`)
+### 2. Agent OS Tools for ADK (`contributing/samples/agent_os_basic/python/agent_os_tools.py`)
 
 Created a comprehensive set of tools that implement Agent OS functionality:
 
@@ -22,7 +22,7 @@ Created a comprehensive set of tools that implement Agent OS functionality:
 - **AgentOsBashTool**: Execute bash commands with timeout support
 - **AgentOsToolset**: Container for all tools with easy access
 
-### 3. Agent OS Agent (`contributing/samples/agent_os/python/agent_os_agent.py`)
+### 3. Agent OS Agent (`contributing/samples/agent_os_basic/python/agent_os_agent.py`)
 
 Created a specialized ADK agent that follows Agent OS workflows:
 
@@ -135,13 +135,13 @@ All tests pass successfully, confirming the integration works correctly.
 ## Files Created/Modified
 
 ### New Files
-- `contributing/samples/agent_os/agent_os_tools.py` - Agent OS tools implementation
-- `contributing/samples/agent_os/agent_os_agent.py` - Agent OS Agent implementation
-- `contributing/samples/agent_os/agent_os_agent_example.py` - Usage example
-- `contributing/samples/agent_os/test_agent_os_integration.py` - Integration tests
-- `contributing/samples/agent_os/test_standalone.py` - Standalone test
-- `contributing/samples/agent_os/AGENT_OS_INTEGRATION.md` - Integration documentation
-- `contributing/samples/agent_os/INTEGRATION_SUMMARY.md` - This summary
+- `contributing/samples/agent_os_basic/agent_os_tools.py` - Agent OS tools implementation
+- `contributing/samples/agent_os_basic/agent_os_agent.py` - Agent OS Agent implementation
+- `contributing/samples/agent_os_basic/agent_os_agent_example.py` - Usage example
+- `contributing/samples/agent_os_basic/test_agent_os_integration.py` - Integration tests
+- `contributing/samples/agent_os_basic/test_standalone.py` - Standalone test
+- `contributing/samples/agent_os_basic/AGENT_OS_INTEGRATION.md` - Integration documentation
+- `contributing/samples/agent_os_basic/INTEGRATION_SUMMARY.md` - This summary
 
 ### Modified Files
 - `src/google/adk/tools/__init__.py` - Added Agent OS tools export

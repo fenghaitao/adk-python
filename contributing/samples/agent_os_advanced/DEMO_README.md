@@ -12,7 +12,7 @@ This demo showcases both Python and YAML agent implementations working with the 
 ## Running the Demo
 
 ```bash
-# From the agent_os_integration directory
+# From the agent_os_advanced directory
 python demo_runner.py
 ```
 
@@ -116,7 +116,7 @@ asyncio.run(run_agent())
 ## File Structure
 
 ```
-agent_os_integration/
+agent_os_advanced/
 ├── demo_runner.py              # This demo script
 ├── DEMO_README.md              # This documentation
 ├── python_agent/
