@@ -24,24 +24,48 @@ pip install google-adk
 
 ## Quick Start
 
-### Basic Usage
+### Option 1: Python Configuration (Recommended)
 
 ```python
-from contributing.samples.agent_os.agent_os_agent import AgentOsAgent
+# Using the pre-configured agent
+from contributing.samples.agent_os.python import root_agent
+from google.adk.runners import InMemoryRunner
+
+# Create runner with pre-configured agent
+runner = InMemoryRunner(root_agent)
+response = await runner.run_async("Plan a new product using Agent OS workflows")
+```
+
+### Option 2: YAML Configuration
+
+```python
+# Using YAML configuration
+from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
+from google.adk.runners import InMemoryRunner
+
+# Load agent from YAML
+agent = load_agent_from_yaml("root_agent.yaml")
+runner = InMemoryRunner(agent)
+response = await runner.run_async("Plan a new product using Agent OS workflows")
+```
+
+### Option 3: Direct Usage
+
+```python
+from contributing.samples.agent_os.python.agent_os_agent import AgentOsAgent
 from google.adk.runners import InMemoryRunner
 
 # Create Agent OS Agent with Agent OS integration
 agent = AgentOsAgent.create_with_agent_os_config(
     agent_os_path="/path/to/agent-os",
     project_path=".",
-    model="github-copilot/gpt-5-mini"
+    model="iflow/Qwen3-Coder"
 )
 
 # Add Agent OS subagents
 agent.add_agent_os_subagents("/path/to/agent-os")
 
 # Use with InMemoryRunner
-from google.adk.runners import InMemoryRunner
 runner = InMemoryRunner(agent)
 response = await runner.run_async("Plan a new product using Agent OS workflows")
 ```

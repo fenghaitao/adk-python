@@ -1,0 +1,218 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Agent OS Root Agent Configuration
+# This file defines the main Agent OS agent configuration for ADK
+
+agent:
+  name: "agent_os_agent"
+  model: "iflow/Qwen3-Coder"
+  description: "A specialized coding agent that follows Agent OS workflows for spec-driven development"
+  
+  # Agent OS specific configuration
+  agent_os:
+    path: "/home/hfeng1/agent-os"  # Path to Agent OS installation
+    project_path: "."              # Current project path
+    auto_load_config: true         # Automatically load Agent OS config
+    auto_add_subagents: true       # Automatically add Agent OS subagents
+
+  # Core instruction for the agent
+  instruction: |
+    You are a specialized coding agent that follows Agent OS workflows for spec-driven development. You help developers build quality software by following structured processes and maintaining high standards.
+
+    ## Core Capabilities
+
+    1. **Spec-Driven Development**: Follow Agent OS specifications and create comprehensive technical documentation
+    2. **File Operations**: Read, write, and manage project files efficiently
+    3. **Code Quality**: Maintain high coding standards and best practices
+    4. **Project Management**: Track tasks, create roadmaps, and manage project documentation
+    5. **Git Workflow**: Handle version control operations following Agent OS conventions
+
+    ## Available Tools
+
+    - **read_file**: Read file contents
+    - **write_file**: Create or update files
+    - **grep_search**: Search for patterns in files
+    - **glob_search**: Find files matching patterns
+    - **bash_command**: Execute shell commands
+
+    ## Workflow Principles
+
+    1. **Always check existing context** before reading files
+    2. **Follow Agent OS conventions** for file naming and structure
+    3. **Create comprehensive documentation** for all features
+    4. **Maintain clean git history** with descriptive commits
+    5. **Test thoroughly** before marking tasks complete
+
+    ## Response Style
+
+    - Be proactive and thorough
+    - Provide clear, actionable guidance
+    - Follow Agent OS file templates and conventions
+    - Always validate your work before completion
+    - Use the available tools efficiently to gather information
+
+    Remember: You are part of a structured development process. Always follow the established workflows and maintain high quality standards.
+
+  # Tools configuration
+  tools:
+    - name: "agent_os_toolset"
+      type: "AgentOsToolset"
+      enabled: true
+      description: "Collection of Agent OS tools for file operations, searching, and system commands"
+
+  # Subagents configuration
+  subagents:
+    enabled: true
+    auto_add: true
+    
+    # Individual subagent configurations
+    context_fetcher:
+      name: "context_fetcher"
+      model: "iflow/Qwen3-Coder"
+      description: "Retrieves and extracts relevant information from Agent OS documentation files"
+      enabled: true
+      
+    file_creator:
+      name: "file_creator"
+      model: "iflow/Qwen3-Coder"
+      description: "Creates files, directories, and applies templates for Agent OS workflows"
+      enabled: true
+      
+    project_manager:
+      name: "project_manager"
+      model: "iflow/Qwen3-Coder"
+      description: "Manages task completion and project tracking documentation"
+      enabled: true
+      
+    git_workflow:
+      name: "git_workflow"
+      model: "iflow/Qwen3-Coder"
+      description: "Handles git operations, branch management, commits, and PR creation"
+      enabled: true
+      
+    test_runner:
+      name: "test_runner"
+      model: "iflow/Qwen3-Coder"
+      description: "Runs tests and analyzes failures for the current task"
+      enabled: true
+      
+    date_checker:
+      name: "date_checker"
+      model: "iflow/Qwen3-Coder"
+      description: "Determines and outputs today's date in YYYY-MM-DD format"
+      enabled: true
+
+  # Model configuration
+  model_config:
+    temperature: 0.7
+    max_tokens: 4096
+    top_p: 0.9
+    frequency_penalty: 0.0
+    presence_penalty: 0.0
+
+  # Agent OS specific settings
+  settings:
+    # File operations
+    file_operations:
+      overwrite_protection: true
+      create_directories: true
+      backup_existing: false
+      
+    # Git workflow
+    git_workflow:
+      auto_commit: false
+      commit_message_template: "feat: {description}"
+      branch_naming: "kebab-case"
+      
+    # Testing
+    testing:
+      auto_run_tests: false
+      test_timeout: 60
+      verbose_output: true
+      
+    # Documentation
+    documentation:
+      auto_generate: true
+      template_path: "{agent_os_path}/templates"
+      output_format: "markdown"
+
+# Runner configuration
+runner:
+  type: "InMemoryRunner"
+  session_config:
+    auto_create_session: true
+    session_timeout: 3600  # 1 hour
+    
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "agent_os.log"
+  console: true
+
+# Environment configuration
+environment:
+  # Required environment variables
+  required_vars:
+    - "GOOGLE_API_KEY"  # For Google Cloud APIs
+    - "AGENT_OS_PATH"   # Path to Agent OS installation
+  
+  # Optional environment variables
+  optional_vars:
+    - "PROJECT_PATH"     # Override project path
+    - "MODEL_NAME"       # Override model name
+    - "LOG_LEVEL"        # Override log level
+
+# Workflow templates
+workflows:
+  product_planning:
+    name: "Product Planning Workflow"
+    description: "Plan and design new products using Agent OS methodologies"
+    steps:
+      - "context_analysis"
+      - "requirement_gathering"
+      - "spec_creation"
+      - "task_breakdown"
+      - "roadmap_creation"
+      
+  spec_creation:
+    name: "Spec Creation Workflow"
+    description: "Create comprehensive specifications for features"
+    steps:
+      - "requirement_analysis"
+      - "technical_design"
+      - "api_specification"
+      - "database_schema"
+      - "test_planning"
+      
+  task_execution:
+    name: "Task Execution Workflow"
+    description: "Execute development tasks following Agent OS processes"
+    steps:
+      - "task_analysis"
+      - "implementation"
+      - "testing"
+      - "documentation"
+      - "review"
+      
+  code_analysis:
+    name: "Code Analysis Workflow"
+    description: "Analyze and improve existing codebases"
+    steps:
+      - "code_review"
+      - "quality_assessment"
+      - "improvement_suggestions"
+      - "refactoring_plan"
+      - "implementation"

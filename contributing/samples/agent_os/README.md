@@ -12,55 +12,71 @@ The Agent OS integration brings structured development workflows to ADK, enablin
 - **Project Management**: Track tasks, create roadmaps, and manage project documentation
 - **Git Workflow**: Handle version control operations following Agent OS conventions
 
-## Files in this Directory
+## Directory Structure
 
-### Core Integration Files
-
-- **`agent_os_agent.py`** - Main Agent OS Agent class that integrates with ADK
-- **`agent_os_tools.py`** - Collection of tools for file operations, searching, and system commands
-- **`agent.py`** - Agent configuration file for ADK compatibility
-
-### Example Files
-
-- **`agent_os_agent_example.py`** - Complete working example showing how to use the integration
-- **`agent_os_agent_example_safe.py`** - Safe example that tests configuration without LLM calls
-- **`claude_code_agent_example.py`** - Alternative example implementation
-
-### Test Files
-
-- **`test_agent_os_integration.py`** - Comprehensive integration tests
-- **`test_simple_integration.py`** - Simple integration tests
-- **`test_standalone.py`** - Standalone tests for tools without ADK dependencies
-
-### Documentation
-
-- **`README.md`** - This file
-- **`AGENT_OS_INTEGRATION.md`** - Detailed integration documentation
-- **`INTEGRATION_SUMMARY.md`** - Summary of the integration implementation
+```
+contributing/samples/agent_os/
+├── python/                    # Self-contained Python configuration
+│   ├── __init__.py           # Package initialization
+│   ├── agent.py              # Main agent configuration
+│   ├── agent_os_agent.py     # Core agent implementation
+│   ├── agent_os_tools.py     # Tools implementation
+│   └── README.md             # Python configuration docs
+├── examples/                  # Example scripts
+│   ├── agent_os_agent_example.py
+│   └── agent_os_agent_example_safe.py
+├── test/                      # Test scripts
+│   ├── test_simple.py
+│   ├── test_python_config.py
+│   ├── test_simple_integration.py
+│   ├── test_agent_os_integration.py
+│   ├── test_standalone.py
+│   └── test_tools_simple.py
+├── yaml/                      # YAML configuration
+│   ├── root_agent.yaml       # YAML agent configuration
+│   ├── yaml_loader.py        # YAML loader implementation
+│   ├── example_usage.py      # YAML usage example
+│   ├── test_yaml_integration.py
+│   └── README.md             # YAML configuration docs
+├── AGENT_OS_INTEGRATION.md   # Detailed integration documentation
+├── INTEGRATION_SUMMARY.md    # Summary of the integration implementation
+└── README.md                 # This file
+```
 
 ## Quick Start
 
-### 1. Install Dependencies
+### Option 1: Python Configuration (Recommended)
 
 ```bash
-# Install ADK Python
-pip install google-adk
+# Run with ADK CLI
+adk run contributing/samples/agent_os/python
 
-# Install Agent OS (follow their installation instructions)
-# https://buildermethods.com/agent-os
+# Or import in code
+from contributing.samples.agent_os.python import root_agent
 ```
 
-### 2. Basic Usage
+### Option 2: YAML Configuration
+
+```bash
+# Run with ADK CLI
+adk run contributing/samples/agent_os/yaml
+
+# Or use the YAML loader
+from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
+agent = load_agent_from_yaml("root_agent.yaml")
+```
+
+### Option 3: Direct Usage
 
 ```python
-from contributing.samples.agent_os.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os.python.agent_os_agent import AgentOsAgent
 from google.adk.runners import InMemoryRunner
 
 # Create Agent OS Agent with Agent OS integration
 agent = AgentOsAgent.create_with_agent_os_config(
     agent_os_path="/path/to/agent-os",
     project_path=".",
-    model="github-copilot/gpt-5-mini"
+    model="iflow/Qwen3-Coder"
 )
 
 # Add Agent OS subagents
@@ -71,17 +87,35 @@ runner = InMemoryRunner(agent)
 response = await runner.run_async("Plan a new product using Agent OS workflows")
 ```
 
-### 3. Run Tests
+## Installation
+
+### Prerequisites
 
 ```bash
-# Run integration tests
-python test_agent_os_integration.py
+# Install ADK Python
+pip install google-adk
 
-# Run simple tests
-python test_simple_integration.py
+# Install Agent OS (follow their installation instructions)
+# https://buildermethods.com/agent-os
+```
 
-# Run standalone tests
-python test_standalone.py
+## Testing
+
+### Run Tests
+
+```bash
+# Test Python configuration
+cd contributing/samples/agent_os/test
+python test_simple.py
+python test_tools_simple.py
+
+# Test YAML configuration
+cd contributing/samples/agent_os/yaml
+python test_yaml_integration.py
+
+# Test examples
+cd contributing/samples/agent_os/examples
+python agent_os_agent_example_safe.py
 ```
 
 ## Available Tools
@@ -179,11 +213,44 @@ The agent automatically loads Agent OS configuration from:
 
 ## Examples
 
-### Basic Example
+### Python Configuration Example
+
+```python
+# Using the pre-configured agent
+from contributing.samples.agent_os.python import root_agent
+from google.adk.runners import InMemoryRunner
+
+# Create runner with pre-configured agent
+runner = InMemoryRunner(root_agent)
+
+# Run conversation
+response = await runner.run_async("Help me plan a new web application")
+print(response)
+```
+
+### YAML Configuration Example
+
+```python
+# Using YAML configuration
+from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
+from google.adk.runners import InMemoryRunner
+
+# Load agent from YAML
+agent = load_agent_from_yaml("root_agent.yaml")
+
+# Create runner
+runner = InMemoryRunner(agent)
+
+# Run conversation
+response = await runner.run_async("Create a spec for user authentication")
+print(response)
+```
+
+### Direct Usage Example
 
 ```python
 import asyncio
-from contributing.samples.agent_os.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os.python.agent_os_agent import AgentOsAgent
 from google.adk.runners import InMemoryRunner
 
 async def main():
@@ -191,7 +258,7 @@ async def main():
     agent = AgentOsAgent.create_with_agent_os_config(
         agent_os_path="/path/to/agent-os",
         project_path=".",
-        model="github-copilot/gpt-5-mini"
+        model="iflow/Qwen3-Coder"
     )
     
     # Add subagents
@@ -211,7 +278,7 @@ if __name__ == "__main__":
 ### Tool Usage Example
 
 ```python
-from contributing.samples.agent_os.agent_os_tools import create_agent_os_toolset
+from contributing.samples.agent_os.python.agent_os_tools import create_agent_os_toolset
 
 # Create toolset
 toolset = create_agent_os_toolset()
@@ -224,33 +291,95 @@ result = await read_tool.run_async(
 )
 ```
 
+## Configuration Options
+
+### Python Configuration (`python/`)
+
+The Python configuration provides a self-contained setup:
+
+- **`agent.py`** - Pre-configured agent ready to use
+- **`agent_os_agent.py`** - Core agent implementation
+- **`agent_os_tools.py`** - Tools implementation
+- **`__init__.py`** - Package initialization
+
+**Usage:**
+```bash
+# Run with ADK CLI
+adk run contributing/samples/agent_os/python
+
+# Import in code
+from contributing.samples.agent_os.python import root_agent
+```
+
+### YAML Configuration (`yaml/`)
+
+The YAML configuration provides declarative setup:
+
+- **`root_agent.yaml`** - Agent configuration in YAML format
+- **`yaml_loader.py`** - YAML loader implementation
+- **`example_usage.py`** - Usage examples
+
+**Usage:**
+```bash
+# Run with ADK CLI
+adk run contributing/samples/agent_os/yaml
+
+# Load from YAML
+from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
+agent = load_agent_from_yaml("root_agent.yaml")
+```
+
 ## Testing
 
-The integration includes comprehensive tests:
+The integration includes comprehensive tests in the `test/` directory:
+
+### Python Configuration Tests
+```bash
+cd contributing/samples/agent_os/test
+python test_simple.py              # Basic agent test
+python test_tools_simple.py        # Tools test
+python test_python_config.py       # Full configuration test
+```
 
 ### Integration Tests
 ```bash
-python test_agent_os_integration.py
+cd contributing/samples/agent_os/test
+python test_agent_os_integration.py    # Full integration test
+python test_simple_integration.py      # Simple integration test
+python test_standalone.py              # Standalone tools test
 ```
 
-### Simple Tests
+### YAML Configuration Tests
 ```bash
-python test_simple_integration.py
+cd contributing/samples/agent_os/yaml
+python test_yaml_integration.py    # YAML configuration test
 ```
 
-### Standalone Tests
+### Example Tests
 ```bash
-python test_standalone.py
+cd contributing/samples/agent_os/examples
+python agent_os_agent_example_safe.py  # Safe example test
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**: Ensure the ADK source directory is in your Python path
+1. **Import Errors**: 
+   - For Python configuration: Ensure the `python/` directory is in your Python path
+   - For YAML configuration: Ensure the `yaml/` directory is in your Python path
+   - For direct usage: Ensure the ADK source directory is in your Python path
+
 2. **Agent OS Path Not Found**: Ensure the agent_os_path points to a valid Agent OS installation
+
 3. **Tool Execution Errors**: Check file permissions and working directory
+
 4. **Model Errors**: Verify your model configuration and API credentials
+
+5. **ADK CLI Issues**: 
+   - Ensure you're running from the correct directory
+   - Check that the agent configuration files exist
+   - Verify ADK is properly installed
 
 ### Debug Mode
 
@@ -259,6 +388,19 @@ Enable debug logging to troubleshoot issues:
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
+```
+
+### Folder Structure Issues
+
+If you encounter import errors, check the folder structure:
+
+```bash
+# Verify the structure
+ls -la contributing/samples/agent_os/
+ls -la contributing/samples/agent_os/python/
+ls -la contributing/samples/agent_os/yaml/
+ls -la contributing/samples/agent_os/test/
+ls -la contributing/samples/agent_os/examples/
 ```
 
 ## Contributing
@@ -278,5 +420,38 @@ This integration follows the same license as ADK (Apache 2.0) and Agent OS.
 
 - [AGENT_OS_INTEGRATION.md](AGENT_OS_INTEGRATION.md) - Detailed integration documentation
 - [INTEGRATION_SUMMARY.md](INTEGRATION_SUMMARY.md) - Summary of the integration implementation
+- [python/README.md](python/README.md) - Python configuration documentation
+- [yaml/README.md](yaml/README.md) - YAML configuration documentation
 - [Agent OS Documentation](https://buildermethods.com/agent-os) - Official Agent OS documentation
 - [ADK Documentation](https://github.com/google/adk-python) - ADK documentation
+
+## Migration Guide
+
+If you're migrating from the old structure to the new organized structure:
+
+### From Direct Imports
+```python
+# Old way
+from google.adk.agents import AgentOsAgent
+from google.adk.tools import create_agent_os_toolset
+
+# New way
+from contributing.samples.agent_os.python.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os.python.agent_os_tools import create_agent_os_toolset
+```
+
+### From Agent Configuration
+```python
+# Old way
+from contributing.samples.agent_os.agent import root_agent
+
+# New way
+from contributing.samples.agent_os.python import root_agent
+```
+
+### From YAML Configuration
+```python
+# New YAML way
+from contributing.samples.agent_os.yaml.yaml_loader import load_agent_from_yaml
+agent = load_agent_from_yaml("root_agent.yaml")
+```

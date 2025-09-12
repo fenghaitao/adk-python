@@ -9,18 +9,18 @@ from pathlib import Path
 import sys
 from pathlib import Path as PathLib
 
-# Add the src directory to Python path for imports
+# Add the python directory to Python path for imports
 current_dir = PathLib(__file__).parent
+python_dir = current_dir.parent / "python"
+sys.path.insert(0, str(python_dir))
+
+# Add the src directory to Python path for ADK imports
 src_dir = current_dir.parent.parent.parent / "src"
 sys.path.insert(0, str(src_dir))
 
 from google.adk.agents.llm_agent import LlmAgent
-try:
-    from .agent_os_tools import create_agent_os_toolset
-    from .agent_os_agent import AgentOsAgent
-except ImportError:
-    from agent_os_tools import create_agent_os_toolset
-    from agent_os_agent import AgentOsAgent
+from agent_os_tools import create_agent_os_toolset
+from agent_os_agent import AgentOsAgent
 
 
 class TestAgentOsIntegration:

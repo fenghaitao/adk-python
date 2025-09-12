@@ -14,7 +14,13 @@
 
 """Agent OS Agent configuration for ADK."""
 
-from .agent_os_agent import AgentOsAgent
+import sys
+from pathlib import Path
+
+# Add the current directory to Python path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from agent_os_agent import AgentOsAgent
 
 # Create Agent OS Agent with Agent OS configuration
 agent_os_agent = AgentOsAgent.create_with_agent_os_config(

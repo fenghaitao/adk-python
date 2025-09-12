@@ -13,26 +13,16 @@ def test_agent_os_tools_standalone():
     try:
         # Import only the tools module
         import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
+        sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
         
-        try:
-            from .agent_os_tools import (
-                AgentOsReadTool, 
-                AgentOsWriteTool, 
-                AgentOsGrepTool, 
-                AgentOsGlobTool, 
-                AgentOsBashTool,
-                create_agent_os_toolset
-            )
-        except ImportError:
-            from agent_os_tools import (
-                AgentOsReadTool, 
-                AgentOsWriteTool, 
-                AgentOsGrepTool, 
-                AgentOsGlobTool, 
-                AgentOsBashTool,
-                create_agent_os_toolset
-            )
+        from agent_os_tools import (
+            AgentOsReadTool, 
+            AgentOsWriteTool, 
+            AgentOsGrepTool, 
+            AgentOsGlobTool, 
+            AgentOsBashTool,
+            create_agent_os_toolset
+        )
         
         # Test individual tools
         tools = [

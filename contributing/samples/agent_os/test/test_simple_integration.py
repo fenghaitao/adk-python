@@ -6,8 +6,8 @@ import os
 import tempfile
 from pathlib import Path
 
-# Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
+# Add the python directory to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
 # Test the Agent OS tools directly
 def test_agent_os_tools():
@@ -15,10 +15,7 @@ def test_agent_os_tools():
     print("Testing Agent OS Tools...")
     
     try:
-        try:
-            from .agent_os_tools import create_agent_os_toolset
-        except ImportError:
-            from agent_os_tools import create_agent_os_toolset
+        from agent_os_tools import create_agent_os_toolset
         
         # Create toolset
         toolset = create_agent_os_toolset()

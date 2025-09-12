@@ -11,7 +11,7 @@ I have successfully integrated Agent OS with Google's Agent Development Kit (ADK
 - **Runner Integration**: Fixed Runner usage to use `InMemoryRunner` for proper initialization
 - **Subagent Models**: All subagents now use the same model for consistency
 
-### 2. Agent OS Tools for ADK (`contributing/samples/agent_os/agent_os_tools.py`)
+### 2. Agent OS Tools for ADK (`contributing/samples/agent_os/python/agent_os_tools.py`)
 
 Created a comprehensive set of tools that implement Agent OS functionality:
 
@@ -22,7 +22,7 @@ Created a comprehensive set of tools that implement Agent OS functionality:
 - **AgentOsBashTool**: Execute bash commands with timeout support
 - **AgentOsToolset**: Container for all tools with easy access
 
-### 3. Agent OS Agent (`contributing/samples/agent_os/agent_os_agent.py`)
+### 3. Agent OS Agent (`contributing/samples/agent_os/python/agent_os_agent.py`)
 
 Created a specialized ADK agent that follows Agent OS workflows:
 
@@ -31,7 +31,15 @@ Created a specialized ADK agent that follows Agent OS workflows:
 - **Subagent Support**: Can add specialized Agent OS subagents
 - **Workflow Integration**: Follows Agent OS conventions for file naming, git workflows, etc.
 
-### 4. Specialized Subagents
+### 4. Configuration Options
+
+The integration now provides multiple configuration options:
+
+- **Python Configuration** (`python/`): Self-contained Python setup with pre-configured agent
+- **YAML Configuration** (`yaml/`): Declarative YAML-based configuration
+- **Direct Usage**: Direct import and usage of core components
+
+### 5. Specialized Subagents
 
 The integration includes six specialized subagents:
 

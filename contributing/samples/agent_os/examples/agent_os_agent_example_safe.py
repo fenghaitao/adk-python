@@ -6,10 +6,10 @@ import os
 import sys
 from pathlib import Path
 
-# Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add the python directory to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
-from .agent_os_agent import AgentOsAgent
+from agent_os_agent import AgentOsAgent
 from google.adk.runners import Runner
 
 
