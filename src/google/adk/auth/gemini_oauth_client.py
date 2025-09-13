@@ -100,9 +100,9 @@ class GeminiOAuthHelper:
                 "scope": " ".join(actual_scopes)
             }
             
-            proxies = {"http": actual_proxy, "https": actual_proxy} if actual_proxy else None
+            # httpx AsyncClient doesn't take proxies in constructor, pass to requests
             
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "https://oauth2.googleapis.com/device/code",
                     data=device_code_data
@@ -129,7 +129,7 @@ class GeminiOAuthHelper:
             expires_in = device_data.get("expires_in", 1800)
             start_time = time.time()
             
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient() as client:
                 while time.time() - start_time < expires_in:
                     response = await client.post(
                         "https://oauth2.googleapis.com/token",
@@ -297,9 +297,8 @@ class GeminiOAuthCredentialManager:
             
         try:
             proxy = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-            proxies = {"http": proxy, "https": proxy} if proxy else None
             
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient() as client:
                 response = await client.get(
                     "https://www.googleapis.com/oauth2/v2/userinfo",
                     headers={"Authorization": f"Bearer {credentials.token}"}
@@ -318,9 +317,8 @@ class GeminiOAuthCredentialManager:
             
         try:
             proxy = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-            proxies = {"http": proxy, "https": proxy} if proxy else None
             
-            async with httpx.AsyncClient(proxies=proxies) as client:
+            async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "https://oauth2.googleapis.com/revoke",
                     data={"token": credentials.token}

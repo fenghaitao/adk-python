@@ -28,6 +28,37 @@ import os
 from google.adk.agents import Agent
 from google.adk.auth import AuthType
 from google.adk.models import GeminiCLI
+from google.adk.runners import InMemoryRunner
+from google.genai import types
+
+
+async def run_agent_query(agent: Agent, query: str) -> str:
+    """Helper function to run a query using an agent with proper ADK runner."""
+    runner = InMemoryRunner(agent=agent, app_name="gemini_cli_auth_test")
+    
+    # Create a session
+    session = await runner.session_service.create_session(
+        app_name="gemini_cli_auth_test", 
+        user_id="test_user"
+    )
+    
+    # Create the user message
+    content = types.Content(
+        role='user', 
+        parts=[types.Part.from_text(text=query)]
+    )
+    
+    # Run the query and collect the response
+    response_parts = []
+    async for event in runner.run_async(
+        user_id="test_user",
+        session_id=session.id,
+        new_message=content,
+    ):
+        if event.content.parts and event.content.parts[0].text:
+            response_parts.append(event.content.parts[0].text)
+    
+    return "".join(response_parts)
 
 
 async def main():
@@ -41,10 +72,12 @@ async def main():
     try:
         agent = Agent(
             model=GeminiCLI(model="gemini-2.5-flash"),
-            system_instruction="You are a helpful assistant."
+            name="gemini_cli_auto_detect_agent",
+            description="Agent demonstrating auto-detected authentication",
+            instruction="You are a helpful assistant."
         )
         
-        response = await agent.run("What authentication method are you using?")
+        response = await run_agent_query(agent, "What authentication method are you using?")
         print(f"Response: {response}")
         
     except Exception as e:
@@ -59,10 +92,12 @@ async def main():
                 auth_type=AuthType.LOGIN_WITH_GOOGLE
                 # Device code flow is now used automatically (no port needed)
             ),
-            system_instruction="You are a helpful assistant."
+            name="gemini_cli_oauth_agent",
+            description="Agent demonstrating OAuth authentication",
+            instruction="You are a helpful assistant."
         )
         
-        response = await agent.run("Hello! Can you tell me about OAuth authentication?")
+        response = await run_agent_query(agent, "Hello! Can you tell me about OAuth authentication?")
         print(f"Response: {response}")
         
     except Exception as e:
@@ -77,10 +112,12 @@ async def main():
                     model="gemini-2.5-flash",
                     auth_type=AuthType.USE_GEMINI
                 ),
-                system_instruction="You are a helpful assistant."
+                name="gemini_cli_api_key_agent",
+                description="Agent demonstrating API key authentication",
+                instruction="You are a helpful assistant."
             )
             
-            response = await agent.run("Hello! Can you tell me about API key authentication?")
+            response = await run_agent_query(agent, "Hello! Can you tell me about API key authentication?")
             print(f"Response: {response}")
             
         except Exception as e:
@@ -97,10 +134,12 @@ async def main():
                     model="gemini-2.5-flash",
                     auth_type=AuthType.USE_VERTEX_AI
                 ),
-                system_instruction="You are a helpful assistant."
+                name="gemini_cli_vertex_ai_agent",
+                description="Agent demonstrating Vertex AI authentication",
+                instruction="You are a helpful assistant."
             )
             
-            response = await agent.run("Hello! Can you tell me about Vertex AI authentication?")
+            response = await run_agent_query(agent, "Hello! Can you tell me about Vertex AI authentication?")
             print(f"Response: {response}")
             
         except Exception as e:
@@ -117,10 +156,12 @@ async def main():
                     model="gemini-2.5-flash",
                     auth_type=AuthType.CLOUD_SHELL
                 ),
-                system_instruction="You are a helpful assistant."
+                name="gemini_cli_cloud_shell_agent",
+                description="Agent demonstrating Cloud Shell authentication",
+                instruction="You are a helpful assistant."
             )
             
-            response = await agent.run("Hello! Can you tell me about Cloud Shell authentication?")
+            response = await run_agent_query(agent, "Hello! Can you tell me about Cloud Shell authentication?")
             print(f"Response: {response}")
             
         except Exception as e:
