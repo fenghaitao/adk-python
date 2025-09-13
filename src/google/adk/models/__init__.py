@@ -15,6 +15,7 @@
 """Defines the interface to support a model."""
 
 from .base_llm import BaseLlm
+from .gemini_cli_codeassist import GeminiCLICodeAssist
 from .github_copilot_llm import GitHubCopilotLlm
 from .google_llm import Gemini
 from .iflow_llm import IFlowLlm
@@ -25,6 +26,7 @@ from .registry import LLMRegistry
 __all__ = [
     'BaseLlm',
     'Gemini',
+    'GeminiCLICodeAssist',
     'GitHubCopilotLlm',
     'IFlowLlm',
     'LLMRegistry',

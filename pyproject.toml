@@ -32,6 +32,9 @@ dependencies = [
   "click>=8.1.8, <9.0.0",                                   # For CLI tools
   "fastapi>=0.115.0, <1.0.0",                               # FastAPI framework
   "google-api-python-client>=2.157.0, <3.0.0",              # Google API client discovery
+  "google-auth>=2.0.0, <3.0.0",                             # For Google authentication
+  "google-auth-httplib2>=0.1.0, <1.0.0",                    # For Google auth HTTP transport
+  "google-auth-oauthlib>=1.0.0, <2.0.0",                    # For Google OAuth authentication
   "google-cloud-bigtable>=2.32.0",                          # For Bigtable database
   "google-cloud-aiplatform[agent_engines]>=1.95.1, <2.0.0", # For VertexAI integrations, e.g. example store.
   "google-cloud-secret-manager>=2.22.0, <3.0.0",            # Fetching secrets in RestAPI Tool
@@ -41,6 +44,7 @@ dependencies = [
   "google-genai>=1.21.1, <2.0.0",                           # Google GenAI SDK
   "graphviz>=0.20.2, <1.0.0",                               # Graphviz for graph rendering
   "litellm>=1.75.5, <2.0.0",                                # For LiteLLM integration
+  "httpx>=0.24.0, <1.0.0",                                  # HTTP client for async requests
   "mcp>=1.8.0, <2.0.0;python_version>='3.10'",              # For MCP Toolset
   "opentelemetry-api>=1.31.0, <2.0.0",                      # OpenTelemetry
   "opentelemetry-exporter-gcp-trace>=1.9.0, <2.0.0",
