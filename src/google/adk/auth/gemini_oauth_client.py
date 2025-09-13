@@ -200,14 +200,26 @@ class GeminiOAuthHelper:
         try:
             with open(cache_file, 'r') as f:
                 cred_data = json.load(f)
+            
+            # Handle both ADK format and Gemini CLI format
+            token = cred_data.get("token") or cred_data.get("access_token")
+            refresh_token = cred_data.get("refresh_token")
+            token_uri = cred_data.get("token_uri") or "https://oauth2.googleapis.com/token"
+            client_id = cred_data.get("client_id") or GeminiOAuthHelper.DEFAULT_CLIENT_ID
+            client_secret = cred_data.get("client_secret") or GeminiOAuthHelper.DEFAULT_CLIENT_SECRET
+            
+            # Handle scopes - could be "scopes" (list) or "scope" (space-separated string)
+            scopes = cred_data.get("scopes")
+            if not scopes and cred_data.get("scope"):
+                scopes = cred_data.get("scope").split()
                 
             return Credentials(
-                token=cred_data.get("token"),
-                refresh_token=cred_data.get("refresh_token"),
-                token_uri=cred_data.get("token_uri"),
-                client_id=cred_data.get("client_id"),
-                client_secret=cred_data.get("client_secret"),
-                scopes=cred_data.get("scopes")
+                token=token,
+                refresh_token=refresh_token,
+                token_uri=token_uri,
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes=scopes
             )
         except Exception:
             return None

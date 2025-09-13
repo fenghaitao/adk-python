@@ -252,13 +252,31 @@ class GeminiCLI(BaseLlm):
             credentials = await self._oauth_manager.get_credentials()
             
             # Create client with OAuth credentials
+            # OAuth credentials work with Vertex AI, need project and location
+            import os
+            project = os.environ.get('GOOGLE_CLOUD_PROJECT')
+            location = os.environ.get('GOOGLE_CLOUD_LOCATION', 'us-central1')
+            
+            if not project:
+                # Try to get project from gcloud config
+                try:
+                    import subprocess
+                    result = subprocess.run(['gcloud', 'config', 'get-value', 'project'], 
+                                          capture_output=True, text=True, check=True)
+                    project = result.stdout.strip()
+                except:
+                    # Default project for OAuth
+                    project = 'gemini-oauth-project'
+            
             return Client(
                 http_options=types.HttpOptions(
                     headers=self._tracking_headers,
                     retry_options=self.retry_options,
                 ),
                 credentials=credentials,
-                vertexai=True,  # OAuth always uses Vertex AI
+                vertexai=True,  # OAuth credentials work with Vertex AI
+                project=project,
+                location=location,
             )
         
     def _get_api_key_client(self) -> Client:

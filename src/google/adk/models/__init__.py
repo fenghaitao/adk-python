@@ -16,6 +16,7 @@
 
 from .base_llm import BaseLlm
 from .gemini_llm import GeminiCLI
+from .gemini_cli_codeassist import GeminiCLICodeAssist
 from .github_copilot_llm import GitHubCopilotLlm
 from .google_llm import Gemini
 from .llm_request import LlmRequest
