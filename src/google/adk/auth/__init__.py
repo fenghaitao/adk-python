@@ -20,3 +20,6 @@ from .auth_schemes import AuthScheme
 from .auth_schemes import AuthSchemeType
 from .auth_schemes import OpenIdConnectWithConfig
 from .auth_tool import AuthConfig
+from .gemini_auth_types import AuthType, GeminiAuthConfig
+from .gemini_auth_validator import GeminiAuthValidator
+from .gemini_oauth_client import GeminiOAuthCredentialManager, GeminiOAuthHelper
