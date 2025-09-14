@@ -55,6 +55,32 @@ LRO_POLL_INTERVAL = 5  # seconds
 # HTTP status codes
 HTTP_UNAUTHORIZED = 401
 
+
+async def _parse_sse_stream(response: httpx.Response) -> AsyncGenerator[dict, None]:
+  """Parse Server-Sent Events stream from Code Assist API."""
+  buffered_lines = []
+  async for line in response.aiter_lines():
+    # Blank lines separate JSON objects in the stream
+    if line == '':
+      if buffered_lines:
+        try:
+          # Join buffered lines and parse as JSON
+          json_str = '\n'.join(buffered_lines)
+          data = json.loads(json_str)
+          # Extract the actual response from Code Assist wrapper
+          if 'response' in data:
+            yield data['response']
+        except json.JSONDecodeError:
+          # Skip malformed JSON
+          pass
+        buffered_lines = []
+    elif line.startswith('data: '):
+      # Extract the data part and add to buffer
+      data_content = line[6:].strip()
+      if data_content:
+        buffered_lines.append(data_content)
+
+
 def _method_url(method: str) -> str:
   endpoint = os.getenv("CODE_ASSIST_ENDPOINT", CODE_ASSIST_ENDPOINT)
   return f"{endpoint}/{CODE_ASSIST_API_VERSION}:{method}"
@@ -287,21 +313,54 @@ class GeminiCLICodeAssist(BaseLlm):
     headers["Authorization"] = f"Bearer {credentials.token}"
 
     # Execute request
-    url = _method_url("generateContent")
-    async with httpx.AsyncClient(timeout=DEFAULT_REQUEST_TIMEOUT) as client:
-      resp = await client.post(url, headers=headers, json=ca_payload)
-      if resp.status_code == HTTP_UNAUTHORIZED and isinstance(credentials, GoogleCredentials):
-        # Try a single refresh
-        credentials.refresh(GoogleAuthRequest())
-        headers["Authorization"] = f"Bearer {credentials.token}"
+    if stream:
+      # Use streaming endpoint
+      url = _method_url("streamGenerateContent")
+      async with httpx.AsyncClient(timeout=DEFAULT_REQUEST_TIMEOUT) as client:
+        async with client.stream(
+            "POST", 
+            url, 
+            headers=headers, 
+            json=ca_payload,
+            params={"alt": "sse"}
+        ) as resp:
+          if resp.status_code == HTTP_UNAUTHORIZED and isinstance(credentials, GoogleCredentials):
+            # Try a single refresh and retry the stream
+            credentials.refresh(GoogleAuthRequest())
+            headers["Authorization"] = f"Bearer {credentials.token}"
+            async with client.stream(
+                "POST", 
+                url, 
+                headers=headers, 
+                json=ca_payload,
+                params={"alt": "sse"}
+            ) as retry_resp:
+              retry_resp.raise_for_status()
+              async for chunk_data in _parse_sse_stream(retry_resp):
+                gen_resp = types.GenerateContentResponse(**chunk_data)
+                yield LlmResponse.create(gen_resp)
+          else:
+            resp.raise_for_status()
+            async for chunk_data in _parse_sse_stream(resp):
+              gen_resp = types.GenerateContentResponse(**chunk_data)
+              yield LlmResponse.create(gen_resp)
+    else:
+      # Use non-streaming endpoint
+      url = _method_url("generateContent")
+      async with httpx.AsyncClient(timeout=DEFAULT_REQUEST_TIMEOUT) as client:
         resp = await client.post(url, headers=headers, json=ca_payload)
-      resp.raise_for_status()
-      data = resp.json()
+        if resp.status_code == HTTP_UNAUTHORIZED and isinstance(credentials, GoogleCredentials):
+          # Try a single refresh
+          credentials.refresh(GoogleAuthRequest())
+          headers["Authorization"] = f"Bearer {credentials.token}"
+          resp = await client.post(url, headers=headers, json=ca_payload)
+        resp.raise_for_status()
+        data = resp.json()
 
-    # Convert Code Assist response to google.genai GenerateContentResponse
-    inres = (data or {}).get("response") or {}
-    gen_resp = types.GenerateContentResponse(**inres)
-    yield LlmResponse.create(gen_resp)
+      # Convert Code Assist response to google.genai GenerateContentResponse
+      inres = (data or {}).get("response") or {}
+      gen_resp = types.GenerateContentResponse(**inres)
+      yield LlmResponse.create(gen_resp)
 
   async def _get_or_setup_project(self, credentials: GoogleCredentials) -> Optional[str]:
     """Try to fetch or create a managed project via Code Assist APIs.
