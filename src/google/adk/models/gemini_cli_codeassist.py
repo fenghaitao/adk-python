@@ -55,6 +55,79 @@ LRO_POLL_INTERVAL = 5  # seconds
 # HTTP status codes
 HTTP_UNAUTHORIZED = 401
 
+async def _handle_streaming_response(
+      response: httpx.Response
+  ) -> AsyncGenerator[LlmResponse, None]:
+    """Handle streaming response from Code Assist API.
+    
+    Args:
+      response: The streaming HTTP response from Code Assist API.
+      
+    Yields:
+      LlmResponse objects for each streaming chunk.
+    """
+    accumulated_text = ""
+    accumulated_parts = []
+    usage_metadata = None
+    
+    async for line in response.aiter_lines():
+      if not line.strip():
+        continue
+        
+      # Handle Server-Sent Events (SSE) format
+      if line.startswith("data: "):
+        data = line[6:]  # Remove "data: " prefix
+        if data == "[DONE]":
+          break
+          
+        try:
+          chunk_data = json.loads(data)
+          # Process the chunk data
+          if "response" in chunk_data:
+            response_data = chunk_data["response"]
+            
+            # Handle candidates in the response
+            if "candidates" in response_data:
+              for candidate in response_data["candidates"]:
+                if "content" in candidate and "parts" in candidate["content"]:
+                  for part in candidate["content"]["parts"]:
+                    if "text" in part:
+                      text_chunk = part["text"]
+                      accumulated_text += text_chunk
+                      
+                      # Create a partial response for this chunk
+                      partial_content = types.Content(
+                          role="model",
+                          parts=[types.Part(text=text_chunk)]
+                      )
+                      partial_response = types.GenerateContentResponse(
+                          candidates=[types.Candidate(content=partial_content)]
+                      )
+                      llm_response = LlmResponse.create(partial_response)
+                      llm_response.partial = True
+                      yield llm_response
+            
+            # Handle usage metadata
+            if "usageMetadata" in response_data:
+              usage_metadata = response_data["usageMetadata"]
+              
+        except json.JSONDecodeError:
+          # Skip malformed JSON chunks
+          continue
+    
+    # Yield final complete response
+    if accumulated_text:
+      final_content = types.Content(
+          role="model",
+          parts=[types.Part(text=accumulated_text)]
+      )
+      final_response = types.GenerateContentResponse(
+          candidates=[types.Candidate(content=final_content)],
+          usage_metadata=usage_metadata
+      )
+      llm_response = LlmResponse.create(final_response)
+      llm_response.partial = False
+      yield llm_response
 
 async def _parse_sse_stream(response: httpx.Response) -> AsyncGenerator[dict, None]:
   """Parse Server-Sent Events stream from Code Assist API."""
@@ -79,7 +152,6 @@ async def _parse_sse_stream(response: httpx.Response) -> AsyncGenerator[dict, No
       data_content = line[6:].strip()
       if data_content:
         buffered_lines.append(data_content)
-
 
 def _method_url(method: str) -> str:
   endpoint = os.getenv("CODE_ASSIST_ENDPOINT", CODE_ASSIST_ENDPOINT)
@@ -336,14 +408,26 @@ class GeminiCLICodeAssist(BaseLlm):
                 params={"alt": "sse"}
             ) as retry_resp:
               retry_resp.raise_for_status()
-              async for chunk_data in _parse_sse_stream(retry_resp):
-                gen_resp = types.GenerateContentResponse(**chunk_data)
-                yield LlmResponse.create(gen_resp)
+              if True:
+                # Use _handle_streaming_response for proper streaming behavior
+                async for llm_response in _handle_streaming_response(retry_resp):
+                  yield llm_response
+              else:
+                # Use _parse_sse_stream for raw dictionary parsing
+                async for chunk_data in _parse_sse_stream(retry_resp):
+                  gen_resp = types.GenerateContentResponse(**chunk_data)
+                  yield LlmResponse.create(gen_resp)
           else:
             resp.raise_for_status()
-            async for chunk_data in _parse_sse_stream(resp):
-              gen_resp = types.GenerateContentResponse(**chunk_data)
-              yield LlmResponse.create(gen_resp)
+            if True:
+              # Use _handle_streaming_response for proper streaming behavior
+              async for llm_response in _handle_streaming_response(resp):
+                yield llm_response
+            else:
+              # Use _parse_sse_stream for raw dictionary parsing
+              async for chunk_data in _parse_sse_stream(resp):
+                gen_resp = types.GenerateContentResponse(**chunk_data)
+                yield LlmResponse.create(gen_resp)
     else:
       # Use non-streaming endpoint
       url = _method_url("generateContent")
