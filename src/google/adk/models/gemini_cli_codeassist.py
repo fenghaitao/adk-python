@@ -154,6 +154,32 @@ class GeminiCLICodeAssist(BaseLlm):
   from the local Gemini CLI cache (via GeminiOAuthCredentialManager).
   """
 
+  @classmethod
+  @override
+  def supported_models(cls) -> list[str]:
+    """Provides the list of supported models for Code Assist API.
+
+    Returns:
+      A list of supported model patterns that the Code Assist API can handle.
+      Based on the models typically supported by Gemini CLI and Code Assist.
+    """
+    return [
+        # Gemini 2.0 models
+        r'gemini-2\.0-flash.*',
+        # Gemini 1.5 models  
+        r'gemini-1\.5-flash.*',
+        r'gemini-1\.5-pro.*',
+        # Gemini 1.0 models (if still supported)
+        r'gemini-1\.0-pro.*',
+        # Gemini 2.5 models (as seen in sample)
+        r'gemini-2\.5-flash.*',
+        # Embedding models
+        r'gemini-embedding-001',
+        r'text-embedding-.*',
+        # Generic gemini pattern for future models
+        r'gemini-.*',
+    ]
+
   @override
   async def generate_content_async(
       self, llm_request: LlmRequest, stream: bool = False
