@@ -46,6 +46,15 @@ CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com"
 CODE_ASSIST_API_VERSION = "v1internal"
 FREE_TIER_ID = "free-tier"
 
+# Timeout constants
+DEFAULT_REQUEST_TIMEOUT = 60  # seconds
+PROJECT_SETUP_TIMEOUT = 30  # seconds
+LRO_POLL_TIMEOUT = 120  # seconds
+LRO_POLL_INTERVAL = 5  # seconds
+
+# HTTP status codes
+HTTP_UNAUTHORIZED = 401
+
 def _method_url(method: str) -> str:
   endpoint = os.getenv("CODE_ASSIST_ENDPOINT", CODE_ASSIST_ENDPOINT)
   return f"{endpoint}/{CODE_ASSIST_API_VERSION}:{method}"
@@ -279,9 +288,9 @@ class GeminiCLICodeAssist(BaseLlm):
 
     # Execute request
     url = _method_url("generateContent")
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=DEFAULT_REQUEST_TIMEOUT) as client:
       resp = await client.post(url, headers=headers, json=ca_payload)
-      if resp.status_code == 401 and isinstance(credentials, GoogleCredentials):
+      if resp.status_code == HTTP_UNAUTHORIZED and isinstance(credentials, GoogleCredentials):
         # Try a single refresh
         credentials.refresh(GoogleAuthRequest())
         headers["Authorization"] = f"Bearer {credentials.token}"
@@ -303,7 +312,7 @@ class GeminiCLICodeAssist(BaseLlm):
     headers = _build_headers()
     headers["Authorization"] = f"Bearer {credentials.token}"
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=PROJECT_SETUP_TIMEOUT) as client:
       # loadCodeAssist
       url = _method_url("loadCodeAssist")
       payload = {
@@ -315,7 +324,7 @@ class GeminiCLICodeAssist(BaseLlm):
           },
       }
       resp = await client.post(url, headers=headers, json=payload)
-      if resp.status_code == 401:
+      if resp.status_code == HTTP_UNAUTHORIZED:
         credentials.refresh(GoogleAuthRequest())
         headers["Authorization"] = f"Bearer {credentials.token}"
         resp = await client.post(url, headers=headers, json=payload)
@@ -354,8 +363,8 @@ class GeminiCLICodeAssist(BaseLlm):
       lro_data = lro.json() or {}
       # Poll until done
       start = time.time()
-      while not lro_data.get("done") and time.time() - start < 120:
-        await asyncio.sleep(5)
+      while not lro_data.get("done") and time.time() - start < LRO_POLL_TIMEOUT:
+        await asyncio.sleep(LRO_POLL_INTERVAL)
         lro = await client.post(op_url, headers=headers, json=onboard_payload)
         lro.raise_for_status()
         lro_data = lro.json() or {}
