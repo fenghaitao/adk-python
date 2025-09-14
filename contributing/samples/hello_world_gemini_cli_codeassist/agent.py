@@ -93,4 +93,12 @@ root_agent = Agent(
         roll_die,
         check_prime,
     ],
+    generate_content_config=types.GenerateContentConfig(
+        safety_settings=[
+            types.SafetySetting(  # avoid false alarm about rolling dice.
+                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=types.HarmBlockThreshold.OFF,
+            ),
+        ]
+    ),
 )

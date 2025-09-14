@@ -106,6 +106,15 @@ def _to_jsonish(obj):
   if isinstance(obj, bytes):
     import base64
     return base64.b64encode(obj).decode('utf-8')
+  
+  # Handle common problematic types that may contain bytes
+  try:
+    import json
+    json.dumps(obj)
+    return obj  # If it's already JSON serializable, return as-is
+  except TypeError:
+    pass  # Continue with conversion logic
+  
   # Pydantic-like objects
   for attr in ("model_dump", "dict"):
     if hasattr(obj, attr):
@@ -114,24 +123,46 @@ def _to_jsonish(obj):
         return _to_jsonish(dumped)
       except Exception:
         pass
+  
   # Mappings
   if isinstance(obj, dict):
     return {k: _to_jsonish(v) for k, v in obj.items()}
+  
   # Iterables
   if isinstance(obj, (list, tuple, set)):
     return [ _to_jsonish(v) for v in obj ]
+  
   # Parts that expose text
   if hasattr(obj, "text"):
     return {"text": getattr(obj, "text")}
+  
   # Enums
   if hasattr(obj, "value"):
     return obj.value
+  
+  # Handle dataclasses
+  if hasattr(obj, "__dataclass_fields__"):
+    import dataclasses
+    try:
+      return _to_jsonish(dataclasses.asdict(obj))
+    except Exception:
+      pass
+  
   # Try __dict__ as fallback for complex objects
   if hasattr(obj, "__dict__"):
     try:
-      return _to_jsonish(obj.__dict__)
+      result = {}
+      for key, value in obj.__dict__.items():
+        try:
+          result[key] = _to_jsonish(value)
+        except Exception:
+          # Skip problematic attributes
+          result[key] = str(value)
+      return result
     except Exception:
       pass
+  
+  # Last resort: convert to string
   return str(obj)
 
 
@@ -231,17 +262,17 @@ class GeminiCLICodeAssist(BaseLlm):
       request_obj["systemInstruction"] = _content_to_json(
           llm_request.config.system_instruction)
     if getattr(llm_request.config, "safety_settings", None):
-      request_obj["safetySettings"] = _to_jsonish(llm_request.config.safety_settings)
+      request_obj["safetySettings"] = llm_request.config.safety_settings
     if getattr(llm_request.config, "tools", None):
-      request_obj["tools"] = _to_jsonish(llm_request.config.tools)
+      request_obj["tools"] = llm_request.config.tools
     if getattr(llm_request.config, "tool_config", None):
-      request_obj["toolConfig"] = _to_jsonish(llm_request.config.tool_config)
+      request_obj["toolConfig"] = llm_request.config.tool_config
 
-    ca_payload = {
+    ca_payload = _to_jsonish({
         "model": model,
         "project": project,
         "request": request_obj,
-    }
+    })
 
     headers = _build_headers()
     headers["Authorization"] = f"Bearer {credentials.token}"
