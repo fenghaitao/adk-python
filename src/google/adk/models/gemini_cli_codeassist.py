@@ -102,6 +102,10 @@ def _to_jsonish(obj):
   # Primitives
   if obj is None or isinstance(obj, (str, int, float, bool)):
     return obj
+  # Handle bytes by converting to base64 string
+  if isinstance(obj, bytes):
+    import base64
+    return base64.b64encode(obj).decode('utf-8')
   # Pydantic-like objects
   for attr in ("model_dump", "dict"):
     if hasattr(obj, attr):
@@ -119,6 +123,15 @@ def _to_jsonish(obj):
   # Parts that expose text
   if hasattr(obj, "text"):
     return {"text": getattr(obj, "text")}
+  # Enums
+  if hasattr(obj, "value"):
+    return obj.value
+  # Try __dict__ as fallback for complex objects
+  if hasattr(obj, "__dict__"):
+    try:
+      return _to_jsonish(obj.__dict__)
+    except Exception:
+      pass
   return str(obj)
 
 
@@ -218,13 +231,11 @@ class GeminiCLICodeAssist(BaseLlm):
       request_obj["systemInstruction"] = _content_to_json(
           llm_request.config.system_instruction)
     if getattr(llm_request.config, "safety_settings", None):
-      request_obj["safetySettings"] = [
-          s for s in llm_request.config.safety_settings
-      ]
+      request_obj["safetySettings"] = _to_jsonish(llm_request.config.safety_settings)
     if getattr(llm_request.config, "tools", None):
-      request_obj["tools"] = llm_request.config.tools
+      request_obj["tools"] = _to_jsonish(llm_request.config.tools)
     if getattr(llm_request.config, "tool_config", None):
-      request_obj["toolConfig"] = llm_request.config.tool_config
+      request_obj["toolConfig"] = _to_jsonish(llm_request.config.tool_config)
 
     ca_payload = {
         "model": model,
