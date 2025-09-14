@@ -1,6 +1,6 @@
 import asyncio
 from google.adk.runners import InMemoryRunner
-from .agent import root_agent
+from agent import root_agent
 from google.genai import types
 
 async def main():

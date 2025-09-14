@@ -83,6 +83,7 @@ log/
 .env.test.local
 .env.production.local
 uv.lock
+gemini-cli/
 
 # Google Cloud specific
 .gcloudignore

@@ -12,338 +12,247 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Gemini CLI OAuth2 integration using ADK's authentication infrastructure."""
+"""Gemini CLI OAuth2 compatibility helpers.
+
+This module intentionally does not implement any interactive OAuth flows.
+Instead, it relies on Gemini CLI / Code Assist to perform authentication and
+store credentials at ``~/.gemini/oauth_creds.json``. We:
+
+- Read cached credentials from that file
+- Refresh access tokens when possible using the stored refresh token
+- Write credentials back to the same file using the same JSON format used by
+  the Gemini CLI (do not introduce ADK-specific fields)
+
+This ensures ADK does not break the Gemini CLI's expectations.
+"""
 
 from __future__ import annotations
 
-import asyncio
+from datetime import datetime, timezone
 import json
 import os
-import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import httpx
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 from ..utils.feature_decorator import experimental
-from .auth_credential import AuthCredential, AuthCredentialTypes, OAuth2Auth
-from .auth_schemes import OpenIdConnectWithConfig
-from .auth_tool import AuthConfig
-from .credential_manager import CredentialManager
+
+
+# Constants align with Gemini CLI expectations and Google's OAuth endpoints.
+_TOKEN_URI = "https://oauth2.googleapis.com/token"
+# Public client for installed apps; used only for token refreshes. We do not
+# write these values back to the credential file.
+_DEFAULT_CLIENT_ID = (
+    os.environ.get(
+        "GEMINI_CLI_CLIENT_ID",
+        "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com",
+    )
+)
+_DEFAULT_CLIENT_SECRET = (
+    os.environ.get("GEMINI_CLI_CLIENT_SECRET", "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")
+)
+
+
+def _cli_oauth_path() -> Path:
+  """Returns the path to the Gemini CLI oauth credentials file.
+
+  Preferred filename is ~/.gemini/oauth_creds.json (gemini-cli).
+  For compatibility, if ~/.gemini/oauth.json exists, we read/write that file
+  instead to avoid breaking existing setups.
+  """
+  base = Path.home() / ".gemini"
+  preferred = base / "oauth_creds.json"
+  legacy = base / "oauth.json"
+  if preferred.exists():
+    return preferred
+  if legacy.exists():
+    return legacy
+  return preferred
+
+
+def _read_cli_oauth_json() -> Optional[Dict[str, Any]]:
+  """Reads the Gemini CLI oauth JSON if it exists.
+
+  Returns:
+    A dict of the JSON content, or None if the file does not exist or cannot
+    be parsed.
+  """
+  p = _cli_oauth_path()
+  if not p.exists():
+    return None
+  try:
+    with p.open("r", encoding="utf-8") as f:
+      return json.load(f)
+  except Exception:
+    return None
+
+
+def _write_cli_oauth_json(data: Dict[str, Any]) -> None:
+  """Writes credentials using the same JSON shape the Gemini CLI wrote.
+
+  We do not filter fields; we preserve the JSON structure (including any
+  additional properties) to avoid breaking the Gemini CLI or other tools that
+  may have written extra fields.
+  """
+  p = _cli_oauth_path()
+  try:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("w", encoding="utf-8") as f:
+      json.dump(data, f, indent=2)
+
+    # Set restrictive permissions similar to CLI (0600).
+    try:
+      os.chmod(p, 0o600)
+    except Exception:
+      # Not critical on all platforms.
+      pass
+  except Exception:
+    # Silent failure: don't crash the app due to IO issues.
+    pass
+
+
+def _to_credentials(cli_data: Dict[str, Any]) -> Credentials:
+  """Converts the CLI JSON format into google.oauth2.credentials.Credentials.
+
+  We use the default token endpoint and a public client id/secret so that
+  refresh can work if a refresh_token is present. We do not write these values
+  back to the CLI file.
+  """
+  token = cli_data.get("access_token") or cli_data.get("token")
+  refresh_token = cli_data.get("refresh_token")
+
+  # CLI stores scope as a single space-separated string; sometimes tests may
+  # use "scopes" as a list. Support both defensively.
+  scopes: Optional[list[str]] = None
+  if isinstance(cli_data.get("scopes"), list):
+    scopes = list(cli_data.get("scopes") or [])
+  elif isinstance(cli_data.get("scope"), str):
+    scopes = [s for s in cli_data.get("scope", "").split(" ") if s]
+
+  creds = Credentials(
+      token=token,
+      refresh_token=refresh_token,
+      token_uri=_TOKEN_URI,
+      client_id=_DEFAULT_CLIENT_ID,
+      client_secret=_DEFAULT_CLIENT_SECRET,
+      scopes=scopes,
+  )
+
+  # Populate expiry if available (CLI stores epoch millis in 'expiry_date').
+  try:
+    expiry_ms = cli_data.get("expiry_date")
+    if isinstance(expiry_ms, (int, float)):
+      # Use naive UTC to avoid aware/naive comparison issues in google-auth
+      creds.expiry = datetime.utcfromtimestamp(expiry_ms / 1000)
+  except Exception:
+    pass
+
+  return creds
+
+
+def _merge_cli_json_with_credentials(
+    base: Dict[str, Any], creds: Credentials
+) -> Dict[str, Any]:
+  """Returns a CLI-style JSON with values updated from Credentials.
+
+  We preserve unknown keys from the base file and only update known fields the
+  CLI expects. The goal is to avoid removing any fields the CLI may depend on.
+  """
+  updated = dict(base) if base is not None else {}
+
+  # access_token
+  if getattr(creds, "token", None):
+    updated["access_token"] = creds.token
+
+  # refresh_token
+  if getattr(creds, "refresh_token", None):
+    updated["refresh_token"] = creds.refresh_token
+
+  # scope (space-separated)
+  if getattr(creds, "scopes", None):
+    try:
+      updated["scope"] = " ".join(creds.scopes or [])
+    except Exception:
+      pass
+
+  # token_type (commonly 'Bearer'); preserve existing value if present.
+  updated.setdefault("token_type", "Bearer")
+
+  # expiry_date in epoch millis if we have an expiry.
+  try:
+    if getattr(creds, "expiry", None):
+      dt = creds.expiry
+      if isinstance(dt, datetime):
+        # Treat naive datetimes as UTC; if tz-aware, convert to UTC
+        if dt.tzinfo is not None:
+          dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        updated["expiry_date"] = int(dt.timestamp() * 1000)
+  except Exception:
+    pass
+
+  return updated
 
 
 @experimental
-class GeminiOAuthHelper:
-    """Helper for Gemini CLI OAuth2 authentication using Google's device code flow."""
-    
-    # OAuth configuration compatible with Gemini CLI
-    # These are the same public OAuth client credentials used by the official Gemini CLI.
-    # These are public client credentials (not confidential) designed for desktop/CLI applications.
-    # Similar to how mobile apps handle OAuth, these credentials are embedded in the client.
-    # For production use, set GEMINI_CLI_CLIENT_ID and GEMINI_CLI_CLIENT_SECRET environment variables.
-    DEFAULT_CLIENT_ID = os.environ.get(
-        "GEMINI_CLI_CLIENT_ID", 
-        "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com"
-    )
-    DEFAULT_CLIENT_SECRET = os.environ.get(
-        "GEMINI_CLI_CLIENT_SECRET",
-        "d-FL95Q19q7MQmFpd7hHD0Ty"
-    )
-    SCOPES = [
-        "https://www.googleapis.com/auth/cloud-platform",
-        "openid",
-        "email", 
-        "profile"
-    ]
-    
-    @staticmethod
-    def create_auth_config(
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        scopes: Optional[list[str]] = None,
-    ) -> AuthConfig:
-        """Create ADK-compatible auth config for Gemini CLI OAuth."""
-        return AuthConfig(
-            auth_scheme=OpenIdConnectWithConfig(
-                authorization_endpoint="https://accounts.google.com/o/oauth2/auth",
-                token_endpoint="https://oauth2.googleapis.com/token",
-                userinfo_endpoint="https://www.googleapis.com/oauth2/v2/userinfo",
-                scopes=scopes or GeminiOAuthHelper.SCOPES
-            ),
-            raw_auth_credential=AuthCredential(
-                auth_type=AuthCredentialTypes.OAUTH2,
-                oauth2=OAuth2Auth(
-                    client_id=client_id or GeminiOAuthHelper.DEFAULT_CLIENT_ID,
-                    client_secret=client_secret or GeminiOAuthHelper.DEFAULT_CLIENT_SECRET,
-                )
-            )
-        )
-    
-    @staticmethod
-    async def authenticate_with_device_code(
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        scopes: Optional[list[str]] = None,
-        proxy: Optional[str] = None,
-    ) -> Optional[Credentials]:
-        """Perform device code OAuth2 flow - no browser/port needed."""
-        actual_client_id = client_id or GeminiOAuthHelper.DEFAULT_CLIENT_ID
-        actual_client_secret = client_secret or GeminiOAuthHelper.DEFAULT_CLIENT_SECRET
-        actual_scopes = scopes or GeminiOAuthHelper.SCOPES
-        actual_proxy = proxy or os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-        
-        try:
-            # Request device code
-            device_code_data = {
-                "client_id": actual_client_id,
-                "scope": " ".join(actual_scopes)
-            }
-            
-            # httpx AsyncClient doesn't take proxies in constructor, pass to requests
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://oauth2.googleapis.com/device/code",
-                    data=device_code_data
-                )
-                response.raise_for_status()
-                device_data = response.json()
-            
-            # Display user code
-            print("\n🔐 Gemini CLI Authentication")
-            print("=" * 35)
-            print(f"\n📱 Please visit: {device_data['verification_url']}")
-            print(f"🔑 Enter this code: {device_data['user_code']}")
-            print("\n⏳ Waiting for authentication...")
-            
-            # Poll for authorization
-            token_data = {
-                "client_id": actual_client_id,
-                "client_secret": actual_client_secret,
-                "device_code": device_data["device_code"],
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
-            }
-            
-            interval = device_data.get("interval", 5)
-            expires_in = device_data.get("expires_in", 1800)
-            start_time = time.time()
-            
-            async with httpx.AsyncClient() as client:
-                while time.time() - start_time < expires_in:
-                    response = await client.post(
-                        "https://oauth2.googleapis.com/token",
-                        data=token_data
-                    )
-                    
-                    if response.status_code == 200:
-                        token_info = response.json()
-                        
-                        # Create credentials
-                        credentials = Credentials(
-                            token=token_info["access_token"],
-                            refresh_token=token_info.get("refresh_token"),
-                            token_uri="https://oauth2.googleapis.com/token",
-                            client_id=actual_client_id,
-                            client_secret=actual_client_secret,
-                            scopes=actual_scopes
-                        )
-                        
-                        print("✅ Authentication successful!")
-                        return credentials
-                    
-                    elif response.status_code == 400:
-                        error_data = response.json()
-                        error = error_data.get("error")
-                        
-                        if error == "authorization_pending":
-                            await asyncio.sleep(interval)
-                            continue
-                        elif error == "slow_down":
-                            interval += 5
-                            await asyncio.sleep(interval)
-                            continue
-                        elif error == "expired_token":
-                            print("❌ Authentication timeout. Please try again.")
-                            return None
-                        elif error == "access_denied":
-                            print("❌ Authentication was denied.")
-                            return None
-                        else:
-                            print(f"❌ Authentication error: {error}")
-                            return None
-                    else:
-                        print(f"❌ Unexpected response: {response.status_code}")
-                        return None
-                        
-                print("❌ Authentication timeout. Please try again.")
-                return None
-                
-        except Exception as e:
-            print(f"❌ Device code flow failed: {e}")
-            return None
-    
-    @staticmethod
-    def get_cache_file() -> Path:
-        """Get the credential cache file path (same as Gemini CLI)."""
-        gemini_dir = Path.home() / ".gemini"
-        gemini_dir.mkdir(exist_ok=True)
-        return gemini_dir / "oauth_creds.json"
-    
-    @staticmethod
-    def load_cached_credentials() -> Optional[Credentials]:
-        """Load credentials from Gemini CLI cache file."""
-        cache_file = GeminiOAuthHelper.get_cache_file()
-        if not cache_file.exists():
-            return None
-            
-        try:
-            with open(cache_file, 'r') as f:
-                cred_data = json.load(f)
-            
-            # Handle both ADK format and Gemini CLI format
-            token = cred_data.get("token") or cred_data.get("access_token")
-            refresh_token = cred_data.get("refresh_token")
-            token_uri = cred_data.get("token_uri") or "https://oauth2.googleapis.com/token"
-            client_id = cred_data.get("client_id") or GeminiOAuthHelper.DEFAULT_CLIENT_ID
-            client_secret = cred_data.get("client_secret") or GeminiOAuthHelper.DEFAULT_CLIENT_SECRET
-            
-            # Handle scopes - could be "scopes" (list) or "scope" (space-separated string)
-            scopes = cred_data.get("scopes")
-            if not scopes and cred_data.get("scope"):
-                scopes = cred_data.get("scope").split()
-                
-            return Credentials(
-                token=token,
-                refresh_token=refresh_token,
-                token_uri=token_uri,
-                client_id=client_id,
-                client_secret=client_secret,
-                scopes=scopes
-            )
-        except Exception:
-            return None
-    
-    @staticmethod
-    def save_credentials(credentials: Credentials) -> None:
-        """Save credentials to Gemini CLI cache file."""
-        if not credentials:
-            return
-            
-        cred_data = {
-            "token": credentials.token,
-            "refresh_token": credentials.refresh_token,
-            "token_uri": credentials.token_uri,
-            "client_id": credentials.client_id,
-            "client_secret": credentials.client_secret,
-            "scopes": credentials.scopes
-        }
-        
-        try:
-            cache_file = GeminiOAuthHelper.get_cache_file()
-            cache_file.parent.mkdir(exist_ok=True)
-            with open(cache_file, 'w') as f:
-                json.dump(cred_data, f, indent=2)
-        except Exception:
-            pass
-
-
-@experimental  
 class GeminiOAuthCredentialManager:
-    """Credential manager for Gemini CLI OAuth using ADK infrastructure."""
-    
-    def __init__(
-        self,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        scopes: Optional[list[str]] = None,
-    ):
-        self._auth_config = GeminiOAuthHelper.create_auth_config(
-            client_id, client_secret, scopes
-        )
-        self._credential_manager = CredentialManager(self._auth_config)
-        self._cached_credentials: Optional[Credentials] = None
-    
-    async def get_credentials(self) -> Optional[Credentials]:
-        """Get valid OAuth2 credentials, using ADK's credential management."""
-        # Check if we have valid cached credentials
-        if self._cached_credentials and self._cached_credentials.valid:
-            return self._cached_credentials
-        
-        # Try to load from Gemini CLI cache first
-        self._cached_credentials = GeminiOAuthHelper.load_cached_credentials()
-        if self._cached_credentials and self._cached_credentials.valid:
-            return self._cached_credentials
-            
-        # Try to refresh if we have refresh token
-        if self._cached_credentials and self._cached_credentials.refresh_token:
-            try:
-                from google.auth.transport.requests import Request
-                self._cached_credentials.refresh(Request())
-                if self._cached_credentials.valid:
-                    GeminiOAuthHelper.save_credentials(self._cached_credentials)
-                    return self._cached_credentials
-            except Exception:
-                # Refresh failed, need to re-authenticate
-                pass
-        
-        # Need to authenticate using device code flow
-        print("🔐 OAuth authentication required for Gemini CLI")
-        self._cached_credentials = await GeminiOAuthHelper.authenticate_with_device_code(
-            self._auth_config.raw_auth_credential.oauth2.client_id,
-            self._auth_config.raw_auth_credential.oauth2.client_secret,
-            self._auth_config.auth_scheme.scopes,
-        )
-        
-        if self._cached_credentials:
-            GeminiOAuthHelper.save_credentials(self._cached_credentials)
-            return self._cached_credentials
-            
+  """Minimal credential manager that relies on the Gemini CLI cache.
+
+  Behavior:
+  - Load from ~/.gemini/oauth_creds.json
+  - If token is valid, return Credentials
+  - If token needs refresh and a refresh_token is present, refresh and write
+    back to ~/.gemini/oauth_creds.json using the same JSON format
+  - Never trigger interactive auth; return None if credentials are missing
+    or cannot be refreshed.
+  """
+
+  def __init__(self) -> None:
+    self._cached: Optional[Credentials] = None
+
+  async def get_credentials(self) -> Optional[Credentials]:
+    # If we already have valid creds cached, use them.
+    if self._cached and self._cached.valid:
+      return self._cached
+
+    cli_data = _read_cli_oauth_json()
+    if not cli_data:
+      return None
+
+    creds = _to_credentials(cli_data)
+    # If current token is valid, cache and return.
+    if creds.valid:
+      self._cached = creds
+      return creds
+
+    # Attempt refresh if we have a refresh token.
+    if creds.refresh_token:
+      try:
+        creds.refresh(Request())
+        if creds.valid:
+          # Persist back in CLI format.
+          merged = _merge_cli_json_with_credentials(cli_data, creds)
+          _write_cli_oauth_json(merged)
+          self._cached = creds
+          return creds
+      except Exception:
+        # If refresh failed, keep returning None so caller can handle it.
         return None
-    
-    async def get_user_info(self) -> Optional[Dict[str, Any]]:
-        """Get user information from OAuth2 userinfo endpoint."""
-        credentials = await self.get_credentials()
-        if not credentials or not credentials.valid:
-            return None
-            
-        try:
-            proxy = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    "https://www.googleapis.com/oauth2/v2/userinfo",
-                    headers={"Authorization": f"Bearer {credentials.token}"}
-                )
-                response.raise_for_status()
-                return response.json()
-                
-        except Exception:
-            return None
-    
-    async def revoke_credentials(self) -> bool:
-        """Revoke the current credentials."""
-        credentials = await self.get_credentials()
-        if not credentials:
-            return False
-            
-        try:
-            proxy = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://oauth2.googleapis.com/revoke",
-                    data={"token": credentials.token}
-                )
-                response.raise_for_status()
-                
-            # Clear cache
-            cache_file = GeminiOAuthHelper.get_cache_file()
-            if cache_file.exists():
-                cache_file.unlink()
-                
-            self._cached_credentials = None
-            return True
-            
-        except Exception:
-            return False
+
+    return None
+
+  async def revoke_credentials(self) -> bool:
+    """Removes the local CLI credential file and clears cache.
+
+    We do not perform remote token revocation here; the Gemini CLI can handle
+    full sign-out if needed. This merely deletes ~/.gemini/oauth_creds.json.
+    """
+    try:
+      p = _cli_oauth_path()
+      if p.exists():
+        p.unlink()
+      self._cached = None
+      return True
+    except Exception:
+      return False
