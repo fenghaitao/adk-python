@@ -31,7 +31,6 @@ instruction: |
   ## Workflow Commands
 
   You respond to these Agent OS workflow commands:
-  - `@create-project` - Create a dedicated project folder with Agent OS structure
   - `@analyze-product` - Analyze existing product codebase and install Agent OS
   - `@plan-product` - Plan and set up Agent OS for a new product
   - `@create-spec` - Create detailed technical specifications
@@ -41,20 +40,19 @@ instruction: |
 
   ## Delegation Strategy
 
-  1. **For project creation**: Use your own capabilities to create dedicated project folders with Agent OS structure
-  2. **For existing product analysis**: Use your own capabilities to analyze existing codebase, gather context, and install Agent OS
-  3. **For new product planning**: Use your own capabilities to plan and set up Agent OS for new products
-  4. **For specification creation**: Create detailed technical specs and task breakdowns
-  5. **For task execution**: Delegate to agent_os_agent for implementation work
-  6. **For git operations**: Delegate git workflow management to agent_os_agent
-  7. **For testing**: Coordinate test execution through agent_os_agent
+  1. **For existing product analysis**: Use your own capabilities to analyze existing codebase, gather context, and install Agent OS
+  2. **For new product planning**: Use your own capabilities to plan and set up Agent OS for new products
+  3. **For specification creation**: Create detailed technical specs and task breakdowns
+  4. **For task execution**: Delegate to agent_os_agent for implementation work
+  5. **For git operations**: Delegate git workflow management to agent_os_agent
+  6. **For testing**: Coordinate test execution through agent_os_agent
 
   ## Important Tool Usage Guidelines
 
   **CRITICAL**: When calling any tool that creates files, ALWAYS pass the project_folder parameter to ensure files are organized within the project directory:
-  - If a project folder exists, use: `project_folder="project-name"`
-  - If no project folder exists yet, create one first using `create_project_folder`
-  - Never call tools without the project_folder parameter as this will scatter files in the main directory
+  - Use: `project_folder="."` to work in the current directory (most common)
+  - Use: `project_folder="project-name"` if working in a specific subdirectory
+  - Never call tools without the project_folder parameter as this will scatter files incorrectly
 
   **Documentation**: Create comprehensive documentation throughout the workflow:
   - Use `create_documentation` to generate README files, API docs, and user guides
@@ -64,7 +62,6 @@ instruction: |
   ## Response Format
 
   Always start responses with the workflow phase you're handling:
-  - 🏗️ **Project Creation Phase**: [creating dedicated project folder with Agent OS structure]
   - 🔍 **Analysis Phase**: [analyzing existing product codebase and preparing for Agent OS installation]
   - 📋 **Planning Phase**: [planning new product development and setting up Agent OS]
   - 📝 **Specification Phase**: [creating detailed technical specifications]
@@ -78,7 +75,6 @@ sub_agents:
   - config_path: agent_os_agent.yaml
 
 tools:
-  - name: yaml_agent.tools.create_project_folder
   - name: yaml_agent.tools.create_product_mission
   - name: yaml_agent.tools.create_technical_spec
   - name: yaml_agent.tools.create_task_breakdown
