@@ -1163,3 +1163,347 @@ def create_documentation(
     file_path.write_text(doc_content)
     
     return f"📁 **Creating**: {doc_type} documentation at {file_path}"
+
+
+# ---- Simics MCP tools (inlined from simics_mcp_tools.py) ----
+# These functions provide Simics-specific helpers previously exposed via MCP.
+
+from typing import Any, Dict
+from dotenv import load_dotenv
+import requests
+
+FILE_BASE_DIR = Path(__file__).resolve().parent
+load_dotenv()
+
+SIMICS_KW_SEARCH_DOCS_PATH = FILE_BASE_DIR / "simics_doc_search_index.json"
+DOCUMENT_DATA = None
+
+DML_TPL_PATH = FILE_BASE_DIR / "simics-dml-tpl.dml"
+DML_TEMPLATE = None
+
+# Load optional data files if present
+try:
+    with open(SIMICS_KW_SEARCH_DOCS_PATH, 'r', encoding='utf-8') as file:
+        DOCUMENT_DATA = json.load(file)
+except FileNotFoundError:
+    DOCUMENT_DATA = None
+
+try:
+    with open(DML_TPL_PATH, 'r', encoding='utf-8') as file:
+        DML_TEMPLATE = file.read()
+except Exception:
+    DML_TEMPLATE = None
+
+
+# Simics guide retrieval helpers
+def __query_guide(query_list: list, wf: str = "guide") -> list:
+    api_key_map = {
+        "guide": os.getenv('API_KEY_GUIDE_WF'),
+        "utility_doc": os.getenv('API_KEY_UTILITY_WF')
+    }
+    if wf not in api_key_map:
+        raise ValueError(f"Workflow '{wf}' not supported")
+    api_key = api_key_map[wf]
+    if not api_key:
+        raise ValueError(f"API key for workflow '{wf}' not found in environment (expected env var).")
+    base_url = os.getenv('BASE_URL')
+    if not base_url:
+        raise ValueError("BASE_URL not found in environment variables")
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    all_results = []
+    seen_segment_ids = set()
+
+    for query in query_list:
+        try:
+            payload = {
+                "inputs": {"query": query},
+                "response_mode": "blocking",
+                "user": "simics-guide-agent"
+            }
+
+            response = requests.post(
+                f"{base_url}/workflows/run",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            response.raise_for_status()
+            result_data = response.json()
+
+            if 'data' in result_data and 'outputs' in result_data['data']:
+                text_results = result_data['data']['outputs'].get('text', [])
+
+                for item in text_results:
+                    if isinstance(item, dict) and 'metadata' in item:
+                        segment_id = item['metadata'].get('segment_id')
+                        if segment_id and segment_id not in seen_segment_ids:
+                            seen_segment_ids.add(segment_id)
+                            item['source_query'] = query
+                            all_results.append(item)
+
+            # best-effort logging
+        except requests.exceptions.RequestException:
+            continue
+        except Exception:
+            continue
+
+    all_results = [x.get("content") for x in all_results if isinstance(x, dict) and "content" in x]
+    return all_results
+
+
+def __format_guide_results(results: list, max_results: int = 10) -> str:
+    if not results:
+        return "No results found."
+    formatted = f"Found {len(results)} unique results:\n\n"
+    for i, result in enumerate(results[:max_results]):
+        formatted += f"=== Result {i+1} ===\n"
+        content_preview = result
+        formatted += f"Content: {content_preview}\n\n"
+    return formatted
+
+
+def _q_guide(queries: str, max_results: int = 5, wf: str = "guide") -> str:
+    try:
+        if ',' in queries:
+            query_list = [q.strip() for q in queries.split(',') if q.strip()]
+        else:
+            query_list = [queries.strip()]
+        results = __query_guide(query_list, wf)
+        return __format_guide_results(results, max_results)
+    except Exception as e:
+        return f"Error querying Simics guide: {str(e)}"
+
+
+# Documentation search helpers
+def __search_documents(documents_data: Dict[str, Any], keyword: str, case_sensitive: bool = False) -> List[Dict[str, str]]:
+    results = []
+    search_keyword = keyword if case_sensitive else keyword.lower()
+    for document in documents_data.get('documents', []):
+        document_title = document.get('title', '')
+        for page in document.get('pages', []):
+            page_title = page.get('title', '')
+            for section in page.get('sections', []):
+                section_title = section.get('title', '')
+                section_url = section.get('url', '')
+                section_text = section.get('text', '')
+                search_text = section_text if case_sensitive else section_text.lower()
+                if search_keyword in search_text:
+                    results.append({
+                        'document_title': document_title,
+                        'page_title': page_title,
+                        'section_title': section_title,
+                        'section_url': section_url,
+                        'text': section_text
+                    })
+    return results
+
+
+def __search_multiple_keywords(documents_data: Dict[str, Any], keywords: List[str], case_sensitive: bool = False) -> List[Dict[str, str]]:
+    all_results = []
+    seen_urls = set()
+    for keyword in keywords:
+        results = __search_documents(documents_data, keyword, case_sensitive)
+        for result in results:
+            section_url = result.get('section_url', '')
+            if section_url and section_url not in seen_urls:
+                seen_urls.add(section_url)
+                result['source_keyword'] = keyword
+                all_results.append(result)
+    return all_results
+
+
+def __format_doc_search_results(results: List[Dict[str, str]], max_results: int = 10, offset: int = 0) -> str:
+    if not results:
+        return "No results found."
+    if offset >= len(results):
+        return "No more results! Your offset exceeds the length of all results."
+    formatted = f"Showing Result {offset} to {offset + max_results - 1} ({len(results)} in total) unique document sections:\n\n"
+    for i, result in enumerate(results[offset:offset + max_results]):
+        formatted += f"=== Result {i+1} ===\n"
+        formatted += f"Document: {result.get('document_title', 'N/A')}\n"
+        formatted += f"Page: {result.get('page_title', 'N/A')}\n"
+        formatted += f"Section: {result.get('section_title', 'N/A')}\n"
+        if 'source_keyword' in result:
+            formatted += f"Matched Keyword: {result['source_keyword']}\n"
+        text = result.get('text', '')
+        formatted += f"Text: {text}\n\n"
+    return formatted
+
+
+def query_simics_guide(queries: str, max_results: int = 5) -> str:
+    """
+    Semantically query the Simics documentation and concept guides. Use when you want to get know of a unfamiliar concept by ambiguous query or natural language. Can be used as a bootstrap.
+    Documentation contained:
+    - **Full DML 1.4 language specification**
+    - **Model Builder User's Guide**, which focuses on modeling the behavior of a system. It contains:
+        - *Introduction and Preparation*: Provides an overview of the way you model your hardware in Simics and how to map hardware concepts to Simics concepts.
+        - *Basic Modeling Concepts*: The concepts of system modeling and how they map to modeling in Simics.
+        - *Device Modeling*: Describes the device modeling concepts and introduces DML, the tool used for writing device models. Also includes chapters on writing new commands for the Simics CLI and how to define new interfaces between device models.
+        - *Modeling Common Hardware Components*: Shows you how to model some common kinds of devices in Simics.
+        - *Creating Virtual Systems*: Assembling the parts of a virtual system into a complete system. It also shows you how to deal with memory and address spaces in Simics. This is one of the most abstract parts of modeling a system in Simics and tries to map how software sees the hardware.
+        - *Simics API*: Explain Simics API's major concepts, how it is structured, how it evolves, and some rules and conventions for how to use it. It also explains how the API interacts with Simics's multithreading support, and how to make your modules safe to use in multithreaded simulations.
+    
+    Args:
+        queries: Comma-separated list of queries or single query
+        max_results: Maximum number of results to return
+        
+    Returns:
+        Formatted results from the Simics guide
+    """
+    try:
+        res = _q_guide(queries, max_results)
+        return res
+    except Exception as e:
+        return f"Error querying Simics guide: {str(e)}"
+
+
+def get_dml_example() -> str:
+    """
+    Get the DML file example. This is the same as the DML template provided to you in the first message.
+    Use this tool to recall the correct syntax of DML file.
+        
+    Returns:
+        The content of the DML example.
+    """
+    return DML_TEMPLATE
+
+
+def query_lib_doc(queries: str, max_results: int = 5) -> str:
+    """
+    Semantically query the Device Modeling Language documentation of the
+    names, parameters and description of:
+    - built-in templates, functions, methods, object attributes, object methods.
+    - standard templates in `utility.dml`.
+    - more about Simics library
+
+    You can find usable templates, descriptions and methods of attributes, banks, connect,
+    interface, port, subdevice, implement, registers, fields and events.
+
+    Also suitable for keyword search as the doc contains many keywords.
+    
+    Args:
+        queries: Comma-separated list of queries or single query
+        max_results: Maximum number of results to return
+        
+    Returns:
+        Formatted results from the Simics guide
+    """
+    try:
+        res = _q_guide(queries, max_results, "utility_doc")
+        return res
+    except Exception as e:
+        return f"Error querying Utility doc: {str(e)}"
+
+
+def search_simics_docs(keywords: str, max_results: int = 10, offset: int = 0) -> str:
+    """
+    Search the full Simics documentation, API documentation, guides, code snippets and manuals by keyword match.
+    You can search for a keyword here to get the descriptive content of it.
+    
+    Args:
+        keywords: Comma-separated list of keywords or single keyword
+        max_results: Maximum number of results to return
+        offset: The offset of the results. Useful when you want to view more results of one set of keywords. This tool returns results[offset:offset + max_results]
+        
+    Returns:
+        Formatted results from the Simics documentation search
+    """
+    try:
+        # Parse keywords - support both single keyword and comma-separated list
+        if DOCUMENT_DATA is None:
+            return "Error: Documentation index not loaded."
+
+        if ',' in keywords:
+            keyword_list = [k.strip() for k in keywords.split(',') if k.strip()]
+        else:
+            keyword_list = [keywords.strip()]
+
+        results = __search_multiple_keywords(DOCUMENT_DATA, keyword_list, False)
+        return __format_doc_search_results(results, max_results, offset)
+    except Exception as e:
+        return f"Error reading documentation file: {str(e)}"
+
+
+# Auto-build helpers
+def __auto_build_srv_req(payload: dict, path: str = "/upload_code") -> dict:
+    auto_build_srv = os.getenv("AUTO_BUILD_HOST_PORT")
+    if not auto_build_srv or len(auto_build_srv) == 0:
+        raise ConnectionError("Auto build server is not available now.")
+    try:
+        response = requests.post(
+            f"{auto_build_srv}{path}",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=300
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise TimeoutError("Build request timed out after 5 minutes.")
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Could not connect to build server at {auto_build_srv}.")
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Request failed - {str(e)}")
+    except ValueError as e:
+        raise ValueError(f"Invalid JSON response from server - {str(e)}")
+
+
+def __auto_build(device_name: str, dml_content: str) -> str:
+    try:
+        job_id = str(int(datetime.now().timestamp() * 1000))
+        payload = {
+            "device_name": device_name,
+            "upload_code": dml_content,
+            "job_id": job_id
+        }
+        try:
+            response_data = __auto_build_srv_req(payload, "/upload_code")
+            compile_status = response_data.get("compile_status")
+            if compile_status == 1:
+                build_log = response_data.get("log", "No log available")
+                return f"Build successful for device '{device_name}' (Job ID: {job_id})\n\nBuild Log:\n{build_log}"
+            else:
+                error_log = response_data.get("log", "No error log available")
+                return f"Build failed for device '{device_name}' (Job ID: {job_id})\n\nError Log:\n{error_log}"
+        except TimeoutError:
+            return f"Error: Build request timed out after 5 minutes for device '{device_name}'"
+        except ConnectionError as ce:
+            return f"Error: {str(ce)}"
+        except Exception as e:
+            return f"Error: {str(e)}"
+    except Exception as e:
+        return f"Auto Build service is not available now. Error in auto_build function: {str(e)}"
+
+
+def _auto_build(device_name: str, dml_path: str) -> str:
+    try:
+        with open(dml_path, 'r', encoding='utf-8') as file:
+            dml_content = file.read()
+        if len(dml_content) == 0:
+            raise FileNotFoundError
+    except FileNotFoundError:
+        return f"Error: DML file not found or is empty at path: {dml_path}."
+    except Exception as e:
+        return f"Error reading DML file: {str(e)}"
+    return __auto_build(device_name, dml_content)
+
+
+def auto_build(device_name: str, dml_path: str, tool_context: ToolContext = None) -> str:
+    # tool_context is accepted for API compatibility; mark used to avoid linter warnings
+    _ = tool_context
+    return _auto_build(device_name, dml_path)
+
+
+def auto_build_by_content(device_name: str, dml_content: str, tool_context: ToolContext = None) -> str:
+    # tool_context is accepted for API compatibility; mark used to avoid linter warnings
+    _ = tool_context
+    return __auto_build(device_name, dml_content)
+
+
+# End of inlined simics tools

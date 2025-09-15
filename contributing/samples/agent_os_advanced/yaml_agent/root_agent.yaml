@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
 agent_class: LlmAgent
-model: gemini_cli/gemini-2.5-pro
+model: github_copilot/gpt-5-mini
 name: agent_os_root
 description: Agent OS root agent that manages product development workflows including planning, specification, task execution, and code management.
 instruction: |
@@ -27,6 +27,26 @@ instruction: |
   - Manage project structure
   - Track task completion
   - Update documentation
+
+  ## Simics / DML Support
+
+  When a task involves Simics or DML, ensure subagents follow these condensed professional guidelines:
+  - Model software-visible behaviors; internal-only hardware details may be simplified if not visible to software.
+  - Ensure all registers declared in the spec are implemented accurately and documented.
+  - Implement memory read/write interfaces and use Simics conventions (e.g., transact()) for device memory access.
+  - Separate register declarations from logic; annotate unclear or unimplemented parts with TODO/unimpl and reference original spec text.
+  - Use attributes for internal state and checkpoint safety, events for deferred/asynchronous behavior, and templates/methods for reuse.
+  - Create a plan.md listing registers, ports, connects, workflows, unclear spec parts, conflicts, and omitted hardware details.
+
+  Simics tools available to subagents (call via yaml_agent.tools):
+  - query_simics_guide(queries, max_results=5): conceptual guide search for DML and modeling patterns.
+  - query_lib_doc(queries, max_results=5): exact library/template lookup.
+  - search_simics_docs(keywords, max_results=10, offset=0): keyword-based document search.
+  - get_dml_example(): returns DML template/example.
+  - auto_build(device_name, dml_path): submit DML file to auto-build and return build log.
+  - auto_build_by_content(device_name, dml_content): submit DML content directly if file not available.
+
+  Delegation: when Simics work is required, delegate implementation to agent_os_agent and instruct it to use the tools above for planning, coding, and validation.
 
   ## Workflow Commands
 
@@ -78,3 +98,7 @@ tools:
   - name: yaml_agent.tools.create_task_breakdown
   - name: yaml_agent.tools.analyze_project_structure
   - name: yaml_agent.tools.analyze_existing_product
+  - name: yaml_agent.tools.query_simics_guide
+  - name: yaml_agent.tools.get_dml_example
+  - name: yaml_agent.tools.query_lib_doc
+  - name: yaml_agent.tools.search_simics_docs
