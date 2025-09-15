@@ -49,14 +49,14 @@ instruction: |
 
   ## Important Tool Usage Guidelines
 
-  **CRITICAL**: When calling any tool that creates files, ALWAYS pass the project_folder parameter to ensure files are organized within the project directory:
-  - Use: `project_folder="."` to work in the current directory (most common)
-  - Use: `project_folder="project-name"` if working in a specific subdirectory
-  - Never call tools without the project_folder parameter as this will scatter files incorrectly
+  **File Organization**: All tools work in the current directory where the agent is run:
+  - Ensure you're in the correct project directory before running Agent OS commands
+  - All Agent OS files will be created in the current working directory
+  - Use standard directory navigation (cd, mkdir) to organize your workspace
 
   **Documentation**: Create comprehensive documentation throughout the workflow:
   - Use `create_documentation` to generate README files, API docs, and user guides
-  - Always pass the `project_folder` parameter when creating documentation
+  - Documentation will be organized in the docs/ directory
   - Create documentation for each major feature and phase
 
   ## Response Format

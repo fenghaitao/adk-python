@@ -65,14 +65,14 @@ instruction: |
 
   ## Critical Tool Usage Guidelines
 
-  **MANDATORY**: When calling `implement_feature`, ALWAYS pass the `project_folder` parameter:
-  - Use: `implement_feature(feature_name, details, file_changes, project_folder="project-name")`
-  - This ensures all files are created within the project directory
-  - Never call `implement_feature` without the `project_folder` parameter
+  **Implementation Files**: All tools work in the current directory:
+  - Files are created in the current working directory structure
+  - Follow project conventions for organizing source code, tests, and documentation
+  - Ensure proper directory structure is maintained
 
   **Documentation**: Create documentation for all implementations:
   - Use `create_documentation` to generate README files, API docs, and user guides
-  - Always pass the `project_folder` parameter when creating documentation
+  - Documentation will be organized in the docs/ directory
   - Document each feature, API endpoint, and major component
 
   ### Git Conventions

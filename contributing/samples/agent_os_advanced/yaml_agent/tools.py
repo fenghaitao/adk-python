@@ -28,7 +28,6 @@ def create_product_mission(
     description: str,
     target_users: str,
     key_features: List[str],
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Create a product mission document following Agent OS structure.
@@ -38,16 +37,12 @@ def create_product_mission(
         description: Brief product description
         target_users: Description of target user base
         key_features: List of key product features
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about mission creation
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     mission_content = f"""# Product Mission
 
@@ -180,7 +175,6 @@ def create_technical_spec(
     feature_name: str,
     requirements: str,
     acceptance_criteria: List[str],
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Create a detailed technical specification.
@@ -189,16 +183,12 @@ def create_technical_spec(
         feature_name: Name of the feature
         requirements: Detailed requirements description
         acceptance_criteria: List of acceptance criteria
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about spec creation
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     date_str = datetime.now().strftime("%Y-%m-%d")
     spec_name = f"{date_str}-{feature_name.lower().replace(' ', '-')}"
@@ -340,7 +330,6 @@ def create_technical_spec(
 def create_task_breakdown(
     spec_name: str,
     tasks: List[str],
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Create a task breakdown for a specification.
@@ -348,16 +337,12 @@ def create_task_breakdown(
     Args:
         spec_name: Name of the specification
         tasks: List of tasks to complete
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about task creation
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     date_str = datetime.now().strftime("%Y-%m-%d")
     spec_folder = f"{date_str}-{spec_name.lower().replace(' ', '-')}"
@@ -776,7 +761,6 @@ def implement_feature(
     feature_name: str,
     implementation_details: str,
     file_changes: Dict[str, str],
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
@@ -785,16 +769,12 @@ def implement_feature(
         feature_name: Name of the feature to implement
         implementation_details: Details about the implementation
         file_changes: Dictionary mapping file paths to new content
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about feature implementation
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     modified_files = []
     
@@ -923,7 +903,6 @@ def update_task_status(
     spec_name: str,
     task_index: int,
     completed: bool,
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Update the status of a specific task.
@@ -932,16 +911,12 @@ def update_task_status(
         spec_name: Name of the specification
         task_index: Index of the task to update (0-based)
         completed: Whether the task is completed
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about task update
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     # Find the spec directory
     agent_os_dir = base_dir / ".agent-os"
@@ -991,28 +966,20 @@ def create_documentation(
     doc_type: str,
     title: str,
     content: str,
-    project_folder: Optional[str] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Create additional documentation files (API docs, user guides, etc.).
-    
-    Note: This function creates documentation in the docs/ directory to avoid
-    conflicts with the main project README.md created by create_project_folder.
     
     Args:
         doc_type: Type of documentation (API, USER_GUIDE, etc.)
         title: Title of the documentation
         content: Content of the documentation
-        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about documentation creation
     """
-    # Determine the base directory
-    if project_folder:
-        base_dir = Path(project_folder)
-    else:
-        base_dir = Path(".")
+    # Work in the current directory
+    base_dir = Path(".")
     
     if doc_type.lower() == "readme":
         # For README, create in docs/ to avoid conflicts with project README
