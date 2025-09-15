@@ -6,6 +6,7 @@ This sample demonstrates a comprehensive ADK agent that uses the Gemini CLI Code
 
 - **Dice Rolling**: Roll dice with any number of sides using tools
 - **Prime Number Checking**: Check if numbers are prime using tools
+- **File Operations**: Read, write, and list files using MCP filesystem tools
 - **Tool State Management**: Maintains state of previous dice rolls
 - **Interactive Mode**: Command-line interface for testing
 - **Function Calling**: Demonstrates parallel and sequential tool usage
@@ -16,6 +17,7 @@ This sample demonstrates a comprehensive ADK agent that uses the Gemini CLI Code
 
 - `agent.py`: Main agent implementation with full tool functionality ✅
 - `main.py`: Interactive runner for the agent ✅
+- `filesystem_server.py`: MCP filesystem server for file operations ✅
 - `simple_agent.py`: Simplified version without tools (for comparison)
 - `test_validation.py`: Basic validation test suite
 - `test_tools_working.py`: Comprehensive tool functionality tests ✅
@@ -23,6 +25,12 @@ This sample demonstrates a comprehensive ADK agent that uses the Gemini CLI Code
 - `test_direct_streaming.py`: Direct streaming API tests ✅
 
 ## Usage
+
+### Start the Filesystem Server (Required for File Operations)
+```bash
+python filesystem_server.py
+```
+This starts the MCP filesystem server at http://localhost:3000/sse that enables file operations.
 
 ### Interactive Mode
 ```bash
@@ -44,6 +52,12 @@ python test_direct_streaming.py
 python test_validation.py
 ```
 
+### Test File Operations
+```bash
+python tmp_rovodev_test_file_ops.py
+```
+Note: Requires the filesystem server to be running first.
+
 ## Example Interactions
 
 ```
@@ -60,6 +74,17 @@ Agent: 7 is a prime number.
 
 You: what were my previous rolls?
 Agent: You previously rolled: 3, 15
+
+You: List the files in the current directory
+Agent: Here are the files in the current directory:
+- agent.py
+- main.py
+- filesystem_server.py
+- README.md
+- ...
+
+You: Read the contents of README.md
+Agent: [Shows the contents of the README.md file]
 ```
 
 ## Tool Functionality

@@ -17,7 +17,10 @@ import random
 from google.adk import Agent
 from google.adk.tools.tool_context import ToolContext
 from google.adk.models import GeminiCLICodeAssist
+from google.adk.tools.mcp_tool import MCPToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
 from google.genai import types
+import os
 
 
 def roll_die(sides: int, tool_context: ToolContext) -> int:
@@ -65,6 +68,24 @@ async def check_prime(nums: list[int]) -> str:
   )
 
 
+# Configure MCP file system tools
+# Using SSE connection to local filesystem server
+file_tools = MCPToolset(
+    connection_params=SseConnectionParams(
+        url='http://localhost:3000/sse',
+        headers={'Accept': 'text/event-stream'},
+        timeout=10.0
+    ),
+    tool_filter=[
+        'read_file',                # Read file contents
+        'list_directory',           # List files and folders
+        'write_file',              # Create/edit files
+        'get_cwd',                 # Get current working directory
+        'list_allowed_directories', # Show allowed directories
+    ]
+)
+
+
 root_agent = Agent(
     model=GeminiCLICodeAssist(model="gemini-2.5-flash"),
     name='hello_codeassist_agent',
@@ -73,25 +94,44 @@ root_agent = Agent(
         ' numbers using Gemini CLI CodeAssist.'
     ),
     instruction="""
-      You roll dice and answer questions about the outcome of the dice rolls.
-      You can roll dice of different sizes.
-      You can use multiple tools in parallel by calling functions in parallel(in one request and in one round).
-      It is ok to discuss previous dice roles, and comment on the dice rolls.
-      When you are asked to roll a die, you must call the roll_die tool with the number of sides. Be sure to pass in an integer. Do not pass in a string.
-      You should never roll a die on your own.
-      When checking prime numbers, call the check_prime tool with a list of integers. Be sure to pass in a list of integers. You should never pass in a string.
-      You should not check prime numbers before calling the tool.
-      When you are asked to roll a die and check prime numbers, you should always make the following two function calls:
-      1. You should first call the roll_die tool to get a roll. Wait for the function response before calling the check_prime tool.
-      2. After you get the function response from roll_die tool, you should call the check_prime tool with the roll_die result.
-        2.1 If user asks you to check primes based on previous rolls, make sure you include the previous rolls in the list.
-      3. When you respond, you must include the roll_die result from step 1.
-      You should always perform the previous 3 steps when asking for a roll and checking prime numbers.
-      You should not rely on the previous history on prime results.
+      You are a helpful assistant that can:
+      1. Roll dice and answer questions about the outcome of dice rolls
+      2. Check if numbers are prime
+      3. Read and work with files in the workspace
+      
+      DICE ROLLING:
+      - You can roll dice of different sizes
+      - When asked to roll a die, call the roll_die tool with the number of sides (integer)
+      - You should never roll a die on your own
+      
+      PRIME CHECKING:
+      - Call the check_prime tool with a list of integers
+      - You should not check prime numbers before calling the tool
+      
+      FILE OPERATIONS:
+      - You can read files when users ask about file contents
+      - You can list directory contents to help users understand project structure
+      - You can write files when users need to create or modify files
+      - You can get the current working directory
+      - You can check which directories are allowed for file operations
+      - Always be helpful with file-related requests
+      
+      IMPORTANT: File operations require the filesystem server to be running.
+      If file operations fail, remind the user to start the server with:
+      python filesystem_server.py
+      
+      PARALLEL TOOLS:
+      - You can use multiple tools in parallel by calling functions in parallel (in one request and in one round)
+      
+      When rolling dice and checking primes together:
+      1. First call roll_die tool and wait for response
+      2. Then call check_prime tool with the result
+      3. Include the roll result in your response
     """,
     tools=[
         roll_die,
         check_prime,
+        file_tools,  # Add file system capabilities
     ],
     generate_content_config=types.GenerateContentConfig(
         safety_settings=[
