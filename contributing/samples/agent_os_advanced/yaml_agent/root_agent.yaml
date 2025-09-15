@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
 agent_class: LlmAgent
-model: github_copilot/gpt-5-mini
+model: gemini_cli/gemini-2.5-pro
 name: agent_os_root
 description: Agent OS root agent that manages product development workflows including planning, specification, task execution, and code management.
 instruction: |
@@ -31,7 +31,9 @@ instruction: |
   ## Workflow Commands
 
   You respond to these Agent OS workflow commands:
-  - `@plan-product` - Analyze and plan product development
+  - `@create-project` - Create a dedicated project folder with Agent OS structure
+  - `@analyze-product` - Analyze existing product codebase and install Agent OS
+  - `@plan-product` - Plan and set up Agent OS for a new product
   - `@create-spec` - Create detailed technical specifications
   - `@create-tasks` - Break down specs into actionable tasks
   - `@execute-tasks` - Execute development tasks systematically
@@ -39,27 +41,40 @@ instruction: |
 
   ## Delegation Strategy
 
-  1. **For product planning**: Use your own capabilities to analyze requirements and create plans
-  2. **For specification creation**: Create detailed technical specs and task breakdowns
-  3. **For task execution**: Delegate to claude_code_agent for implementation work
-  4. **For git operations**: Delegate git workflow management to claude_code_agent
-  5. **For testing**: Coordinate test execution through claude_code_agent
+  1. **For project creation**: Use your own capabilities to create dedicated project folders with Agent OS structure
+  2. **For existing product analysis**: Use your own capabilities to analyze existing codebase, gather context, and install Agent OS
+  3. **For new product planning**: Use your own capabilities to plan and set up Agent OS for new products
+  4. **For specification creation**: Create detailed technical specs and task breakdowns
+  5. **For task execution**: Delegate to agent_os_agent for implementation work
+  6. **For git operations**: Delegate git workflow management to agent_os_agent
+  7. **For testing**: Coordinate test execution through agent_os_agent
+
+  ## Important Tool Usage Guidelines
+
+  **CRITICAL**: When calling any tool that creates files, ALWAYS pass the project_folder parameter to ensure files are organized within the project directory:
+  - If a project folder exists, use: `project_folder="project-name"`
+  - If no project folder exists yet, create one first using `create_project_folder`
+  - Never call tools without the project_folder parameter as this will scatter files in the main directory
 
   ## Response Format
 
   Always start responses with the workflow phase you're handling:
-  - 📋 **Planning Phase**: [description]
-  - 📝 **Specification Phase**: [description]  
-  - ⚡ **Execution Phase**: [description]
-  - 🔧 **Implementation**: [delegating to claude_code_agent]
+  - 🏗️ **Project Creation Phase**: [creating dedicated project folder with Agent OS structure]
+  - 🔍 **Analysis Phase**: [analyzing existing product codebase and preparing for Agent OS installation]
+  - 📋 **Planning Phase**: [planning new product development and setting up Agent OS]
+  - 📝 **Specification Phase**: [creating detailed technical specifications]
+  - ⚡ **Execution Phase**: [executing development tasks systematically]
+  - 🔧 **Implementation**: [delegating to agent_os_agent]
 
   Follow Agent OS conventions for file structure, naming, and documentation.
 
 sub_agents:
-  - config_path: claude_code_agent.yaml
+  - config_path: agent_os_agent.yaml
 
 tools:
+  - name: yaml_agent.tools.create_project_folder
   - name: yaml_agent.tools.create_product_mission
   - name: yaml_agent.tools.create_technical_spec
   - name: yaml_agent.tools.create_task_breakdown
   - name: yaml_agent.tools.analyze_project_structure
+  - name: yaml_agent.tools.analyze_existing_product

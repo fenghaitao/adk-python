@@ -265,6 +265,186 @@ def analyze_project_structure(
     return analysis
 
 
+def analyze_existing_product(
+    project_path: str,
+    product_context: str,
+    tool_context: ToolContext
+) -> str:
+    """Analyze an existing product codebase and prepare for Agent OS installation.
+    
+    This tool performs a comprehensive analysis of an existing codebase to understand:
+    - Current project structure and organization
+    - Technology stack and dependencies
+    - Implemented features and progress
+    - Code patterns and conventions
+    - Development workflow and practices
+    
+    Args:
+        project_path: Path to the project directory to analyze
+        product_context: Additional context about the product (vision, users, etc.)
+        
+    Returns:
+        Comprehensive analysis report for Agent OS installation
+    """
+    current_dir = Path(project_path)
+    
+    # Analyze directory structure
+    directories = []
+    files = []
+    config_files = []
+    source_files = []
+    
+    for item in current_dir.rglob("*"):
+        if item.is_dir() and not item.name.startswith('.'):
+            directories.append(str(item))
+        elif item.is_file() and not item.name.startswith('.'):
+            files.append(str(item))
+            
+            # Identify configuration files
+            if item.suffix in ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg']:
+                config_files.append(str(item))
+            # Identify source code files
+            elif item.suffix in ['.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.cpp', '.c']:
+                source_files.append(str(item))
+    
+    # Analyze package/dependency files
+    package_files = []
+    for file in files:
+        if any(name in file.lower() for name in ['package.json', 'requirements.txt', 'gemfile', 'cargo.toml', 'go.mod', 'pom.xml']):
+            package_files.append(file)
+    
+    # Check for Agent OS structure
+    agent_os_dir = Path(".agent-os")
+    has_agent_os = agent_os_dir.exists()
+    
+    # Analyze technology stack
+    tech_stack = {
+        'languages': set(),
+        'frameworks': set(),
+        'databases': set(),
+        'tools': set()
+    }
+    
+    for file in source_files:
+        if file.endswith('.py'):
+            tech_stack['languages'].add('Python')
+        elif file.endswith(('.js', '.jsx')):
+            tech_stack['languages'].add('JavaScript')
+        elif file.endswith(('.ts', '.tsx')):
+            tech_stack['languages'].add('TypeScript')
+        elif file.endswith('.java'):
+            tech_stack['languages'].add('Java')
+        elif file.endswith('.go'):
+            tech_stack['languages'].add('Go')
+        elif file.endswith('.rs'):
+            tech_stack['languages'].add('Rust')
+    
+    # Analyze configuration files for frameworks
+    for config_file in config_files:
+        try:
+            content = Path(config_file).read_text()
+            if 'package.json' in config_file:
+                if 'react' in content.lower():
+                    tech_stack['frameworks'].add('React')
+                if 'vue' in content.lower():
+                    tech_stack['frameworks'].add('Vue')
+                if 'angular' in content.lower():
+                    tech_stack['frameworks'].add('Angular')
+                if 'express' in content.lower():
+                    tech_stack['frameworks'].add('Express')
+            elif 'requirements.txt' in config_file:
+                if 'django' in content.lower():
+                    tech_stack['frameworks'].add('Django')
+                if 'flask' in content.lower():
+                    tech_stack['frameworks'].add('Flask')
+                if 'fastapi' in content.lower():
+                    tech_stack['frameworks'].add('FastAPI')
+        except:
+            pass
+    
+    analysis = f"""# Existing Product Analysis
+
+## Product Context
+{product_context}
+
+## Project Overview
+- **Total Directories**: {len(directories)}
+- **Total Files**: {len(files)}
+- **Source Files**: {len(source_files)}
+- **Configuration Files**: {len(config_files)}
+- **Agent OS Structure**: {'✅ Present' if has_agent_os else '❌ Missing'}
+
+## Technology Stack Analysis
+
+### Programming Languages
+{chr(10).join(f"- {lang}" for lang in sorted(tech_stack['languages']))}
+
+### Frameworks & Libraries
+{chr(10).join(f"- {fw}" for fw in sorted(tech_stack['frameworks'])) if tech_stack['frameworks'] else "- None detected"}
+
+### Package Management
+{chr(10).join(f"- {pkg}" for pkg in package_files) if package_files else "- No package files detected"}
+
+## Project Structure
+{chr(10).join(f"- {d}" for d in sorted(directories)[:15])}
+{'...' if len(directories) > 15 else ''}
+
+## Key Source Files
+{chr(10).join(f"- {f}" for f in sorted(source_files)[:10])}
+{'...' if len(source_files) > 10 else ''}
+
+## Agent OS Installation Status
+"""
+    
+    if has_agent_os:
+        # Analyze existing Agent OS structure
+        product_dir = agent_os_dir / "product"
+        specs_dir = agent_os_dir / "specs"
+        
+        analysis += f"""
+- **Product Directory**: {'✅' if product_dir.exists() else '❌'}
+- **Specs Directory**: {'✅' if specs_dir.exists() else '❌'}
+"""
+        
+        if specs_dir.exists():
+            specs = list(specs_dir.iterdir())
+            analysis += f"- **Specifications**: {len(specs)} found\n"
+            for spec in specs[:5]:
+                analysis += f"  - {spec.name}\n"
+    else:
+        analysis += """
+- Agent OS structure not initialized
+- Ready for Agent OS installation
+- Will create .agent-os/product/ structure
+- Will analyze existing features for roadmap
+"""
+
+    analysis += f"""
+
+## Recommended Next Steps
+
+1. **Install Agent OS**: Run @plan-product with gathered context
+2. **Create Mission**: Document product vision and target users
+3. **Build Roadmap**: Map existing features to development phases
+4. **Set Up Specs**: Create specifications for planned features
+
+## Analysis Summary
+
+This codebase appears to be a {', '.join(sorted(tech_stack['languages']))} project with {len(source_files)} source files. 
+{'The project already has Agent OS installed.' if has_agent_os else 'The project is ready for Agent OS installation.'}
+
+**Key Findings**:
+- Technology stack: {', '.join(sorted(tech_stack['languages']))}
+- {'Frameworks detected: ' + ', '.join(sorted(tech_stack['frameworks'])) if tech_stack['frameworks'] else 'No major frameworks detected'}
+- Project structure: {len(directories)} directories, {len(files)} total files
+- Development stage: {'Active development' if len(source_files) > 10 else 'Early stage'}
+
+This analysis provides the foundation for setting up Agent OS with documentation that reflects the actual implementation.
+"""
+
+    return analysis
+
+
 # Claude Code Agent Tools
 def create_file_structure(
     base_path: str,
@@ -736,11 +916,11 @@ def list_available_workflows(
     return result
 
 # Create the agent instances
-claude_code_agent = LlmAgent(
+agent_os_agent = LlmAgent(
     model="github_copilot/gpt-5-mini",
-    name="claude_code_agent",
-    description="Claude Code subagent specialized in code implementation, file management, git operations, and testing for Agent OS workflows.",
-    instruction="""You are the Claude Code agent, a specialized implementation agent that handles the technical execution aspects of Agent OS workflows.
+    name="agent_os_agent",
+    description="Agent OS subagent specialized in code implementation, file management, git operations, and testing for Agent OS workflows.",
+    instruction="""You are the Agent OS agent, a specialized implementation agent that handles the technical execution aspects of Agent OS workflows.
 
 ## Core Responsibilities
 
@@ -804,7 +984,8 @@ You coordinate the entire product development lifecycle through specialized suba
 ## Workflow Commands
 
 You respond to these Agent OS workflow commands:
-- `@plan-product` - Analyze and plan product development
+- `@analyze-product` - Analyze existing product codebase and install Agent OS
+- `@plan-product` - Plan and set up Agent OS for a new product
 - `@create-spec` - Create detailed technical specifications
 - `@create-tasks` - Break down specs into actionable tasks
 - `@execute-tasks` - Execute development tasks systematically
@@ -812,11 +993,19 @@ You respond to these Agent OS workflow commands:
 
 ## Delegation Strategy
 
-1. **For product planning**: Use your own capabilities to analyze requirements and create plans
-2. **For specification creation**: Create detailed technical specs and task breakdowns
-3. **For task execution**: Delegate to claude_code_agent for implementation work
-4. **For git operations**: Delegate git workflow management to claude_code_agent
-5. **For testing**: Coordinate test execution through claude_code_agent
+1. **For existing product analysis**: Use your own capabilities to analyze existing codebase, gather context, and install Agent OS
+2. **For new product planning**: Use your own capabilities to plan and set up Agent OS for new products
+3. **For specification creation**: Create detailed technical specs and task breakdowns
+4. **For task execution**: Delegate to agent_os_agent for implementation work
+5. **For git operations**: Delegate git workflow management to agent_os_agent
+6. **For testing**: Coordinate test execution through agent_os_agent
+
+## Important Tool Usage Guidelines
+
+**CRITICAL**: When calling any tool that creates files, ALWAYS pass the project_folder parameter to ensure files are organized within the project directory:
+- If a project folder exists, use: `project_folder="project-name"`
+- If no project folder exists yet, create one first using `create_project_folder`
+- Never call tools without the project_folder parameter as this will scatter files in the main directory
 
 Always start responses with the workflow phase you're handling and follow Agent OS conventions.""",
     tools=[
@@ -824,12 +1013,13 @@ Always start responses with the workflow phase you're handling and follow Agent 
         create_technical_spec,
         create_task_breakdown,
         analyze_project_structure,
+        analyze_existing_product,
         # Custom workflow tools
         create_api_workflow,
         create_frontend_workflow,
         list_available_workflows,
     ],
-    sub_agents=[claude_code_agent]
+    sub_agents=[agent_os_agent]
 )
 
 # Export the root agent as 'agent' for ADK CLI compatibility

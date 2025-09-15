@@ -1,6 +1,6 @@
 # Agent OS Integration with ADK
 
-This sample demonstrates the integration of Agent OS into the Agent Development Kit (ADK) as a root agent with Claude Code as a specialized subagent.
+This sample demonstrates the integration of Agent OS into the Agent Development Kit (ADK) as a root agent with Agent OS as a specialized subagent.
 
 ## Overview
 
@@ -19,7 +19,7 @@ Agent OS is a comprehensive product development workflow management system that 
 Agent OS Root Agent (ADK)
 ├── Product Planning & Specification
 ├── Task Management & Coordination
-└── Claude Code Subagent
+└── Agent OS Subagent
     ├── Code Implementation
     ├── File Management
     ├── Git Workflow Management
@@ -34,7 +34,7 @@ Agent OS Root Agent (ADK)
 - **Capabilities**: Product planning, specification creation, task breakdown
 - **Tools**: Product mission creation, technical specs, task management
 
-### Subagent: `claude_code_agent`
+### Subagent: `agent_os_agent`
 - **Role**: Technical implementation and code management
 - **Capabilities**: Code implementation, file operations, git management, testing
 - **Tools**: File creation, feature implementation, test execution, git operations
@@ -44,8 +44,8 @@ Agent OS Root Agent (ADK)
 The integration supports these Agent OS workflow commands:
 
 ### Planning Phase
-- `@plan-product` - Analyze product requirements and create development plans
-- `@analyze-product` - Deep analysis of product needs and market fit
+- `@analyze-product` - Analyze existing product codebase and install Agent OS
+- `@plan-product` - Plan and set up Agent OS for a new product
 
 ### Specification Phase
 - `@create-spec` - Create detailed technical specifications
@@ -81,25 +81,31 @@ The integration follows Agent OS conventions:
 
 ## Usage Examples
 
-### 1. Create a New Product Plan
+### 1. Analyze Existing Product
+
+```python
+response = root_agent.run("@analyze-product for existing codebase analysis")
+```
+
+### 2. Create a New Product Plan
 
 ```python
 response = root_agent.run("@plan-product for a task management application")
 ```
 
-### 2. Create Technical Specification
+### 3. Create Technical Specification
 
 ```python
 response = root_agent.run("@create-spec for user authentication system")
 ```
 
-### 3. Execute Development Tasks
+### 4. Execute Development Tasks
 
 ```python
 response = root_agent.run("@execute-tasks for the authentication spec")
 ```
 
-### 4. Implement Specific Feature
+### 5. Implement Specific Feature
 
 ```python
 response = root_agent.run("@execute-task: implement login form validation")
@@ -143,6 +149,7 @@ response = root_agent.run("@execute-task: implement login form validation")
 
 3. **Try Workflow Commands**:
    ```
+   Agent OS > @analyze-product for existing codebase
    Agent OS > @plan-product for a calculator app
    Agent OS > @create-spec for basic arithmetic operations
    Agent OS > @execute-tasks

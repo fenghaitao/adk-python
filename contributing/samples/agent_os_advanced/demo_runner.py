@@ -78,10 +78,12 @@ def demo_python_agent():
                 print(f"     {i+1}. {sub_agent.name}")
         
         print(f"\n📝 Agent OS Commands supported:")
-        print(f"   • @plan-product - Analyze and plan product development")
+        print(f"   • @analyze-product - Analyze existing product codebase and install Agent OS")
+        print(f"   • @plan-product - Plan and set up Agent OS for a new product")
         print(f"   • @create-spec - Create detailed technical specifications")
         print(f"   • @create-tasks - Break down specs into actionable tasks")
         print(f"   • @execute-tasks - Execute development tasks systematically")
+        print(f"   • @execute-task - Execute a specific task")
         
         # Test Runner integration with actual execution
         print(f"\n🤖 Testing Runner Integration with Live Execution:")
@@ -143,10 +145,12 @@ def demo_yaml_agent():
                 print(f"     {i+1}. {sub_agent.name}")
         
         print(f"\n📝 Agent OS Commands supported:")
-        print(f"   • @plan-product - Analyze and plan product development")
+        print(f"   • @analyze-product - Analyze existing product codebase and install Agent OS")
+        print(f"   • @plan-product - Plan and set up Agent OS for a new product")
         print(f"   • @create-spec - Create detailed technical specifications")
         print(f"   • @create-tasks - Break down specs into actionable tasks")
         print(f"   • @execute-tasks - Execute development tasks systematically")
+        print(f"   • @execute-task - Execute a specific task")
         
         # Test Runner integration with actual execution
         print(f"\n🤖 Testing Runner Integration with Live Execution:")
@@ -187,7 +191,7 @@ def demo_comparative_execution():
     print("Testing both agents with the same task to compare responses:")
     
     # Test both agents with the same prompt
-    test_prompt = "@analyze-project and suggest improvements for this Agent OS integration"
+    test_prompt = "@analyze-product and suggest improvements for this Agent OS integration"
     print(f"\n📋 Test Prompt: {test_prompt}")
     print("\n" + "=" * 60)
     
@@ -250,7 +254,8 @@ def main():
     if python_success and yaml_success:
         print("\n🎉 Both agents successfully executed Agent OS workflows!")
         print("\n💡 Available Agent OS Commands:")
-        print("   • @plan-product - Analyze and plan product development")
+        print("   • @analyze-product - Analyze existing product codebase and install Agent OS")
+        print("   • @plan-product - Plan and set up Agent OS for a new product")
         print("   • @create-spec - Create detailed technical specifications")
         print("   • @create-tasks - Break down specs into actionable tasks")
         print("   • @execute-tasks - Execute development tasks systematically")
