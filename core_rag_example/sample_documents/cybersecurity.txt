@@ -1,0 +1,32 @@
+# Cybersecurity Fundamentals
+
+Cybersecurity is the practice of protecting systems, networks, and programs 
+from digital attacks.
+
+## Common Threats:
+1. **Malware**: Viruses, worms, trojans, ransomware
+2. **Phishing**: Fraudulent emails to steal sensitive information
+3. **Social Engineering**: Manipulating people to divulge information
+4. **DDoS Attacks**: Overwhelming systems with traffic
+5. **Insider Threats**: Threats from within the organization
+
+## Security Principles:
+- **Confidentiality**: Ensuring information is accessible only to authorized users
+- **Integrity**: Maintaining accuracy and completeness of data
+- **Availability**: Ensuring systems are accessible when needed
+
+## Best Practices:
+- Use strong, unique passwords
+- Enable two-factor authentication
+- Keep software updated
+- Regular security training
+- Backup data regularly
+- Network segmentation
+- Incident response planning
+
+## Security Tools:
+- Firewalls
+- Antivirus software
+- Intrusion detection systems
+- Security information and event management (SIEM)
+- Vulnerability scanners

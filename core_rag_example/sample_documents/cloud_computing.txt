@@ -1,0 +1,28 @@
+# Cloud Computing Guide
+
+Cloud computing is the delivery of computing services over the internet ("the cloud") 
+to offer faster innovation, flexible resources, and economies of scale.
+
+## Service Models:
+1. **IaaS (Infrastructure as a Service)**: Virtual machines, storage, networks
+2. **PaaS (Platform as a Service)**: Development platforms and tools
+3. **SaaS (Software as a Service)**: Complete applications over the internet
+
+## Deployment Models:
+- **Public Cloud**: Services offered over the public internet
+- **Private Cloud**: Services maintained on a private network
+- **Hybrid Cloud**: Combination of public and private clouds
+
+## Benefits:
+- Cost reduction
+- Scalability
+- Flexibility
+- Automatic updates
+- Disaster recovery
+- Global accessibility
+
+## Major Providers:
+- Amazon Web Services (AWS)
+- Microsoft Azure
+- Google Cloud Platform (GCP)
+- IBM Cloud

@@ -2,10 +2,8 @@
 
 This example demonstrates how to use ADK Python's core RAG components including:
 
-1. **VertexAiRagRetrieval** - For document retrieval using Vertex AI RAG
-2. **VertexAiRagMemoryService** - For RAG-powered memory storage
-3. **VertexAiSearchTool** - For search functionality
-4. **FilesRetrieval** - For local file-based retrieval
+1. **FilesRetrieval** - For local file-based retrieval
+2. **GoogleSearchTool** - For web search functionality
 
 ## Setup
 
@@ -14,32 +12,23 @@ This example demonstrates how to use ADK Python's core RAG components including:
 pip install "google-adk[extensions]"
 ```
 
-2. Set up environment variables:
+2. Set up environment variables (optional for Google Search):
 ```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
-export RAG_CORPUS="projects/your-project/locations/us-central1/ragCorpora/your-corpus-id"
-export VERTEX_AI_SEARCH_DATASTORE="projects/your-project/locations/global/collections/default_collection/dataStores/your-datastore"
+# Google Search API credentials (optional - for enhanced web search)
 ```
 
-3. Run the examples:
+3. Run the example:
 ```bash
-# Basic RAG agent
-python basic_rag_agent.py
-
-# Memory-powered RAG agent
-python memory_rag_agent.py
-
-# Multi-tool RAG agent
-python multi_tool_rag_agent.py
-
-# Local files RAG agent
+# Local files RAG agent with web search
 python files_rag_agent.py
+
+# Or run all examples interactively
+python run_all_examples.py
 ```
 
 ## Examples Overview
 
-- `basic_rag_agent.py` - Simple RAG with Vertex AI retrieval
-- `memory_rag_agent.py` - RAG with persistent memory using Vertex AI RAG Memory Service
-- `multi_tool_rag_agent.py` - Combines multiple RAG tools (search + retrieval)
-- `files_rag_agent.py` - Local file-based RAG without cloud dependencies
-- `sample_documents/` - Sample documents for testing
+- `files_rag_agent.py` - Local file-based RAG combined with web search capabilities
+- `run_all_examples.py` - Interactive runner for the example
+- `sample_documents/` - Sample documents for testing (created automatically)

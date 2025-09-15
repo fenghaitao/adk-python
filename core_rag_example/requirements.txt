@@ -1,7 +1,10 @@
-# Core ADK with extensions for RAG functionality
+# Core ADK with extensions for RAG and search functionality
 google-adk[extensions]
 
-# Additional dependencies for the examples
+# Required for FilesRetrieval
+llama-index
+
+# Additional dependencies for the example
 python-dotenv
 
 # Optional: For enhanced file processing

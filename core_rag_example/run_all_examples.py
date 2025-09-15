@@ -63,37 +63,9 @@ def show_menu():
         {
             "key": "1",
             "script": "files_rag_agent.py",
-            "title": "Local Files RAG Agent",
-            "description": "RAG with local documents (no cloud setup required)",
-            "requirements": "✅ No cloud setup needed"
-        },
-        {
-            "key": "2", 
-            "script": "basic_rag_agent.py",
-            "title": "Basic Vertex AI RAG Agent",
-            "description": "Simple RAG using Vertex AI RAG corpus",
-            "requirements": "🔧 Requires: RAG_CORPUS environment variable"
-        },
-        {
-            "key": "3",
-            "script": "memory_rag_agent.py", 
-            "title": "Memory-Powered RAG Agent",
-            "description": "RAG with persistent memory using Vertex AI",
-            "requirements": "🔧 Requires: RAG_CORPUS environment variable"
-        },
-        {
-            "key": "4",
-            "script": "multi_tool_rag_agent.py",
-            "title": "Multi-Tool RAG Agent", 
-            "description": "RAG combining multiple tools and search methods",
-            "requirements": "🔧 Requires: Full cloud setup (RAG_CORPUS, VERTEX_AI_SEARCH_DATASTORE)"
-        },
-        {
-            "key": "s",
-            "script": "setup_environment.py",
-            "title": "Setup Environment",
-            "description": "Check setup and create configuration files",
-            "requirements": "🛠️  Setup and configuration helper"
+            "title": "Local Files RAG + Web Search Agent",
+            "description": "RAG with local documents combined with web search capabilities",
+            "requirements": "✅ No cloud setup needed for basic functionality"
         }
     ]
     
@@ -113,10 +85,8 @@ def show_environment_status():
     print("-" * 30)
     
     env_vars = [
-        ("GOOGLE_CLOUD_PROJECT", "Google Cloud Project ID"),
-        ("RAG_CORPUS", "Vertex AI RAG Corpus"),
-        ("VERTEX_AI_SEARCH_DATASTORE", "Vertex AI Search Datastore"),
-        ("GOOGLE_APPLICATION_CREDENTIALS", "Service Account Key"),
+        ("GOOGLE_CLOUD_PROJECT", "Google Cloud Project ID (optional for web search)"),
+        ("GOOGLE_APPLICATION_CREDENTIALS", "Service Account Key (optional)"),
     ]
     
     for var, description in env_vars:
@@ -126,7 +96,7 @@ def show_environment_status():
             display_value = value[:20] + "..." if len(value) > 20 else value
             print(f"✅ {var}: {display_value}")
         else:
-            print(f"❌ {var}: Not set")
+            print(f"ℹ️  {var}: Not set ({description})")
     
     print()
 
@@ -134,65 +104,16 @@ def show_environment_status():
 def main():
     """Main function."""
     print("🎉 Welcome to Core RAG Examples!")
-    print("This interactive menu helps you explore different RAG approaches in ADK.")
+    print("This script will automatically run the Local Files RAG + Web Search Agent example.")
     
-    if not check_setup():
-        print("\n❌ Setup check failed. Please fix the issues above.")
-        return
+    # Show environment status
+    show_environment_status()
     
-    while True:
-        show_environment_status()
-        show_menu()
-        
-        choice = input("👉 Select an option: ").strip().lower()
-        
-        if choice == 'q' or choice == 'quit':
-            print("👋 Goodbye!")
-            break
-            
-        elif choice == '1':
-            run_example("files_rag_agent.py", "Local Files RAG Agent")
-            
-        elif choice == '2':
-            if not os.environ.get("RAG_CORPUS"):
-                print("\n⚠️  Warning: RAG_CORPUS not set in environment")
-                print("   This example may not work without proper configuration.")
-                proceed = input("   Continue anyway? (y/N): ").strip().lower()
-                if proceed != 'y':
-                    continue
-            run_example("basic_rag_agent.py", "Basic Vertex AI RAG Agent")
-            
-        elif choice == '3':
-            if not os.environ.get("RAG_CORPUS"):
-                print("\n⚠️  Warning: RAG_CORPUS not set in environment")
-                print("   This example may not work without proper configuration.")
-                proceed = input("   Continue anyway? (y/N): ").strip().lower()
-                if proceed != 'y':
-                    continue
-            run_example("memory_rag_agent.py", "Memory-Powered RAG Agent")
-            
-        elif choice == '4':
-            missing = []
-            if not os.environ.get("RAG_CORPUS"):
-                missing.append("RAG_CORPUS")
-            if not os.environ.get("VERTEX_AI_SEARCH_DATASTORE"):
-                missing.append("VERTEX_AI_SEARCH_DATASTORE")
-                
-            if missing:
-                print(f"\n⚠️  Warning: Missing environment variables: {', '.join(missing)}")
-                print("   This example may not work without proper configuration.")
-                proceed = input("   Continue anyway? (y/N): ").strip().lower()
-                if proceed != 'y':
-                    continue
-            run_example("multi_tool_rag_agent.py", "Multi-Tool RAG Agent")
-            
-        elif choice == 's' or choice == 'setup':
-            run_example("setup_environment.py", "Environment Setup")
-            
-        else:
-            print("❌ Invalid choice. Please try again.")
-        
-        input("\n⏸️  Press Enter to continue...")
+    # Automatically run the files_rag_agent example
+    print("🚀 Automatically running the Local Files RAG + Web Search Agent example...")
+    run_example("files_rag_agent.py", "Local Files RAG + Web Search Agent")
+    
+    print("\n✨ Example execution completed!")
 
 
 if __name__ == "__main__":

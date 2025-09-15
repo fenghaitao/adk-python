@@ -10,164 +10,24 @@ import os
 from pathlib import Path
 from google.adk.agents.llm_agent import Agent
 from google.adk.tools.retrieval.files_retrieval import FilesRetrieval
+from google.adk.tools.google_search_tool import GoogleSearchTool
 
-
-def create_sample_documents():
-    """Creates sample documents for testing if they don't exist."""
-    docs_dir = Path("core_rag_example/sample_documents")
-    docs_dir.mkdir(exist_ok=True)
-    
-    sample_docs = {
-        "ai_basics.txt": """
-# Artificial Intelligence Basics
-
-Artificial Intelligence (AI) is a branch of computer science that aims to create 
-intelligent machines that can perform tasks that typically require human intelligence.
-
-## Types of AI:
-1. **Narrow AI**: AI designed for specific tasks (like image recognition)
-2. **General AI**: AI with human-level intelligence across all domains
-3. **Super AI**: AI that surpasses human intelligence
-
-## Machine Learning:
-Machine Learning is a subset of AI that enables computers to learn and improve 
-from experience without being explicitly programmed.
-
-### Types of Machine Learning:
-- **Supervised Learning**: Learning with labeled data
-- **Unsupervised Learning**: Finding patterns in unlabeled data
-- **Reinforcement Learning**: Learning through trial and error
-
-## Applications:
-- Natural Language Processing
-- Computer Vision
-- Robotics
-- Autonomous Vehicles
-- Healthcare Diagnostics
-""",
-        
-        "cloud_computing.txt": """
-# Cloud Computing Guide
-
-Cloud computing is the delivery of computing services over the internet ("the cloud") 
-to offer faster innovation, flexible resources, and economies of scale.
-
-## Service Models:
-1. **IaaS (Infrastructure as a Service)**: Virtual machines, storage, networks
-2. **PaaS (Platform as a Service)**: Development platforms and tools
-3. **SaaS (Software as a Service)**: Complete applications over the internet
-
-## Deployment Models:
-- **Public Cloud**: Services offered over the public internet
-- **Private Cloud**: Services maintained on a private network
-- **Hybrid Cloud**: Combination of public and private clouds
-
-## Benefits:
-- Cost reduction
-- Scalability
-- Flexibility
-- Automatic updates
-- Disaster recovery
-- Global accessibility
-
-## Major Providers:
-- Amazon Web Services (AWS)
-- Microsoft Azure
-- Google Cloud Platform (GCP)
-- IBM Cloud
-""",
-        
-        "cybersecurity.txt": """
-# Cybersecurity Fundamentals
-
-Cybersecurity is the practice of protecting systems, networks, and programs 
-from digital attacks.
-
-## Common Threats:
-1. **Malware**: Viruses, worms, trojans, ransomware
-2. **Phishing**: Fraudulent emails to steal sensitive information
-3. **Social Engineering**: Manipulating people to divulge information
-4. **DDoS Attacks**: Overwhelming systems with traffic
-5. **Insider Threats**: Threats from within the organization
-
-## Security Principles:
-- **Confidentiality**: Ensuring information is accessible only to authorized users
-- **Integrity**: Maintaining accuracy and completeness of data
-- **Availability**: Ensuring systems are accessible when needed
-
-## Best Practices:
-- Use strong, unique passwords
-- Enable two-factor authentication
-- Keep software updated
-- Regular security training
-- Backup data regularly
-- Network segmentation
-- Incident response planning
-
-## Security Tools:
-- Firewalls
-- Antivirus software
-- Intrusion detection systems
-- Security information and event management (SIEM)
-- Vulnerability scanners
-""",
-        
-        "python_programming.txt": """
-# Python Programming Guide
-
-Python is a high-level, interpreted programming language known for its 
-simplicity and readability.
-
-## Key Features:
-- Easy to learn and use
-- Extensive standard library
-- Cross-platform compatibility
-- Large community support
-- Versatile applications
-
-## Common Use Cases:
-1. **Web Development**: Django, Flask frameworks
-2. **Data Science**: NumPy, Pandas, Matplotlib
-3. **Machine Learning**: Scikit-learn, TensorFlow, PyTorch
-4. **Automation**: Scripting and task automation
-5. **Desktop Applications**: Tkinter, PyQt
-
-## Basic Syntax:
-```python
-# Variables
-name = "Python"
-version = 3.9
-
-# Functions
-def greet(name):
-    return f"Hello, {name}!"
-
-# Classes
-class Calculator:
-    def add(self, a, b):
-        return a + b
-```
-
-## Popular Libraries:
-- **NumPy**: Numerical computing
-- **Pandas**: Data manipulation
-- **Requests**: HTTP library
-- **Beautiful Soup**: Web scraping
-- **Matplotlib**: Data visualization
-"""
-    }
-    
-    for filename, content in sample_docs.items():
-        file_path = docs_dir / filename
-        if not file_path.exists():
-            file_path.write_text(content.strip())
-            print(f"📄 Created sample document: {filename}")
-    
-    return docs_dir
-
-
+# Configure LlamaIndex to use local embeddings
+from llama_index.core import Settings
+try:
+    # Try to use a simple local embedding model
+    from llama_index.embeddings.fastembed import FastEmbedEmbedding
+    Settings.embed_model = FastEmbedEmbedding(model_name="BAAI/bge-small-en-v1.5")
+except ImportError:
+    try:
+        # Fallback to OpenAI with a dummy key to avoid the error
+        import os
+        os.environ['OPENAI_API_KEY'] = 'dummy-key-for-local-use'
+        print("⚠️  Using dummy OpenAI key - this may cause issues with actual embedding requests")
+    except Exception:
+        print("⚠️  Could not configure embeddings - proceeding with defaults")
 def create_files_rag_agent(documents_path):
-    """Creates a RAG agent using local files retrieval."""
+    """Creates a RAG agent using local files retrieval and web search."""
     
     # Configure the Files Retrieval tool
     files_retrieval_tool = FilesRetrieval(
@@ -175,16 +35,22 @@ def create_files_rag_agent(documents_path):
         description=(
             "Use this tool to search through local documents and files "
             "to find relevant information. This searches through text files, "
-            "documentation, and other local resources."
+            "documentation, and other local resources. Use this FIRST for "
+            "questions that might be answered by the local knowledge base."
         ),
         # Path to the directory containing documents
-        file_paths=[str(documents_path)],
-        # Number of top results to return
-        top_k=3,
-        # Chunk size for document processing
-        chunk_size=1000,
-        # Overlap between chunks
-        chunk_overlap=200,
+        input_dir=str(documents_path),
+    )
+    
+    # Configure the Google Search tool
+    google_search_tool = GoogleSearchTool(
+        name="search_web",
+        description=(
+            "Use this tool to search the web for current information, news, "
+            "or topics not covered in the local documents. Use this as a "
+            "fallback when local documents don't have the information needed."
+        ),
+        num_results=5,
     )
     
     # Create the agent
@@ -192,24 +58,30 @@ def create_files_rag_agent(documents_path):
         model="gemini-2.0-flash-001",
         name="files_rag_agent",
         instruction=(
-            "You are a helpful AI assistant with access to local documents. "
-            "When users ask questions, use the search_local_documents tool to "
-            "find relevant information from the available files, then provide "
-            "comprehensive answers based on the retrieved content.\n\n"
+            "You are a helpful AI assistant with access to both local documents and web search. "
+            "You have two main tools for finding information:\n\n"
             
-            "Available document topics include:\n"
+            "1. **search_local_documents**: Local knowledge base with curated documents\n"
+            "2. **search_web**: Web search for current/general information\n\n"
+            
+            "Available local document topics include:\n"
             "- Artificial Intelligence and Machine Learning\n"
             "- Cloud Computing\n"
             "- Cybersecurity\n"
             "- Python Programming\n\n"
             
-            "Always:\n"
-            "- Search the documents first before answering\n"
-            "- Cite which documents provided the information\n"
-            "- Combine information from multiple sources when relevant\n"
-            "- Be clear about what information comes from the documents vs. general knowledge"
+            "**Search Strategy:**\n"
+            "- Start with local documents for topics covered in the knowledge base\n"
+            "- Use web search for current events, recent developments, or topics not in local docs\n"
+            "- Combine information from both sources when helpful\n"
+            "- Always cite your sources and indicate which tool provided the information\n\n"
+            
+            "**Response Format:**\n"
+            "- Provide comprehensive answers combining relevant information\n"
+            "- Clearly indicate information sources (local docs vs. web search)\n"
+            "- Mention if information is from local knowledge vs. external sources"
         ),
-        tools=[files_retrieval_tool],
+        tools=[files_retrieval_tool, google_search_tool],
     )
     
     return agent
@@ -217,18 +89,18 @@ def create_files_rag_agent(documents_path):
 
 def main():
     """Main function to run the files-based RAG agent."""
-    print("📁 Starting Local Files RAG Agent Example")
+    print("📁 Starting Local Files RAG + Web Search Agent Example")
     print("=" * 50)
     
     try:
         # Create sample documents
         print("📚 Setting up sample documents...")
-        docs_path = create_sample_documents()
+        docs_path = Path("sample_documents")
         print(f"✅ Documents ready in: {docs_path}")
         print()
         
         # Create the agent
-        agent = create_files_rag_agent(docs_path)
+        agent = create_files_rag_agent(str(docs_path))
         print("✅ Files RAG agent created successfully!")
         print()
         
@@ -240,12 +112,12 @@ def main():
         
         # Example queries
         example_queries = [
-            "What are the different types of machine learning?",
-            "What are the benefits of cloud computing?",
-            "What are common cybersecurity threats?",
-            "How is Python used in data science?",
-            "Compare supervised and unsupervised learning",
-            "What security tools are mentioned in the documents?",
+            "What are the different types of machine learning?",  # Local docs
+            "What are the benefits of cloud computing?",  # Local docs
+            "What are the latest developments in AI in 2024?",  # Web search
+            "How is Python used in data science?",  # Local docs
+            "What are current cybersecurity threats?",  # Combination
+            "Compare TensorFlow and PyTorch frameworks",  # Web search
         ]
         
         print("💡 Example queries you can try:")
@@ -253,42 +125,31 @@ def main():
             print(f"   {i}. {query}")
         print()
         
-        # Interactive mode
-        print("💬 Interactive mode - Ask questions about the documents!")
-        print("   Type 'docs' to see available documents, or 'quit' to exit.")
+        # Automatic demo mode - run some example queries
+        print("🚀 Demo mode - Running example queries automatically!")
+        print("   The agent will use local docs and web search as needed.")
         print("-" * 50)
         
-        while True:
-            user_input = input("\n📖 Your question: ").strip()
-            
-            if user_input.lower() in ['quit', 'exit', 'q']:
-                print("👋 Goodbye!")
-                break
-                
-            if user_input.lower() == 'docs':
-                print("\n📋 Available documents:")
-                for doc_file in docs_path.glob("*.txt"):
-                    print(f"   - {doc_file.name}")
-                continue
-                
-            if user_input.lower() == 'examples':
-                print("\n💡 Example queries:")
-                for i, query in enumerate(example_queries, 1):
-                    print(f"   {i}. {query}")
-                continue
-                
-            if not user_input:
-                continue
-                
+        # Run a few example queries automatically
+        demo_queries = [
+            "What are the different types of machine learning?",  # Local docs
+            "What are the benefits of cloud computing?",  # Local docs
+            "How is Python used in data science?",  # Local docs
+        ]
+        
+        for i, query in enumerate(demo_queries, 1):
             try:
-                print("\n🔍 Searching local documents...")
-                response = agent.run(user_input)
+                print(f"\n📖 Query {i}: {query}")
+                print("🔍 Processing...")
+                response = agent.run(query)
                 print(f"\n🤖 Agent Response:\n{response}")
                 print("-" * 50)
                 
             except Exception as e:
                 print(f"❌ Error processing query: {e}")
                 print("   Please check that the sample documents exist and try again.")
+        
+        print("\n✅ Demo completed! All example queries have been processed.")
                 
     except Exception as e:
         print(f"❌ Error setting up files RAG agent: {e}")

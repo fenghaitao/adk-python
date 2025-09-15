@@ -1,0 +1,25 @@
+# Artificial Intelligence Basics
+
+Artificial Intelligence (AI) is a branch of computer science that aims to create 
+intelligent machines that can perform tasks that typically require human intelligence.
+
+## Types of AI:
+1. **Narrow AI**: AI designed for specific tasks (like image recognition)
+2. **General AI**: AI with human-level intelligence across all domains
+3. **Super AI**: AI that surpasses human intelligence
+
+## Machine Learning:
+Machine Learning is a subset of AI that enables computers to learn and improve 
+from experience without being explicitly programmed.
+
+### Types of Machine Learning:
+- **Supervised Learning**: Learning with labeled data
+- **Unsupervised Learning**: Finding patterns in unlabeled data
+- **Reinforcement Learning**: Learning through trial and error
+
+## Applications:
+- Natural Language Processing
+- Computer Vision
+- Robotics
+- Autonomous Vehicles
+- Healthcare Diagnostics
