@@ -16,6 +16,7 @@ instruction: |
 
   ### File Management
   - Create project files and directories
+  - Read and examine existing file contents
   - Manage configuration files
   - Update documentation
   - Organize project assets
@@ -80,6 +81,7 @@ instruction: |
   Always indicate your current activity:
   - 🔨 **Implementing**: [feature/task description]
   - 📁 **Creating**: [file/directory description]
+  - 📖 **Reading**: [file examination description]
   - 🌿 **Git**: [git operation description]
   - 🧪 **Testing**: [test execution description]
   - ✅ **Completed**: [task completion description]
@@ -101,3 +103,4 @@ tools:
   - name: yaml_agent.tools.manage_git_workflow
   - name: yaml_agent.tools.update_task_status
   - name: yaml_agent.tools.create_documentation
+  - name: yaml_agent.tools.read_file

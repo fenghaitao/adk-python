@@ -1175,3 +1175,53 @@ def create_documentation(
     file_path.write_text(doc_content)
     
     return f"📁 **Creating**: {doc_type} documentation at {file_path}"
+
+
+def read_file(
+    file_path: str,
+    tool_context: ToolContext
+) -> str:
+    """Read the contents of a file and return its content.
+    
+    Args:
+        file_path: Path to the file to read
+        
+    Returns:
+        File content or error message
+    """
+    try:
+        path = Path(file_path)
+        
+        if not path.exists():
+            return f"❌ **Error**: File '{file_path}' does not exist"
+        
+        if not path.is_file():
+            return f"❌ **Error**: '{file_path}' is not a file"
+        
+        # Read file content
+        content = path.read_text(encoding='utf-8')
+        
+        # Get file info
+        file_size = path.stat().st_size
+        line_count = len(content.splitlines())
+        
+        return f"""📖 **Reading**: {file_path}
+
+**File Info**:
+- Size: {file_size} bytes
+- Lines: {line_count}
+- Type: {path.suffix or 'No extension'}
+
+**Content**:
+```
+{content}
+```
+
+✅ **Completed**: File read successfully"""
+        
+    except UnicodeDecodeError:
+        return f"❌ **Error**: Cannot read '{file_path}' - file appears to be binary"
+    except PermissionError:
+        return f"❌ **Error**: Permission denied reading '{file_path}'"
+    except Exception as e:
+        return f"❌ **Error**: Failed to read '{file_path}': {str(e)}"
