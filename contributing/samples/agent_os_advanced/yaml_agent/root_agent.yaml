@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
 agent_class: LlmAgent
-model: github_copilot/gpt-5
+model: github_copilot/gpt-5-mini
 name: agent_os_root
 description: Agent OS root agent that manages product development workflows including planning, specification, task execution, and code management.
 instruction: |
@@ -56,6 +56,11 @@ instruction: |
   - If no project folder exists yet, create one first using `create_project_folder`
   - Never call tools without the project_folder parameter as this will scatter files in the main directory
 
+  **Documentation**: Create comprehensive documentation throughout the workflow:
+  - Use `create_documentation` to generate README files, API docs, and user guides
+  - Always pass the `project_folder` parameter when creating documentation
+  - Create documentation for each major feature and phase
+
   ## Response Format
 
   Always start responses with the workflow phase you're handling:
@@ -65,6 +70,7 @@ instruction: |
   - 📝 **Specification Phase**: [creating detailed technical specifications]
   - ⚡ **Execution Phase**: [executing development tasks systematically]
   - 🔧 **Implementation**: [delegating to agent_os_agent]
+  - 📚 **Documentation Phase**: [creating comprehensive documentation and user guides]
 
   Follow Agent OS conventions for file structure, naming, and documentation.
 

@@ -1145,23 +1145,37 @@ def create_documentation(
     doc_type: str,
     title: str,
     content: str,
-    tool_context: ToolContext
+    project_folder: Optional[str] = None,
+    tool_context: ToolContext = None
 ) -> str:
-    """Create documentation files.
+    """Create additional documentation files (API docs, user guides, etc.).
+    
+    Note: This function creates documentation in the docs/ directory to avoid
+    conflicts with the main project README.md created by create_project_folder.
     
     Args:
-        doc_type: Type of documentation (README, API, etc.)
+        doc_type: Type of documentation (API, USER_GUIDE, etc.)
         title: Title of the documentation
         content: Content of the documentation
+        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about documentation creation
     """
-    if doc_type.lower() == "readme":
-        file_path = Path("README.md")
+    # Determine the base directory
+    if project_folder:
+        base_dir = Path(project_folder)
     else:
-        docs_dir = Path("docs")
-        docs_dir.mkdir(exist_ok=True)
+        base_dir = Path(".")
+    
+    if doc_type.lower() == "readme":
+        # For README, create in docs/ to avoid conflicts with project README
+        docs_dir = base_dir / "docs"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        file_path = docs_dir / f"{title.lower().replace(' ', '_')}.md"
+    else:
+        docs_dir = base_dir / "docs"
+        docs_dir.mkdir(parents=True, exist_ok=True)
         file_path = docs_dir / f"{title.lower().replace(' ', '_')}.md"
     
     doc_content = f"""# {title}
@@ -1174,7 +1188,7 @@ def create_documentation(
     
     file_path.write_text(doc_content)
     
-    return f"📁 **Creating**: {doc_type} documentation at {file_path}"
+    return f"📁 **Creating**: {doc_type} documentation at {file_path} (project: {base_dir.name})"
 
 
 def read_file(
