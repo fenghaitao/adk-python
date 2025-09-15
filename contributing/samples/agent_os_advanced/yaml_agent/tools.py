@@ -930,7 +930,8 @@ def implement_feature(
     feature_name: str,
     implementation_details: str,
     file_changes: Dict[str, str],
-    tool_context: ToolContext
+    project_folder: Optional[str] = None,
+    tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
     
@@ -938,14 +939,25 @@ def implement_feature(
         feature_name: Name of the feature to implement
         implementation_details: Details about the implementation
         file_changes: Dictionary mapping file paths to new content
+        project_folder: Optional project folder path (if None, uses current directory)
         
     Returns:
         Status message about feature implementation
     """
+    # Determine the base directory
+    if project_folder:
+        base_dir = Path(project_folder)
+    else:
+        base_dir = Path(".")
+    
     modified_files = []
     
     for file_path, content in file_changes.items():
-        path = Path(file_path)
+        # If file_path is relative, make it relative to project folder
+        if not Path(file_path).is_absolute():
+            path = base_dir / file_path
+        else:
+            path = Path(file_path)
         
         # Create parent directories if needed
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -962,7 +974,7 @@ def implement_feature(
 **Modified Files**: {len(modified_files)}
 {chr(10).join(f"- {f}" for f in modified_files)}
 
-✅ **Completed**: Feature implementation"""
+✅ **Completed**: Feature implementation (project: {base_dir.name})"""
 
 
 def run_tests(

@@ -948,6 +948,13 @@ agent_os_agent = LlmAgent(
 - Validate implementation against requirements
 - Ensure code quality standards
 
+## Critical Tool Usage Guidelines
+
+**MANDATORY**: When calling `implement_feature`, ALWAYS pass the `project_folder` parameter:
+- Use: `implement_feature(feature_name, details, file_changes, project_folder="project-name")`
+- This ensures all files are created within the project directory
+- Never call `implement_feature` without the `project_folder` parameter
+
 Focus on clean, efficient implementation that follows Agent OS conventions and maintains high code quality.""",
     tools=[
         create_file_structure,
