@@ -54,6 +54,7 @@ LRO_POLL_INTERVAL = 5  # seconds
 
 # HTTP status codes
 HTTP_UNAUTHORIZED = 401
+HTTP_TOO_MANY_REQUESTS = 429
 
 async def _handle_streaming_response(
       response: httpx.Response
@@ -66,6 +67,20 @@ async def _handle_streaming_response(
     Yields:
       LlmResponse objects for each streaming chunk.
     """
+    # Check response status before processing
+    if response.status_code != 200:
+      error_detail = ""
+      try:
+        error_text = await response.aread()
+        error_detail = f" - {error_text.decode()[:200]}..."
+      except Exception:
+        error_detail = f" - Status: {response.status_code}"
+      
+      raise RuntimeError(
+          f"Streaming response has error status {response.status_code}: "
+          f"{response.reason_phrase}{error_detail}"
+      )
+    
     accumulated_text = ""
     accumulated_parts = []
     usage_metadata = None
@@ -422,44 +437,125 @@ class GeminiCLICodeAssist(BaseLlm):
                 json=ca_payload,
                 params={"alt": "sse"}
             ) as retry_resp:
-              retry_resp.raise_for_status()
-              if True:
-                # Use _handle_streaming_response for proper streaming behavior
-                async for llm_response in _handle_streaming_response(retry_resp):
-                  yield llm_response
-              else:
-                # Use _parse_sse_stream for raw dictionary parsing
-                async for chunk_data in _parse_sse_stream(retry_resp):
-                  gen_resp = types.GenerateContentResponse(**chunk_data)
-                  yield LlmResponse.create(gen_resp)
-          else:
-            resp.raise_for_status()
-            if True:
+              if retry_resp.status_code != 200:
+                error_detail = ""
+                try:
+                  error_text = await retry_resp.aread()
+                  error_detail = f" - {error_text.decode()[:200]}..."
+                except Exception:
+                  error_detail = f" - Status: {retry_resp.status_code}"
+                
+                if retry_resp.status_code == HTTP_TOO_MANY_REQUESTS:
+                  # For streaming, yield an informative error response instead of crashing
+                  error_content = types.Content(
+                      role="model",
+                      parts=[types.Part(text=(
+                          f"⚠️ Rate limit exceeded (429) after auth retry. The Code Assist API is "
+                          f"currently receiving too many requests. Please wait a moment and try again. "
+                          f"Details: {retry_resp.reason_phrase}{error_detail}"
+                      ))]
+                  )
+                  error_response = types.GenerateContentResponse(
+                      candidates=[types.Candidate(content=error_content)]
+                  )
+                  yield LlmResponse.create(error_response)
+                  return
+                else:
+                  raise RuntimeError(
+                      f"Code Assist streaming API request failed with status {retry_resp.status_code}: "
+                      f"{retry_resp.reason_phrase}{error_detail}"
+                  )
+              
               # Use _handle_streaming_response for proper streaming behavior
-              async for llm_response in _handle_streaming_response(resp):
+              async for llm_response in _handle_streaming_response(retry_resp):
                 yield llm_response
-            else:
-              # Use _parse_sse_stream for raw dictionary parsing
-              async for chunk_data in _parse_sse_stream(resp):
-                gen_resp = types.GenerateContentResponse(**chunk_data)
-                yield LlmResponse.create(gen_resp)
+          else:
+            if resp.status_code != 200:
+              error_detail = ""
+              try:
+                error_text = await resp.aread()
+                error_detail = f" - {error_text.decode()[:200]}..."
+              except Exception:
+                error_detail = f" - Status: {resp.status_code}"
+              
+              if resp.status_code == HTTP_TOO_MANY_REQUESTS:
+                # For streaming, yield an informative error response instead of crashing
+                error_content = types.Content(
+                    role="model",
+                    parts=[types.Part(text=(
+                        f"⚠️ Rate limit exceeded (429). The Code Assist API is currently "
+                        f"receiving too many requests. Please wait a moment and try again. "
+                        f"Details: {resp.reason_phrase}{error_detail}"
+                    ))]
+                )
+                error_response = types.GenerateContentResponse(
+                    candidates=[types.Candidate(content=error_content)]
+                )
+                yield LlmResponse.create(error_response)
+                return
+              else:
+                raise RuntimeError(
+                    f"Code Assist streaming API request failed with status {resp.status_code}: "
+                    f"{resp.reason_phrase}{error_detail}"
+                )
+            
+            # Use _handle_streaming_response for proper streaming behavior
+            async for llm_response in _handle_streaming_response(resp):
+              yield llm_response
     else:
       # Use non-streaming endpoint
       url = _method_url("generateContent")
       async with httpx.AsyncClient(timeout=DEFAULT_REQUEST_TIMEOUT) as client:
         resp = await client.post(url, headers=headers, json=ca_payload)
+        
+        # Handle authentication errors
         if resp.status_code == HTTP_UNAUTHORIZED and isinstance(credentials, GoogleCredentials):
           # Try a single refresh
           credentials.refresh(GoogleAuthRequest())
           headers["Authorization"] = f"Bearer {credentials.token}"
           resp = await client.post(url, headers=headers, json=ca_payload)
-        resp.raise_for_status()
+        
+        # Handle rate limiting with exponential backoff
+        if resp.status_code == HTTP_TOO_MANY_REQUESTS:
+          import random
+          retry_count = 0
+          max_retries = 3
+          base_delay = 1.0
+          
+          while retry_count < max_retries and resp.status_code == HTTP_TOO_MANY_REQUESTS:
+            retry_count += 1
+            # Exponential backoff with jitter
+            delay = base_delay * (2 ** (retry_count - 1)) + random.uniform(0, 1)
+            await asyncio.sleep(delay)
+            
+            resp = await client.post(url, headers=headers, json=ca_payload)
+        
+        # Better error handling with informative messages
+        if resp.status_code != 200:
+          error_detail = ""
+          try:
+            error_data = resp.json()
+            error_detail = f" - {error_data}"
+          except Exception:
+            error_detail = f" - {resp.text[:200]}..."
+          
+          if resp.status_code == HTTP_TOO_MANY_REQUESTS:
+            raise RuntimeError(
+                f"Code Assist API rate limit exceeded (429) after {max_retries} retries: "
+                f"{resp.reason_phrase}{error_detail}"
+            )
+          else:
+            raise RuntimeError(
+                f"Code Assist API request failed with status {resp.status_code}: "
+                f"{resp.reason_phrase}{error_detail}"
+            )
+        
         data = resp.json()
 
-      # Convert Code Assist response to google.genai GenerateContentResponse
-      inres = (data or {}).get("response") or {}
-      gen_resp = types.GenerateContentResponse(**inres)
-      yield LlmResponse.create(gen_resp)
+        # Convert Code Assist response to google.genai GenerateContentResponse
+        inres = (data or {}).get("response") or {}
+        gen_resp = types.GenerateContentResponse(**inres)
+        yield LlmResponse.create(gen_resp)
 
   async def _get_or_setup_project(self, credentials: GoogleCredentials) -> Optional[str]:
     """Try to fetch or create a managed project via Code Assist APIs.
@@ -486,7 +582,19 @@ class GeminiCLICodeAssist(BaseLlm):
         credentials.refresh(GoogleAuthRequest())
         headers["Authorization"] = f"Bearer {credentials.token}"
         resp = await client.post(url, headers=headers, json=payload)
-      resp.raise_for_status()
+      
+      if resp.status_code != 200:
+        error_detail = ""
+        try:
+          error_data = resp.json()
+          error_detail = f" - {error_data}"
+        except Exception:
+          error_detail = f" - {resp.text[:200]}..."
+        
+        raise RuntimeError(
+            f"Code Assist loadCodeAssist request failed with status {resp.status_code}: "
+            f"{resp.reason_phrase}{error_detail}"
+        )
       data = resp.json() or {}
 
       project = data.get("cloudaicompanionProject")
@@ -517,14 +625,39 @@ class GeminiCLICodeAssist(BaseLlm):
       }
       op_url = _method_url("onboardUser")
       lro = await client.post(op_url, headers=headers, json=onboard_payload)
-      lro.raise_for_status()
+      
+      if lro.status_code != 200:
+        error_detail = ""
+        try:
+          error_data = lro.json()
+          error_detail = f" - {error_data}"
+        except Exception:
+          error_detail = f" - {lro.text[:200]}..."
+        
+        raise RuntimeError(
+            f"Code Assist onboardUser request failed with status {lro.status_code}: "
+            f"{lro.reason_phrase}{error_detail}"
+        )
       lro_data = lro.json() or {}
       # Poll until done
       start = time.time()
       while not lro_data.get("done") and time.time() - start < LRO_POLL_TIMEOUT:
         await asyncio.sleep(LRO_POLL_INTERVAL)
         lro = await client.post(op_url, headers=headers, json=onboard_payload)
-        lro.raise_for_status()
+        
+        if lro.status_code != 200:
+          error_detail = ""
+          try:
+            error_data = lro.json()
+            error_detail = f" - {error_data}"
+          except Exception:
+            error_detail = f" - {lro.text[:200]}..."
+          
+          raise RuntimeError(
+              f"Code Assist onboardUser polling request failed with status {lro.status_code}: "
+              f"{lro.reason_phrase}{error_detail}"
+          )
+        
         lro_data = lro.json() or {}
 
       response = (lro_data or {}).get("response") or {}
