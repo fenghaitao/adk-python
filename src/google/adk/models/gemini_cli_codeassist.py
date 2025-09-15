@@ -305,6 +305,19 @@ class GeminiCLICodeAssist(BaseLlm):
   from the local Gemini CLI cache (via GeminiOAuthCredentialManager).
   """
 
+  def __init__(self, model: str, **kwargs):
+    """Initializes the GeminiCLICodeAssist class.
+
+    Args:
+      model: The name of the model (e.g., "gemini_cli/gemini-2.0-flash" or "gemini-2.0-flash").
+      **kwargs: Additional arguments to pass to the base class.
+    """
+    # Strip the gemini_cli/ prefix if present to get the actual model name
+    if model.startswith("gemini_cli/"):
+      model = model.replace("gemini_cli/", "")
+    
+    super().__init__(model=model, **kwargs)
+
   @classmethod
   @override
   def supported_models(cls) -> list[str]:
@@ -315,20 +328,22 @@ class GeminiCLICodeAssist(BaseLlm):
       Based on the models typically supported by Gemini CLI and Code Assist.
     """
     return [
-        # Gemini 2.0 models
-        r'gemini-2\.0-flash.*',
-        # Gemini 1.5 models  
+        # Gemini CLI specific prefix (similar to github_copilot/ and iflow/)
+        r'gemini_cli/gemini-1\.5-flash.*',
+        r'gemini_cli/gemini-1\.5-pro.*',
+        r'gemini_cli/gemini-2\.0-flash.*',
+        r'gemini_cli/gemini-2\.5-flash.*',
+        r'gemini_cli/gemini-2\.5-pro.*',
+        r'gemini_cli/gemini-embedding-001',
+        r'gemini_cli/text-embedding-.*',
+        # Support models without gemini_cli/ prefix for convenience (like iflow)
         r'gemini-1\.5-flash.*',
         r'gemini-1\.5-pro.*',
-        # Gemini 1.0 models (if still supported)
-        r'gemini-1\.0-pro.*',
-        # Gemini 2.5 models (as seen in sample)
+        r'gemini-2\.0-flash.*',
         r'gemini-2\.5-flash.*',
-        # Embedding models
+        r'gemini-2\.5-pro.*',
         r'gemini-embedding-001',
         r'text-embedding-.*',
-        # Generic gemini pattern for future models
-        r'gemini-.*',
     ]
 
   @override

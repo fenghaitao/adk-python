@@ -41,3 +41,6 @@ LLMRegistry.register(GitHubCopilotLlm)
 
 # Register iFlow LLM
 LLMRegistry.register(IFlowLlm)
+
+# Register Gemini CLI Code Assist LLM
+LLMRegistry.register(GeminiCLICodeAssist)
