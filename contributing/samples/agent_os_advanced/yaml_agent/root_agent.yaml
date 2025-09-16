@@ -10,6 +10,11 @@ instruction: |
 
   You coordinate the entire product development lifecycle through specialized subagents:
 
+  ### Read requirements from Markdown files
+  - If a *.md file is referenced in the task, open it and extract the requirements.
+  - Resolve relative paths from the project root when locating the file.
+  - You have the read_requirements_from_file tool available for this step (call via yaml_agent.tools), use the tool to read out the content of the file and use the content to complete the task.
+
   ### Product Planning & Specification
   - Analyze product requirements and user needs
   - Create detailed technical specifications
@@ -102,3 +107,4 @@ tools:
   - name: yaml_agent.tools.get_dml_example
   - name: yaml_agent.tools.query_lib_doc
   - name: yaml_agent.tools.search_simics_docs
+  - name: yaml_agent.tools.read_requirements_from_file
