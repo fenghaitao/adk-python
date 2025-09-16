@@ -764,6 +764,8 @@ def implement_feature(
     feature_name: str,
     implementation_details: str,
     file_changes: Dict[str, str],
+    spec_name: str = None,
+    task_index: int = None,
     tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
@@ -772,6 +774,8 @@ def implement_feature(
         feature_name: Name of the feature to implement
         implementation_details: Details about the implementation
         file_changes: Dictionary mapping file paths to new content
+        spec_name: Optional specification name for task tracking
+        task_index: Optional task index to mark as complete
         
     Returns:
         Status message about feature implementation
@@ -798,6 +802,14 @@ def implement_feature(
         path.write_text(content)
         modified_files.append(str(path))
     
+    # Auto-update task status if spec_name and task_index are provided
+    task_update_msg = ""
+    if spec_name and task_index is not None:
+        try:
+            task_update_msg = update_task_status(spec_name, task_index, True, tool_context)
+        except Exception as e:
+            task_update_msg = f"⚠️ Could not update task status: {str(e)}"
+    
     return f"""🔨 **Implementing**: {feature_name}
 
 **Implementation Details**:
@@ -805,6 +817,8 @@ def implement_feature(
 
 **Modified Files**: {len(modified_files)}
 {chr(10).join(f"- {f}" for f in modified_files)}
+
+{task_update_msg}
 
 ✅ **Completed**: Feature implementation (project: {base_dir.name})"""
 
@@ -966,6 +980,40 @@ def update_task_status(
     tasks_file.write_text('\n'.join(lines))
     
     return f"✅ **Completed**: Updated task {task_index} to {status} in {spec_folder.name} (project: {base_dir.name})"
+
+
+def mark_task_complete(
+    spec_name: str,
+    task_index: int,
+    tool_context: ToolContext = None
+) -> str:
+    """Convenience function to mark a task as complete.
+    
+    Args:
+        spec_name: Name of the specification
+        task_index: Index of the task to mark as complete (0-based)
+        
+    Returns:
+        Status message about task completion
+    """
+    return update_task_status(spec_name, task_index, True, tool_context)
+
+
+def mark_task_pending(
+    spec_name: str,
+    task_index: int,
+    tool_context: ToolContext = None
+) -> str:
+    """Convenience function to mark a task as pending.
+    
+    Args:
+        spec_name: Name of the specification
+        task_index: Index of the task to mark as pending (0-based)
+        
+    Returns:
+        Status message about task update
+    """
+    return update_task_status(spec_name, task_index, False, tool_context)
 
 
 def create_documentation(

@@ -926,6 +926,40 @@ def update_task_status(
     return f"✅ **Completed**: Updated task {task_index} to {status} in {spec_folder.name} (project: {base_dir.name})"
 
 
+def mark_task_complete(
+    spec_name: str,
+    task_index: int,
+    tool_context: ToolContext = None
+) -> str:
+    """Convenience function to mark a task as complete.
+    
+    Args:
+        spec_name: Name of the specification
+        task_index: Index of the task to mark as complete (0-based)
+        
+    Returns:
+        Status message about task completion
+    """
+    return update_task_status(spec_name, task_index, True, tool_context)
+
+
+def mark_task_pending(
+    spec_name: str,
+    task_index: int,
+    tool_context: ToolContext = None
+) -> str:
+    """Convenience function to mark a task as pending.
+    
+    Args:
+        spec_name: Name of the specification
+        task_index: Index of the task to mark as pending (0-based)
+        
+    Returns:
+        Status message about task update
+    """
+    return update_task_status(spec_name, task_index, False, tool_context)
+
+
 def create_documentation(
     doc_type: str,
     title: str,
@@ -1304,6 +1338,8 @@ Focus on clean, efficient implementation that follows Agent OS conventions and m
         run_tests,
         manage_git_workflow,
         update_task_status,
+        mark_task_complete,
+        mark_task_pending,
         create_documentation,
         read_file,
     ]

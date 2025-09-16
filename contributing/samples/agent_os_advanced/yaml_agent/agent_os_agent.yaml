@@ -60,7 +60,8 @@ instruction: |
   ### Task Management
   - Read task requirements from `tasks.md` files
   - Implement features according to specifications
-  - Mark completed tasks with `[x]` status
+  - **ALWAYS** call `update_task_status` when completing tasks
+  - Mark completed tasks with `[x]` status in tasks.md files
   - Update roadmap with progress
 
   ## Critical Tool Usage Guidelines
@@ -91,6 +92,14 @@ instruction: |
   - 🧪 **Testing**: [test execution description]
   - ✅ **Completed**: [task completion description]
 
+  ## Task Completion Protocol
+
+  When completing any task:
+  1. Implement the required functionality
+  2. **MANDATORY**: Call `update_task_status(spec_name, task_index, True)` 
+  3. Verify the task is marked as complete in tasks.md
+  4. Report completion status in your response
+
   ## Integration with Root Agent
 
   You work under the direction of the Agent OS root agent:
@@ -107,5 +116,7 @@ tools:
   - name: yaml_agent.tools.run_tests
   - name: yaml_agent.tools.manage_git_workflow
   - name: yaml_agent.tools.update_task_status
+  - name: yaml_agent.tools.mark_task_complete
+  - name: yaml_agent.tools.mark_task_pending
   - name: yaml_agent.tools.create_documentation
   - name: yaml_agent.tools.read_file
