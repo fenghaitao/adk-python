@@ -501,11 +501,11 @@ def analyze_project_structure(
 - **Agent OS Structure**: {'✅ Present' if has_agent_os else '❌ Missing'}
 
 ## Directory Structure
-{chr(10).join(f"- {d}" for d in sorted(directories)[:10])}
+{chr(10).join(f"- {d.strip()}" for d in sorted(directories)[:10])}
 {'...' if len(directories) > 10 else ''}
 
 ## Key Files
-{chr(10).join(f"- {f}" for f in sorted(files)[:10])}
+{chr(10).join(f"- {f.strip()}" for f in sorted(files)[:10])}
 {'...' if len(files) > 10 else ''}
 
 ## Agent OS Status
@@ -656,11 +656,11 @@ def analyze_existing_product(
 {chr(10).join(f"- {pkg}" for pkg in package_files) if package_files else "- No package files detected"}
 
 ## Project Structure
-{chr(10).join(f"- {d}" for d in sorted(directories)[:15])}
+{chr(10).join(f"- {d.strip()}" for d in sorted(directories)[:15])}
 {'...' if len(directories) > 15 else ''}
 
 ## Key Source Files
-{chr(10).join(f"- {f}" for f in sorted(source_files)[:10])}
+{chr(10).join(f"- {f.strip()}" for f in sorted(source_files)[:10])}
 {'...' if len(source_files) > 10 else ''}
 
 ## Agent OS Installation Status
@@ -734,13 +734,16 @@ def create_file_structure(
     created_dirs = []
     
     for file_path, content in structure.items():
-        path = Path(file_path)
+        # Clean up file path - remove extra spaces
+        clean_file_path = file_path.strip()
+        path = Path(clean_file_path)
         
         # Create parent directories
         if path.parent != Path("."):
             path.parent.mkdir(parents=True, exist_ok=True)
-            if str(path.parent) not in created_dirs:
-                created_dirs.append(str(path.parent))
+            parent_str = str(path.parent)
+            if parent_str not in created_dirs:
+                created_dirs.append(parent_str)
         
         # Create file
         path.write_text(content)
@@ -779,11 +782,14 @@ def implement_feature(
     modified_files = []
     
     for file_path, content in file_changes.items():
+        # Clean up file path - remove extra spaces
+        clean_file_path = file_path.strip()
+        
         # If file_path is relative, make it relative to project folder
-        if not Path(file_path).is_absolute():
-            path = base_dir / file_path
+        if not Path(clean_file_path).is_absolute():
+            path = base_dir / clean_file_path
         else:
-            path = Path(file_path)
+            path = Path(clean_file_path)
         
         # Create parent directories if needed
         path.parent.mkdir(parents=True, exist_ok=True)
