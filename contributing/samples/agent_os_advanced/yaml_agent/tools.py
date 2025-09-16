@@ -1023,13 +1023,15 @@ def read_file(
         File content or error message
     """
     try:
-        path = Path(file_path)
+        # Clean up file path - remove extra spaces
+        clean_file_path = file_path.strip()
+        path = Path(clean_file_path)
         
         if not path.exists():
-            return f"❌ **Error**: File '{file_path}' does not exist"
+            return f"❌ **Error**: File '{clean_file_path}' does not exist"
         
         if not path.is_file():
-            return f"❌ **Error**: '{file_path}' is not a file"
+            return f"❌ **Error**: '{clean_file_path}' is not a file"
         
         # Read file content
         content = path.read_text(encoding='utf-8')
@@ -1038,7 +1040,7 @@ def read_file(
         file_size = path.stat().st_size
         line_count = len(content.splitlines())
         
-        return f"""📖 **Reading**: {file_path}
+        return f"""📖 **Reading**: {clean_file_path}
 
 **File Info**:
 - Size: {file_size} bytes
@@ -1053,8 +1055,8 @@ def read_file(
 ✅ **Completed**: File read successfully"""
         
     except UnicodeDecodeError:
-        return f"❌ **Error**: Cannot read '{file_path}' - file appears to be binary"
+        return f"❌ **Error**: Cannot read '{clean_file_path}' - file appears to be binary"
     except PermissionError:
-        return f"❌ **Error**: Permission denied reading '{file_path}'"
+        return f"❌ **Error**: Permission denied reading '{clean_file_path}'"
     except Exception as e:
-        return f"❌ **Error**: Failed to read '{file_path}': {str(e)}"
+        return f"❌ **Error**: Failed to read '{clean_file_path}': {str(e)}"
