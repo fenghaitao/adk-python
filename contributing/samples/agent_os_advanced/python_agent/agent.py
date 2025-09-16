@@ -744,11 +744,14 @@ def implement_feature(
     modified_files = []
     
     for file_path, content in file_changes.items():
+        # Clean up file path - remove extra spaces
+        clean_file_path = file_path.strip()
+        
         # If file_path is relative, make it relative to project folder
-        if not Path(file_path).is_absolute():
-            path = base_dir / file_path
+        if not Path(clean_file_path).is_absolute():
+            path = base_dir / clean_file_path
         else:
-            path = Path(file_path)
+            path = Path(clean_file_path)
         
         # Create parent directories if needed
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -978,13 +981,15 @@ def read_file(
         File content or error message
     """
     try:
-        path = Path(file_path)
+        # Clean up file path - remove extra spaces
+        clean_file_path = file_path.strip()
+        path = Path(clean_file_path)
         
         if not path.exists():
-            return f"❌ **Error**: File '{file_path}' does not exist"
+            return f"❌ **Error**: File '{clean_file_path}' does not exist"
         
         if not path.is_file():
-            return f"❌ **Error**: '{file_path}' is not a file"
+            return f"❌ **Error**: '{clean_file_path}' is not a file"
         
         # Read file content
         content = path.read_text(encoding='utf-8')
@@ -993,7 +998,7 @@ def read_file(
         file_size = path.stat().st_size
         line_count = len(content.splitlines())
         
-        return f"""📖 **Reading**: {file_path}
+        return f"""📖 **Reading**: {clean_file_path}
 
 **File Info**:
 - Size: {file_size} bytes
@@ -1008,11 +1013,11 @@ def read_file(
 ✅ **Completed**: File read successfully"""
         
     except UnicodeDecodeError:
-        return f"❌ **Error**: Cannot read '{file_path}' - file appears to be binary"
+        return f"❌ **Error**: Cannot read '{clean_file_path}' - file appears to be binary"
     except PermissionError:
-        return f"❌ **Error**: Permission denied reading '{file_path}'"
+        return f"❌ **Error**: Permission denied reading '{clean_file_path}'"
     except Exception as e:
-        return f"❌ **Error**: Failed to read '{file_path}': {str(e)}"
+        return f"❌ **Error**: Failed to read '{clean_file_path}': {str(e)}"
 
 
 # Custom workflow functions moved inline to avoid import issues
