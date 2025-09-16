@@ -726,6 +726,8 @@ def implement_feature(
     feature_name: str,
     implementation_details: str,
     file_changes: Dict[str, str],
+    spec_name: str | None = None,
+    task_index: int | None = None,
     tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
@@ -734,6 +736,8 @@ def implement_feature(
         feature_name: Name of the feature to implement
         implementation_details: Details about the implementation
         file_changes: Dictionary mapping file paths to new content
+        spec_name: Optional specification name for task tracking
+        task_index: Optional task index to mark as complete
         
     Returns:
         Status message about feature implementation
@@ -760,6 +764,14 @@ def implement_feature(
         path.write_text(content)
         modified_files.append(str(path))
     
+    # Auto-update task status if spec_name and task_index are provided
+    task_update_msg = ""
+    if spec_name and task_index is not None:
+        try:
+            task_update_msg = update_task_status(spec_name, task_index, True, tool_context)
+        except Exception as e:
+            task_update_msg = f"⚠️ Could not update task status: {str(e)}"
+    
     return f"""🔨 **Implementing**: {feature_name}
 
 **Implementation Details**:
@@ -767,6 +779,8 @@ def implement_feature(
 
 **Modified Files**: {len(modified_files)}
 {chr(10).join(f"- {f}" for f in modified_files)}
+
+{task_update_msg}
 
 ✅ **Completed**: Feature implementation (project: {base_dir.name})"""
 
