@@ -117,7 +117,7 @@ instruction: |
   Usage rules:
   - Always include relevant spec excerpts with tool calls when available.
   - Aggregate related questions into a single tool call where possible to reduce round-trips.
-  - If auto_build fails, attach the full build log and request targeted fixes.
+  - If auto_build fails, call get_dml_example, query_lib_doc, query_simics_guide, or search_simics_docs to identify and fix syntax errors, then run auto_build again until the build succeeds.
   - When creating files, pass project_folder in the tool call if available to keep files organized.
   ## Response Format
 
