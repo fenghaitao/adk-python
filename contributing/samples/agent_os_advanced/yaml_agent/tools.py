@@ -764,8 +764,8 @@ def implement_feature(
     feature_name: str,
     implementation_details: str,
     file_changes: Dict[str, str],
-    spec_name: str | None = None,
-    task_index: int | None = None,
+    spec_name: Optional[str] = None,
+    task_index: Optional[int] = None,
     tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
