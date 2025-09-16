@@ -22,6 +22,7 @@ instruction: |
   - Organize project assets
 
   ### Git Workflow Management
+  - Initialize a git repository (git init) if none exists before any branch operations
   - Create and manage git branches
   - Handle commits with proper messages
   - Manage pull requests
@@ -96,7 +97,7 @@ instruction: |
 
   When completing any task:
   1. Implement the required functionality
-  2. **MANDATORY**: Call `update_task_status(spec_name, task_index, True)` 
+  2. **MANDATORY**: Call `update_task_status(spec_name, task_index, True)`
   3. Verify the task is marked as complete in tasks.md
   4. Report completion status in your response
 
@@ -111,12 +112,12 @@ instruction: |
   Focus on clean, efficient implementation that follows Agent OS conventions and maintains high code quality.
 
 tools:
-  - name: yaml_agent.tools.create_file_structure
-  - name: yaml_agent.tools.implement_feature
-  - name: yaml_agent.tools.run_tests
-  - name: yaml_agent.tools.manage_git_workflow
-  - name: yaml_agent.tools.update_task_status
-  - name: yaml_agent.tools.mark_task_complete
-  - name: yaml_agent.tools.mark_task_pending
-  - name: yaml_agent.tools.create_documentation
-  - name: yaml_agent.tools.read_file
+  - name: tools.create_file_structure
+  - name: tools.implement_feature
+  - name: tools.run_tests
+  - name: tools.manage_git_workflow
+  - name: tools.update_task_status
+  - name: tools.mark_task_complete
+  - name: tools.mark_task_pending
+  - name: tools.create_documentation
+  - name: tools.read_file

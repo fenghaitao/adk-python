@@ -75,8 +75,8 @@ sub_agents:
   - config_path: agent_os_agent.yaml
 
 tools:
-  - name: yaml_agent.tools.create_product_mission
-  - name: yaml_agent.tools.create_technical_spec
-  - name: yaml_agent.tools.create_task_breakdown
-  - name: yaml_agent.tools.analyze_project_structure
-  - name: yaml_agent.tools.analyze_existing_product
+  - name: tools.create_product_mission
+  - name: tools.create_technical_spec
+  - name: tools.create_task_breakdown
+  - name: tools.analyze_project_structure
+  - name: tools.analyze_existing_product

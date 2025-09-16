@@ -31,19 +31,19 @@ def create_product_mission(
     tool_context: ToolContext = None
 ) -> str:
     """Create a product mission document following Agent OS structure.
-    
+
     Args:
         product_name: Name of the product
         description: Brief product description
         target_users: Description of target user base
         key_features: List of key product features
-        
+
     Returns:
         Status message about mission creation
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     mission_content = f"""# Product Mission
 
 ## Pitch
@@ -76,11 +76,11 @@ def create_product_mission(
     agent_os_dir = base_dir / ".agent-os"
     product_dir = agent_os_dir / "product"
     product_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Write mission file
     mission_file = product_dir / "mission.md"
     mission_file.write_text(mission_content)
-    
+
     # Create mission-lite.md
     mission_lite = f"""# {product_name}
 
@@ -90,10 +90,10 @@ def create_product_mission(
 
 **Key Features**: {', '.join(key_features)}
 """
-    
+
     mission_lite_file = product_dir / "mission-lite.md"
     mission_lite_file.write_text(mission_lite)
-    
+
     # Create tech-stack.md placeholder
     tech_stack_content = f"""# Technical Stack
 
@@ -116,10 +116,10 @@ def create_product_mission(
 ---
 *This will be populated during the planning phase*
 """
-    
+
     tech_stack_file = product_dir / "tech-stack.md"
     tech_stack_file.write_text(tech_stack_content)
-    
+
     # Create roadmap.md placeholder
     roadmap_content = f"""# Product Roadmap
 
@@ -150,10 +150,10 @@ def create_product_mission(
 - [ ] Scalability improvements
 - [ ] Security hardening
 """
-    
+
     roadmap_file = product_dir / "roadmap.md"
     roadmap_file.write_text(roadmap_content)
-    
+
     return f"""✅ **Product Mission Created**: {product_name}
 
 **Location**: {product_dir.absolute()}
@@ -178,21 +178,21 @@ def create_technical_spec(
     tool_context: ToolContext = None
 ) -> str:
     """Create a detailed technical specification.
-    
+
     Args:
         feature_name: Name of the feature
         requirements: Detailed requirements description
         acceptance_criteria: List of acceptance criteria
-        
+
     Returns:
         Status message about spec creation
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     date_str = datetime.now().strftime("%Y-%m-%d")
     spec_name = f"{date_str}-{feature_name.lower().replace(' ', '-')}"
-    
+
     spec_content = f"""# {feature_name} Specification
 
 ## Overview
@@ -258,11 +258,11 @@ def create_technical_spec(
     agent_os_dir = base_dir / ".agent-os"
     specs_dir = agent_os_dir / "specs" / spec_name
     specs_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Write spec file
     spec_file = specs_dir / "spec.md"
     spec_file.write_text(spec_content)
-    
+
     # Create spec-lite.md
     spec_lite = f"""# {feature_name}
 
@@ -271,14 +271,14 @@ def create_technical_spec(
 ## Acceptance Criteria
 {chr(10).join(f"- {criteria}" for criteria in acceptance_criteria)}
 """
-    
+
     spec_lite_file = specs_dir / "spec-lite.md"
     spec_lite_file.write_text(spec_lite)
-    
+
     # Create sub-specs directory and technical spec
     sub_specs_dir = specs_dir / "sub-specs"
     sub_specs_dir.mkdir(exist_ok=True)
-    
+
     tech_spec_content = f"""# Technical Specification - {feature_name}
 
 ## Architecture
@@ -308,10 +308,10 @@ def create_technical_spec(
 ---
 *This technical specification will be detailed during implementation*
 """
-    
+
     tech_spec_file = sub_specs_dir / "technical-spec.md"
     tech_spec_file.write_text(tech_spec_content)
-    
+
     return f"""✅ **Technical Specification Created**: {feature_name}
 
 **Location**: {specs_dir.absolute()}
@@ -333,20 +333,20 @@ def create_task_breakdown(
     tool_context: ToolContext = None
 ) -> str:
     """Create a task breakdown for a specification.
-    
+
     Args:
         spec_name: Name of the specification
         tasks: List of tasks to complete
-        
+
     Returns:
         Status message about task creation
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     date_str = datetime.now().strftime("%Y-%m-%d")
     spec_folder = f"{date_str}-{spec_name.lower().replace(' ', '-')}"
-    
+
     tasks_content = f"""# {spec_name} - Task Breakdown
 
 ## Tasks
@@ -392,11 +392,11 @@ All tasks must be completed and tested before marking the specification as done.
     agent_os_dir = base_dir / ".agent-os"
     specs_dir = agent_os_dir / "specs" / spec_folder
     specs_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Write tasks file
     tasks_file = specs_dir / "tasks.md"
     tasks_file.write_text(tasks_content)
-    
+
     # Create implementation notes file
     implementation_notes = f"""# Implementation Notes - {spec_name}
 
@@ -441,10 +441,10 @@ All tasks must be completed and tested before marking the specification as done.
 ---
 *This file helps track implementation progress*
 """
-    
+
     notes_file = specs_dir / "implementation-notes.md"
     notes_file.write_text(implementation_notes)
-    
+
     return f"""✅ **Task Breakdown Created**: {spec_name}
 
 **Location**: {specs_dir.absolute()}
@@ -470,29 +470,45 @@ def analyze_project_structure(
     tool_context: ToolContext
 ) -> str:
     """Analyze the current project structure and provide insights.
-    
+
     Args:
         project_path: Path to the project directory to analyze
-        
+
     Returns:
         Analysis of the project structure
     """
     current_dir = Path(project_path)
-    
+
     # Analyze directory structure
     directories = []
     files = []
-    
+
     for item in current_dir.rglob("*"):
         if item.is_dir() and not item.name.startswith('.'):
             directories.append(str(item))
         elif item.is_file() and not item.name.startswith('.'):
             files.append(str(item))
-    
+
     # Check for Agent OS structure
     agent_os_dir = Path(".agent-os")
     has_agent_os = agent_os_dir.exists()
-    
+
+    mission_snippet = ""
+    roadmap_snippet = ""
+    prod_dir = Path(project_path) / ".agent-os" / "product"
+    m_path = prod_dir / "mission.md"
+    r_path = prod_dir / "roadmap.md"
+    if m_path.exists():
+        try:
+            mission_snippet = "\n".join(m_path.read_text(encoding='utf-8').splitlines()[:40])
+        except Exception:
+            mission_snippet = "(unable to read mission.md)"
+    if r_path.exists():
+        try:
+            roadmap_snippet = "\n".join(r_path.read_text(encoding='utf-8').splitlines()[:40])
+        except Exception:
+            roadmap_snippet = "(unable to read roadmap.md)"
+
     analysis = f"""# Project Structure Analysis
 
 ## Overview
@@ -508,19 +524,24 @@ def analyze_project_structure(
 {chr(10).join(f"- {f.strip()}" for f in sorted(files)[:10])}
 {'...' if len(files) > 10 else ''}
 
+## Mission (excerpt)
+{mission_snippet or '(mission.md not found)'}
+
+## Roadmap (excerpt)
+{roadmap_snippet or '(roadmap.md not found)'}
+
 ## Agent OS Status
 """
 
     if has_agent_os:
-        # Analyze Agent OS structure
         product_dir = agent_os_dir / "product"
         specs_dir = agent_os_dir / "specs"
-        
+
         analysis += f"""
 - **Product Directory**: {'✅' if product_dir.exists() else '❌'}
 - **Specs Directory**: {'✅' if specs_dir.exists() else '❌'}
 """
-        
+
         if specs_dir.exists():
             specs = list(specs_dir.iterdir())
             analysis += f"- **Specifications**: {len(specs)} found\n"
@@ -541,52 +562,52 @@ def analyze_existing_product(
     tool_context: ToolContext
 ) -> str:
     """Analyze an existing product codebase and prepare for Agent OS installation.
-    
+
     This tool performs a comprehensive analysis of an existing codebase to understand:
     - Current project structure and organization
     - Technology stack and dependencies
     - Implemented features and progress
     - Code patterns and conventions
     - Development workflow and practices
-    
+
     Args:
         project_path: Path to the project directory to analyze
         product_context: Additional context about the product (vision, users, etc.)
-        
+
     Returns:
         Comprehensive analysis report for Agent OS installation
     """
     current_dir = Path(project_path)
-    
+
     # Analyze directory structure
     directories = []
     files = []
     config_files = []
     source_files = []
-    
+
     for item in current_dir.rglob("*"):
         if item.is_dir() and not item.name.startswith('.'):
             directories.append(str(item))
         elif item.is_file() and not item.name.startswith('.'):
             files.append(str(item))
-            
+
             # Identify configuration files
             if item.suffix in ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg']:
                 config_files.append(str(item))
             # Identify source code files
             elif item.suffix in ['.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.cpp', '.c']:
                 source_files.append(str(item))
-    
+
     # Analyze package/dependency files
     package_files = []
     for file in files:
         if any(name in file.lower() for name in ['package.json', 'requirements.txt', 'gemfile', 'cargo.toml', 'go.mod', 'pom.xml']):
             package_files.append(file)
-    
+
     # Check for Agent OS structure
     agent_os_dir = Path(".agent-os")
     has_agent_os = agent_os_dir.exists()
-    
+
     # Analyze technology stack
     tech_stack = {
         'languages': set(),
@@ -594,7 +615,7 @@ def analyze_existing_product(
         'databases': set(),
         'tools': set()
     }
-    
+
     for file in source_files:
         if file.endswith('.py'):
             tech_stack['languages'].add('Python')
@@ -608,7 +629,7 @@ def analyze_existing_product(
             tech_stack['languages'].add('Go')
         elif file.endswith('.rs'):
             tech_stack['languages'].add('Rust')
-    
+
     # Analyze configuration files for frameworks
     for config_file in config_files:
         try:
@@ -631,7 +652,7 @@ def analyze_existing_product(
                     tech_stack['frameworks'].add('FastAPI')
         except:
             pass
-    
+
     analysis = f"""# Existing Product Analysis
 
 ## Product Context
@@ -665,17 +686,17 @@ def analyze_existing_product(
 
 ## Agent OS Installation Status
 """
-    
+
     if has_agent_os:
         # Analyze existing Agent OS structure
         product_dir = agent_os_dir / "product"
         specs_dir = agent_os_dir / "specs"
-        
+
         analysis += f"""
 - **Product Directory**: {'✅' if product_dir.exists() else '❌'}
 - **Specs Directory**: {'✅' if specs_dir.exists() else '❌'}
 """
-        
+
         if specs_dir.exists():
             specs = list(specs_dir.iterdir())
             analysis += f"- **Specifications**: {len(specs)} found\n"
@@ -700,7 +721,7 @@ def analyze_existing_product(
 
 ## Analysis Summary
 
-This codebase appears to be a {', '.join(sorted(tech_stack['languages']))} project with {len(source_files)} source files. 
+This codebase appears to be a {', '.join(sorted(tech_stack['languages']))} project with {len(source_files)} source files.
 {'The project already has Agent OS installed.' if has_agent_os else 'The project is ready for Agent OS installation.'}
 
 **Key Findings**:
@@ -722,33 +743,33 @@ def create_file_structure(
     tool_context: ToolContext
 ) -> str:
     """Create a file and directory structure for a project.
-    
+
     Args:
         project_name: Name of the project
         structure: Dictionary mapping file paths to content
-        
+
     Returns:
         Status message about structure creation
     """
     created_files = []
     created_dirs = []
-    
+
     for file_path, content in structure.items():
         # Clean up file path - remove extra spaces
         clean_file_path = file_path.strip()
         path = Path(clean_file_path)
-        
+
         # Create parent directories
         if path.parent != Path("."):
             path.parent.mkdir(parents=True, exist_ok=True)
             parent_str = str(path.parent)
             if parent_str not in created_dirs:
                 created_dirs.append(parent_str)
-        
+
         # Create file
         path.write_text(content)
         created_files.append(str(path))
-    
+
     return f"""🔨 **Creating**: Project structure for {project_name}
 
 **Created Directories**: {len(created_dirs)}
@@ -769,39 +790,39 @@ def implement_feature(
     tool_context: ToolContext = None
 ) -> str:
     """Implement a specific feature with file changes.
-    
+
     Args:
         feature_name: Name of the feature to implement
         implementation_details: Details about the implementation
         file_changes: Dictionary mapping file paths to new content
         spec_name: Optional specification name for task tracking
         task_index: Optional task index to mark as complete
-        
+
     Returns:
         Status message about feature implementation
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     modified_files = []
-    
+
     for file_path, content in file_changes.items():
         # Clean up file path - remove extra spaces
         clean_file_path = file_path.strip()
-        
+
         # If file_path is relative, make it relative to project folder
         if not Path(clean_file_path).is_absolute():
             path = base_dir / clean_file_path
         else:
             path = Path(clean_file_path)
-        
+
         # Create parent directories if needed
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Write file content
         path.write_text(content)
         modified_files.append(str(path))
-    
+
     # Auto-update task status if spec_name and task_index are provided
     task_update_msg = ""
     if spec_name and task_index is not None:
@@ -809,7 +830,7 @@ def implement_feature(
             task_update_msg = update_task_status(spec_name, task_index, True, tool_context)
         except Exception as e:
             task_update_msg = f"⚠️ Could not update task status: {str(e)}"
-    
+
     return f"""🔨 **Implementing**: {feature_name}
 
 **Implementation Details**:
@@ -829,11 +850,11 @@ def run_tests(
     tool_context: ToolContext
 ) -> str:
     """Run tests and analyze results.
-    
+
     Args:
         test_command: Command to run tests
         test_path: Path to test files
-        
+
     Returns:
         Test execution results
     """
@@ -845,7 +866,7 @@ def run_tests(
             text=True,
             timeout=60
         )
-        
+
         return f"""🧪 **Testing**: Running test suite
 
 **Command**: {test_command}
@@ -860,7 +881,7 @@ def run_tests(
 
 **Status**: {'✅ PASSED' if result.returncode == 0 else '❌ FAILED'}
 """
-    
+
     except subprocess.TimeoutExpired:
         return "🧪 **Testing**: Test execution timed out after 60 seconds"
     except Exception as e:
@@ -874,12 +895,12 @@ def manage_git_workflow(
     tool_context: ToolContext
 ) -> str:
     """Manage git workflow operations.
-    
+
     Args:
         action: Git action to perform (branch, commit, push, etc.)
         branch_name: Name of the branch for branch operations
         commit_message: Commit message for commit operations
-        
+
     Returns:
         Status message about git operation
     """
@@ -891,11 +912,11 @@ def manage_git_workflow(
                 text=True
             )
             return f"🌿 **Git**: Created and switched to branch '{branch_name}'"
-            
+
         elif action == "commit" and commit_message:
             # Add all changes
             subprocess.run(["git", "add", "."], capture_output=True)
-            
+
             # Commit changes
             result = subprocess.run(
                 ["git", "commit", "-m", commit_message],
@@ -903,7 +924,7 @@ def manage_git_workflow(
                 text=True
             )
             return f"🌿 **Git**: Committed changes with message: '{commit_message}'"
-            
+
         elif action == "status":
             result = subprocess.run(
                 ["git", "status", "--porcelain"],
@@ -911,10 +932,10 @@ def manage_git_workflow(
                 text=True
             )
             return f"🌿 **Git**: Repository status:\n{result.stdout}"
-            
+
         else:
             return f"🌿 **Git**: Unknown action '{action}'"
-            
+
     except Exception as e:
         return f"🌿 **Git**: Error performing {action}: {str(e)}"
 
@@ -926,59 +947,62 @@ def update_task_status(
     tool_context: ToolContext = None
 ) -> str:
     """Update the status of a specific task.
-    
+
     Args:
         spec_name: Name of the specification
         task_index: Index of the task to update (0-based)
         completed: Whether the task is completed
-        
+
     Returns:
         Status message about task update
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     # Find the spec directory
     agent_os_dir = base_dir / ".agent-os"
     specs_dir = agent_os_dir / "specs"
-    
+
     if not specs_dir.exists():
         return "❌ No specs directory found"
-    
+
     # Find matching spec folder
     spec_folders = [d for d in specs_dir.iterdir() if spec_name.lower() in d.name.lower()]
-    
+
     if not spec_folders:
         return f"❌ No specification found matching '{spec_name}'"
-    
-    spec_folder = spec_folders[0]
-    tasks_file = spec_folder / "tasks.md"
-    
-    if not tasks_file.exists():
+
+    tasks_file = None
+    for spec_folder in spec_folders:
+        tasks_file = spec_folder / "tasks.md"
+        if tasks_file.exists():
+            break
+
+    if not tasks_file:
         return f"❌ No tasks.md file found in {spec_folder}"
-    
+
     # Read and update tasks
     content = tasks_file.read_text()
     lines = content.split('\n')
-    
+
     task_lines = [i for i, line in enumerate(lines) if line.strip().startswith('- [')]
-    
+
     if task_index >= len(task_lines):
         return f"❌ Task index {task_index} out of range (0-{len(task_lines)-1})"
-    
+
     line_index = task_lines[task_index]
     current_line = lines[line_index]
-    
+
     if completed:
         lines[line_index] = current_line.replace('- [ ]', '- [x]')
         status = "completed"
     else:
         lines[line_index] = current_line.replace('- [x]', '- [ ]')
         status = "pending"
-    
+
     # Write updated content
     tasks_file.write_text('\n'.join(lines))
-    
+
     return f"✅ **Completed**: Updated task {task_index} to {status} in {spec_folder.name} (project: {base_dir.name})"
 
 
@@ -988,11 +1012,11 @@ def mark_task_complete(
     tool_context: ToolContext = None
 ) -> str:
     """Convenience function to mark a task as complete.
-    
+
     Args:
         spec_name: Name of the specification
         task_index: Index of the task to mark as complete (0-based)
-        
+
     Returns:
         Status message about task completion
     """
@@ -1005,11 +1029,11 @@ def mark_task_pending(
     tool_context: ToolContext = None
 ) -> str:
     """Convenience function to mark a task as pending.
-    
+
     Args:
         spec_name: Name of the specification
         task_index: Index of the task to mark as pending (0-based)
-        
+
     Returns:
         Status message about task update
     """
@@ -1023,18 +1047,18 @@ def create_documentation(
     tool_context: ToolContext = None
 ) -> str:
     """Create additional documentation files (API docs, user guides, etc.).
-    
+
     Args:
         doc_type: Type of documentation (API, USER_GUIDE, etc.)
         title: Title of the documentation
         content: Content of the documentation
-        
+
     Returns:
         Status message about documentation creation
     """
     # Work in the current directory
     base_dir = Path(".")
-    
+
     if doc_type.lower() == "readme":
         # For README, create in docs/ to avoid conflicts with project README
         docs_dir = base_dir / "docs"
@@ -1044,7 +1068,7 @@ def create_documentation(
         docs_dir = base_dir / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         file_path = docs_dir / f"{title.lower().replace(' ', '_')}.md"
-    
+
     doc_content = f"""# {title}
 
 {content}
@@ -1052,9 +1076,9 @@ def create_documentation(
 ---
 *Generated by Agent OS - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 """
-    
+
     file_path.write_text(doc_content)
-    
+
     return f"📁 **Creating**: {doc_type} documentation at {file_path} (project: {base_dir.name})"
 
 
@@ -1063,10 +1087,10 @@ def read_file(
     tool_context: ToolContext
 ) -> str:
     """Read the contents of a file and return its content.
-    
+
     Args:
         file_path: Path to the file to read
-        
+
     Returns:
         File content or error message
     """
@@ -1074,20 +1098,20 @@ def read_file(
         # Clean up file path - remove extra spaces
         clean_file_path = file_path.strip()
         path = Path(clean_file_path)
-        
+
         if not path.exists():
             return f"❌ **Error**: File '{clean_file_path}' does not exist"
-        
+
         if not path.is_file():
             return f"❌ **Error**: '{clean_file_path}' is not a file"
-        
+
         # Read file content
         content = path.read_text(encoding='utf-8')
-        
+
         # Get file info
         file_size = path.stat().st_size
         line_count = len(content.splitlines())
-        
+
         return f"""📖 **Reading**: {clean_file_path}
 
 **File Info**:
@@ -1101,7 +1125,7 @@ def read_file(
 ```
 
 ✅ **Completed**: File read successfully"""
-        
+
     except UnicodeDecodeError:
         return f"❌ **Error**: Cannot read '{clean_file_path}' - file appears to be binary"
     except PermissionError:
