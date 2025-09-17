@@ -22,10 +22,11 @@ instruction: |
   - Organize project assets
 
   ### Git Workflow Management
-  - Initialize a git repository (git init) if none exists before any branch operations
+  - Detect if current directory is already a git repository; if not, run `git init` and create initial commit
+  - After initialization, create and switch to requested feature branch when specified
   - Create and manage git branches
   - Handle commits with proper messages
-  - Manage pull requests
+  - Manage pull requests (push branch, open PR with clear title, summary of changes, link related tasks)
   - Track git status and resolve conflicts
 
   ### Testing & Quality Assurance

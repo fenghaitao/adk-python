@@ -28,6 +28,7 @@ def create_product_mission(
     description: str,
     target_users: str,
     key_features: List[str],
+    roadmaps: List[str],
     tool_context: ToolContext = None
 ) -> str:
     """Create a product mission document following Agent OS structure.
@@ -65,11 +66,9 @@ def create_product_mission(
 - User satisfaction scores
 - Performance benchmarks
 
-## Timeline
+## Roadmap Overview
 
-- Phase 1: Core functionality (Month 1-2)
-- Phase 2: Advanced features (Month 3-4)
-- Phase 3: Optimization & scaling (Month 5-6)
+{chr(10).join(f"- {r}" for r in roadmaps) if roadmaps else '- Roadmap to be defined'}
 """
 
     # Create .agent-os directory structure
@@ -121,35 +120,17 @@ def create_product_mission(
     tech_stack_file.write_text(tech_stack_content)
 
     # Create roadmap.md placeholder
-    roadmap_content = f"""# Product Roadmap
-
-## Phase 1: Core Functionality
-**Goal**: Implement essential features
-**Success Criteria**: Basic functionality working
-
-### Features
-- [ ] {key_features[0] if key_features else 'Core Feature 1'}
-- [ ] {key_features[1] if len(key_features) > 1 else 'Core Feature 2'}
-- [ ] {key_features[2] if len(key_features) > 2 else 'Core Feature 3'}
-
-## Phase 2: Advanced Features
-**Goal**: Add advanced functionality
-**Success Criteria**: Enhanced user experience
-
-### Features
-- [ ] Advanced Feature 1
-- [ ] Advanced Feature 2
-- [ ] Advanced Feature 3
-
-## Phase 3: Optimization & Scaling
-**Goal**: Performance and scalability
-**Success Criteria**: Production-ready system
-
-### Features
-- [ ] Performance optimization
-- [ ] Scalability improvements
-- [ ] Security hardening
-"""
+    if roadmaps:
+        roadmap_sections = []
+        for entry in roadmaps:
+            parts = entry.split('|')
+            title = parts[0].strip() if parts else 'Phase'
+            goal = parts[1].strip() if len(parts) > 1 else 'Goal TBD'
+            feats = parts[2].split(',') if len(parts) > 2 else []
+            roadmap_sections.append(f"## {title}\nGoal: {goal}\n### Features\n" + ("\n".join(f"- [ ] {f.strip()}" for f in feats if f.strip()) or "- [ ] TBD") + "\n")
+        roadmap_content = "# Product Roadmap\n\n" + "\n".join(roadmap_sections)
+    else:
+        roadmap_content = "# Product Roadmap\n\n- TBD"
 
     roadmap_file = product_dir / "roadmap.md"
     roadmap_file.write_text(roadmap_content)
@@ -858,6 +839,8 @@ def run_tests(
     Returns:
         Test execution results
     """
+    if not test_path:
+        test_path = Path(".")
     try:
         result = subprocess.run(
             test_command.split(),
@@ -905,33 +888,57 @@ def manage_git_workflow(
         Status message about git operation
     """
     try:
+        git_exist_check = Path('.git').exists() and Path('.git').is_dir()
+        if action == "init":
+            if not git_exist_check:
+                init_result = subprocess.run(["git", "init"], capture_output=True, text=True)
+                subprocess.run(["git", "add", "."], capture_output=True, text=True)
+                commit_msg = commit_message or "chore: initial repository import"
+                commit_result = subprocess.run(["git", "commit", "-m", commit_msg], capture_output=True, text=True)
+                branch_out = ""
+                if branch_name:
+                    branch_proc = subprocess.run(["git", "checkout", "-b", branch_name], capture_output=True, text=True)
+                    branch_out = f"branch: {branch_proc.stdout or branch_proc.stderr}"
+                return ("🌿 **Git**: Initialized repository\n" +
+                        f"init: {init_result.stdout or init_result.stderr}" +
+                        f"commit: {commit_result.stdout or commit_result.stderr}" +
+                        branch_out)
+            else:
+                return "🌿 **Git**: Repository already initialized"
+
         if action == "create_branch" and branch_name:
-            result = subprocess.run(
-                ["git", "checkout", "-b", branch_name],
-                capture_output=True,
-                text=True
-            )
-            return f"🌿 **Git**: Created and switched to branch '{branch_name}'"
+            if git_exist_check:
+                result = subprocess.run(
+                    ["git", "checkout", "-b", branch_name],
+                    capture_output=True,
+                    text=True
+                )
+                return f"🌿 **Git**: Created and switched to branch '{branch_name}'"
+            else:
+                return f"🌿 **Git**: Repo does not exist, please init it first"
 
         elif action == "commit" and commit_message:
-            # Add all changes
-            subprocess.run(["git", "add", "."], capture_output=True)
-
-            # Commit changes
-            result = subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                capture_output=True,
-                text=True
-            )
-            return f"🌿 **Git**: Committed changes with message: '{commit_message}'"
+            if git_exist_check:
+                subprocess.run(["git", "add", "."], capture_output=True)
+                result = subprocess.run(
+                    ["git", "commit", "-m", commit_message],
+                    capture_output=True,
+                    text=True
+                )
+                return f"🌿 **Git**: Committed changes with message: '{commit_message}'"
+            else:
+                return f"🌿 **Git**: Repo does not exist, please init it first, then create_branch before commit changes"
 
         elif action == "status":
-            result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True,
-                text=True
-            )
-            return f"🌿 **Git**: Repository status:\n{result.stdout}"
+            if git_exist_check:
+                result = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    capture_output=True,
+                    text=True
+                )
+                return f"🌿 **Git**: Repository status:\n{result.stdout}"
+            else:
+                return f"🌿 **Git**: Repo does not exist, please init it first"
 
         else:
             return f"🌿 **Git**: Unknown action '{action}'"
@@ -967,7 +974,7 @@ def update_task_status(
         return "❌ No specs directory found"
 
     # Find matching spec folder
-    spec_folders = [d for d in specs_dir.iterdir() if spec_name.lower() in d.name.lower()]
+    spec_folders = [d for d in specs_dir.iterdir() if spec_name.lower().replace(' ', '-') in d.name.lower()]
 
     if not spec_folders:
         return f"❌ No specification found matching '{spec_name}'"
