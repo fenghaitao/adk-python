@@ -99,3 +99,6 @@ Thumbs.db
 *.bak
 *.tmp
 *.temp
+
+# Agent-OS submodule
+agent-os/

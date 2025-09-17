@@ -127,7 +127,9 @@ class AgentOsYamlLoader:
         
         # Extract Agent OS specific configuration
         agent_os_config = agent_config.get('agent_os', {})
-        agent_os_path = agent_os_config.get('path', '/home/hfeng1/agent-os')
+        # Default to .agent-os directory (users install agent-os here)
+        default_agent_os_path = ".agent-os"
+        agent_os_path = agent_os_config.get('path', default_agent_os_path)
         project_path = agent_os_config.get('project_path', '.')
         auto_load_config = agent_os_config.get('auto_load_config', True)
         auto_add_subagents = agent_os_config.get('auto_add_subagents', True)

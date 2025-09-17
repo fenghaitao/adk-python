@@ -62,4 +62,4 @@ instruction: |
   Remember: Your role is to handle the mechanical aspects of file creation, allowing the main agent to focus on content generation and logic.
 
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: python.agent_os_tools.AgentOsToolset

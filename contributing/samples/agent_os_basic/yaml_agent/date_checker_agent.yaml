@@ -77,4 +77,4 @@ instruction: |
   Remember: Your primary goal is to output today's date in YYYY-MM-DD format so it becomes available in the main agent's context window.
 
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: python.agent_os_tools.AgentOsToolset

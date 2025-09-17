@@ -6,21 +6,38 @@ import os
 from pathlib import Path
 
 import sys
-from pathlib import Path
 
-# Add the python directory to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
-
-from agent_os_agent import AgentOsAgent
+# Import agent with relative path handling
+try:
+    # Try importing from the parent directory structure
+    sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
+    from agent_os_agent import AgentOsAgent
+except ImportError as e:
+    raise ImportError(
+        f"Could not import AgentOsAgent. Please ensure you're running from the correct directory "
+        f"or set PYTHONPATH to include the python directory. Error: {e}"
+    ) from e
 from google.adk.runners import InMemoryRunner
 from google.genai import types
+
+
+def get_agent_os_path():
+    """Get Agent OS path from environment or use default."""
+    # Default to .agent-os directory (users install agent-os here)
+    default_path = ".agent-os"
+    return os.environ.get("AGENT_OS_PATH", default_path)
+
+
+def get_agent_os_model():
+    """Get Agent OS model from environment or use default."""
+    return os.environ.get("AGENT_OS_MODEL", "iflow/Qwen3-Coder")
 
 
 async def main():
     """Example usage of Agent OS Agent with Agent OS integration."""
     
     # Set up paths
-    agent_os_path = "/home/hfeng1/agent-os"
+    agent_os_path = get_agent_os_path()
     project_path = "."
     
     # Create Agent OS Agent with Agent OS configuration
@@ -28,7 +45,7 @@ async def main():
         agent_os_path=agent_os_path,
         project_path=project_path,
         name="agent_os_agent",
-        model="iflow/Qwen3-Coder",
+        model=get_agent_os_model(),
     )
     
     # Add Agent OS subagents

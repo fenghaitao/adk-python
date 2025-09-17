@@ -20,17 +20,37 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Import from the ADK source directory
-import sys
-from pathlib import Path as PathLib
-
-# Add the src directory to Python path for imports
-current_dir = PathLib(__file__).parent
-src_dir = current_dir.parent.parent.parent / "src"
-sys.path.insert(0, str(src_dir))
-
-from google.adk.tools.base_tool import BaseTool
-from google.adk.tools.tool_context import ToolContext
+# Import ADK tools - use more robust import method
+try:
+    # Try direct import first (when ADK is properly installed)
+    from google.adk.tools.base_tool import BaseTool
+    from google.adk.tools.base_toolset import BaseToolset
+    from google.adk.tools.tool_context import ToolContext
+except ImportError:
+    # Fallback: Add src directory only if direct import fails
+    import sys
+    from pathlib import Path as PathLib
+    
+    # Find ADK source directory relative to this file
+    current_dir = PathLib(__file__).parent
+    adk_src_dir = current_dir.parent.parent.parent / "src"
+    
+    if adk_src_dir.exists():
+        sys.path.insert(0, str(adk_src_dir))
+        try:
+            from google.adk.tools.base_tool import BaseTool
+            from google.adk.tools.base_toolset import BaseToolset
+            from google.adk.tools.tool_context import ToolContext
+        except ImportError as e:
+            raise ImportError(
+                f"Could not import ADK tools. Please ensure ADK is installed or "
+                f"PYTHONPATH includes the ADK source directory. Error: {e}"
+            ) from e
+    else:
+        raise ImportError(
+            f"ADK source directory not found at {adk_src_dir}. "
+            f"Please ensure ADK is installed or set PYTHONPATH correctly."
+        )
 
 
 class AgentOsReadTool(BaseTool):
@@ -40,6 +60,24 @@ class AgentOsReadTool(BaseTool):
         super().__init__(
             name="read_file",
             description="Read the contents of a file. Use this to examine files in the project.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="read_file",
+            description="Read the contents of a file. Use this to examine files in the project.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "file_path": types.Schema(
+                        type=types.Type.STRING,
+                        description="Path to the file to read"
+                    )
+                },
+                required=["file_path"]
+            )
         )
 
     async def run_async(
@@ -66,6 +104,32 @@ class AgentOsWriteTool(BaseTool):
         super().__init__(
             name="write_file",
             description="Write content to a file. Use this to create or update files in the project.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="write_file",
+            description="Write content to a file. Use this to create or update files in the project.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "file_path": types.Schema(
+                        type=types.Type.STRING,
+                        description="Path to the file to write"
+                    ),
+                    "content": types.Schema(
+                        type=types.Type.STRING,
+                        description="Content to write to the file"
+                    ),
+                    "overwrite": types.Schema(
+                        type=types.Type.BOOLEAN,
+                        description="Whether to overwrite if file exists (default: False)"
+                    )
+                },
+                required=["file_path", "content"]
+            )
         )
 
     async def run_async(
@@ -100,6 +164,36 @@ class AgentOsGrepTool(BaseTool):
         super().__init__(
             name="grep_search",
             description="Search for patterns in files using grep. Use this to find specific content across files.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="grep_search",
+            description="Search for patterns in files using grep. Use this to find specific content across files.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "pattern": types.Schema(
+                        type=types.Type.STRING,
+                        description="Pattern to search for"
+                    ),
+                    "file_path": types.Schema(
+                        type=types.Type.STRING,
+                        description="File or directory to search in (default: '.')"
+                    ),
+                    "case_sensitive": types.Schema(
+                        type=types.Type.BOOLEAN,
+                        description="Whether search is case sensitive (default: False)"
+                    ),
+                    "max_lines": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Maximum number of result lines to return (default: 50)"
+                    )
+                },
+                required=["pattern"]
+            )
         )
 
     async def run_async(
@@ -156,6 +250,32 @@ class AgentOsGlobTool(BaseTool):
             description="Find files matching a glob pattern. Use this to discover files in the project.",
         )
 
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="glob_search",
+            description="Find files matching a glob pattern. Use this to discover files in the project.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "pattern": types.Schema(
+                        type=types.Type.STRING,
+                        description="Glob pattern to match files (e.g., '*.py', '**/*.md')"
+                    ),
+                    "directory": types.Schema(
+                        type=types.Type.STRING,
+                        description="Directory to search in (default: '.')"
+                    ),
+                    "max_files": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Maximum number of files to return (default: 100)"
+                    )
+                },
+                required=["pattern"]
+            )
+        )
+
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
@@ -199,6 +319,32 @@ class AgentOsBashTool(BaseTool):
             description="Execute bash commands. Use this to run shell commands, git operations, and other system tasks.",
         )
 
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="bash_command",
+            description="Execute bash commands. Use this to run shell commands, git operations, and other system tasks.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "command": types.Schema(
+                        type=types.Type.STRING,
+                        description="Bash command to execute"
+                    ),
+                    "working_directory": types.Schema(
+                        type=types.Type.STRING,
+                        description="Directory to run command in (default: '.')"
+                    ),
+                    "timeout": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Timeout in seconds (default: 60)"
+                    )
+                },
+                required=["command"]
+            )
+        )
+
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
@@ -232,14 +378,11 @@ class AgentOsBashTool(BaseTool):
             return {"error": f"Error executing command: {str(e)}"}
 
 
-class AgentOsToolset(BaseTool):
+class AgentOsToolset(BaseToolset):
     """Toolset containing all Agent OS tools."""
 
     def __init__(self):
-        super().__init__(
-            name="agent_os_toolset",
-            description="Collection of Agent OS tools for file operations, searching, and system commands.",
-        )
+        super().__init__()
         self.tools = [
             AgentOsReadTool(),
             AgentOsWriteTool(),
@@ -248,15 +391,22 @@ class AgentOsToolset(BaseTool):
             AgentOsBashTool(),
         ]
 
-    async def get_tools_with_prefix(self, tool_context: ToolContext) -> List[BaseTool]:
+    async def get_tools(self, readonly_context=None) -> List[BaseTool]:
         """Return all tools in this toolset."""
         return self.tools
 
-    async def run_async(
-        self, *, args: Dict[str, Any], tool_context: ToolContext
-    ) -> Any:
-        """This toolset doesn't have a direct run method."""
-        return {"error": "Use individual tools from this toolset"}
+    @classmethod
+    def from_config(cls, config, config_abs_path: str):
+        """Create an AgentOsToolset from configuration.
+        
+        Args:
+            config: The configuration object (unused for this simple toolset)
+            config_abs_path: Absolute path to the config file (unused)
+            
+        Returns:
+            AgentOsToolset: A new instance of the toolset
+        """
+        return cls()
 
 
 # Convenience function to create the toolset

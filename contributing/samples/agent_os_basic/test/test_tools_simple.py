@@ -38,7 +38,10 @@ def test_tools():
     # Test tools
     print("\n🔧 Available Tools:")
     for tool in root_agent.tools:
-        print(f"  - {tool.name}: {tool.description}")
+        if hasattr(tool, 'name'):
+            print(f"  - {tool.name}: {tool.description}")
+        else:
+            print(f"  - {type(tool).__name__}: {getattr(tool, 'description', 'No description')}")
         if hasattr(tool, 'tools'):
             print(f"    Sub-tools: {[t.name for t in tool.tools]}")
     

@@ -22,10 +22,10 @@ agent:
   
   # Agent OS specific configuration
   agent_os:
-    path: "/home/hfeng1/agent-os"  # Path to Agent OS installation
-    project_path: "."              # Current project path
-    auto_load_config: true         # Automatically load Agent OS config
-    auto_add_subagents: true       # Automatically add Agent OS subagents
+    path: "${AGENT_OS_PATH:-~/agent-os}"  # Path to Agent OS installation (configurable via env var)
+    project_path: "."                     # Current project path
+    auto_load_config: true                # Automatically load Agent OS config
+    auto_add_subagents: true              # Automatically add Agent OS subagents
 
   # Core instruction for the agent
   instruction: |

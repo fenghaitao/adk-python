@@ -42,4 +42,4 @@ instruction: |
   Remember: Your goal is to maintain accurate project tracking and ensure all completed work is properly documented.
 
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: python.agent_os_tools.AgentOsToolset

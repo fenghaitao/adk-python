@@ -9,12 +9,43 @@ import os
 import asyncio
 from pathlib import Path
 
-# Add the ADK source to the path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
+# Import ADK with robust path handling
+try:
+    # Try direct import first (when ADK is properly installed)
+    from google.adk.runners import InMemoryRunner
+    from google.genai import types
+    from google.adk.agents.config_agent_utils import from_config
+except ImportError:
+    # Fallback: Add ADK source directory only if direct import fails
+    adk_src_path = Path(__file__).parent.parent.parent.parent / "src"
+    if adk_src_path.exists():
+        sys.path.insert(0, str(adk_src_path))
+        try:
+            from google.adk.runners import InMemoryRunner
+            from google.genai import types
+            from google.adk.agents.config_agent_utils import from_config
+        except ImportError as e:
+            raise ImportError(
+                f"Could not import ADK modules. Please ensure ADK is installed or "
+                f"PYTHONPATH includes the ADK source directory. Error: {e}"
+            ) from e
+    else:
+        raise ImportError(
+            f"ADK source directory not found at {adk_src_path}. "
+            f"Please ensure ADK is installed or set PYTHONPATH correctly."
+        )
 
-from google.adk.runners import InMemoryRunner
-from google.genai import types
-from google.adk.agents.config_agent_utils import from_config
+
+def get_agent_os_path():
+    """Get Agent OS path from environment or use default."""
+    # Default to .agent-os directory (users install agent-os here)
+    default_path = ".agent-os"
+    return os.environ.get("AGENT_OS_PATH", default_path)
+
+
+def get_agent_os_model():
+    """Get Agent OS model from environment or use default."""
+    return os.environ.get("AGENT_OS_MODEL", "iflow/Qwen3-Coder")
 
 
 def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
@@ -55,22 +86,26 @@ def demo_python_agent():
     print("-" * 50)
     
     try:
-        # Add python_agent to path and import
-        sys.path.insert(0, str(Path(__file__).parent / "python"))
-        from agent_os_agent import AgentOsAgent
+        # Import python agent with better error handling
+        python_dir = Path(__file__).parent / "python"
+        if python_dir.exists():
+            sys.path.insert(0, str(python_dir))
+            from agent_os_agent import AgentOsAgent
+        else:
+            raise ImportError(f"Python agent directory not found at {python_dir}")
         
         print(f"✅ Python agent loaded successfully")
         
         # Create Agent OS Agent
         agent_os_agent = AgentOsAgent.create_with_agent_os_config(
-            agent_os_path="/home/hfeng1/agent-os",
+            agent_os_path=get_agent_os_path(),
             project_path=".",
             name="agent_os_agent",
-            model="iflow/Qwen3-Coder",
+            model=get_agent_os_model(),
         )
         
         # Add Agent OS subagents
-        agent_os_agent.add_agent_os_subagents("/home/hfeng1/agent-os")
+        agent_os_agent.add_agent_os_subagents(get_agent_os_path())
         
         print(f"   Agent name: {agent_os_agent.name}")
         print(f"   Agent description: {agent_os_agent.description}")
@@ -217,13 +252,11 @@ def demo_comparative_execution():
         sys.path.insert(0, str(Path(__file__).parent / "python"))
         from agent_os_agent import AgentOsAgent
         
-        agent_os_agent = AgentOsAgent.create_with_agent_os_config(
-            agent_os_path="/home/hfeng1/agent-os",
-            project_path=".",
+        agent_os_agent = AgentOsAgent.create_with_agent_os(
             name="agent_os_agent",
             model="iflow/Qwen3-Coder",
         )
-        agent_os_agent.add_agent_os_subagents("/home/hfeng1/agent-os")
+        agent_os_agent.add_agent_os_subagents(get_agent_os_path())
         
         runner = InMemoryRunner(agent_os_agent)
         response = run_agent_with_prompt(runner, test_prompt, "compare_python")

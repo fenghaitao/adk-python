@@ -60,4 +60,4 @@ instruction: |
   Remember: Your goal is to handle git operations efficiently while maintaining clean git history and following project conventions.
 
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: python.agent_os_tools.AgentOsToolset

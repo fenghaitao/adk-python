@@ -17,7 +17,7 @@ The `agent.py` file provides a pre-configured Agent OS agent that can be used di
 
 ```python
 # Import the pre-configured agent
-from contributing.samples.agent_os.python.agent import root_agent
+from contributing.samples.agent_os_basic.python.agent import root_agent
 
 # Use with ADK runner
 from google.adk.runners import InMemoryRunner
@@ -97,7 +97,7 @@ Choose the YAML configuration for:
 ### Example 1: Basic Usage
 
 ```python
-from contributing.samples.agent_os.python.agent import root_agent
+from contributing.samples.agent_os_basic.python.agent import root_agent
 from google.adk.runners import InMemoryRunner
 
 async def main():
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 ### Example 2: Custom Configuration
 
 ```python
-from contributing.samples.agent_os.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os_basic.python.agent_os_agent import AgentOsAgent
 
 # Create custom agent
 custom_agent = AgentOsAgent.create_with_agent_os_config(

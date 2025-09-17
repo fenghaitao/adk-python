@@ -49,4 +49,4 @@ instruction: |
   - Keep responses concise
 
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: python.agent_os_tools.AgentOsToolset
