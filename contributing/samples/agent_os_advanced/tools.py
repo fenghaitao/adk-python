@@ -888,9 +888,8 @@ def manage_git_workflow(
         Status message about git operation
     """
     try:
-        git_exist_check = Path('.git').exists() and Path('.git').is_dir()
         if action == "init":
-            if not git_exist_check:
+            if not (Path('.git').exists() and Path('.git').is_dir()):
                 init_result = subprocess.run(["git", "init"], capture_output=True, text=True)
                 subprocess.run(["git", "add", "."], capture_output=True, text=True)
                 commit_msg = commit_message or "chore: initial repository import"
@@ -907,38 +906,38 @@ def manage_git_workflow(
                 return "🌿 **Git**: Repository already initialized"
 
         if action == "create_branch" and branch_name:
-            if git_exist_check:
-                result = subprocess.run(
-                    ["git", "checkout", "-b", branch_name],
-                    capture_output=True,
-                    text=True
-                )
+            result = subprocess.run(
+                ["git", "checkout", "-b", branch_name],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
                 return f"🌿 **Git**: Created and switched to branch '{branch_name}'"
             else:
-                return f"🌿 **Git**: Repo does not exist, please init it first"
+                return f"🌿 **Git**: {result.stderr}"
 
         elif action == "commit" and commit_message:
-            if git_exist_check:
-                subprocess.run(["git", "add", "."], capture_output=True)
-                result = subprocess.run(
-                    ["git", "commit", "-m", commit_message],
-                    capture_output=True,
-                    text=True
-                )
+            subprocess.run(["git", "add", "."], capture_output=True)
+            result = subprocess.run(
+                ["git", "commit", "-m", commit_message],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
                 return f"🌿 **Git**: Committed changes with message: '{commit_message}'"
             else:
-                return f"🌿 **Git**: Repo does not exist, please init it first, then create_branch before commit changes"
+                return f"🌿 **Git**: {result.stderr}"
 
         elif action == "status":
-            if git_exist_check:
-                result = subprocess.run(
-                    ["git", "status", "--porcelain"],
-                    capture_output=True,
-                    text=True
-                )
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
                 return f"🌿 **Git**: Repository status:\n{result.stdout}"
             else:
-                return f"🌿 **Git**: Repo does not exist, please init it first"
+                return f"🌿 **Git**: {result.stderr}"
 
         else:
             return f"🌿 **Git**: Unknown action '{action}'"
