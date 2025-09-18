@@ -15,7 +15,7 @@ The Agent OS integration brings structured development workflows to ADK, enablin
 ## Directory Structure
 
 ```
-contributing/samples/agent_os_basic/
+contributing/samples/agent_os_integration/
 ├── python/                    # Self-contained Python configuration
 │   ├── __init__.py           # Package initialization
 │   ├── agent.py              # Main agent configuration
@@ -53,7 +53,7 @@ contributing/samples/agent_os_basic/
 
 ```bash
 # Run the interactive demo
-cd contributing/samples/agent_os_basic
+cd contributing/samples/agent_os_integration
 python demo_runner.py
 ```
 
@@ -61,37 +61,37 @@ python demo_runner.py
 
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os_basic/python
+adk run contributing/samples/agent_os_integration/python
 
 # Or import in code
-from contributing.samples.agent_os_basic.python import root_agent
+from contributing.samples.agent_os_integration.python import root_agent
 ```
 
 ### Option 3: YAML Agent Configuration
 
 ```bash
 # Run with ADK CLI (YAML agent)
-adk run contributing/samples/agent_os_basic/yaml_agent
+adk run contributing/samples/agent_os_integration/yaml_agent
 
 # Or run specific YAML file
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent.yaml
 ```
 
 ### Option 4: Custom YAML Configuration
 
 ```bash
 # Run with ADK CLI (custom YAML)
-adk run contributing/samples/agent_os_basic/yaml
+adk run contributing/samples/agent_os_integration/yaml
 
 # Or use the YAML loader
-from contributing.samples.agent_os_basic.yaml.yaml_loader import load_agent_from_yaml
+from contributing.samples.agent_os_integration.yaml.yaml_loader import load_agent_from_yaml
 agent = load_agent_from_yaml("root_agent.yaml")
 ```
 
 ### Option 5: Direct Usage
 
 ```python
-from contributing.samples.agent_os_basic.python.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os_integration.python.agent_os_agent import AgentOsAgent
 from google.adk.runners import InMemoryRunner
 
 # Create Agent OS Agent with Agent OS integration
@@ -134,7 +134,7 @@ The `demo_runner.py` provides an interactive way to test all agent configuration
 
 ### Usage
 ```bash
-cd contributing/samples/agent_os_basic
+cd contributing/samples/agent_os_integration
 python demo_runner.py
 ```
 
@@ -150,20 +150,20 @@ The demo will show:
 
 ```bash
 # Interactive demo (recommended)
-cd contributing/samples/agent_os_basic
+cd contributing/samples/agent_os_integration
 python demo_runner.py
 
 # Test Python configuration
-cd contributing/samples/agent_os_basic/test
+cd contributing/samples/agent_os_integration/test
 python test_simple.py
 python test_tools_simple.py
 
 # Test YAML configuration
-cd contributing/samples/agent_os_basic/yaml
+cd contributing/samples/agent_os_integration/yaml
 python test_yaml_integration.py
 
 # Test examples
-cd contributing/samples/agent_os_basic/examples
+cd contributing/samples/agent_os_integration/examples
 python agent_os_agent_example_safe.py
 ```
 
@@ -354,10 +354,10 @@ The Python configuration provides a self-contained setup:
 **Usage:**
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os_basic/python
+adk run contributing/samples/agent_os_integration/python
 
 # Import in code
-from contributing.samples.agent_os_basic.python import root_agent
+from contributing.samples.agent_os_integration.python import root_agent
 ```
 
 ### YAML Agent Configuration (`yaml_agent/`)
@@ -370,10 +370,10 @@ The YAML agent configuration provides ADK CLI compatible setup:
 **Usage:**
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os_basic/yaml_agent
+adk run contributing/samples/agent_os_integration/yaml_agent
 
 # Or run specific YAML file
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent.yaml
 ```
 
 ### Custom YAML Configuration (`yaml/`)
@@ -387,10 +387,10 @@ The custom YAML configuration provides declarative setup:
 **Usage:**
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os_basic/yaml
+adk run contributing/samples/agent_os_integration/yaml
 
 # Load from YAML
-from contributing.samples.agent_os_basic.yaml.yaml_loader import load_agent_from_yaml
+from contributing.samples.agent_os_integration.yaml.yaml_loader import load_agent_from_yaml
 agent = load_agent_from_yaml("root_agent.yaml")
 ```
 
@@ -400,7 +400,7 @@ The integration includes comprehensive tests in the `test/` directory:
 
 ### Python Configuration Tests
 ```bash
-cd contributing/samples/agent_os_basic/test
+cd contributing/samples/agent_os_integration/test
 python test_simple.py              # Basic agent test
 python test_tools_simple.py        # Tools test
 python test_python_config.py       # Full configuration test
@@ -408,7 +408,7 @@ python test_python_config.py       # Full configuration test
 
 ### Integration Tests
 ```bash
-cd contributing/samples/agent_os_basic/test
+cd contributing/samples/agent_os_integration/test
 python test_agent_os_integration.py    # Full integration test
 python test_simple_integration.py      # Simple integration test
 python test_standalone.py              # Standalone tools test
@@ -416,13 +416,13 @@ python test_standalone.py              # Standalone tools test
 
 ### YAML Configuration Tests
 ```bash
-cd contributing/samples/agent_os_basic/yaml
+cd contributing/samples/agent_os_integration/yaml
 python test_yaml_integration.py    # YAML configuration test
 ```
 
 ### Example Tests
 ```bash
-cd contributing/samples/agent_os_basic/examples
+cd contributing/samples/agent_os_integration/examples
 python agent_os_agent_example_safe.py  # Safe example test
 ```
 
@@ -461,11 +461,11 @@ If you encounter import errors, check the folder structure:
 
 ```bash
 # Verify the structure
-ls -la contributing/samples/agent_os_basic/
-ls -la contributing/samples/agent_os_basic/python/
-ls -la contributing/samples/agent_os_basic/yaml/
-ls -la contributing/samples/agent_os_basic/test/
-ls -la contributing/samples/agent_os_basic/examples/
+ls -la contributing/samples/agent_os_integration/
+ls -la contributing/samples/agent_os_integration/python/
+ls -la contributing/samples/agent_os_integration/yaml/
+ls -la contributing/samples/agent_os_integration/test/
+ls -la contributing/samples/agent_os_integration/examples/
 ```
 
 ## Contributing
@@ -502,8 +502,8 @@ from google.adk.agents import AgentOsAgent
 from google.adk.tools import create_agent_os_toolset
 
 # New way
-from contributing.samples.agent_os_basic.python.agent_os_agent import AgentOsAgent
-from contributing.samples.agent_os_basic.python.agent_os_tools import create_agent_os_toolset
+from contributing.samples.agent_os_integration.python.agent_os_agent import AgentOsAgent
+from contributing.samples.agent_os_integration.python.agent_os_tools import create_agent_os_toolset
 ```
 
 ### From Agent Configuration
@@ -512,25 +512,25 @@ from contributing.samples.agent_os_basic.python.agent_os_tools import create_age
 from contributing.samples.agent_os.agent import root_agent
 
 # New way
-from contributing.samples.agent_os_basic.python import root_agent
+from contributing.samples.agent_os_integration.python import root_agent
 ```
 
 ### From YAML Configuration
 ```python
 # New YAML way
-from contributing.samples.agent_os_basic.yaml.yaml_loader import load_agent_from_yaml
+from contributing.samples.agent_os_integration.yaml.yaml_loader import load_agent_from_yaml
 agent = load_agent_from_yaml("root_agent.yaml")
 ```
 
 ### New Demo Runner
 ```bash
 # New interactive demo
-cd contributing/samples/agent_os_basic
+cd contributing/samples/agent_os_integration
 python demo_runner.py
 ```
 
 ### New YAML Agent Support
 ```bash
 # New YAML agent for ADK CLI
-adk run contributing/samples/agent_os_basic/yaml_agent
+adk run contributing/samples/agent_os_integration/yaml_agent
 ```

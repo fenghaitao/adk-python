@@ -8,10 +8,10 @@ The `python/` directory contains the original Python-based configuration:
 
 ```bash
 # Run with ADK CLI
-adk run contributing/samples/agent_os_basic/python
+adk run contributing/samples/agent_os_integration/python
 
 # Or import in code
-from contributing.samples.agent_os_basic.python import root_agent
+from contributing.samples.agent_os_integration.python import root_agent
 ```
 
 ## 2. YAML Configuration (New)
@@ -23,7 +23,7 @@ Two YAML configurations are available for `adk run`:
 Uses the custom `AgentOsAgent` class with full Agent OS integration:
 
 ```bash
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent.yaml
 ```
 
 **Features:**
@@ -37,7 +37,7 @@ adk run contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml
 Uses standard `LlmAgent` with Agent OS tools:
 
 ```bash
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent_simple.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent_simple.yaml
 ```
 
 **Features:**
@@ -82,13 +82,13 @@ Both configurations include these Agent OS tools:
 
 ```bash
 # Using the full Agent OS agent
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent.yaml
 
 # Using the simple configuration
-adk run contributing/samples/agent_os_basic/yaml_agent/root_agent_simple.yaml
+adk run contributing/samples/agent_os_integration/yaml_agent/root_agent_simple.yaml
 
 # Using Python configuration
-adk run contributing/samples/agent_os_basic/python
+adk run contributing/samples/agent_os_integration/python
 ```
 
 ### Programmatic Usage
@@ -97,16 +97,16 @@ adk run contributing/samples/agent_os_basic/python
 from google.adk.agents.config_agent_utils import from_config
 
 # Load from YAML
-agent = from_config('contributing/samples/agent_os_basic/yaml_agent/root_agent.yaml')
+agent = from_config('contributing/samples/agent_os_integration/yaml_agent/root_agent.yaml')
 
 # Or use the simple version
-agent = from_config('contributing/samples/agent_os_basic/yaml_agent/root_agent_simple.yaml')
+agent = from_config('contributing/samples/agent_os_integration/yaml_agent/root_agent_simple.yaml')
 ```
 
 ## Directory Structure
 
 ```
-agent_os_basic/
+agent_os_integration/
 ├── python/                    # Original Python configuration
 │   ├── agent.py
 │   ├── agent_os_agent.py

@@ -16,7 +16,7 @@ The Agent OS subagents were not properly transferring control back to the root a
 
 ### 1. Added transfer_to_agent Tool to AgentOsToolset
 
-**File**: `contributing/samples/agent_os_basic/python/agent_os_tools.py`
+**File**: `contributing/samples/agent_os_integration/python/agent_os_tools.py`
 
 - Added import for `transfer_to_agent` from `google.adk.tools.transfer_to_agent_tool`
 - Created `AgentOsTransferTool` class that wraps the ADK transfer mechanism
@@ -24,7 +24,7 @@ The Agent OS subagents were not properly transferring control back to the root a
 
 ### 2. Updated All Subagent Instructions
 
-**File**: `contributing/samples/agent_os_basic/python/agent_os_agent.py`
+**File**: `contributing/samples/agent_os_integration/python/agent_os_agent.py`
 
 Updated instructions for all 6 subagents:
 - **context_fetcher**: Now uses `transfer_to_agent` with parent agent name
@@ -36,7 +36,7 @@ Updated instructions for all 6 subagents:
 
 ### 3. Updated Main Agent Instructions
 
-**File**: `contributing/samples/agent_os_basic/python/agent_os_agent.py`
+**File**: `contributing/samples/agent_os_integration/python/agent_os_agent.py`
 
 - Added `transfer_to_agent` to the list of available tools
 - Added section explaining how to use subagents with proper transfer mechanism
@@ -44,14 +44,14 @@ Updated instructions for all 6 subagents:
 ### 4. Updated YAML Configurations
 
 **Files**: 
-- `contributing/samples/agent_os_basic/yaml_agent/context_fetcher_agent.yaml`
-- `contributing/samples/agent_os_basic/yaml_agent/file_creator_agent.yaml`
+- `contributing/samples/agent_os_integration/yaml_agent/context_fetcher_agent.yaml`
+- `contributing/samples/agent_os_integration/yaml_agent/file_creator_agent.yaml`
 
 Updated to include proper transfer instructions for YAML-based agent configurations.
 
 ### 5. Fixed Parent-Child Relationships
 
-**File**: `contributing/samples/agent_os_basic/python/agent_os_agent.py`
+**File**: `contributing/samples/agent_os_integration/python/agent_os_agent.py`
 
 - Modified `add_agent_os_subagents` method to properly set parent_agent references
 - Added manual parent assignment since subagents are added after initialization

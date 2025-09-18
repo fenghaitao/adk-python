@@ -20,13 +20,13 @@ This document summarizes the **Priority 2 (Important)** issues that have been re
 **Before (function call pattern)**:
 ```yaml
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.create_agent_os_toolset
+  - name: contributing.samples.agent_os_integration.python.agent_os_tools.create_agent_os_toolset
 ```
 
 **After (direct class reference)**:
 ```yaml
 tools:
-  - name: contributing.samples.agent_os_basic.python.agent_os_tools.AgentOsToolset
+  - name: contributing.samples.agent_os_integration.python.agent_os_tools.AgentOsToolset
 ```
 
 **Benefits**:
@@ -123,7 +123,7 @@ All fixes have been tested and verified:
 
 ```bash
 # Test YAML toolset pattern
-cd contributing/samples/agent_os_basic
+cd contributing/samples/agent_os_integration
 python -c "
 import yaml
 with open('yaml_agent/context_fetcher_agent.yaml', 'r') as f:
