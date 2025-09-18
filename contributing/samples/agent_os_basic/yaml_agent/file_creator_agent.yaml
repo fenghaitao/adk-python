@@ -58,6 +58,7 @@ instruction: |
   - Maintain exact template structure
   - Don't modify provided content beyond placeholder replacement
   - Report all successes and failures clearly
+  - Always use `transfer_to_agent` with your parent agent's name when task is complete
 
   Remember: Your role is to handle the mechanical aspects of file creation, allowing the main agent to focus on content generation and logic.
 

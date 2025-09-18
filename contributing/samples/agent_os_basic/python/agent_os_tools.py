@@ -26,6 +26,7 @@ try:
     from google.adk.tools.base_tool import BaseTool
     from google.adk.tools.base_toolset import BaseToolset
     from google.adk.tools.tool_context import ToolContext
+    from google.adk.tools.transfer_to_agent_tool import transfer_to_agent
 except ImportError:
     # Fallback: Add src directory only if direct import fails
     import sys
@@ -41,6 +42,7 @@ except ImportError:
             from google.adk.tools.base_tool import BaseTool
             from google.adk.tools.base_toolset import BaseToolset
             from google.adk.tools.tool_context import ToolContext
+            from google.adk.tools.transfer_to_agent_tool import transfer_to_agent
         except ImportError as e:
             raise ImportError(
                 f"Could not import ADK tools. Please ensure ADK is installed or "
@@ -378,6 +380,45 @@ class AgentOsBashTool(BaseTool):
             return {"error": f"Error executing command: {str(e)}"}
 
 
+class AgentOsTransferTool(BaseTool):
+    """Tool for transferring control to another agent."""
+
+    def __init__(self):
+        super().__init__(
+            name="transfer_to_agent",
+            description="Transfer control to another agent. Use this when you have completed your task and need to return control to the main agent or transfer to another specialized agent.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="transfer_to_agent",
+            description="Transfer control to another agent. Use this when you have completed your task and need to return control to the main agent or transfer to another specialized agent.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "agent_name": types.Schema(
+                        type=types.Type.STRING,
+                        description="Name of the agent to transfer control to. Use 'agent_os_agent' to return to main agent."
+                    )
+                },
+                required=["agent_name"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        agent_name = args.get("agent_name")
+        if not agent_name:
+            return {"error": "agent_name is required"}
+
+        # Use the ADK transfer mechanism
+        transfer_to_agent(agent_name, tool_context)
+        return {"result": f"Transferred control to {agent_name}"}
+
+
 class AgentOsToolset(BaseToolset):
     """Toolset containing all Agent OS tools."""
 
@@ -389,6 +430,7 @@ class AgentOsToolset(BaseToolset):
             AgentOsGrepTool(),
             AgentOsGlobTool(),
             AgentOsBashTool(),
+            AgentOsTransferTool(),
         ]
 
     async def get_tools(self, readonly_context=None) -> List[BaseTool]:

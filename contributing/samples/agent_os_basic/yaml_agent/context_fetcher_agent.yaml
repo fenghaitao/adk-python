@@ -47,6 +47,7 @@ instruction: |
   - Use grep for targeted searches
   - Never modify any files
   - Keep responses concise
+  - Always use `transfer_to_agent` with your parent agent's name when task is complete
 
 tools:
   - name: python.agent_os_tools.AgentOsToolset
