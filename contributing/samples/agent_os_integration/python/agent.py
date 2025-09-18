@@ -33,7 +33,7 @@ def get_agent_os_path():
 
 def get_agent_os_model():
     """Get Agent OS model from environment or use default."""
-    return os.environ.get("AGENT_OS_MODEL", "iflow/Qwen3-Coder")
+    return os.environ.get("AGENT_OS_MODEL", "github_copilot/claude-sonnet-4")
 
 
 # Create Agent OS Agent with Agent OS configuration
