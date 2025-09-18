@@ -31,6 +31,7 @@ from ..sessions.base_session_service import BaseSessionService
 from ..sessions.in_memory_session_service import InMemorySessionService
 from ..sessions.session import Session
 from ..utils.context_utils import Aclosing
+from .readline_prompt import ReadlinePrompt
 from .utils import envs
 from .utils.agent_loader import AgentLoader
 
@@ -92,11 +93,15 @@ async def run_interactively(
       session_service=session_service,
       credential_service=credential_service,
   )
+  
+  # Initialize readline prompt handler with history support
+  input_handler = ReadlinePrompt()
+  
   while True:
-    query = input('[user]: ')
+    query = input_handler.get_input('[user]: ')
     if not query or not query.strip():
       continue
-    if query == 'exit':
+    if query.strip() == 'exit':
       break
     async with Aclosing(
         runner.run_async(
@@ -193,7 +198,9 @@ async def run_cli(
     )
 
   if save_session:
-    session_id = session_id or input('Session ID to save: ')
+    if not session_id:
+      input_handler = ReadlinePrompt()
+      session_id = input_handler.get_input('Session ID to save: ')
     session_path = (
         f'{agent_parent_dir}/{agent_folder_name}/{session_id}.session.json'
     )
