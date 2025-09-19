@@ -57,7 +57,7 @@ class AgentOsAgent(LlmAgent):
     def __init__(
         self,
         name: str = "agent_os",
-        model: str = "iflow/Qwen3-Coder",
+        model: str = "github_copilot/claude-sonnet-4",
         instruction: str = "",
         description: str = "A specialized coding agent that follows Agent OS workflows for spec-driven development",
         **kwargs
@@ -106,51 +106,60 @@ You are a specialized coding agent that follows Agent OS workflows for spec-driv
 - **bash_command**: Execute shell commands
 - **transfer_to_agent**: Transfer control to specialized subagents
 
+### Simics Device Modeling Tools
+
+- **get_dml_example**: Get DML template and examples for device modeling
+- **query_lib_doc**: Query DML documentation for built-in templates and methods
+- **query_simics_guide**: Semantically query Simics documentation and concept guides
+- **search_simics_docs**: Search Simics documentation using keyword matching
+- **auto_build**: Compile DML source file to .so module
+- **auto_build_by_content**: Compile DML source code directly to .so module
+
 ## Agent OS Commands
 
 You can recognize and execute Agent OS commands. When a command is detected, follow the specific instructions for that command:
 
 - **/plan-product [description]**: Plan a new product and install Agent OS in its codebase
-  - Follow instructions in: `.adk/commands/plan-product.md`
-  - Detailed implementation: `.agent-os/instructions/core/plan-product.md`
-
-- **/analyze-product**: Analyze your product's codebase and install Agent OS
-  - Follow instructions in: `.adk/commands/analyze-product.md`
-  - Detailed implementation: `.agent-os/instructions/core/analyze-product.md`
+  - Follow instructions in: `.agent-os/instructions/core/plan-product.md`
+  - Includes specialized support for Simics device modeling projects
+  - Uses Simics tools: get_dml_example, query_lib_doc, query_simics_guide
 
 - **/create-spec [feature]**: Create a detailed spec for a new feature with technical specifications and task breakdown
-  - Follow instructions in: `.adk/commands/create-spec.md`
-  - Detailed implementation: `.agent-os/instructions/core/create-spec.md`
+  - Follow instructions in: `.agent-os/instructions/core/create-spec.md`
+  - Includes specialized templates for device model specifications
+  - Uses Simics tools: get_dml_example, query_lib_doc, search_simics_docs
 
 - **/create-tasks [feature]**: Create a tasks list with sub-tasks to execute a feature based on its spec
-  - Follow instructions in: `.adk/commands/create-tasks.md`
-  - Detailed implementation: `.agent-os/instructions/core/create-tasks.md`
+  - Follow instructions in: `.agent-os/instructions/core/create-tasks.md`
+  - Includes specialized task structures for DML implementation
+  - Guides tool usage: register→signal→state→build→test workflow
 
 - **/execute-task [task]**: Execute specific development tasks
-  - Follow instructions in: `.adk/commands/execute-tasks.md`
-  - Detailed implementation: `.agent-os/instructions/core/execute-tasks.md`
-
-- **/execute-tasks**: Execute multiple development tasks
-  - Follow instructions in: `.adk/commands/execute-tasks.md`
-  - Detailed implementation: `.agent-os/instructions/core/execute-tasks.md`
+  - Follow instructions in: `.agent-os/instructions/core/execute-task.md`
+  - Includes specialized DML implementation workflows
+  - Uses all Simics tools: auto_build, auto_build_by_content for compilation
 
 ### Command Execution Protocol:
 
-1. **Read Command Instructions**: First read the brief command description from `.adk/commands/[command-name].md`
-2. **Follow Detailed Implementation**: Then read and follow the complete instructions from `.agent-os/instructions/core/[command-name].md`
-3. **Use Subagents**: Delegate to specialized subagents as specified in the detailed instructions
-4. **Follow Process Flow**: Execute the step-by-step process defined in the instruction files
-5. **Validate Results**: Ensure outputs match the templates and requirements specified
+1. **Read Command Instructions**: Read the complete instructions from `.agent-os/instructions/core/[command-name].md`
+2. **Detect Project Type**: Automatically detect Simics projects using keywords
+3. **Use Appropriate Workflow**: Follow Simics-specialized or standard workflow as appropriate
+4. **Apply Simics Tools**: Use get_dml_example, query_lib_doc, query_simics_guide, search_simics_docs, auto_build, auto_build_by_content as guided
+5. **Follow Process Flow**: Execute the step-by-step process defined in the instruction files
+6. **Validate Results**: Ensure outputs match the templates and requirements specified
 
 ## Agent OS Integration
 
 You have access to the complete Agent OS system:
 
-- **Command Descriptions**: `.adk/commands/` directory with brief command descriptions
-- **Detailed Instructions**: `.agent-os/instructions/core/` directory with complete implementation steps
-- **Agent OS Standards**: `.agent-os/standards/` directory for conventions and standards
-- **Agent OS Tools**: File operations, grep, glob, bash commands
-- **Agent OS Subagents**: Specialized agents for different workflow tasks
+- **Workflow Instructions**: `.agent-os/instructions/core/` directory with complete implementation steps
+  - `plan-product.md`: Product planning with Simics detection and tool integration
+  - `create-spec.md`: Feature specifications with device model templates
+  - `create-tasks.md`: Task creation with DML implementation workflows
+  - `execute-task.md`: Task execution with Simics tool usage guidance
+- **Simics Tools**: Specialized tools for device modeling and DML development
+- **Automatic Detection**: Simics projects detected by keywords and routed to specialized workflows
+- **Fallback Support**: All tools include robust fallback mechanisms when APIs unavailable
 
 ## Using Subagents
 
@@ -216,6 +225,8 @@ Remember: You are part of a structured development process. Always follow the es
         """
         # Note: agent_os_path and project_path are kept for backward compatibility
         # but are not used since all Agent OS guidance is now in the base instruction
+        _ = agent_os_path  # Mark as used to avoid linter warnings
+        _ = project_path  # Mark as used to avoid linter warnings
         return cls(**kwargs)
 
     def add_agent_os_subagents(self, agent_os_path: str) -> None:
@@ -224,12 +235,13 @@ Remember: You are part of a structured development process. Always follow the es
         Args:
             agent_os_path: Path to the Agent OS installation
         """
+        _ = agent_os_path  # Mark as used to avoid linter warnings
         subagents = []
         
         # Create context-fetcher subagent
         context_fetcher = LlmAgent(
             name="context_fetcher",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_context_fetcher_instruction(),
             description="Retrieves and extracts relevant information from Agent OS documentation files",
             tools=[create_agent_os_toolset()],
@@ -239,7 +251,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create file-creator subagent
         file_creator = LlmAgent(
             name="file_creator",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_file_creator_instruction(),
             description="Creates files, directories, and applies templates for Agent OS workflows",
             tools=[create_agent_os_toolset()],
@@ -249,7 +261,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create project-manager subagent
         project_manager = LlmAgent(
             name="project_manager",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_project_manager_instruction(),
             description="Manages task completion and project tracking documentation",
             tools=[create_agent_os_toolset()],
@@ -259,7 +271,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create git-workflow subagent
         git_workflow = LlmAgent(
             name="git_workflow",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_git_workflow_instruction(),
             description="Handles git operations, branch management, commits, and PR creation",
             tools=[create_agent_os_toolset()],
@@ -269,7 +281,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create test-runner subagent
         test_runner = LlmAgent(
             name="test_runner",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_test_runner_instruction(),
             description="Runs tests and analyzes failures for the current task",
             tools=[create_agent_os_toolset()],
@@ -279,7 +291,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create date-checker subagent
         date_checker = LlmAgent(
             name="date_checker",
-            model="iflow/Qwen3-Coder",
+            model="github_copilot/claude-sonnet-4",
             instruction=self._get_date_checker_instruction(),
             description="Determines and outputs today's date in YYYY-MM-DD format",
             tools=[create_agent_os_toolset()],
