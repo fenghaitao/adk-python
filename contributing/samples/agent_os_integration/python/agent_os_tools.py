@@ -17,8 +17,12 @@
 import os
 import subprocess
 import tempfile
+import json
+import requests
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
 
 # Import ADK tools - use more robust import method
 try:
@@ -419,6 +423,689 @@ class AgentOsTransferTool(BaseTool):
         return {"result": f"Transferred control to {agent_name}"}
 
 
+# Simics-specific tools for device modeling
+class SimicsGetDmlExampleTool(BaseTool):
+    """Tool for getting DML template and examples."""
+
+    def __init__(self):
+        super().__init__(
+            name="get_dml_example",
+            description="Get the DML file example template for device modeling. Returns DML syntax patterns and examples.",
+        )
+        
+        # Load DML template if available
+        self.dml_template = self._load_dml_template()
+
+    def _load_dml_template(self) -> Optional[str]:
+        """Load DML template from file."""
+        try:
+            # Look for DML template in various locations
+            template_paths = [
+                Path(__file__).parent / "simics-dml-tpl.dml",
+                Path("simics-dml-tpl.dml"),
+                Path(".") / "simics-dml-tpl.dml"
+            ]
+            
+            for path in template_paths:
+                if path.exists():
+                    return path.read_text(encoding='utf-8')
+                    
+            # Return basic DML template if file not found
+            return """dml 1.4;
+
+device sample_device;
+
+// Device attributes
+attribute device_name default "sample_device";
+
+// Register bank
+bank registers {
+    register control size 4 @ 0x00 {
+        // Control register implementation
+        field enable @ [0];
+        field reset @ [1];
+        
+        method write_register(uint64 enabled_bytes, uint64 value) {
+            default(enabled_bytes, value);
+            // Add side effects here
+        }
+    }
+    
+    register status size 4 @ 0x04 "read-only" {
+        // Status register implementation
+        field ready @ [0];
+        field error @ [1];
+    }
+}
+
+// Port for external signals
+port signal_in {
+    implement signal {
+        method signal_raise() {
+            // Handle incoming signal
+        }
+    }
+}
+
+// Connect for interface communication
+connect memory {
+    interface memory_space;
+}
+"""
+        except Exception:
+            return None
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="get_dml_example",
+            description="Get the DML file example template for device modeling. Returns DML syntax patterns and examples.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={},
+                required=[]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        return {
+            "dml_template": self.dml_template or "DML template not available",
+            "description": "DML template with basic device structure, registers, ports, and connections"
+        }
+
+
+class SimicsQueryLibDocTool(BaseTool):
+    """Tool for querying Simics library documentation."""
+
+    def __init__(self):
+        super().__init__(
+            name="query_lib_doc",
+            description="Query Device Modeling Language documentation for built-in templates, functions, methods, and Simics library components.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="query_lib_doc",
+            description="Query Device Modeling Language documentation for built-in templates, functions, methods, and Simics library components.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "queries": types.Schema(
+                        type=types.Type.STRING,
+                        description="Comma-separated list of queries or single query"
+                    ),
+                    "max_results": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Maximum number of results to return (default: 5)"
+                    )
+                },
+                required=["queries"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        queries = args.get("queries", "")
+        max_results = args.get("max_results", 5)
+        
+        try:
+            # Try to use the actual API if environment is configured
+            results = self._query_utility_doc(queries, max_results)
+            return {"results": results, "queries": queries}
+        except Exception as e:
+            # Fallback to static documentation
+            return {
+                "results": self._get_static_lib_doc(queries),
+                "queries": queries,
+                "note": f"Using static documentation. API error: {str(e)}"
+            }
+
+    def _query_utility_doc(self, queries: str, max_results: int) -> List[str]:
+        """Query the actual utility documentation API."""
+        load_dotenv()
+        
+        api_key = os.getenv('API_KEY_UTILITY_WF')
+        base_url = os.getenv('BASE_URL')
+        
+        if not api_key or not base_url:
+            raise ValueError("API configuration not available")
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+
+        query_list = [q.strip() for q in queries.split(',') if q.strip()]
+        all_results = []
+
+        for query in query_list:
+            try:
+                payload = {
+                    "inputs": {"query": query},
+                    "response_mode": "blocking",
+                    "user": "simics-lib-agent"
+                }
+
+                response = requests.post(
+                    f"{base_url}/workflows/run",
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
+
+                response.raise_for_status()
+                result_data = response.json()
+
+                if 'data' in result_data and 'outputs' in result_data['data']:
+                    text_results = result_data['data']['outputs'].get('text', [])
+                    for item in text_results:
+                        if isinstance(item, dict) and 'content' in item:
+                            all_results.append(item['content'])
+
+            except Exception:
+                continue
+
+        return all_results[:max_results]
+
+    def _get_static_lib_doc(self, queries: str) -> List[str]:
+        """Return static DML library documentation."""
+        static_docs = [
+            "DML built-in templates: register, field, bank, port, connect, implement",
+            "Common register methods: read_register(), write_register(), reset()",
+            "Utility templates: utility.dml contains pre-defined templates for common patterns",
+            "Attribute types: uint64, int64, bool, string, object",
+            "Event handling: after() for deferred operations, event objects for timers",
+            "Interface implementation: implement interface_name for connecting to other devices",
+            "Memory operations: transact() for reading/writing memory",
+            "Logging: log(), log_error(), log_warning() for debug output"
+        ]
+        
+        query_words = queries.lower().split()
+        filtered_docs = []
+        
+        for doc in static_docs:
+            if any(word in doc.lower() for word in query_words):
+                filtered_docs.append(doc)
+        
+        return filtered_docs if filtered_docs else static_docs
+
+
+class SimicsQueryGuideTool(BaseTool):
+    """Tool for querying Simics documentation and concept guides."""
+
+    def __init__(self):
+        super().__init__(
+            name="query_simics_guide",
+            description="Semantically query Simics documentation and concept guides for understanding concepts and modeling approaches.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="query_simics_guide",
+            description="Semantically query Simics documentation and concept guides for understanding concepts and modeling approaches.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "queries": types.Schema(
+                        type=types.Type.STRING,
+                        description="Comma-separated list of queries or single query"
+                    ),
+                    "max_results": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Maximum number of results to return (default: 5)"
+                    )
+                },
+                required=["queries"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        queries = args.get("queries", "")
+        max_results = args.get("max_results", 5)
+        
+        try:
+            # Try to use the actual API if environment is configured
+            results = self._query_guide_api(queries, max_results)
+            return {"results": results, "queries": queries}
+        except Exception as e:
+            # Fallback to static guide content
+            return {
+                "results": self._get_static_guide_content(queries),
+                "queries": queries,
+                "note": f"Using static guide content. API error: {str(e)}"
+            }
+
+    def _query_guide_api(self, queries: str, max_results: int) -> List[str]:
+        """Query the actual Simics guide API."""
+        load_dotenv()
+        
+        api_key = os.getenv('API_KEY_GUIDE_WF')
+        base_url = os.getenv('BASE_URL')
+        
+        if not api_key or not base_url:
+            raise ValueError("API configuration not available")
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+
+        query_list = [q.strip() for q in queries.split(',') if q.strip()]
+        all_results = []
+
+        for query in query_list:
+            try:
+                payload = {
+                    "inputs": {"query": query},
+                    "response_mode": "blocking",
+                    "user": "simics-guide-agent"
+                }
+
+                response = requests.post(
+                    f"{base_url}/workflows/run",
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
+
+                response.raise_for_status()
+                result_data = response.json()
+
+                if 'data' in result_data and 'outputs' in result_data['data']:
+                    text_results = result_data['data']['outputs'].get('text', [])
+                    for item in text_results:
+                        if isinstance(item, dict) and 'content' in item:
+                            all_results.append(item['content'])
+
+            except Exception:
+                continue
+
+        return all_results[:max_results]
+
+    def _get_static_guide_content(self, queries: str) -> List[str]:
+        """Return static Simics guide content."""
+        static_content = [
+            "Device modeling basics: Model only software-visible behavior, implement all registers accurately",
+            "Register modeling: Use register templates with proper read/write methods and side effects",
+            "Memory mapping: Devices are mapped into memory spaces using banks and register addresses",
+            "Signal modeling: Use ports and interfaces for device interconnection and communication",
+            "Event handling: Use events for asynchronous operations like timers and interrupts",
+            "State management: Use attributes for device state that needs checkpointing",
+            "DML compilation: Use Simics build system to compile DML into .so modules",
+            "Testing approach: Write unit tests for device behavior and integration with Simics"
+        ]
+        
+        query_words = queries.lower().split()
+        filtered_content = []
+        
+        for content in static_content:
+            if any(word in content.lower() for word in query_words):
+                filtered_content.append(content)
+        
+        return filtered_content if filtered_content else static_content
+
+
+class SimicsSearchDocsTool(BaseTool):
+    """Tool for keyword-based search of Simics documentation."""
+
+    def __init__(self):
+        super().__init__(
+            name="search_simics_docs",
+            description="Search Simics documentation, API references, and manuals using keyword matching.",
+        )
+        
+        # Load documentation index if available
+        self.doc_data = self._load_doc_index()
+
+    def _load_doc_index(self) -> Optional[Dict]:
+        """Load documentation search index."""
+        try:
+            index_paths = [
+                Path(__file__).parent / "simics_doc_search_index.json",
+                Path("simics_doc_search_index.json"),
+                Path(".") / "simics_doc_search_index.json"
+            ]
+            
+            for path in index_paths:
+                if path.exists():
+                    with open(path, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+        except Exception:
+            pass
+        return None
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="search_simics_docs",
+            description="Search Simics documentation, API references, and manuals using keyword matching.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "keywords": types.Schema(
+                        type=types.Type.STRING,
+                        description="Comma-separated list of keywords or single keyword"
+                    ),
+                    "max_results": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Maximum number of results to return (default: 10)"
+                    ),
+                    "offset": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="Offset for pagination (default: 0)"
+                    )
+                },
+                required=["keywords"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        keywords = args.get("keywords", "")
+        max_results = args.get("max_results", 10)
+        offset = args.get("offset", 0)
+        
+        if self.doc_data:
+            results = self._search_indexed_docs(keywords, max_results, offset)
+        else:
+            results = self._search_static_docs(keywords, max_results, offset)
+        
+        return {
+            "results": results,
+            "keywords": keywords,
+            "total_results": len(results),
+            "using_index": self.doc_data is not None
+        }
+
+    def _search_indexed_docs(self, keywords: str, max_results: int, offset: int) -> List[Dict]:
+        """Search using loaded documentation index."""
+        keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
+        results = []
+        seen_urls = set()
+        
+        for document in self.doc_data.get('documents', []):
+            doc_title = document.get('title', '')
+            for page in document.get('pages', []):
+                page_title = page.get('title', '')
+                for section in page.get('sections', []):
+                    section_title = section.get('title', '')
+                    section_url = section.get('url', '')
+                    section_text = section.get('text', '').lower()
+                    
+                    if any(keyword in section_text for keyword in keyword_list):
+                        if section_url not in seen_urls:
+                            seen_urls.add(section_url)
+                            results.append({
+                                'document_title': doc_title,
+                                'page_title': page_title,
+                                'section_title': section_title,
+                                'section_url': section_url,
+                                'text': section.get('text', '')
+                            })
+        
+        return results[offset:offset + max_results]
+
+    def _search_static_docs(self, keywords: str, max_results: int, offset: int) -> List[Dict]:
+        """Search using static documentation content."""
+        static_sections = [
+            {
+                'document_title': 'DML Language Reference',
+                'page_title': 'Device Modeling',
+                'section_title': 'Register Implementation',
+                'text': 'Registers are the primary interface between software and device models. Use register templates with read_register() and write_register() methods.'
+            },
+            {
+                'document_title': 'Model Builder Guide',
+                'page_title': 'Basic Concepts',
+                'section_title': 'Memory Mapping',
+                'text': 'Device registers are mapped into memory spaces using banks. Each register has an address offset within the bank.'
+            },
+            {
+                'document_title': 'Simics API Reference',
+                'page_title': 'Interfaces',
+                'section_title': 'Signal Interfaces',
+                'text': 'Devices communicate through interfaces and ports. Use connect blocks to implement interface methods.'
+            }
+        ]
+        
+        keyword_list = [k.strip().lower() for k in keywords.split(',') if k.strip()]
+        filtered_results = []
+        
+        for section in static_sections:
+            text = section['text'].lower()
+            if any(keyword in text for keyword in keyword_list):
+                filtered_results.append(section)
+        
+        return filtered_results[offset:offset + max_results]
+
+
+class SimicsAutoBuildTool(BaseTool):
+    """Tool for building DML source files."""
+
+    def __init__(self):
+        super().__init__(
+            name="auto_build",
+            description="Compile DML source file to .so module using Simics build system.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="auto_build",
+            description="Compile DML source file to .so module using Simics build system.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "device_name": types.Schema(
+                        type=types.Type.STRING,
+                        description="Name of the device being built"
+                    ),
+                    "dml_path": types.Schema(
+                        type=types.Type.STRING,
+                        description="Path to the DML source file"
+                    )
+                },
+                required=["device_name", "dml_path"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        device_name = args.get("device_name")
+        dml_path = args.get("dml_path")
+        
+        if not device_name or not dml_path:
+            return {"error": "device_name and dml_path are required"}
+        
+        try:
+            # Read DML file content
+            with open(dml_path, 'r', encoding='utf-8') as f:
+                dml_content = f.read()
+            
+            if not dml_content.strip():
+                return {"error": f"DML file is empty: {dml_path}"}
+            
+            # Try to use build service
+            result = self._build_with_service(device_name, dml_content)
+            return result
+            
+        except FileNotFoundError:
+            return {"error": f"DML file not found: {dml_path}"}
+        except Exception as e:
+            return {"error": f"Build failed: {str(e)}"}
+
+    def _build_with_service(self, device_name: str, dml_content: str) -> Dict:
+        """Build using auto-build service."""
+        load_dotenv()
+        
+        auto_build_srv = os.getenv("AUTO_BUILD_HOST_PORT")
+        if not auto_build_srv:
+            return {"error": "Auto build server not configured"}
+        
+        try:
+            job_id = str(int(datetime.now().timestamp() * 1000))
+            payload = {
+                "device_name": device_name,
+                "upload_code": dml_content,
+                "job_id": job_id
+            }
+            
+            response = requests.post(
+                f"{auto_build_srv}/upload_code",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=300
+            )
+            
+            response.raise_for_status()
+            result_data = response.json()
+            
+            compile_status = result_data.get("compile_status")
+            log = result_data.get("log", "No log available")
+            
+            if compile_status == 1:
+                return {
+                    "success": True,
+                    "device_name": device_name,
+                    "job_id": job_id,
+                    "log": log,
+                    "message": f"Build successful for device '{device_name}'"
+                }
+            else:
+                return {
+                    "success": False,
+                    "device_name": device_name,
+                    "job_id": job_id,
+                    "log": log,
+                    "message": f"Build failed for device '{device_name}'"
+                }
+                
+        except requests.exceptions.Timeout:
+            return {"error": "Build request timed out after 5 minutes"}
+        except requests.exceptions.ConnectionError:
+            return {"error": f"Could not connect to build server at {auto_build_srv}"}
+        except Exception as e:
+            return {"error": f"Build service error: {str(e)}"}
+
+
+class SimicsAutoBuildByContentTool(BaseTool):
+    """Tool for building DML content directly."""
+
+    def __init__(self):
+        super().__init__(
+            name="auto_build_by_content",
+            description="Compile DML source code directly to .so module using Simics build system.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        from google.genai import types
+        return types.FunctionDeclaration(
+            name="auto_build_by_content",
+            description="Compile DML source code directly to .so module using Simics build system.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "device_name": types.Schema(
+                        type=types.Type.STRING,
+                        description="Name of the device being built"
+                    ),
+                    "dml_content": types.Schema(
+                        type=types.Type.STRING,
+                        description="DML source code content"
+                    )
+                },
+                required=["device_name", "dml_content"]
+            )
+        )
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        device_name = args.get("device_name")
+        dml_content = args.get("dml_content")
+        
+        if not device_name or not dml_content:
+            return {"error": "device_name and dml_content are required"}
+        
+        if not dml_content.strip():
+            return {"error": "DML content is empty"}
+        
+        try:
+            result = self._build_with_service(device_name, dml_content)
+            return result
+            
+        except Exception as e:
+            return {"error": f"Build failed: {str(e)}"}
+
+    def _build_with_service(self, device_name: str, dml_content: str) -> Dict:
+        """Build using auto-build service."""
+        load_dotenv()
+        
+        auto_build_srv = os.getenv("AUTO_BUILD_HOST_PORT")
+        if not auto_build_srv:
+            return {"error": "Auto build server not configured"}
+        
+        try:
+            job_id = str(int(datetime.now().timestamp() * 1000))
+            payload = {
+                "device_name": device_name,
+                "upload_code": dml_content,
+                "job_id": job_id
+            }
+            
+            response = requests.post(
+                f"{auto_build_srv}/upload_code",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=300
+            )
+            
+            response.raise_for_status()
+            result_data = response.json()
+            
+            compile_status = result_data.get("compile_status")
+            log = result_data.get("log", "No log available")
+            
+            if compile_status == 1:
+                return {
+                    "success": True,
+                    "device_name": device_name,
+                    "job_id": job_id,
+                    "log": log,
+                    "message": f"Build successful for device '{device_name}'"
+                }
+            else:
+                return {
+                    "success": False,
+                    "device_name": device_name,
+                    "job_id": job_id,
+                    "log": log,
+                    "message": f"Build failed for device '{device_name}'"
+                }
+                
+        except requests.exceptions.Timeout:
+            return {"error": "Build request timed out after 5 minutes"}
+        except requests.exceptions.ConnectionError:
+            return {"error": f"Could not connect to build server at {auto_build_srv}"}
+        except Exception as e:
+            return {"error": f"Build service error: {str(e)}"}
+
+
 class AgentOsToolset(BaseToolset):
     """Toolset containing all Agent OS tools."""
 
@@ -431,10 +1118,18 @@ class AgentOsToolset(BaseToolset):
             AgentOsGlobTool(),
             AgentOsBashTool(),
             AgentOsTransferTool(),
+            # Simics-specific tools
+            SimicsGetDmlExampleTool(),
+            SimicsQueryLibDocTool(),
+            SimicsQueryGuideTool(),
+            SimicsSearchDocsTool(),
+            SimicsAutoBuildTool(),
+            SimicsAutoBuildByContentTool(),
         ]
 
     async def get_tools(self, readonly_context=None) -> List[BaseTool]:
         """Return all tools in this toolset."""
+        _ = readonly_context  # Mark as used to avoid linter warnings
         return self.tools
 
     @classmethod
@@ -448,6 +1143,8 @@ class AgentOsToolset(BaseToolset):
         Returns:
             AgentOsToolset: A new instance of the toolset
         """
+        _ = config  # Mark as used to avoid linter warnings
+        _ = config_abs_path  # Mark as used to avoid linter warnings
         return cls()
 
 
