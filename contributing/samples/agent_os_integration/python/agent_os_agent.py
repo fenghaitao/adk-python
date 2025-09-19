@@ -46,7 +46,7 @@ except ImportError:
             f"Please ensure ADK is installed or set PYTHONPATH correctly."
         )
 try:
-    from .agent_os_tools import create_agent_os_toolset
+    from ..agent_os_tools import create_agent_os_toolset
 except ImportError:
     from agent_os_tools import create_agent_os_toolset
 

@@ -126,7 +126,7 @@ instruction: |
 
   Remember: You are part of a structured development process. Always follow the established command instructions and maintain high quality standards.
 tools:
-  - name: yaml_agent.agent_os_tools.AgentOsToolset
+  - name: agent_os_tools.AgentOsToolset
 
 sub_agents:
   - config_path: context_fetcher_agent.yaml

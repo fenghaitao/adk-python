@@ -36,4 +36,4 @@ instruction: |
 
   Always refer to `.adk/agents/test-runner.md` for the most up-to-date guidance.
 tools:
-  - name: yaml_agent.agent_os_tools.AgentOsToolset
+  - name: agent_os_tools.AgentOsToolset
