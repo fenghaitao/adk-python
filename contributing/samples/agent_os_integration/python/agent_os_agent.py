@@ -57,7 +57,7 @@ class AgentOsAgent(LlmAgent):
     def __init__(
         self,
         name: str = "agent_os",
-        model: str = "github_copilot/claude-sonnet-4",
+        model: str = "github_copilot/gpt-5-mini",
         instruction: str = "",
         description: str = "A specialized coding agent that follows Agent OS workflows for spec-driven development",
         **kwargs
@@ -241,7 +241,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create context-fetcher subagent
         context_fetcher = LlmAgent(
             name="context_fetcher",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_context_fetcher_instruction(),
             description="Retrieves and extracts relevant information from Agent OS documentation files",
             tools=[create_agent_os_toolset()],
@@ -251,7 +251,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create file-creator subagent
         file_creator = LlmAgent(
             name="file_creator",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_file_creator_instruction(),
             description="Creates files, directories, and applies templates for Agent OS workflows",
             tools=[create_agent_os_toolset()],
@@ -261,7 +261,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create project-manager subagent
         project_manager = LlmAgent(
             name="project_manager",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_project_manager_instruction(),
             description="Manages task completion and project tracking documentation",
             tools=[create_agent_os_toolset()],
@@ -271,7 +271,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create git-workflow subagent
         git_workflow = LlmAgent(
             name="git_workflow",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_git_workflow_instruction(),
             description="Handles git operations, branch management, commits, and PR creation",
             tools=[create_agent_os_toolset()],
@@ -281,7 +281,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create test-runner subagent
         test_runner = LlmAgent(
             name="test_runner",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_test_runner_instruction(),
             description="Runs tests and analyzes failures for the current task",
             tools=[create_agent_os_toolset()],
@@ -291,7 +291,7 @@ Remember: You are part of a structured development process. Always follow the es
         # Create date-checker subagent
         date_checker = LlmAgent(
             name="date_checker",
-            model="github_copilot/claude-sonnet-4",
+            model="github_copilot/gpt-5-mini",
             instruction=self._get_date_checker_instruction(),
             description="Determines and outputs today's date in YYYY-MM-DD format",
             tools=[create_agent_os_toolset()],
