@@ -23,7 +23,8 @@ instruction: |
 
   ### Git Workflow Management
   - Detect if current directory is already a git repository; if not, run `git init` and create initial commit
-  - After initialization, create and switch to requested feature branch when specified
+  - **Prompt user for remote repository URL before first push if repository was newly initialized**
+  - After initialization and set remote, create and switch to requested feature branch when specified
   - Create and manage git branches
   - Handle commits with proper messages
   - Manage pull requests (push branch, open PR with clear title, summary of changes, link related tasks)

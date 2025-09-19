@@ -17,7 +17,7 @@ import subprocess
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from google.adk.tools.tool_context import ToolContext
 
@@ -875,14 +875,24 @@ def manage_git_workflow(
     action: str,
     branch_name: str,
     commit_message: str,
-    tool_context: ToolContext
+    remote_url: Optional[str] = None,  # Remote repository URL for 'set_remote' action
+    tool_context: ToolContext = None,
 ) -> str:
     """Manage git workflow operations.
 
+    Supported actions:
+    - 'init': Initialize git repository and create initial commit
+    - 'create_branch': Create and switch to a new branch
+    - 'commit': Stage all changes and commit with message
+    - 'status': Show repository status
+    - 'set_remote': Set remote repository URL (requires remote_url parameter)
+    - 'push': Push current branch to remote (requires remote setup)
+
     Args:
-        action: Git action to perform (branch, commit, push, etc.)
+        action: Git action to perform
         branch_name: Name of the branch for branch operations
         commit_message: Commit message for commit operations
+        remote_url: Remote repository URL for 'set_remote' action
 
     Returns:
         Status message about git operation
@@ -938,6 +948,45 @@ def manage_git_workflow(
                 return f"🌿 **Git**: Repository status:\n{result.stdout}"
             else:
                 return f"🌿 **Git**: {result.stderr}"
+
+        elif action == "set_remote":
+            if not remote_url:  # Use branch_name param for remote URL
+                return "🌿 **Git**: Remote URL required for set_remote action"
+
+            # Set remote origin
+            remote_result = subprocess.run(
+                ["git", "remote", "add", "origin", remote_url],
+                capture_output=True,
+                text=True
+            )
+            if remote_result.returncode == 0:
+                return f"🌿 **Git**: Set remote 'origin' to {branch_name}"
+            else:
+                return f"🌿 **Git**: Failed to set remote: {remote_result.stderr}"
+
+        elif action == "push":
+            # Check if remote exists
+            remote_result = subprocess.run(["git", "remote"], capture_output=True, text=True)
+            if not remote_result.stdout.strip():
+                return "🌿 **Git**: No remote repository configured. Please set remote first using 'set_remote' action."
+
+            # Get current branch
+            branch_result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True)
+            current_branch = branch_result.stdout.strip()
+
+            if not current_branch:
+                return "🌿 **Git**: No current branch found. Please checkout a branch first."
+
+            # Push to remote
+            push_result = subprocess.run(
+                ["git", "push", "-u", "origin", current_branch],
+                capture_output=True,
+                text=True
+            )
+            if push_result.returncode == 0:
+                return f"🌿 **Git**: Pushed branch '{current_branch}' to remote 'origin'"
+            else:
+                return f"🌿 **Git**: Failed to push: {push_result.stderr}"
 
         else:
             return f"🌿 **Git**: Unknown action '{action}'"
