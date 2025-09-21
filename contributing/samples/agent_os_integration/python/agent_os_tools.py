@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 
+TOOL_CALL_DEBUG = True
+
 # Import ADK tools - use more robust import method
 try:
     # Try direct import first (when ADK is properly installed)
@@ -89,6 +91,13 @@ class AgentOsReadTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsReadTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         file_path = args.get("file_path")
         if not file_path:
             return {"error": "file_path is required"}
@@ -141,6 +150,13 @@ class AgentOsWriteTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsWriteTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         file_path = args.get("file_path")
         content = args.get("content", "")
         overwrite = args.get("overwrite", False)
@@ -205,6 +221,13 @@ class AgentOsGrepTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsGrepTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         pattern = args.get("pattern")
         file_path = args.get("file_path", ".")
         case_sensitive = args.get("case_sensitive", False)
@@ -285,6 +308,13 @@ class AgentOsGlobTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsGlobTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         pattern = args.get("pattern")
         directory = args.get("directory", ".")
         max_files = args.get("max_files", 100)
@@ -354,6 +384,13 @@ class AgentOsBashTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsBashTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         command = args.get("command")
         working_directory = args.get("working_directory", ".")
         timeout = args.get("timeout", 60)
@@ -414,6 +451,13 @@ class AgentOsTransferTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"AgentOsTransferTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         agent_name = args.get("agent_name")
         if not agent_name:
             return {"error": "agent_name is required"}
@@ -511,6 +555,15 @@ connect memory {
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        # Print a debug message only if TOOL_CALL_DEBUG global flag is truthy
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"get_dml_example called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            # Swallow errors to avoid breaking tool behavior
+            pass
+
         return {
             "dml_template": self.dml_template or "DML template not available",
             "description": "DML template with basic device structure, registers, ports, and connections"
@@ -551,6 +604,13 @@ class SimicsQueryLibDocTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"SimicsQueryLibDocTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         queries = args.get("queries", "")
         max_results = args.get("max_results", 5)
         
@@ -670,6 +730,13 @@ class SimicsQueryGuideTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"SimicsQueryGuideTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         queries = args.get("queries", "")
         max_results = args.get("max_results", 5)
         
@@ -813,6 +880,13 @@ class SimicsSearchDocsTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"SimicsSearchDocsTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         keywords = args.get("keywords", "")
         max_results = args.get("max_results", 10)
         offset = args.get("offset", 0)
@@ -925,6 +999,13 @@ class SimicsAutoBuildTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"SimicsAutoBuildTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         device_name = args.get("device_name")
         dml_path = args.get("dml_path")
         
@@ -1036,6 +1117,13 @@ class SimicsAutoBuildByContentTool(BaseTool):
     async def run_async(
         self, *, args: Dict[str, Any], tool_context: ToolContext
     ) -> Any:
+        try:
+            if TOOL_CALL_DEBUG:
+                user_info = getattr(tool_context, "user", None)
+                print(f"SimicsAutoBuildByContentTool.run_async called with args={args}, tool_context_user={user_info}")
+        except Exception:
+            pass
+
         device_name = args.get("device_name")
         dml_content = args.get("dml_content")
         
