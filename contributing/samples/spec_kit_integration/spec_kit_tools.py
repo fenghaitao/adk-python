@@ -16,14 +16,18 @@
 
 import os
 import subprocess
+import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 # Import ADK tools
 try:
     from google.adk.tools.base_tool import BaseTool
     from google.adk.tools.base_toolset import BaseToolset
     from google.adk.tools.tool_context import ToolContext
+    from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+    from mcp import StdioServerParameters
 except ImportError:
     import sys
     current_dir = Path(__file__).parent
@@ -33,6 +37,9 @@ except ImportError:
         from google.adk.tools.base_tool import BaseTool
         from google.adk.tools.base_toolset import BaseToolset
         from google.adk.tools.tool_context import ToolContext
+        from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+        from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+        from mcp import StdioServerParameters
 
 
 class SpecKitReadTool(BaseTool):
@@ -231,6 +238,39 @@ class SpecKitToolset(BaseToolset):
     async def get_tools(self, readonly_context=None):
         """Return all tools in this toolset."""
         return self.tools
+
+
+def create_simics_mcp_toolset() -> MCPToolset:
+    """Create a MCP toolset that connects to the simics-mcp-server."""
+    current_dir = Path(__file__).parent
+    simics_server_dir = current_dir / "simics-mcp-server"
+    server_script = simics_server_dir / "run_server.py"
+    
+    # Create stdio connection parameters for the simics-mcp-server
+    server_params = StdioServerParameters(
+        command="python3",
+        args=[str(server_script), "--transport", "stdio"]
+    )
+    
+    connection_params = StdioConnectionParams(
+        server_params=server_params,
+        timeout=10.0
+    )
+    
+    # Filter for specific Simics tools we want to expose
+    tool_filter = [
+        "create_simics_project",
+        "install_simics_package", 
+        "list_installed_packages",
+        "search_packages",
+        "uninstall_simics_package",
+        "get_simics_version"
+    ]
+    
+    return MCPToolset(
+        connection_params=connection_params,
+        tool_filter=tool_filter
+    )
 
 
 def create_spec_kit_toolset() -> SpecKitToolset:
