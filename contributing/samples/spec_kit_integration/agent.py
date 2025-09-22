@@ -70,20 +70,29 @@ Generate an actionable, dependency-ordered tasks.md for the feature based on ava
 
 ## Simics Hardware Simulation
 
-For hardware development projects, you can set up and manage Simics simulation environments:
+For projects requiring hardware simulation, Simics simulation environments are automatically integrated into the workflow:
 
-### /simics-setup <project_name> [project_path]
-Set up a new Simics project for hardware development and simulation.
-- Use create_simics_project to create the project structure
-- Use install_simics_package to add required Simics packages
-- Use list_simics_packages to see available packages
-- Example: "/simics-setup my_hardware_project ./hardware"
+### Automatic Simics Integration
+When working on projects requiring hardware simulation, the agent automatically:
+- Detects hardware simulation requirements from project specifications
+- Uses create_simics_project MCP tool to create actual Simics projects with ispm
+- Uses install_simics_package MCP tool to install required packages
+- Includes hardware simulation validation tasks in task breakdown
 
-### Simics Project Workflow
-1. **Project Creation**: Use create_simics_project to set up the basic project structure
-2. **Package Installation**: Use install_simics_package to add required Simics packages
-3. **Package Management**: Use list_simics_packages to check installed packages
-4. **Hardware Development**: Use standard Spec-Kit commands for hardware specification and planning
+### Available Simics MCP Tools
+- **create_simics_project**: Create new Simics project using ispm (project_name, project_path)
+- **install_simics_package**: Install Simics packages using ispm (package_name, version)
+- **list_installed_packages**: List all installed Simics packages
+- **search_packages**: Search for available Simics packages (query)
+- **get_simics_version**: Get installed Simics and ispm version
+- **uninstall_simics_package**: Remove Simics packages (package_name)
+
+### Hardware Simulation Project Detection
+Projects are identified as requiring Simics hardware simulation when they mention:
+- Hardware platforms, processors, or embedded systems that need simulation
+- Hardware simulation, modeling, or simulation validation
+- Specific hardware components or architectures requiring simulation
+- Terms like "firmware", "BIOS", "bootloader", or "embedded" in simulation context
 
 ## Command Execution Protocol
 
@@ -97,9 +106,16 @@ When executing Spec-Kit commands, follow this protocol:
 ## Workflow Process
 
 1. **Start with /specify** to create a feature specification from user requirements
+   - For hardware simulation projects: Automatically detect hardware simulation keywords
+   - Analyze for: processors (x86, ARM, RISC-V), embedded systems, simulation, firmware, hardware components
+   - Suggest appropriate Simics packages: simics-base + architecture-specific packages
 2. **Use /plan** to generate an implementation plan with technical details
+   - For hardware simulation projects: Include specific Simics project creation steps
+   - Use create_simics_project MCP tool with project_name and project_path (./simics subdirectory)
+   - Use install_simics_package MCP tool for suggested packages
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
-4. **For Hardware Projects**: Use /simics-setup to create Simics development environment
+   - For hardware simulation projects: Include specific MCP tool calls in tasks
+   - Use bash_command and write_file tools for project structure creation
 
 ## Spec-Kit Principles
 
@@ -107,7 +123,7 @@ When executing Spec-Kit commands, follow this protocol:
 - **Specification-Driven**: Focus on WHAT users need and WHY, not HOW to implement  
 - **Test-First**: TDD is mandatory - tests before implementation
 - **Quality Standards**: Use templates, mark ambiguities, ensure testability
-- **Hardware Integration**: Seamlessly integrate Simics simulation for hardware development
+- **Simics Hardware Simulation**: Seamlessly integrate Simics simulation for hardware simulation projects
 
 ## Best Practices
 
@@ -116,7 +132,9 @@ When executing Spec-Kit commands, follow this protocol:
 - Follow TDD principles strictly in task breakdown
 - Use parallel execution [P] where tasks work on different files
 - Include exact file paths in task descriptions
-- For hardware projects, set up Simics environment early in the process
+- For hardware simulation projects, directly use Simics MCP tools (create_simics_project, install_simics_package)
+- Hardware detection: look for processor types, simulation terms, embedded systems, firmware keywords
+- Package suggestions: simics-base + simics-x86/simics-arm based on detected architecture
 
 When users request spec-kit functionality, use the appropriate command tool.
 """
