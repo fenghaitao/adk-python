@@ -7,3 +7,6 @@
 [submodule "contributing/samples/spec_kit_integration/simics-mcp-server"]
 	path = contributing/samples/spec_kit_integration/simics-mcp-server
 	url = https://github.com/fenghaitao/simics-mcp-server.git
+[submodule "contributing/samples/agent_os_integration/simics/simics-mcp-server"]
+	path = contributing/samples/agent_os_integration/simics/simics-mcp-server
+	url = https://github.com/fenghaitao/simics-mcp-server.git
