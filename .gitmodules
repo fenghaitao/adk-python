@@ -4,3 +4,6 @@
 [submodule "spec-kit"]
 	path = spec-kit
 	url = https://github.com/fenghaitao/spec-kit.git
+[submodule "contributing/samples/spec_kit_integration/simics-mcp-server"]
+	path = contributing/samples/spec_kit_integration/simics-mcp-server
+	url = https://github.com/fenghaitao/simics-mcp-server.git
