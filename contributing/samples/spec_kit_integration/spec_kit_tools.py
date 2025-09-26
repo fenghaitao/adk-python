@@ -248,9 +248,51 @@ def create_simics_mcp_toolset() -> MCPToolset:
     
     # Create stdio connection parameters for the simics-mcp-server
     simics_python = simics_server_dir / ".venv" / "bin" / "python3"
+    pyvenv_cfg = simics_server_dir / ".venv" / "pyvenv.cfg"
+    python_version_dir = None
+
+    if pyvenv_cfg.exists():
+        pyvenv_lines = pyvenv_cfg.read_text(encoding="utf-8").splitlines()
+        for line in pyvenv_lines:
+            if line.startswith("version ="):
+                version_value = line.split("=", 1)[1].strip()
+                if version_value:
+                    major_minor = ".".join(version_value.split(".")[:2])
+                    python_version_dir = (
+                        simics_server_dir / ".venv" / "lib" / f"python{major_minor}"
+                    )
+                break
+
+    if python_version_dir is None:
+        lib_dir = simics_server_dir / ".venv" / "lib"
+        if lib_dir.exists():
+            for path in lib_dir.iterdir():
+                if path.is_dir() and path.name.startswith("python"):
+                    python_version_dir = path
+                    break
+
+    if python_version_dir is None:
+        raise FileNotFoundError(
+            "Unable to determine Python version directory for simics-mcp-server virtualenv."
+        )
+
+    site_packages_dir = python_version_dir / "site-packages"
+    if not site_packages_dir.exists():
+        raise FileNotFoundError(
+            "Unable to locate site-packages directory within the simics-mcp-server virtualenv."
+        )
+
+    server_env = os.environ.copy()
+    existing_pythonpath = server_env.get("PYTHONPATH")
+    if existing_pythonpath:
+        server_env["PYTHONPATH"] = f"{site_packages_dir}:{existing_pythonpath}"
+    else:
+        server_env["PYTHONPATH"] = str(site_packages_dir)
+
     server_params = StdioServerParameters(
         command=str(simics_python),
-        args=[str(server_script), "--transport", "stdio"]
+        args=[str(server_script), "--transport", "stdio"],
+        env=server_env
     )
     
     connection_params = StdioConnectionParams(
