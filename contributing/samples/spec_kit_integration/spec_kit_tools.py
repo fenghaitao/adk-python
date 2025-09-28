@@ -209,7 +209,7 @@ class SpecKitBashTool(BaseTool):
                 text=True,
                 timeout=timeout,
             )
-            
+
             return {
                 "stdout": result.stdout,
                 "stderr": result.stderr,
@@ -242,32 +242,35 @@ class SpecKitToolset(BaseToolset):
 
 def create_simics_mcp_toolset() -> MCPToolset:
     """Create a MCP toolset that connects to the simics-mcp-server."""
+    print("Creating Simics MCP toolset...")
     current_dir = Path(__file__).parent
     simics_server_dir = current_dir / "simics-mcp-server"
     server_script = simics_server_dir / "run_server.py"
-    
+
     # Create stdio connection parameters for the simics-mcp-server
     simics_python = simics_server_dir / ".venv" / "bin" / "python3"
     server_params = StdioServerParameters(
         command=str(simics_python),
         args=[str(server_script), "--transport", "stdio"]
     )
-    
+
     connection_params = StdioConnectionParams(
         server_params=server_params,
         timeout=10.0
     )
-    
+
     # Filter for specific Simics tools we want to expose
     tool_filter = [
         "create_simics_project",
-        "install_simics_package", 
+        "add_dml_device_skeleton",
+        #"install_simics_package",
         "list_installed_packages",
-        "search_packages",
-        "uninstall_simics_package",
+        "list_simics_platforms",
+        #"search_packages",
+        #"uninstall_simics_package",
         "get_simics_version"
     ]
-    
+
     return MCPToolset(
         connection_params=connection_params,
         tool_filter=tool_filter

@@ -52,11 +52,11 @@ You can recognize and execute Spec-Kit commands. When a command is detected, fol
 
 ### /specify <feature_description>
 Create or update the feature specification from a natural language feature description.
-- Follow instructions in: `.adk/commands/specify.md`  
+- Follow instructions in: `.adk/commands/specify.md`
 - Use bash_command to run scripts, read_file to load templates, write_file to create specs
 - Example: "/specify Create a user authentication system with email/password login"
 
-### /plan <implementation_details>  
+### /plan <implementation_details>
 Execute the implementation planning workflow using the plan template to generate design artifacts.
 - Follow instructions in: `.adk/commands/plan.md`
 - Use bash_command to run scripts, read_file for analysis, write_file for artifacts
@@ -67,6 +67,12 @@ Generate an actionable, dependency-ordered tasks.md for the feature based on ava
 - Follow instructions in: `.adk/commands/tasks.md`
 - Use bash_command to run scripts, read_file for docs, write_file for task breakdown
 - Example: "/tasks Break down into TDD tasks with parallel execution where possible"
+
+### /implement <execution_context>
+Execute the implementation plan by processing and executing all tasks defined in tasks.md.
+- Follow instructions in: `.adk/commands/implement.md`
+- Use bash_command to run scripts, read_file for analysis, write_file for implementation
+- Example: "/implement Follow TDD approach with contract tests first"
 
 ## Simics Hardware Simulation
 
@@ -80,12 +86,13 @@ When working on projects requiring hardware simulation, the agent automatically:
 - Includes hardware simulation validation tasks in task breakdown
 
 ### Available Simics MCP Tools
+
+**Tool Descriptions:**
+- **get_simics_version**: Get installed Simics base package version
 - **create_simics_project**: Create new Simics project using ispm (project_name, project_path)
-- **install_simics_package**: Install Simics packages using ispm (package_name, version)
 - **list_installed_packages**: List all installed Simics packages
-- **search_packages**: Search for available Simics packages (query)
-- **get_simics_version**: Get installed Simics and ispm version
-- **uninstall_simics_package**: Remove Simics packages (package_name)
+- **list_simics_platforms**: List all available Simics platforms
+- **add_dml_device_skeleton**: Create a Simics Device DML 1.4 Model skelenton for further development
 
 ### Hardware Simulation Project Detection
 Projects are identified as requiring Simics hardware simulation when they mention:
@@ -116,11 +123,14 @@ When executing Spec-Kit commands, follow this protocol:
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
    - For hardware simulation projects: Include specific MCP tool calls in tasks
    - Use bash_command and write_file tools for project structure creation
+4. **Use /implement** to execute the implementation plan by processing tasks.md
+   - Execute tasks in dependency order with TDD approach (tests first)
+   - For hardware simulation projects: Execute Simics project setup and device modeling tasks
 
 ## Spec-Kit Principles
 
 - **Library-First**: Every feature starts as a standalone library
-- **Specification-Driven**: Focus on WHAT users need and WHY, not HOW to implement  
+- **Specification-Driven**: Focus on WHAT users need and WHY, not HOW to implement
 - **Test-First**: TDD is mandatory - tests before implementation
 - **Quality Standards**: Use templates, mark ambiguities, ensure testability
 - **Simics Hardware Simulation**: Seamlessly integrate Simics simulation for hardware simulation projects
@@ -148,7 +158,7 @@ When users request spec-kit functionality, use the appropriate command tool.
         # Remove name and model from kwargs to avoid conflicts
         agent_name = kwargs.pop("name", "spec_kit_agent")
         agent_model = kwargs.pop("model", get_spec_kit_model())
-        
+
         super().__init__(
             name=agent_name,
             model=agent_model,
