@@ -479,6 +479,12 @@ def _model_response_to_generate_content_response(
   if not message:
     raise ValueError("No message in response")
 
+  print("=" * 20)
+  for r in response["choices"]:
+    m = r.get("message", None)
+    if m:
+      print(f"Response: {m}")
+
   llm_response = _message_to_generate_content_response(message)
   if response.get("usage", None):
     llm_response.usage_metadata = types.GenerateContentResponseUsageMetadata(
@@ -744,6 +750,9 @@ class LiteLlm(BaseLlm):
       # LiteLLM does not support both tools and functions together.
       tools = None
 
+    print("=" * 20)
+    print(f"Payload: {messages[-2]}")
+    print(f"Payload: {messages[-1]}")
     completion_args = {
         "model": self.model,
         "messages": messages,
