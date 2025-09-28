@@ -103,3 +103,6 @@ Thumbs.db
 # Agent-OS submodule
 agent-os/
 demo/
+
+# Qoder configuration directory
+.qoder/
