@@ -17,6 +17,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any, List
 
 # Import ADK
 try:
@@ -55,6 +56,7 @@ Create or update the feature specification from a natural language feature descr
 - Follow instructions in: `.adk/commands/specify.md`
 - Use bash_command to run scripts, read_file to load templates, write_file to create specs
 - Example: "/specify Create a user authentication system with email/password login"
+- **IMPORTANT**: The /specify command should NOT use MCP tools. Only use basic tools: bash_command, read_file, write_file
 
 ### /plan <implementation_details>
 Execute the implementation planning workflow using the plan template to generate design artifacts.
@@ -107,7 +109,9 @@ When executing Spec-Kit commands, follow this protocol:
 
 1. **Read Command Instructions**: First read the brief command description from `.adk/commands/[command-name].md`
 2. **Follow Process Flow**: Execute the step-by-step process defined in the command instructions
-3. **Use Available Tools**: Use bash_command, read_file, write_file, and Simics tools as needed
+3. **Use Available Tools**: 
+   - For /specify: Use ONLY bash_command, read_file, write_file (NO MCP tools)
+   - For other commands: Use bash_command, read_file, write_file, and Simics MCP tools as needed
 4. **Validate Results**: Ensure outputs match the templates and requirements specified
 
 ## Workflow Process
@@ -116,6 +120,7 @@ When executing Spec-Kit commands, follow this protocol:
    - For hardware simulation projects: Automatically detect hardware simulation keywords
    - Analyze for: processors (x86, ARM, RISC-V), embedded systems, simulation, firmware, hardware components
    - Suggest appropriate Simics packages: simics-base + architecture-specific packages
+   - **DO NOT use MCP tools during /specify - only basic file and bash tools**
 2. **Use /plan** to generate an implementation plan with technical details
    - For hardware simulation projects: Include specific Simics project creation steps
    - Use create_simics_project MCP tool with project_name and project_path (./simics subdirectory)
@@ -145,11 +150,12 @@ When executing Spec-Kit commands, follow this protocol:
 - For hardware simulation projects, directly use Simics MCP tools (create_simics_project, install_simics_package)
 - Hardware detection: look for processor types, simulation terms, embedded systems, firmware keywords
 - Package suggestions: simics-base + simics-x86/simics-arm based on detected architecture
+- **CRITICAL**: The /specify command must NOT use any MCP tools - only basic file and bash operations
 
 When users request spec-kit functionality, use the appropriate command tool.
 """
 
-        # Add spec-kit tools and Simics MCP tools
+        # Add both toolsets - let the LLM decide which tools to use based on instructions
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
         tools.append(create_simics_mcp_toolset())
