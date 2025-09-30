@@ -263,6 +263,10 @@ def create_simics_mcp_toolset() -> MCPToolset:
     tool_filter = [
         "create_simics_project",
         "add_dml_device_skeleton",
+        "build_simics_project",
+        "run_simics_test",
+        "get_simics_device_example",
+        "get_dml_template",
         #"install_simics_package",
         "list_installed_packages",
         "list_simics_platforms",
