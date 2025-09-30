@@ -147,7 +147,7 @@ Projects are identified as requiring Simics hardware simulation when they mentio
    - **DO NOT use MCP tools during /specify - only basic file and bash tools**
 2. **Use /plan** to generate an implementation plan with technical details
    - For hardware simulation projects: Include specific Simics project creation steps
-   - Use create_simics_project MCP tool with project_name and project_path (./simics subdirectory)
+   - Use create_simics_project MCP tool with project_path (./simics subdirectory)
    - Use install_simics_package MCP tool for suggested packages
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
    - For hardware simulation projects: Include specific MCP tool calls in tasks
