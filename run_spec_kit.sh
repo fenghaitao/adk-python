@@ -5,6 +5,19 @@
 # Example: ./run_spec_kit.sh myproject "Create a REST API for user management"
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode
+# 
+# NOTE: This script does NOT save sessions because:
+# - SequentialAgent does not support session saving (not an LlmAgent)
+# - Session saving only works with LlmAgent instances
+# 
+# For session saving with individual subagents, use:
+#   ./run_spec_kit_phased.sh
+# 
+# The phased script runs each subagent separately and saves individual sessions:
+# - specify_agent/PROJECT_NAME_specify.session.json
+# - plan_agent/PROJECT_NAME_plan.session.json  
+# - tasks_agent/PROJECT_NAME_tasks.session.json
+# - implement_agent/PROJECT_NAME_implement.session.json
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,14 +72,16 @@ echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
 
 echo "Running ADK with Spec-Kit integration..."
+echo "Note: This script uses the sequential multi-agent architecture"
+echo "For session saving, use: ./run_spec_kit_phased.sh"
 
-# Run ADK with spec-kit integration
+# Run ADK with spec-kit integration using sequential agent
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Starting with initial prompt..."
-    echo "Session will be saved as: $PROJECT_NAME"
-    echo "$INITIAL_PROMPT" | "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR" --save_session --session_id "$PROJECT_NAME"
+    echo "Using: sequential multi-agent workflow"
+    echo "$INITIAL_PROMPT" | "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR"
 else
     echo "Starting interactive mode..."
-    echo "Session will be saved as: $PROJECT_NAME"
-    "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR" --save_session --session_id "$PROJECT_NAME"
+    echo "Using: sequential multi-agent workflow"
+    "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR"
 fi
