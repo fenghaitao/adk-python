@@ -151,6 +151,8 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
     async def create_and_run():
         user_id = "demo_user"
         session_id = f"demo_session_{session_suffix}"
+        
+        # Create the message properly - the agent expects a user message
         message = types.Content(parts=[types.Part(text=prompt)])
         
         # Create session first
@@ -160,6 +162,8 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
             session_id=session_id
         )
         
+        print(f"📝 Sending message: {prompt}")
+        
         events = []
         async for event in runner.run_async(
             user_id=user_id,
@@ -167,11 +171,24 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
             new_message=message
         ):
             events.append(event)
+            # Debug: Print event details
+            print(f"📋 Event: {event.author} - {type(event.content).__name__ if event.content else 'None'}")
+            if hasattr(event, 'content') and event.content:
+                if hasattr(event.content, 'parts') and event.content.parts:
+                    for part in event.content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            print(f"   Text preview: {part.text[:100]}...")
         
-        # Get the final response
+        # Get the final response - look for the last model response
+        model_responses = []
         for event in events:
             if event.author == 'model' and event.content and event.content.parts:
-                return event.content.parts[0].text
+                for part in event.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        model_responses.append(part.text)
+        
+        if model_responses:
+            return model_responses[-1]  # Return the last model response
         
         return "No model response found"
     
@@ -184,6 +201,18 @@ def demo_specify_command():
     print("-" * 50)
     
     try:
+        # Import Spec-Kit agent from the integration directory
+        # We need to add the integration directory to Python path
+        adk_root = Path(__file__).parent.parent.parent.parent.absolute()
+        spec_kit_integration_dir = adk_root / "contributing" / "samples" / "spec_kit_integration"
+        
+        # Add the integration directory to Python path so we can import the agent
+        if str(spec_kit_integration_dir) not in sys.path:
+            sys.path.insert(0, str(spec_kit_integration_dir))
+        
+        print(f"✅ Added integration directory to Python path: {spec_kit_integration_dir}")
+        print(f"📁 Current working directory: {os.getcwd()}")
+        
         # Import Spec-Kit agent
         from agent import SpecKitAgent
         
@@ -224,10 +253,15 @@ def demo_specify_command():
             print(f"   App name: {runner.app_name}")
             print(f"   Agent: {runner.agent.name}")
             
-            # Execute /specify command
+            # Execute /specify command - use the exact format expected
             prompt = "/specify read /home/hfeng1/wdt.md and create a Simics model for watchdog timer"
-            print(f"\n📝 Executing prompt: {prompt}")
+            print(f"\n📝 Executing command: {prompt}")
             print(f"🔄 Running agent...")
+            print(f"📋 The agent should:")
+            print(f"   1. Read .adk/commands/specify.md")
+            print(f"   2. Execute the bash script")
+            print(f"   3. Create the specification file")
+            print(f"   4. Report completion")
             
             response = run_agent_with_prompt(runner, prompt, "specify_demo")
             print(f"\n✅ Agent Response:")
