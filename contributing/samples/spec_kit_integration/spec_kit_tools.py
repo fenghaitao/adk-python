@@ -247,6 +247,13 @@ def create_simics_mcp_toolset() -> MCPToolset:
     simics_server_dir = current_dir / "simics-mcp-server"
     server_script = simics_server_dir / "run_server.py"
 
+    # Check if Simics server exists before creating toolset
+    if not server_script.exists():
+        print(f"Warning: Simics MCP server not found at {server_script}")
+        print("Simics tools will not be available")
+        # Return empty toolset or handle gracefully
+        raise FileNotFoundError(f"Simics MCP server not found: {server_script}")
+
     # Create stdio connection parameters for the simics-mcp-server
     simics_python = simics_server_dir / ".venv" / "bin" / "python3"
     server_params = StdioServerParameters(
@@ -256,7 +263,7 @@ def create_simics_mcp_toolset() -> MCPToolset:
 
     connection_params = StdioConnectionParams(
         server_params=server_params,
-        timeout=10.0
+        timeout=300.0
     )
 
     # Filter for specific Simics tools we want to expose
