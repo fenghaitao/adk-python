@@ -111,7 +111,7 @@ When working on projects requiring hardware simulation, the agent automatically:
 
 **Tool Descriptions:**
 - **get_simics_version**: Get installed Simics base package version
-- **create_simics_project**: Create new Simics project using ispm (project_name, project_path)
+- **create_simics_project**: Create new Simics project using ispm (project_path)
 - **list_installed_packages**: List all installed Simics packages
 - **list_simics_platforms**: List all available Simics platforms
 - **add_dml_device_skeleton**: Create a Simics Device DML 1.4 Model skelenton for further development
