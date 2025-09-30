@@ -219,8 +219,22 @@ REMEMBER: Your job is to execute the workflows defined in .adk/commands/*.md fil
         )
 
 
-# Create the root agent
-root_agent = SpecKitAgent(
+# Create the root agent (original monolithic agent)
+original_agent = SpecKitAgent(
     name="spec_kit_agent",
     model=get_spec_kit_model()
 )
+
+# Import and create the new sequential agent
+try:
+    from .sequential_spec_kit_agent import create_sequential_spec_kit_agent
+    # Create the new sequential agent as the default root agent
+    root_agent = create_sequential_spec_kit_agent(
+        name="sequential_spec_kit_agent"
+    )
+except ImportError:
+    from sequential_spec_kit_agent import create_sequential_spec_kit_agent
+    # Create the new sequential agent as the default root agent
+    root_agent = create_sequential_spec_kit_agent(
+        name="sequential_spec_kit_agent"
+    )
