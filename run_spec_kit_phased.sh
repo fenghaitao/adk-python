@@ -70,8 +70,8 @@ echo "PHASE 1: SPECIFY - Creating specification"
 echo "==========================================="
 
 # Create specify agent directory
-mkdir -p "specify_agent"
-cat > "specify_agent/agent.py" << EOF
+mkdir -p "adk_specify_agent"
+cat > "adk_specify_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
@@ -81,20 +81,20 @@ EOF
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Running SpecifyAgent with feature description..."
     echo "Command: $INITIAL_PROMPT"
-    echo "Session will be saved as: specify_agent/${PROJECT_NAME}_specify.session.json"
-    (echo "$INITIAL_PROMPT"; echo "exit") | "$ADK_VENV/bin/adk" run "specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
+    echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+    (echo "$INITIAL_PROMPT"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
 else
     echo "Running SpecifyAgent in interactive mode..."
-    echo "Session will be saved as: specify_agent/${PROJECT_NAME}_specify.session.json"
+    echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
     echo "Please provide the feature description for /specify command"
-    "$ADK_VENV/bin/adk" run "specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
+    "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
 fi
 
 # Check if session file was created
-if [ -f "specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
-    echo "✅ Session saved: specify_agent/${PROJECT_NAME}_specify.session.json"
+if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
+    echo "✅ Session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
 else
-    echo "❌ Session file not found in specify_agent/"
+    echo "❌ Session file not found in adk_specify_agent/"
 fi
 
 echo ""
@@ -103,8 +103,8 @@ echo "PHASE 2: PLAN - Creating implementation plan"
 echo "==========================================="
 
 # Create plan agent directory
-mkdir -p "plan_agent"
-cat > "plan_agent/agent.py" << EOF
+mkdir -p "adk_plan_agent"
+cat > "adk_plan_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
@@ -112,14 +112,14 @@ from plan_agent import plan_agent as root_agent
 EOF
 
 echo "Running PlanAgent with /plan command..."
-echo "Session will be saved as: plan_agent/${PROJECT_NAME}_plan.session.json"
-(echo "/plan"; echo "exit") | "$ADK_VENV/bin/adk" run "plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
+echo "Session will be saved as: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
+(echo "/plan"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
 
 # Check if session file was created
-if [ -f "plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
-    echo "✅ Session saved: plan_agent/${PROJECT_NAME}_plan.session.json"
+if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
+    echo "✅ Session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
 else
-    echo "❌ Session file not found in plan_agent/"
+    echo "❌ Session file not found in adk_plan_agent/"
 fi
 
 echo ""
@@ -128,8 +128,8 @@ echo "PHASE 3: TASKS - Generating task breakdown"
 echo "==========================================="
 
 # Create tasks agent directory
-mkdir -p "tasks_agent"
-cat > "tasks_agent/agent.py" << EOF
+mkdir -p "adk_tasks_agent"
+cat > "adk_tasks_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
@@ -137,14 +137,14 @@ from tasks_agent import tasks_agent as root_agent
 EOF
 
 echo "Running TasksAgent with /tasks command..."
-echo "Session will be saved as: tasks_agent/${PROJECT_NAME}_tasks.session.json"
-(echo "/tasks"; echo "exit") | "$ADK_VENV/bin/adk" run "tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
+echo "Session will be saved as: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
+(echo "/tasks"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
 
 # Check if session file was created
-if [ -f "tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
-    echo "✅ Session saved: tasks_agent/${PROJECT_NAME}_tasks.session.json"
+if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
+    echo "✅ Session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
 else
-    echo "❌ Session file not found in tasks_agent/"
+    echo "❌ Session file not found in adk_tasks_agent/"
 fi
 
 echo ""
@@ -153,8 +153,8 @@ echo "PHASE 4: IMPLEMENT - Executing implementation"
 echo "==========================================="
 
 # Create implement agent directory
-mkdir -p "implement_agent"
-cat > "implement_agent/agent.py" << EOF
+mkdir -p "adk_implement_agent"
+cat > "adk_implement_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
@@ -162,14 +162,14 @@ from implement_agent import implement_agent as root_agent
 EOF
 
 echo "Running ImplementAgent with /implement command..."
-echo "Session will be saved as: implement_agent/${PROJECT_NAME}_implement.session.json"
-(echo "/implement"; echo "exit") | "$ADK_VENV/bin/adk" run "implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
+echo "Session will be saved as: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
+(echo "/implement"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
 
 # Check if session file was created
-if [ -f "implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
-    echo "✅ Session saved: implement_agent/${PROJECT_NAME}_implement.session.json"
+if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
+    echo "✅ Session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
 else
-    echo "❌ Session file not found in implement_agent/"
+    echo "❌ Session file not found in adk_implement_agent/"
 fi
 
 echo ""
@@ -180,7 +180,7 @@ echo "Checking for session files..."
 
 SESSIONS_FOUND=0
 for phase in "specify" "plan" "tasks" "implement"; do
-    SESSION_FILE="${phase}_agent/${PROJECT_NAME}_${phase}.session.json"
+    SESSION_FILE="adk_${phase}_agent/${PROJECT_NAME}_${phase}.session.json"
     if [ -f "$SESSION_FILE" ]; then
         echo "✅ Found: $SESSION_FILE"
         ls -la "$SESSION_FILE"
@@ -195,13 +195,13 @@ echo "Summary: $SESSIONS_FOUND/4 session files created"
 echo "Location: $(pwd)"
 echo ""
 echo "Agent directories created:"
-echo "  specify_agent/    - SpecifyAgent with session logs"
-echo "  plan_agent/       - PlanAgent with session logs"
-echo "  tasks_agent/      - TasksAgent with session logs"
-echo "  implement_agent/  - ImplementAgent with session logs"
+echo "  adk_specify_agent/    - SpecifyAgent with session logs"
+echo "  adk_plan_agent/       - PlanAgent with session logs"
+echo "  adk_tasks_agent/      - TasksAgent with session logs"
+echo "  adk_implement_agent/  - ImplementAgent with session logs"
 echo ""
 echo "To resume a specific phase:"
-echo "  $ADK_VENV/bin/adk run specify_agent --resume ${PROJECT_NAME}_specify.session.json"
-echo "  $ADK_VENV/bin/adk run plan_agent --resume ${PROJECT_NAME}_plan.session.json"
-echo "  $ADK_VENV/bin/adk run tasks_agent --resume ${PROJECT_NAME}_tasks.session.json"
-echo "  $ADK_VENV/bin/adk run implement_agent --resume ${PROJECT_NAME}_implement.session.json"
+echo "  $ADK_VENV/bin/adk run adk_specify_agent --resume ${PROJECT_NAME}_specify.session.json"
+echo "  $ADK_VENV/bin/adk run adk_plan_agent --resume ${PROJECT_NAME}_plan.session.json"
+echo "  $ADK_VENV/bin/adk run adk_tasks_agent --resume ${PROJECT_NAME}_tasks.session.json"
+echo "  $ADK_VENV/bin/adk run adk_implement_agent --resume ${PROJECT_NAME}_implement.session.json"
