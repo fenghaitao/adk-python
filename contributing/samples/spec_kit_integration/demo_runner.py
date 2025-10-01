@@ -9,6 +9,8 @@ import os
 import asyncio
 import subprocess
 import shutil
+import json
+import datetime
 from pathlib import Path
 
 # Import ADK with robust path handling
@@ -152,8 +154,8 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
         user_id = "demo_user"
         session_id = f"demo_session_{session_suffix}"
         
-        # Create the message properly - the agent expects a user message
-        message = types.Content(parts=[types.Part(text=prompt)])
+        # Create the message properly - the agent expects a user message with explicit role
+        message = types.Content(role='user', parts=[types.Part.from_text(text=prompt)])
         
         # Create session first
         await runner.session_service.create_session(
@@ -187,10 +189,35 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
                     if hasattr(part, 'text') and part.text:
                         model_responses.append(part.text)
         
-        if model_responses:
-            return model_responses[-1]  # Return the last model response
+        final_response = model_responses[-1] if model_responses else "No model response found"
         
-        return "No model response found"
+        # Save session using ADK's built-in session service
+        try:
+            # Get the session with full history
+            session = await runner.session_service.get_session(
+                app_name=runner.app_name,
+                user_id=user_id,
+                session_id=session_id
+            )
+            
+            if session:
+                # Create filename with timestamp and session suffix
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{timestamp}_{session_suffix}_session.json"
+                
+                # Save session using ADK's built-in JSON export
+                session_json = session.model_dump_json(indent=2, exclude_none=True)
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(session_json)
+                
+                print(f"💾 Session saved to: {filename}")
+                print(f"📊 Session contains {len(session.contents)} content entries")
+                
+        except Exception as e:
+            print(f"⚠️  Failed to save session: {e}")
+        
+        return final_response
     
     return asyncio.run(create_and_run())
 
@@ -397,7 +424,7 @@ def demo_implement_command():
             print(f"✅ InMemoryRunner created successfully")
             
             # Execute /implement command
-            prompt = "/implemtn"
+            prompt = "/implement"
             print(f"\n📝 Executing prompt: {prompt}")
             print(f"🔄 Running agent...")
             
