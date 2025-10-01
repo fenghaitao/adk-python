@@ -65,6 +65,11 @@ fi
 echo ""
 
 # Initialize spec-kit project
+# Remove existing project directory if it exists
+if [ -d "$PROJECT_NAME" ]; then
+    echo "Removing existing project directory: $PROJECT_NAME"
+    rm -rf "$PROJECT_NAME"
+fi
 "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
 
 echo ""
