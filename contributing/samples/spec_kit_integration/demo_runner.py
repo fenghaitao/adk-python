@@ -148,6 +148,13 @@ def get_spec_kit_model():
     return os.environ.get("SPEC_KIT_MODEL", "iflow/Qwen3-Coder")
 
 
+def setup_environment():
+    """Set up environment variables for demo runner."""
+    # Use monolithic agent for demo runner
+    os.environ["USE_MONOLITHIC_AGENT"] = "true"
+    print("🔧 Demo runner configured to use monolithic agent")
+
+
 def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
     """Helper function to run an agent with a prompt and return the response."""
     async def create_and_run():
@@ -456,6 +463,10 @@ def main():
     print("=" * 60)
     print("This demo shows Spec-Kit agent executing real prompts")
     print("using the iflow/Qwen3-Coder model.\n")
+    
+    # Setup environment variables for demo
+    setup_environment()
+    print()
     
     # Setup spec-kit environment first
     print("📋 Setting up Spec-Kit environment...")
