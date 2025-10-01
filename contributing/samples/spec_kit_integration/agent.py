@@ -228,13 +228,23 @@ original_agent = SpecKitAgent(
 # Import and create the new sequential agent
 try:
     from .sequential_spec_kit_agent import create_sequential_spec_kit_agent
-    # Create the new sequential agent as the default root agent
-    root_agent = create_sequential_spec_kit_agent(
+    sequential_agent = create_sequential_spec_kit_agent(
         name="sequential_spec_kit_agent"
     )
 except ImportError:
     from sequential_spec_kit_agent import create_sequential_spec_kit_agent
-    # Create the new sequential agent as the default root agent
-    root_agent = create_sequential_spec_kit_agent(
+    sequential_agent = create_sequential_spec_kit_agent(
         name="sequential_spec_kit_agent"
     )
+
+# Configure root_agent based on environment variable
+# Set USE_MONOLITHIC_AGENT=true to use the original monolithic agent
+# Default is to use the sequential agent
+use_monolithic = os.environ.get("USE_MONOLITHIC_AGENT", "false").lower() in ("true", "1", "yes")
+
+if use_monolithic:
+    print("🔄 Using original monolithic Spec-Kit agent")
+    root_agent = original_agent
+else:
+    print("🔄 Using sequential Spec-Kit agent (default)")
+    root_agent = sequential_agent
