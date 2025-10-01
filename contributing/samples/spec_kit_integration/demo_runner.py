@@ -2,6 +2,18 @@
 """
 Demo application showing how to use the Runner class with Spec-Kit agent
 for specification-driven development workflows with actual execution.
+
+Usage: 
+    python demo_runner.py [PROJECT_NAME] [INITIAL_PROMPT]
+
+Examples:
+    python demo_runner.py
+    python demo_runner.py myproject 
+    python demo_runner.py myproject "Create a REST API for user management"
+
+Arguments:
+    PROJECT_NAME    - Name of the project (default: 'watchdog_timer_demo')
+    INITIAL_PROMPT  - Initial prompt for /specify command (default: uses built-in prompt)
 """
 
 import sys
@@ -229,7 +241,7 @@ def run_agent_with_prompt(runner, prompt, session_suffix="demo"):
     return asyncio.run(create_and_run())
 
 
-def demo_specify_command():
+def demo_specify_command(initial_prompt=None):
     """Demo the /specify command with actual execution."""
     print("📋 Testing /specify Command")
     print("-" * 50)
@@ -288,7 +300,10 @@ def demo_specify_command():
             print(f"   Agent: {runner.agent.name}")
             
             # Execute /specify command - use the exact format expected
-            prompt = "/specify read /home/hfeng1/wdt.md and create a Simics model for watchdog timer"
+            if initial_prompt:
+                prompt = f"/specify {initial_prompt}"
+            else:
+                prompt = "/specify read /home/hfeng1/wdt.md and create a Simics model for watchdog timer"
             print(f"\n📝 Executing command: {prompt}")
             print(f"🔄 Running agent...")
             print(f"📋 The agent should:")
@@ -464,13 +479,29 @@ def main():
     print("This demo shows Spec-Kit agent executing real prompts")
     print("using the iflow/Qwen3-Coder model.\n")
     
+    # Parse command line arguments
+    import sys
+    
+    # Get project name from first argument, default to 'watchdog_timer_demo' if not provided
+    project_name = sys.argv[1] if len(sys.argv) > 1 else "watchdog_timer_demo"
+    
+    # Get initial prompt from second argument (optional)
+    initial_prompt = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    print(f"Project name: {project_name}")
+    if initial_prompt:
+        print(f"Initial prompt: {initial_prompt}")
+    else:
+        print("Initial prompt: Using default prompts for each command")
+    print()
+    
     # Setup environment variables for demo
     setup_environment()
     print()
     
     # Setup spec-kit environment first
     print("📋 Setting up Spec-Kit environment...")
-    setup_success, project_dir = setup_spec_kit("watchdog_timer_demo")
+    setup_success, project_dir = setup_spec_kit(project_name)
     
     if not setup_success or not project_dir:
         print("\n❌ Spec-Kit setup failed. Please check the error messages above.")
@@ -492,7 +523,7 @@ def main():
         return 1
     
     # Test individual commands with execution
-    specify_success = demo_specify_command()
+    specify_success = demo_specify_command(initial_prompt)
     plan_success = demo_plan_command()
     tasks_success = demo_tasks_command()
     implement_success = demo_implement_command()
