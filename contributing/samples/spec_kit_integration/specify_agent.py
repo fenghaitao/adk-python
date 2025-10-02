@@ -34,6 +34,7 @@ except ImportError:
     from spec_kit_tools import create_spec_kit_toolset
 
 
+
 def get_spec_kit_model():
     """Get Spec-Kit model from environment or use default."""
     return os.environ.get("SPEC_KIT_MODEL", "iflow/Qwen3-Coder")
@@ -57,7 +58,7 @@ When you receive a /specify command, you MUST:
 1. **ALWAYS read the command file first**: Use read_file to load `.adk/commands/specify.md`
 2. **Follow the exact instructions**: The command file contains the precise steps you must execute
 3. **Do NOT improvise**: Do not create specifications on your own - follow the command file workflow
-4. **Use ONLY basic tools**: Use bash_command, read_file, and write_file (NO MCP tools for /specify)
+4. **Use ONLY basic tools**: Use bash_command, read_file, and write_file
 
 ## /specify Command Workflow
 
@@ -68,8 +69,6 @@ The /specify command creates feature specification by following this scripted wo
 2. Load the spec template to understand required sections
 3. Write the specification using the template structure
 4. Report completion with branch name, spec file path, and readiness for next phase
-
-**IMPORTANT**: The /specify command should NOT use MCP tools. Only use basic tools: bash_command, read_file, write_file
 
 ## Tools Available
 
@@ -82,7 +81,7 @@ The /specify command creates feature specification by following this scripted wo
 1. **Read Command File**: ALWAYS use read_file(".adk/commands/specify.md") first
 2. **Parse Instructions**: Extract the step-by-step process from the command file
 3. **Execute Steps**: Follow each step exactly as written in the command file
-4. **Use Available Tools**: Use ONLY bash_command, read_file, write_file (NO MCP tools)
+4. **Use Available Tools**: Use ONLY bash_command, read_file, write_file
 5. **Validate Results**: Ensure outputs match the templates and requirements specified
 6. **Report Results**: Provide the output format specified in the command file
 
