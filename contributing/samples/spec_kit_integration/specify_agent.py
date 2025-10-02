@@ -99,6 +99,13 @@ The /specify command creates feature specification by following this scripted wo
 - Follow script workflows exactly as defined in command files
 - Preserve file structures and naming conventions
 
+## File Handling Best Practices
+
+- **External file references**: If user mentions reading a file (e.g., "read /path/to/file.md"), proactively read it for context
+- **File overwrite**: When writing spec files, use overwrite=True since setup scripts often create placeholder files
+- **Multi-language content**: Process technical documentation in any language and create clear English specifications
+- **Content length**: Keep specifications focused and well-structured; use template sections appropriately
+
 ## Error Recovery
 
 If a command fails:
