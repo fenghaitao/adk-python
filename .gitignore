@@ -100,8 +100,12 @@ Thumbs.db
 *.tmp
 *.temp
 
+.adk
+.specify
+
 # Agent-OS submodule
 agent-os/
+spec-kit/
 demo/
 
 # Qoder configuration directory
