@@ -129,6 +129,14 @@ Projects are identified as requiring Simics when they mention:
 - Detect processor types, simulation terms, embedded systems keywords
 - Suggest appropriate Simics packages: simics-base + architecture-specific packages
 
+## Enhanced Planning Practices
+
+- **Clarifications validation**: If no "## Clarifications" section exists but spec shows "Review checklist passed", proceed with planning
+- **Constitution file paths**: Try `.specify/memory/constitution.md` first, then fallback to `memory/constitution.md` 
+- **Artifact validation**: After phase completion, verify all expected files were created using file listing commands
+- **Hardware project acceleration**: For detected hardware projects, prioritize Simics tool usage and include detailed device modeling guidance
+- **Progress tracking**: Always update the plan.md Progress Tracking section as phases complete
+
 ## Error Recovery
 
 If a command fails:
