@@ -141,6 +141,14 @@ For projects requiring hardware simulation, include specific Simics-related task
 - Number tasks clearly (T001, T002, etc.)
 - Include Task agent command examples for parallel execution
 
+## Enhanced Task Generation Practices
+
+- **Simics workflow optimization**: For hardware projects, execute Simics tools in logical sequence (create_simics_project → add_dml_device_skeleton → build_simics_project → run_simics_test)
+- **Document analysis efficiency**: Load and analyze all available design documents systematically before task generation
+- **Environment validation**: For hardware projects, validate Simics environment by running tests before finalizing tasks
+- **Path management**: Use absolute paths consistently and verify file locations throughout the process
+- **Proactive validation**: Build and test project structure during task generation to ensure viability
+
 ## Error Recovery
 
 If a command fails:
