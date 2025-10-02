@@ -142,6 +142,14 @@ For projects with Simics hardware simulation tasks:
 - Follow the technical plan and architecture decisions
 - For hardware simulation: integrate Simics tools seamlessly in TDD workflow
 
+## Implementation Efficiency
+
+- **Batch file operations**: Group related file creations/updates together to reduce tool calls
+- **Progress checkpoints**: Provide intermediate summaries every 5-10 completed tasks
+- **Path consistency**: Use relative paths consistently (e.g., `simics-project/modules/...`)
+- **Build validation timing**: Run `build_simics_project` after major milestones, not every small change
+- **Error focus**: When build errors occur, analyze specific error messages and iterate efficiently
+
 ## Error Recovery
 
 If implementation fails:
