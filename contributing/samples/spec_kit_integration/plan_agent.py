@@ -97,6 +97,7 @@ Projects are identified as requiring Simics when they mention:
 - **run_simics_test**: Run Simics test suite(s) within a project
 
 **Device Examples and Documentation:**
+- **get_simics_dml_template**: Get DML device template for base device structure patterns
 - **get_simics_device_example_i2c**: Get button-i2c simple I2C device DML implementation examples
 - **get_simics_device_example_ds12887**: Get DS12887 real-time clock device DML implementation examples
 - **get_simics_dml_1_4_reference_manual**: Get DML 1.4 reference manual documentation paths

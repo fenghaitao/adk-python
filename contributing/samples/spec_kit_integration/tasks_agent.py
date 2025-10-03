@@ -108,6 +108,7 @@ For projects requiring hardware simulation, include specific Simics-related task
 **Device Modeling Tasks:**
 - **Simics project setup**: Use create_simics_project MCP tool
 - **Device skeleton creation**: Use add_dml_device_skeleton MCP tool
+- **DML template access**: Use get_simics_dml_template MCP tool for base device structure patterns
 - **Reference examples**: Use get_simics_device_example_i2c and get_simics_device_example_ds12887 MCP tools
 - **Documentation access**: Use get_simics_dml_1_4_reference_manual and get_simics_model_builder_user_guide MCP tools
 
