@@ -98,6 +98,15 @@ fi
 # Check if session file was created
 if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
     echo "✅ Session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+    
+    # Generate human-readable session dump
+    echo "📄 Generating human-readable session dump..."
+    python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+    if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
+        echo "✅ Human-readable session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+    else
+        echo "❌ Failed to generate human-readable session dump"
+    fi
 else
     echo "❌ Session file not found in adk_specify_agent/"
 fi
@@ -123,6 +132,15 @@ echo "Session will be saved as: adk_plan_agent/${PROJECT_NAME}_plan.session.json
 # Check if session file was created
 if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
     echo "✅ Session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
+    
+    # Generate human-readable session dump
+    echo "📄 Generating human-readable session dump..."
+    python3 "$SCRIPT_DIR/view_session.py" "adk_plan_agent/${PROJECT_NAME}_plan.session.json" > "adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
+    if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.txt" ]; then
+        echo "✅ Human-readable session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
+    else
+        echo "❌ Failed to generate human-readable session dump"
+    fi
 else
     echo "❌ Session file not found in adk_plan_agent/"
 fi
@@ -148,6 +166,15 @@ echo "Session will be saved as: adk_tasks_agent/${PROJECT_NAME}_tasks.session.js
 # Check if session file was created
 if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
     echo "✅ Session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
+    
+    # Generate human-readable session dump
+    echo "📄 Generating human-readable session dump..."
+    python3 "$SCRIPT_DIR/view_session.py" "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" > "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
+    if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt" ]; then
+        echo "✅ Human-readable session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
+    else
+        echo "❌ Failed to generate human-readable session dump"
+    fi
 else
     echo "❌ Session file not found in adk_tasks_agent/"
 fi
@@ -173,6 +200,15 @@ echo "Session will be saved as: adk_implement_agent/${PROJECT_NAME}_implement.se
 # Check if session file was created
 if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
     echo "✅ Session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
+    
+    # Generate human-readable session dump
+    echo "📄 Generating human-readable session dump..."
+    python3 "$SCRIPT_DIR/view_session.py" "adk_implement_agent/${PROJECT_NAME}_implement.session.json" > "adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
+    if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.txt" ]; then
+        echo "✅ Human-readable session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
+    else
+        echo "❌ Failed to generate human-readable session dump"
+    fi
 else
     echo "❌ Session file not found in adk_implement_agent/"
 fi
@@ -184,8 +220,11 @@ echo "==========================================="
 echo "Checking for session files..."
 
 SESSIONS_FOUND=0
+READABLE_SESSIONS_FOUND=0
 for phase in "specify" "plan" "tasks" "implement"; do
     SESSION_FILE="adk_${phase}_agent/${PROJECT_NAME}_${phase}.session.json"
+    READABLE_FILE="adk_${phase}_agent/${PROJECT_NAME}_${phase}.session.txt"
+    
     if [ -f "$SESSION_FILE" ]; then
         echo "✅ Found: $SESSION_FILE"
         ls -la "$SESSION_FILE"
@@ -193,17 +232,30 @@ for phase in "specify" "plan" "tasks" "implement"; do
     else
         echo "❌ Missing: $SESSION_FILE"
     fi
+    
+    if [ -f "$READABLE_FILE" ]; then
+        echo "✅ Found: $READABLE_FILE"
+        ls -la "$READABLE_FILE"
+        ((READABLE_SESSIONS_FOUND++))
+    else
+        echo "❌ Missing: $READABLE_FILE"
+    fi
 done
 
 echo ""
 echo "Summary: $SESSIONS_FOUND/4 session files created"
+echo "Summary: $READABLE_SESSIONS_FOUND/4 human-readable session files created"
 echo "Location: $(pwd)"
 echo ""
 echo "Agent directories created:"
-echo "  adk_specify_agent/    - SpecifyAgent with session logs"
-echo "  adk_plan_agent/       - PlanAgent with session logs"
-echo "  adk_tasks_agent/      - TasksAgent with session logs"
-echo "  adk_implement_agent/  - ImplementAgent with session logs"
+echo "  adk_specify_agent/    - SpecifyAgent with session logs (.json + .txt)"
+echo "  adk_plan_agent/       - PlanAgent with session logs (.json + .txt)"
+echo "  adk_tasks_agent/      - TasksAgent with session logs (.json + .txt)"
+echo "  adk_implement_agent/  - ImplementAgent with session logs (.json + .txt)"
+echo ""
+echo "Session files generated:"
+echo "  *.session.json        - Raw JSON session data for resuming"
+echo "  *.session.txt         - Human-readable session dumps for review"
 echo ""
 echo "To resume a specific phase:"
 echo "  $ADK_VENV/bin/adk run adk_specify_agent --resume ${PROJECT_NAME}_specify.session.json"
