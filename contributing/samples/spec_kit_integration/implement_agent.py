@@ -150,6 +150,14 @@ For projects with Simics hardware simulation tasks:
 - **Build validation timing**: Run `build_simics_project` after major milestones, not every small change
 - **Error focus**: When build errors occur, analyze specific error messages and iterate efficiently
 
+## Token Management and Large Output Handling
+
+- **Avoid large directory listings**: Use specific file operations instead of `find . -type f | sort` or `ls -la` on large directories
+- **Selective file reading**: When examining project structure, read only essential files first
+- **Chunked exploration**: Break large tasks into smaller, focused operations
+- **Smart command usage**: Use targeted commands like `find . -name "*.dml" | head -10` instead of listing all files
+- **MCP tool responses**: Simics MCP tools automatically truncate large responses to prevent token limits
+
 ## Error Recovery
 
 If implementation fails:

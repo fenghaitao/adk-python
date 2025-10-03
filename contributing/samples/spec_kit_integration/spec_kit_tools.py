@@ -42,6 +42,59 @@ except ImportError:
         from mcp import StdioServerParameters
 
 
+def truncate_content(content: str, max_length: int = 128000) -> str:
+    """
+    Truncate content to prevent token limit issues.
+    
+    Args:
+        content: The content to truncate
+        max_length: Maximum character length (default 50K chars ≈ 12.5K tokens)
+    
+    Returns:
+        Truncated content with truncation notice if needed
+    """
+    if len(content) <= max_length:
+        return content
+    
+    truncated = content[:max_length]
+    truncation_notice = f"\n\n[CONTENT TRUNCATED - Original length: {len(content)} chars, showing first {max_length} chars. Use more specific queries to get complete information.]"
+    return truncated + truncation_notice
+
+
+def truncate_json_response(json_str: str, max_file_entries: int = 5) -> str:
+    """
+    Truncate JSON responses from MCP tools to prevent token limit issues.
+    
+    Args:
+        json_str: JSON string response
+        max_file_entries: Maximum number of file entries to include
+    
+    Returns:
+        Truncated JSON string
+    """
+    try:
+        import json
+        data = json.loads(json_str)
+        
+        # If there are file collections, limit them
+        if isinstance(data, dict):
+            for key in ['device_files', 'test_files', 'manual_files', 'guide_files']:
+                if key in data and isinstance(data[key], dict):
+                    files = data[key]
+                    if len(files) > max_file_entries:
+                        # Keep only the first max_file_entries files
+                        limited_files = dict(list(files.items())[:max_file_entries])
+                        data[key] = limited_files
+                        data[f'{key}_truncated'] = True
+                        data[f'{key}_original_count'] = len(files)
+                        data[f'{key}_showing_count'] = len(limited_files)
+        
+        return json.dumps(data, indent=2)
+    except Exception:
+        # If JSON parsing fails, use simple truncation
+        return truncate_content(json_str, 30000)
+
+
 class SpecKitReadTool(BaseTool):
     """Tool for reading files in Spec-Kit workflows."""
 
@@ -210,12 +263,20 @@ class SpecKitBashTool(BaseTool):
                 timeout=timeout,
             )
 
+            # Truncate large outputs to prevent token limit issues
+            stdout_truncated = truncate_content(result.stdout, max_length=128000)
+            stderr_truncated = truncate_content(result.stderr, max_length=32000)
+
             return {
-                "stdout": result.stdout,
-                "stderr": result.stderr,
+                "stdout": stdout_truncated,
+                "stderr": stderr_truncated,
                 "return_code": result.returncode,
                 "command": command,
                 "working_directory": working_directory,
+                "stdout_truncated": len(stdout_truncated) < len(result.stdout),
+                "stderr_truncated": len(stderr_truncated) < len(result.stderr),
+                "original_stdout_size": len(result.stdout),
+                "original_stderr_size": len(result.stderr),
             }
         except subprocess.TimeoutExpired:
             return {"error": f"Command timed out after {timeout} seconds"}
@@ -240,8 +301,38 @@ class SpecKitToolset(BaseToolset):
         return self.tools
 
 
-def create_simics_mcp_toolset() -> MCPToolset:
-    """Create a MCP toolset that connects to the simics-mcp-server."""
+class TruncatedMCPToolset(MCPToolset):
+    """MCP Toolset wrapper that truncates large responses to prevent token limit issues."""
+    
+    def __init__(self, connection_params, tool_filter=None):
+        super().__init__(connection_params=connection_params, tool_filter=tool_filter)
+        self._tools_that_need_truncation = {
+            "get_simics_device_example_i2c",
+            "get_simics_device_example_ds12887", 
+            "get_simics_dml_1_4_reference_manual",
+            "get_simics_model_builder_user_guide",
+            "list_installed_packages",
+            "list_simics_platforms"
+        }
+    
+    async def invoke_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+        """Invoke tool and truncate response if needed."""
+        result = await super().invoke_tool(tool_name, arguments)
+        
+        # Truncate responses from documentation/example tools that return large JSON
+        if tool_name in self._tools_that_need_truncation and isinstance(result, str):
+            if result.strip().startswith('{') or result.strip().startswith('['):
+                # This looks like JSON, apply JSON-specific truncation
+                result = truncate_json_response(result, max_file_entries=3)
+            else:
+                # Apply general truncation
+                result = truncate_content(result, max_length=20000)
+        
+        return result
+
+
+def create_simics_mcp_toolset() -> TruncatedMCPToolset:
+    """Create a MCP toolset that connects to the simics-mcp-server with content truncation."""
     print("Creating Simics MCP toolset...")
     current_dir = Path(__file__).parent
     simics_server_dir = current_dir / "simics-mcp-server"
