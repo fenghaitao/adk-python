@@ -268,18 +268,38 @@ def create_simics_mcp_toolset() -> MCPToolset:
 
     # Filter for specific Simics tools we want to expose
     tool_filter = [
+        # Core project management tools
+        "list_installed_packages",
+        "list_simics_platforms", 
+        "get_simics_version",
+        
+        # Device modeling and development tools
         "create_simics_project",
         "add_dml_device_skeleton",
         "build_simics_project",
         "run_simics_test",
-        "get_simics_device_example",
-        "get_dml_template",
-        #"install_simics_package",
-        "list_installed_packages",
-        "list_simics_platforms",
-        #"search_packages",
-        #"uninstall_simics_package",
-        "get_simics_version"
+        
+        # Device examples and documentation tools
+        "get_simics_device_example_i2c",
+        "get_simics_device_example_ds12887",
+        "get_simics_dml_1_4_reference_manual",
+        "get_simics_model_builder_user_guide",
+        
+        # Package management tools
+        # "install_simics_package",
+        # "uninstall_simics_package",
+        
+        # Simulation control tools
+        # "start_simulation",
+        # "stop_simulation", 
+        # "pause_simulation",
+        # "resume_simulation",
+        # "list_simulations",
+        # "get_simulation_logs",
+        
+        # Checkpoint management tools
+        # "create_checkpoint",
+        # "load_checkpoint"
     ]
 
     return MCPToolset(

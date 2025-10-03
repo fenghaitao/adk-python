@@ -100,10 +100,20 @@ The /tasks command generates actionable task breakdown:
 ## Hardware Simulation Integration
 
 For projects requiring hardware simulation, include specific Simics-related tasks:
-- **Simics project setup tasks**: Use create_simics_project MCP tool
-- **Device modeling tasks**: Use add_dml_device_skeleton MCP tool
-- **Build and test tasks**: Use build_simics_project and run_simics_test MCP tools
-- **Hardware validation tasks**: Include specific MCP tool calls in task descriptions
+
+**Project Setup Tasks:**
+- **Package verification**: Use list_installed_packages and get_simics_version MCP tools
+- **Platform selection**: Use list_simics_platforms MCP tool
+
+**Device Modeling Tasks:**
+- **Simics project setup**: Use create_simics_project MCP tool
+- **Device skeleton creation**: Use add_dml_device_skeleton MCP tool
+- **Reference examples**: Use get_simics_device_example_i2c and get_simics_device_example_ds12887 MCP tools
+- **Documentation access**: Use get_simics_dml_1_4_reference_manual and get_simics_model_builder_user_guide MCP tools
+
+**Build and Test Tasks:**
+- **Project building**: Use build_simics_project MCP tool
+- **Test execution**: Use run_simics_test MCP tool
 
 ## Tools Available
 
@@ -143,11 +153,17 @@ For projects requiring hardware simulation, include specific Simics-related task
 
 ## Enhanced Task Generation Practices
 
-- **Simics workflow optimization**: For hardware projects, execute Simics tools in logical sequence (create_simics_project → add_dml_device_skeleton → build_simics_project → run_simics_test)
 - **Document analysis efficiency**: Load and analyze all available design documents systematically before task generation
-- **Environment validation**: For hardware projects, validate Simics environment by running tests before finalizing tasks
-- **Path management**: Use absolute paths consistently and verify file locations throughout the process
-- **Proactive validation**: Build and test project structure during task generation to ensure viability
+- **Path management**: Use consistent relative paths (e.g., `simics-project/modules/...`)
+- **Task definition only**: Generate task descriptions and dependencies WITHOUT executing them
+- **Clear scope boundary**: Tasks agent generates tasks.md and stops - does NOT execute the tasks
+
+## CRITICAL: Scope Boundary
+
+- **DO**: Generate comprehensive tasks.md with MCP tool calls defined as task descriptions
+- **DO NOT**: Execute MCP tools, create files, or build projects during task generation
+- **STOP AFTER**: Writing tasks.md file - let implement agent execute the tasks
+- **AVOID**: Any actual implementation work during task generation phase
 
 ## Error Recovery
 

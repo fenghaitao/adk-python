@@ -84,15 +84,23 @@ Projects are identified as requiring Simics when they mention:
 - Terms like "firmware", "BIOS", "bootloader", or "embedded" in simulation context
 
 ### Available Simics MCP Tools
-- **create_simics_project**: Create new Simics project using ispm (project_path)
-- **list_installed_packages**: List all installed Simics packages
+
+**Core Project Management:**
+- **list_installed_packages**: List all installed Simics packages with structured JSON output
 - **list_simics_platforms**: List all available Simics platforms
+- **get_simics_version**: Get installed Simics Base package information
+
+**Device Modeling and Development:**
+- **create_simics_project**: Create new Simics project using ispm (project_path)
 - **add_dml_device_skeleton**: Create a Simics Device DML 1.4 Model skeleton
 - **build_simics_project**: Build a Simics project (project_path, module)
 - **run_simics_test**: Run Simics test suite(s) within a project
-- **get_simics_device_example**: Get DML device implementation examples
-- **get_dml_template**: Get sample DML device template
-- **get_simics_version**: Get installed Simics base package version
+
+**Device Examples and Documentation:**
+- **get_simics_device_example_i2c**: Get button-i2c simple I2C device DML implementation examples
+- **get_simics_device_example_ds12887**: Get DS12887 real-time clock device DML implementation examples
+- **get_simics_dml_1_4_reference_manual**: Get DML 1.4 reference manual documentation paths
+- **get_simics_model_builder_user_guide**: Get Model Builder User Guide documentation paths
 
 ## Tools Available
 
@@ -136,6 +144,14 @@ Projects are identified as requiring Simics when they mention:
 - **Artifact validation**: After phase completion, verify all expected files were created using file listing commands
 - **Hardware project acceleration**: For detected hardware projects, prioritize Simics tool usage and include detailed device modeling guidance
 - **Progress tracking**: Always update the plan.md Progress Tracking section as phases complete
+
+## Quickstart.md Generation Rules
+
+- **For human users**: Present setup instructions as conceptual steps, not specific tool syntax
+- **Avoid MCP tool syntax**: Don't show `create_simics_project()` function calls in user documentation
+- **Use generic descriptions**: "Create Simics project", "Build the device module", "Run tests" 
+- **Focus on Simics CLI usage**: Show actual Simics commands users will run (`load-module`, `new device`)
+- **Separate concerns**: Quickstart is for end-users, tasks.md is for agent execution
 
 ## Error Recovery
 
