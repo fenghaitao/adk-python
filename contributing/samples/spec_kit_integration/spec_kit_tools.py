@@ -301,37 +301,7 @@ class SpecKitToolset(BaseToolset):
         return self.tools
 
 
-class TruncatedMCPToolset(MCPToolset):
-    """MCP Toolset wrapper that truncates large responses to prevent token limit issues."""
-    
-    def __init__(self, connection_params, tool_filter=None):
-        super().__init__(connection_params=connection_params, tool_filter=tool_filter)
-        self._tools_that_need_truncation = {
-            "get_simics_device_example_i2c",
-            "get_simics_device_example_ds12887", 
-            "get_simics_dml_1_4_reference_manual",
-            "get_simics_model_builder_user_guide",
-            "list_installed_packages",
-            "list_simics_platforms"
-        }
-    
-    async def invoke_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
-        """Invoke tool and truncate response if needed."""
-        result = await super().invoke_tool(tool_name, arguments)
-        
-        # Truncate responses from documentation/example tools that return large JSON
-        if tool_name in self._tools_that_need_truncation and isinstance(result, str):
-            if result.strip().startswith('{') or result.strip().startswith('['):
-                # This looks like JSON, apply JSON-specific truncation
-                result = truncate_json_response(result, max_file_entries=3)
-            else:
-                # Apply general truncation
-                result = truncate_content(result, max_length=20000)
-        
-        return result
-
-
-def create_simics_mcp_toolset() -> TruncatedMCPToolset:
+def create_simics_mcp_toolset() -> MCPToolset:
     """Create a MCP toolset that connects to the simics-mcp-server with content truncation."""
     print("Creating Simics MCP toolset...")
     current_dir = Path(__file__).parent
@@ -375,6 +345,7 @@ def create_simics_mcp_toolset() -> TruncatedMCPToolset:
         "get_simics_device_example_ds12887",
         "get_simics_dml_1_4_reference_manual",
         "get_simics_model_builder_user_guide",
+        "get_simics_dml_template",
         
         # Package management tools
         # "install_simics_package",
