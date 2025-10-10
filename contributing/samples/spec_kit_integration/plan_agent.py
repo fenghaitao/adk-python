@@ -100,8 +100,8 @@ Projects are identified as requiring Simics when they mention:
 - **get_simics_dml_template**: Get DML device template for base device structure patterns
 - **get_simics_device_example_i2c**: Get button-i2c simple I2C device DML implementation examples
 - **get_simics_device_example_ds12887**: Get DS12887 real-time clock device DML implementation examples
-- **get_simics_dml_1_4_reference_manual**: Get DML 1.4 reference manual documentation paths
-- **get_simics_model_builder_user_guide**: Get Model Builder User Guide documentation paths
+- **pageindex_rag_query_model_builder**: Use PageIndex RAG to query the Model Builder User Guide for targeted guidance, examples, and recommended patterns
+- **pageindex_rag_query_drm**: Use PageIndex RAG to query the DML 1.4 Reference Manual (DRM) for authoritative language, syntax, and reference details
 
 ## Tools Available
 

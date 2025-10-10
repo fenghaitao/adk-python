@@ -95,6 +95,7 @@ For projects with Simics hardware simulation tasks:
 - **Implement device models**: Use add_dml_device_skeleton and build_simics_project MCP tools
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
+- **PageIndex RAG lookups**: Use pageindex_rag_query_model_builder to fetch examples, recommended patterns, and code snippets from the Model Builder User Guide, and pageindex_rag_query_drm to fetch authoritative syntax, definitions, and reference excerpts from the DML 1.4 Reference Manual
 
 ## Progress Tracking and Error Handling
 

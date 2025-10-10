@@ -343,9 +343,9 @@ def create_simics_mcp_toolset() -> MCPToolset:
         # Device examples and documentation tools
         "get_simics_device_example_i2c",
         "get_simics_device_example_ds12887",
-        "get_simics_dml_1_4_reference_manual",
-        "get_simics_model_builder_user_guide",
         "get_simics_dml_template",
+        "pageindex_rag_query_model_builder",
+        "pageindex_rag_query_drm",
         
         # Package management tools
         # "install_simics_package",
