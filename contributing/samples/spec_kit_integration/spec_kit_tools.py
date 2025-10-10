@@ -317,9 +317,11 @@ def create_simics_mcp_toolset() -> MCPToolset:
 
     # Create stdio connection parameters for the simics-mcp-server
     simics_python = simics_server_dir / ".venv" / "bin" / "python3"
+    server_env = os.environ.copy()
     server_params = StdioServerParameters(
         command=str(simics_python),
-        args=[str(server_script), "--transport", "stdio"]
+        args=[str(server_script), "--transport", "stdio"],
+        env=server_env
     )
 
     connection_params = StdioConnectionParams(

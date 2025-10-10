@@ -12,4 +12,4 @@
 	url = https://github.com/fenghaitao/simics-mcp-server.git
 [submodule "PageIndexCopilot"]
 	path = PageIndexCopilot
-	url = https://github.com/fenghaitao/PageIndexCopilot/
+	url = https://github.com/fenghaitao/PageIndexCopilot.git
