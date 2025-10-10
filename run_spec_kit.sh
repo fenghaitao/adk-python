@@ -76,6 +76,10 @@ echo ""
 echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
 
+if [ ! -e './tmp' ]; then
+    mkdir ./tmp
+fi
+
 echo "Running ADK with Spec-Kit integration..."
 echo "Note: This script uses the sequential multi-agent architecture"
 echo "For session saving, use: ./run_spec_kit_phased.sh"
@@ -88,5 +92,5 @@ if [ -n "$INITIAL_PROMPT" ]; then
 else
     echo "Starting interactive mode..."
     echo "Using: sequential multi-agent workflow"
-    "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR"
+    TMPDIR=./tmp "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR" --save_session --session_id "${PROJECT_NAME}"
 fi
