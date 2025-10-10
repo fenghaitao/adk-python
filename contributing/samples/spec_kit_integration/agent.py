@@ -30,9 +30,17 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import (
+        create_spec_kit_toolset, 
+        create_simics_mcp_toolset,
+        create_http_sse_mcp_toolset
+    )
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import (
+        create_spec_kit_toolset, 
+        create_simics_mcp_toolset,
+        create_http_sse_mcp_toolset
+    )
 
 
 def get_spec_kit_model():
@@ -200,10 +208,22 @@ If a command fails:
 REMEMBER: Your job is to execute the workflows defined in .adk/commands/*.md files, not to create your own workflows.
 """
 
-        # Add both toolsets - let the LLM decide which tools to use based on instructions
+        # Add all available toolsets - let the LLM decide which tools to use based on instructions
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
-        tools.append(create_simics_mcp_toolset())
+        
+        # Try to add Simics MCP toolset
+        try:
+            tools.append(create_simics_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: Simics MCP toolset not available: {e}")
+        
+        # Try to add HTTP SSE MCP toolset
+        try:
+            tools.append(create_http_sse_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: HTTP SSE MCP toolset not available: {e}")
+        
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts

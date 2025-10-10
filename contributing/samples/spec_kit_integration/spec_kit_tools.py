@@ -26,7 +26,7 @@ try:
     from google.adk.tools.base_toolset import BaseToolset
     from google.adk.tools.tool_context import ToolContext
     from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
-    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, SseConnectionParams
     from mcp import StdioServerParameters
 except ImportError:
     import sys
@@ -38,7 +38,7 @@ except ImportError:
         from google.adk.tools.base_toolset import BaseToolset
         from google.adk.tools.tool_context import ToolContext
         from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
-        from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+        from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, SseConnectionParams
         from mcp import StdioServerParameters
 
 
@@ -364,6 +364,28 @@ def create_simics_mcp_toolset() -> MCPToolset:
         # "load_checkpoint"
     ]
 
+    return MCPToolset(
+        connection_params=connection_params,
+        tool_filter=tool_filter
+    )
+
+
+def create_http_sse_mcp_toolset() -> MCPToolset:
+    """Create a MCP toolset that connects to the HTTP SSE MCP server at localhost:8051."""
+    print("Creating HTTP SSE MCP toolset...")
+    
+    # Create SSE connection parameters for the HTTP MCP server
+    connection_params = SseConnectionParams(
+        url="http://127.0.0.1:8051/sse",
+        headers={"Accept": "text/event-stream"},
+        timeout=10.0,
+        sse_read_timeout=300.0
+    )
+    
+    # Optional: Filter for specific tools if needed
+    # You can customize this list based on what tools the server provides
+    tool_filter = None  # None means include all tools
+    
     return MCPToolset(
         connection_params=connection_params,
         tool_filter=tool_filter
