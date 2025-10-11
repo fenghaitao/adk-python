@@ -56,7 +56,7 @@ else:
   _connection_params = StreamableHTTPServerParams(url=_MCP_URL, headers=_HEADERS)
 
 root_agent = LlmAgent(
-    model="gemini-2.0-flash",
+    model="iflow/Qwen3-Coder",
     name="mcp_crawl4ai_rag_root",
     instruction=(
         "You are a RAG chatbot assistant. Use the mcp-crawl4ai-rag tools to "
