@@ -382,9 +382,12 @@ def create_http_sse_mcp_toolset() -> MCPToolset:
         sse_read_timeout=300.0
     )
     
-    # Optional: Filter for specific tools if needed
-    # You can customize this list based on what tools the server provides
-    tool_filter = None  # None means include all tools
+    # Filter to exclude knowledge graph related tools (same as mcp_crawl4ai_rag_agent)
+    tool_filter = lambda tool, ctx=None: (
+        "kg" not in tool.name.lower()
+        and "graph" not in tool.name.lower()
+        and "knowledge" not in tool.name.lower()
+    )
     
     return MCPToolset(
         connection_params=connection_params,
