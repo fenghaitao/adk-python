@@ -92,5 +92,5 @@ if [ -n "$INITIAL_PROMPT" ]; then
 else
     echo "Starting interactive mode..."
     echo "Using: sequential multi-agent workflow"
-    TMPDIR=./tmp "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR" --save_session --session_id "${PROJECT_NAME}"
+    "$ADK_VENV/bin/adk" run "$SPEC_KIT_INTEGRATION_DIR"
 fi

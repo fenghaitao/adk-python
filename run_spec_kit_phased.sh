@@ -96,7 +96,7 @@ else
     echo "Running SpecifyAgent in interactive mode..."
     echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
     echo "Please provide the feature description for /specify command"
-    TMPDIR=./tmp "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
+    "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
 fi
 
 # Check if session file was created
@@ -131,7 +131,7 @@ EOF
 
 echo "Running PlanAgent with /plan command..."
 echo "Session will be saved as: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
-(echo "/plan"; echo "exit") | TMPDIR=./tmp "$ADK_VENV/bin/adk" run "adk_plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
+(echo "/plan"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
 
 # Check if session file was created
 if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
@@ -165,7 +165,7 @@ EOF
 
 echo "Running TasksAgent with /tasks command..."
 echo "Session will be saved as: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
-(echo "/tasks"; echo "exit") | TMPDIR=./tmp "$ADK_VENV/bin/adk" run "adk_tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
+(echo "/tasks"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
 
 # Check if session file was created
 if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
@@ -199,7 +199,7 @@ EOF
 
 echo "Running ImplementAgent with /implement command..."
 echo "Session will be saved as: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
-(echo "/implement"; echo "exit") | TMPDIR=./tmp "$ADK_VENV/bin/adk" run "adk_implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
+(echo "/implement"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
 
 # Check if session file was created
 if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
