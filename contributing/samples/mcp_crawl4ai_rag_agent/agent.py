@@ -67,13 +67,8 @@ root_agent = LlmAgent(
     tools=[
         MCPToolset(
             connection_params=_connection_params,
-            # Allow crawl and query tools; exclude knowledge graph related tools
-            tool_filter=lambda tool, ctx=None: (
-                ("crawl" in tool.name.lower() or "query" in tool.name.lower())
-                and ("kg" not in tool.name.lower()
-                     and "graph" not in tool.name.lower()
-                     and "knowledge" not in tool.name.lower())
-            ),
+            # Only allow the perform_rag_query tool
+            tool_filter=lambda tool, ctx=None: tool.name == "perform_rag_query",
         )
     ],
 )

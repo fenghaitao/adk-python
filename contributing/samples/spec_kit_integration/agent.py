@@ -128,6 +128,23 @@ When working on projects requiring hardware simulation, the agent automatically:
 - **get_simics_device_example**: Get DML device implementation examples and Python test examples from Simics packages
 - **get_dml_template**: Get sample DML device template with examples of registers, attributes, signals, and events
 
+### Available RAG Documentation Tool
+
+**Tool Description:**
+- **perform_rag_query**: Search documentation with Simics-specific filtering options:
+  - `source_type="all"`: Search all sources (default)
+  - `source_type="dml"`: Search Simics DML documentation only (simics-dml)
+  - `source_type="python"`: Search Simics Python API documentation only (simics-python)
+  - `source_type="source"`: Search both Simics DML and Python sources (simics-dml + simics-python)
+  - `source_type="docs"`: Search Simics documentation only
+
+**When to Use RAG Tool:**
+- Use `perform_rag_query` with `source_type="source"` for general Simics development questions
+- Use `perform_rag_query` with `source_type="dml"` for DML device modeling questions  
+- Use `perform_rag_query` with `source_type="python"` for Simics Python API questions
+- Use `perform_rag_query` with `source_type="docs"` for Simics documentation
+- Use `perform_rag_query` with `source_type="all"` to search across all available sources
+
 ### Hardware Simulation Project Detection
 Projects are identified as requiring Simics hardware simulation when they mention:
 - Hardware platforms, processors, or embedded systems that need simulation
@@ -155,10 +172,12 @@ Projects are identified as requiring Simics hardware simulation when they mentio
    - **DO NOT use MCP tools during /specify - only basic file and bash tools**
 2. **Use /plan** to generate an implementation plan with technical details
    - For hardware simulation projects: Include specific Simics project creation steps
+   - Use perform_rag_query with source_type="source" to research Simics documentation
    - Use create_simics_project MCP tool with project_path (./simics subdirectory)
    - Use install_simics_package MCP tool for suggested packages
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
    - For hardware simulation projects: Include specific MCP tool calls in tasks
+   - Use perform_rag_query with appropriate source_type for documentation research
    - Use bash_command and write_file tools for project structure creation
 4. **Use /implement** to execute the implementation plan by processing tasks.md
    - Execute tasks in dependency order with TDD approach (tests first)
@@ -218,7 +237,7 @@ REMEMBER: Your job is to execute the workflows defined in .adk/commands/*.md fil
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
         
-        # Try to add HTTP SSE MCP toolset
+        # Try to add HTTP SSE MCP toolset (perform_rag_query only)
         try:
             tools.append(create_http_sse_mcp_toolset())
         except Exception as e:

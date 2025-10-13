@@ -371,7 +371,7 @@ def create_simics_mcp_toolset() -> MCPToolset:
 
 
 def create_http_sse_mcp_toolset() -> MCPToolset:
-    """Create a MCP toolset that connects to the HTTP SSE MCP server at localhost:8051."""
+    """Create a MCP toolset that connects to the HTTP SSE MCP server at localhost:8051 for RAG queries."""
     print("Creating HTTP SSE MCP toolset...")
     
     # Create SSE connection parameters for the HTTP MCP server
@@ -382,12 +382,9 @@ def create_http_sse_mcp_toolset() -> MCPToolset:
         sse_read_timeout=300.0
     )
     
-    # Filter to exclude knowledge graph related tools (same as mcp_crawl4ai_rag_agent)
-    tool_filter = lambda tool, ctx=None: (
-        "kg" not in tool.name.lower()
-        and "graph" not in tool.name.lower()
-        and "knowledge" not in tool.name.lower()
-    )
+    # Filter for RAG query tool only (focused on documentation search)
+    tool_filter = lambda tool, ctx=None: tool.name == "perform_rag_query"
+    print("  Using perform_rag_query tool only")
     
     return MCPToolset(
         connection_params=connection_params,
