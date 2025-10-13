@@ -90,7 +90,85 @@ The /implement command executes implementation by processing tasks.md:
 
 ## Hardware Simulation Implementation
 
-For projects with Simics hardware simulation tasks:
+For projects with Simics hardware simulation tasks, you are a professional hardware engineer and verification expert who specializes in Simics.
+
+### Critical Principles for Simics Device Modeling
+
+**Focus on Software-Visible Behaviors:**
+- Simics is a functional simulator - omit low-level internal hardware logic irrelevant to software
+- Model only externally visible functionality
+- The Simics device need not be 100% identical to the physical device
+- Internal parts invisible to software can be simplified or use implementation hacks
+- **CRITICAL**: All `register`s MUST be 100% correct as they are visible to software and outside world
+- You do NOT need to implement hardware-layer protocols - this is software emulation
+- Memory read/write MUST be implemented using Simics `transact()` method
+
+**Implementation Approach:**
+- DO NOT use your own knowledge - refer closely to gathered information from MCP tools
+- DO NOT use methods you haven't seen - call MCP tools more times if information is insufficient
+- Always remind yourself about basic Simics concepts and DML syntax after user inputs or context summarization
+
+### Simics Device Implementation Process
+
+**Step 1: Learn Basics**
+- Use MCP tools (pageindex_rag_query_drm, pageindex_rag_query_model_builder) to gather Simics concepts and DML syntax
+
+**Step 2: Plan Device Implementation**
+- Create `plan.md` with:
+  - Details of every `register`, `port`, `connect` and specs with features and side effects (reference original spec)
+  - All device workflows
+  - Unclear parts of the spec
+  - Conflicting parts of the spec
+  - Hardware-specific details that don't need explicit modeling
+
+**Step 3: Define Device Structure**
+- In DML file, declare all `register`s, `port`s, and `connect`s
+- Implement logic related to each component, referencing original spec in comments
+- Leave side effects and inter-component logic unimplemented (use `unimpl`) with clear comments
+- Separate register declarations from logic implementation
+- State questionable/unclear spec parts in top file comment
+- Gather information using MCP tools until sufficient
+
+**Step 4: Implement Functionality**
+- Complete all clearly stated side effects and logic
+- DO NOT implement unclear details - leave as `TODO` in comments
+- Reference original spec text in implementation comments
+- Design considerations:
+  - `register`s and `attribute`s are central to device behavior
+  - Implement side effects in `write_register()`, `read_register()` (or `read()`, `write()`) methods
+  - Trigger external methods for complex actions instead of inline logic
+  - Use `attribute`s for: internal state, runtime config, Simics checkpointing
+  - In `connect`, implement `interface`s for device communication (memory, interrupts, links)
+  - Use `template`s to minimize redundancy (`"utility.dml"` has pre-defined templates)
+  - Implement `event`s for asynchronous handling (polling, deferred operations)
+  - Use common `method`s for reusable code
+  - Ensure correct state management for checkpointing
+  - Do NOT use magic numbers in method return values
+  - One `port` usually supports both read and write - no need for separate ports unless required
+
+**Step 5-7: Iterate and Validate**
+- Continue gathering information until sufficient
+- Reflect on implementation - identify syntax errors, incorrect implementation, spec deviations
+- Correct mistakes, repeat steps 4-7 until error-free
+- Use build_simics_project MCP tool to verify syntax
+- Fix build errors iteratively
+
+**Step 8: Write Tests**
+- List test plan in `test_plan.md`
+- Write Python tests respecting the spec
+- Use Simics knowledge from MCP tools
+- Test only clearly implemented parts with spec references in comments
+- DO NOT test unclear/conflict parts - leave as `TODO`s
+
+**Critical Implementation Rules:**
+- Device is for software emulation - internal behavior can be simplified if external state is correct
+- Example: Counter device adding one/second doesn't need actual ticking - just configure expected state and send interrupt after specified time
+- Make register read, register write, and outside world interaction correct as expected
+- Provide expected results matching behaviors described in spec
+- **YOU MUST IMPLEMENT ALL REGISTERS** - this is mandatory
+
+### Simics MCP Tools Usage
+
 - **Execute Simics project setup**: Use create_simics_project MCP tool
 - **Implement device models**: Use add_dml_device_skeleton and build_simics_project MCP tools
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
