@@ -19,6 +19,7 @@ import asyncio
 import datetime
 import inspect
 import logging
+import json
 from typing import AsyncGenerator
 from typing import cast
 from typing import Optional
@@ -729,6 +730,150 @@ class BaseLlmFlow(ABC):
           # pushes the counter beyond the max set value, then the execution is
           # stopped right here, and exception is thrown.
           invocation_context.increment_llm_call_count()
+
+          # Defensive: build an approximate textual payload from the request and
+          # truncate oldest context if the payload likely exceeds model limits.
+          def _to_text(obj) -> str:
+            try:
+              if obj is None:
+                return ''
+              if isinstance(obj, str):
+                return obj
+              return json.dumps(obj, default=str)
+            except Exception:
+              return str(obj)
+
+          def _messages_to_text(msgs) -> str:
+            """Convert a list of message objects/dicts to a compact text representation.
+            This avoids encoding full metadata and focuses on the role + content fields
+            which contribute most to token usage."""
+            if not msgs:
+              return ''
+            parts = []
+            for m in msgs:
+              try:
+                if isinstance(m, dict):
+                  content = m.get('content') or m.get('text') or ''
+                  role = m.get('role', '')
+                else:
+                  content = getattr(m, 'content', None)
+                  role = getattr(m, 'role', '')
+                  # Some message types wrap content in nested structures
+                  if isinstance(content, dict):
+                    content = content.get('text') or content.get('content') or ''
+              except Exception:
+                content = str(m)
+                role = ''
+              if isinstance(content, str):
+                parts.append(f"{role}: {content}")
+              else:
+                parts.append(_to_text(content))
+            return "\n".join(parts)
+
+          # Infer model max tokens
+          model_max_tokens = None
+          try:
+            model_max_tokens = getattr(llm, 'max_tokens', None) or getattr(llm, 'model_max_tokens', None)
+          except Exception:
+            model_max_tokens = None
+          try:
+            if model_max_tokens is None and getattr(llm_request, 'config', None):
+              model_max_tokens = getattr(llm_request.config, 'max_output_tokens', None) or getattr(llm_request.config, 'max_new_tokens', None)
+          except Exception:
+            pass
+          if model_max_tokens is None:
+            model_max_tokens = 262144
+
+          # Reserve buffer for model output and safety
+          reserved_output_tokens = 1024
+          safety_margin_tokens = 512
+          allowed_input_tokens = max(128, model_max_tokens - reserved_output_tokens - safety_margin_tokens)
+
+          # Collect candidate fields that contribute to token count
+          pieces = []
+          for attr in ('contents', 'system_prompt', 'messages', 'history', 'context'):
+            try:
+              val = getattr(llm_request, attr, None)
+            except Exception:
+              val = None
+            if val:
+              if attr == 'messages':
+                pieces.append(_messages_to_text(val))
+              else:
+                pieces.append(_to_text(val))
+          try:
+            if getattr(llm_request, 'tools_dict', None):
+              pieces.append(json.dumps(llm_request.tools_dict, default=str))
+          except Exception:
+            pass
+          try:
+            pieces.append(json.dumps(getattr(llm_request, 'config', {}), default=str))
+          except Exception:
+            pass
+
+          payload_text = '\n'.join(pieces)
+          estimated_tokens = max(1, len(payload_text) // 4)
+
+          if estimated_tokens > allowed_input_tokens:
+            logger.warning(
+              'LLM request too large (est %s tokens > %s). Attempting to trim context.',
+              estimated_tokens, allowed_input_tokens,
+            )
+
+            # If there is a messages/history list, drop oldest entries until under limit
+            trimmed = False
+            try:
+              msgs = getattr(llm_request, 'messages', None)
+              if isinstance(msgs, list) and msgs:
+                # keep trimming oldest messages
+                while msgs:
+                  # recompute payload using attribute order; replace messages with current msgs
+                  attrs = ('contents', 'system_prompt', 'messages', 'history', 'context')
+                  pieces_tmp = []
+                  for a in attrs:
+                    if a == 'messages':
+                      if msgs:
+                        pieces_tmp.append(_messages_to_text(msgs))
+                    else:
+                      try:
+                        val = getattr(llm_request, a, None)
+                      except Exception:
+                        val = None
+                      if val:
+                        pieces_tmp.append(_to_text(val))
+                  payload_text = '\n'.join(pieces_tmp)
+                  estimated_tokens = max(1, len(payload_text) // 4)
+                  if estimated_tokens <= allowed_input_tokens:
+                    setattr(llm_request, 'messages', msgs)
+                    trimmed = True
+                    break
+                  # drop the oldest message
+                  msgs = msgs[1:]
+                if trimmed:
+                  logger.info('Trimmed oldest messages to fit model limits.')
+            except Exception:
+              pass
+
+            # If still too large, truncate contents tail (keep recent context)
+            if not trimmed:
+              contents_text = _to_text(getattr(llm_request, 'contents', '') or '')
+              allowed_chars = max(1000, allowed_input_tokens * 4)
+              if len(contents_text) > allowed_chars:
+                truncated_text = '[TRUNCATED - previous content omitted]\n' + contents_text[-allowed_chars:]
+              else:
+                # No need to prepend notice if nothing was removed
+                truncated_text = contents_text
+              try:
+                llm_request.contents = truncated_text
+                logger.info('Truncated llm_request.contents to %s chars.', len(truncated_text))
+              except Exception:
+                try:
+                  if not getattr(llm_request, 'config', None):
+                    llm_request.config = types.GenerateContentConfig()
+                  setattr(llm_request.config, '_truncated_contents', truncated_text)
+                except Exception:
+                  logger.error('Failed to set truncated contents on llm_request; proceeding with original payload.')
+
           responses_generator = llm.generate_content_async(
               llm_request,
               stream=invocation_context.run_config.streaming_mode
