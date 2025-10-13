@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -95,6 +95,12 @@ For projects with Simics hardware simulation tasks:
 - **Implement device models**: Use add_dml_device_skeleton and build_simics_project MCP tools
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
+- **Query documentation and code examples as needed**: Use perform_rag_query MCP tool to search Simics documentation
+  - `source_type="all"`: Search all sources (default)
+  - `source_type="docs"`: Search documentation sources only (excludes Simics sources)
+  - `source_type="dml"`: Search Simics DML sources only for DML syntax and language features
+  - `source_type="python"`: Search Simics Python sources only for Python test and script examples
+  - `source_type="source"`: Search both DML and Python sources for comprehensive Simics code examples
 
 ## Progress Tracking and Error Handling
 
@@ -167,6 +173,11 @@ If implementation fails:
 4. Report specific error details with debugging context
 5. Suggest next steps for resolution
 
+**Simics-Specific Error Recovery:**
+- **If `build_simics_project` fails with syntax error**: Call `perform_rag_query(query="Simics DML 1.4 " + syntax_error_keyword, source_type="all")` to get grammar reference for the specific syntax issue
+- **Example**: For error "unknown attribute 'reg'", query with "Simics DML 1.4 attribute syntax"
+- **Follow up**: Apply the documentation guidance to fix the syntax error and rebuild
+
 ## Completion Validation
 
 - **Verify all required tasks are completed**
@@ -178,10 +189,11 @@ If implementation fails:
 REMEMBER: Your job is to execute the /implement workflow defined in .adk/commands/implement.md, following TDD principles and task dependencies.
 """
 
-        # Add both toolsets for implement command
+        # Add all toolsets for implement command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
         tools.append(create_simics_mcp_toolset())
+        tools.append(create_http_sse_mcp_toolset())
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts
