@@ -122,11 +122,19 @@ For projects with Simics hardware simulation tasks, you are a professional hardw
   - Hardware-specific details that don't need explicit modeling
 
 **Step 3: Define Device Structure**
-- In DML file, declare all `register`s, `port`s, and `connect`s
+- **CRITICAL**: Write ALL DML code into a SINGLE file: `simics-project/modules/device-name/device-name.dml`
+  - Do NOT split into multiple files (registers.dml, interfaces.dml, etc.)
+  - All `register`s, `port`s, `connect`s, `attribute`s, `method`s, `event`s go in one DML file
+- In this single DML file, declare all `register`s, `port`s, and `connect`s
 - Implement logic related to each component, referencing original spec in comments
 - Leave side effects and inter-component logic unimplemented (use `unimpl`) with clear comments
 - Separate register declarations from logic implementation
 - State questionable/unclear spec parts in top file comment
+- **Use example devices for reference**:
+  - Call `get_simics_device_example_i2c()` to get example project path
+  - Call `get_simics_device_example_ds12887()` to get advanced example project path
+  - These tools return FILE PATHS - you MUST use read_file to retrieve actual source code from returned paths
+  - Study the example DML files for patterns, syntax, and best practices
 - Gather information using MCP tools until sufficient
 
 **Step 4: Implement Functionality**
@@ -156,6 +164,11 @@ For projects with Simics hardware simulation tasks, you are a professional hardw
 **Step 8: Write Tests**
 - List test plan in `test_plan.md`
 - Write Python tests respecting the spec
+- **Use example test files for reference**:
+  - Use paths from `get_simics_device_example_i2c()` and `get_simics_device_example_ds12887()`
+  - These tools return FILE PATHS - you MUST use read_file to retrieve actual test code from returned paths
+  - Find test files (typically in `modules/*/test/` directories) and study their patterns
+  - Adapt test patterns to your device's functionality
 - Use Simics knowledge from MCP tools
 - Test only clearly implemented parts with spec references in comments
 - DO NOT test unclear/conflict parts - leave as `TODO`s
@@ -171,9 +184,14 @@ For projects with Simics hardware simulation tasks, you are a professional hardw
 
 - **Execute Simics project setup**: Use create_simics_project MCP tool
 - **Implement device models**: Use add_dml_device_skeleton and build_simics_project MCP tools
+- **CRITICAL - Single DML file**: Write ALL device code into ONE file: `device-name.dml` (no separate files for registers, interfaces, etc.)
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
 - **PageIndex RAG lookups**: Use pageindex_rag_query_model_builder to fetch examples, recommended patterns, and code snippets from the Model Builder User Guide, and pageindex_rag_query_drm to fetch authoritative syntax, definitions, and reference excerpts from the DML 1.4 Reference Manual
+- **Example device references**: 
+  - `get_simics_device_example_i2c()` and `get_simics_device_example_ds12887()` return FILE PATHS
+  - You MUST use read_file on the returned paths to retrieve actual source code
+  - Study example DML files and test files from these paths for coding patterns
 
 ## Progress Tracking and Error Handling
 
