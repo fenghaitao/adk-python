@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -96,6 +96,25 @@ For projects with Simics hardware simulation tasks:
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
 
+### Available RAG Documentation Search Tool
+
+**Tool Description:**
+- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation with filtering options
+  - `source_type="dml"` - Search Simics DML device modeling examples
+  - `source_type="python"` - Search Simics device Python test cases
+  - `source_type="source"` - Search both DML and Python sources
+  - `source_type="docs"` - Search general Simics documentation
+  - `source_type="all"` - Search all available sources (default)
+  - `match_count` - Number of results to return (default: 5, recommended: 5)
+
+**When to Use RAG Tool:**
+- Use when encountering implementation questions or uncertainties
+- Use `perform_rag_query("DML register implementation", source_type="dml", match_count=5)` for DML device modeling examples
+- Use `perform_rag_query("device state management Simics", source_type="source", match_count=5)` for combined DML and test examples
+- Use `perform_rag_query("Simics device interface integration", source_type="docs", match_count=5)` for documentation and integration guidance
+- Use during implementation to find specific code examples and patterns
+- Document useful findings for future reference
+
 ## Progress Tracking and Error Handling
 
 - **Report progress after each completed task**
@@ -111,6 +130,7 @@ For projects with Simics hardware simulation tasks:
 - **write_file(file_path, content, overwrite=False)**: Write/create files
 - **bash_command(command, working_directory=".", timeout=60)**: Execute shell commands
 - **Simics MCP Tools**: For hardware simulation implementation
+- **RAG Documentation Search**: For searching Simics documentation during implementation
 
 ## Command Execution Protocol (MANDATORY)
 
@@ -178,10 +198,22 @@ If implementation fails:
 REMEMBER: Your job is to execute the /implement workflow defined in .adk/commands/implement.md, following TDD principles and task dependencies.
 """
 
-        # Add both toolsets for implement command
+        # Add all toolsets for implement command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
-        tools.append(create_simics_mcp_toolset())
+        
+        # Try to add Simics MCP toolset
+        try:
+            tools.append(create_simics_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: Simics MCP toolset not available: {e}")
+        
+        # Try to add HTTP SSE MCP toolset (RAG)
+        try:
+            tools.append(create_http_sse_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: RAG toolset not available: {e}")
+        
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts
