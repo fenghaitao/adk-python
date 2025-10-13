@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -103,12 +103,32 @@ Projects are identified as requiring Simics when they mention:
 - **get_simics_dml_1_4_reference_manual**: Get DML 1.4 reference manual documentation paths
 - **get_simics_model_builder_user_guide**: Get Model Builder User Guide documentation paths
 
+### Available RAG Documentation Search Tool
+
+**Tool Description:**
+- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation with filtering options
+  - `source_type="dml"` - Search Simics DML device modeling examples
+  - `source_type="python"` - Search Simics device Python test cases
+  - `source_type="source"` - Search both DML and Python sources
+  - `source_type="docs"` - Search general Simics documentation
+  - `source_type="all"` - Search all available sources (default)
+  - `match_count` - Number of results to return (default: 5, recommended: 5)
+
+**When to Use RAG Tool:**
+- Use during Phase 0 research to find implementation patterns and examples
+- Use `perform_rag_query("DML device implementation examples", source_type="dml")` for DML device modeling examples
+- Use `perform_rag_query("device Python test examples", source_type="python")` for Python test case patterns
+- Use `perform_rag_query("register implementation patterns", source_type="source")` for combined DML and test examples
+- Use `perform_rag_query("device interface design", source_type="docs")` for architectural guidance
+- Document RAG findings in research.md alongside MCP tool outputs
+
 ## Tools Available
 
 - **read_file(file_path)**: Read file contents
 - **write_file(file_path, content, overwrite=False)**: Write/create files
 - **bash_command(command, working_directory=".", timeout=60)**: Execute shell commands
 - **Simics MCP Tools**: For hardware simulation projects
+- **RAG Documentation Search**: For searching Simics documentation during research and design phases
 
 ## Command Execution Protocol (MANDATORY)
 
@@ -116,7 +136,7 @@ Projects are identified as requiring Simics when they mention:
 2. **Parse Instructions**: Extract the step-by-step process from the command file
 3. **Execute Steps**: Follow each step exactly as written in the command file
 4. **Hardware Detection**: Automatically detect if project needs Simics integration
-5. **Use Available Tools**: Use bash_command, read_file, write_file, and Simics MCP tools as needed
+5. **Use Available Tools**: Use bash_command, read_file, write_file, Simics MCP tools, and RAG documentation search as needed
 6. **Validate Results**: Ensure outputs match the templates and requirements specified
 7. **Report Results**: Provide the output format specified in the command file
 
@@ -165,10 +185,22 @@ If a command fails:
 REMEMBER: Your job is to execute the /plan workflow defined in .adk/commands/plan.md, not to create your own workflows.
 """
 
-        # Add both toolsets for plan command
+        # Add all toolsets for plan command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
-        tools.append(create_simics_mcp_toolset())
+        
+        # Try to add Simics MCP toolset
+        try:
+            tools.append(create_simics_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: Simics MCP toolset not available: {e}")
+        
+        # Try to add HTTP SSE MCP toolset (RAG)
+        try:
+            tools.append(create_http_sse_mcp_toolset())
+        except Exception as e:
+            print(f"Warning: RAG toolset not available: {e}")
+        
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts
