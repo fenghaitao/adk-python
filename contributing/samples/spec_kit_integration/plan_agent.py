@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -97,11 +97,18 @@ Projects are identified as requiring Simics when they mention:
 - **run_simics_test**: Run Simics test suite(s) within a project
 
 **Device Examples and Documentation:**
-- **get_simics_dml_template**: Get DML device template for base device structure patterns
-- **get_simics_device_example_i2c**: Get button-i2c simple I2C device DML implementation examples
-- **get_simics_device_example_ds12887**: Get DS12887 real-time clock device DML implementation examples
-- **get_simics_dml_1_4_reference_manual**: Get DML 1.4 reference manual documentation paths
-- **get_simics_model_builder_user_guide**: Get Model Builder User Guide documentation paths
+- **perform_rag_query**: Query Simics documentation using RAG (Retrieval-Augmented Generation)
+  - Use this tool to search for specific information in Simics documentation
+  - **source_type** argument options:
+    - `"all"` (default): Search all sources
+    - `"docs"`: Search documentation sources only (excludes Simics sources)
+    - `"dml"`: Search Simics DML sources only (simics-dml)
+    - `"python"`: Search Simics Python sources only (simics-python)
+    - `"source"`: Search both Simics DML and Python sources (simics-dml + simics-python)
+  - Examples:
+    - `perform_rag_query(query="How to implement event handling in DML?", source_type="dml")`
+    - `perform_rag_query(query="Python test examples for Simics", source_type="python")`
+    - `perform_rag_query(query="Best Practices for Implementing a Timer Device in Simics DML 1.4", source_type="source")`
 
 ## Tools Available
 
@@ -141,7 +148,7 @@ Projects are identified as requiring Simics when they mention:
 ## Enhanced Planning Practices
 
 - **Clarifications validation**: If no "## Clarifications" section exists but spec shows "Review checklist passed", proceed with planning
-- **Constitution file paths**: Try `.specify/memory/constitution.md` first, then fallback to `memory/constitution.md` 
+- **Constitution file paths**: Try `.specify/memory/constitution.md` first, then fallback to `memory/constitution.md`
 - **Artifact validation**: After phase completion, verify all expected files were created using file listing commands
 - **Hardware project acceleration**: For detected hardware projects, prioritize Simics tool usage and include detailed device modeling guidance
 - **Progress tracking**: Always update the plan.md Progress Tracking section as phases complete
@@ -150,7 +157,7 @@ Projects are identified as requiring Simics when they mention:
 
 - **For human users**: Present setup instructions as conceptual steps, not specific tool syntax
 - **Avoid MCP tool syntax**: Don't show `create_simics_project()` function calls in user documentation
-- **Use generic descriptions**: "Create Simics project", "Build the device module", "Run tests" 
+- **Use generic descriptions**: "Create Simics project", "Build the device module", "Run tests"
 - **Focus on Simics CLI usage**: Show actual Simics commands users will run (`load-module`, `new device`)
 - **Separate concerns**: Quickstart is for end-users, tasks.md is for agent execution
 
@@ -165,10 +172,11 @@ If a command fails:
 REMEMBER: Your job is to execute the /plan workflow defined in .adk/commands/plan.md, not to create your own workflows.
 """
 
-        # Add both toolsets for plan command
+        # Add all toolsets for plan command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
         tools.append(create_simics_mcp_toolset())
+        tools.append(create_http_sse_mcp_toolset())
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts

@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -108,9 +108,14 @@ For projects requiring hardware simulation, include specific Simics-related task
 **Device Modeling Tasks:**
 - **Simics project setup**: Use create_simics_project MCP tool
 - **Device skeleton creation**: Use add_dml_device_skeleton MCP tool
-- **DML template access**: Use get_simics_dml_template MCP tool for base device structure patterns
 - **Reference examples**: Use get_simics_device_example_i2c and get_simics_device_example_ds12887 MCP tools
 - **Documentation access**: Use get_simics_dml_1_4_reference_manual and get_simics_model_builder_user_guide MCP tools
+- **Documentation and code example queries**: Use perform_rag_query MCP tool to search Simics documentation
+  - `source_type="all"`: Search all sources (default)
+  - `source_type="docs"`: Search documentation sources only (excludes Simics sources)
+  - `source_type="dml"`: Search Simics DML sources only (simics-dml)
+  - `source_type="python"`: Search Simics Python sources only (simics-python)
+  - `source_type="source"`: Search both Simics DML and Python sources (simics-dml + simics-python)
 
 **Build and Test Tasks:**
 - **Project building**: Use build_simics_project MCP tool
@@ -177,10 +182,11 @@ If a command fails:
 REMEMBER: Your job is to execute the /tasks workflow defined in .adk/commands/tasks.md, generating immediately executable task breakdowns.
 """
 
-        # Add both toolsets for tasks command
+        # Add all toolsets for tasks command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
         tools.append(create_simics_mcp_toolset())
+        tools.append(create_http_sse_mcp_toolset())
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts
