@@ -1,0 +1,16 @@
+x86_txt_chipset
+x86_unplug
+x86_unplug_v2
+x86_external_reset
+x86_smm_notification
+apic_bus_v2
+apic_timer
+x86_sai
+mktme
+apic_to_apic_bus
+apic_bus_to_apic
+x86_cstate_notification_v2
+x86_monitor_notification
+x86_monitor
+x86_vcounters
+apic_inter_core_smi_handling
