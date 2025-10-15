@@ -77,6 +77,11 @@ INITIAL_RETRY_DELAY = float(os.getenv('ADK_INITIAL_RETRY_DELAY', '2.0'))  # seco
 MAX_RETRY_DELAY = float(os.getenv('ADK_MAX_RETRY_DELAY', '60.0'))  # seconds
 ENABLE_RATE_LIMIT_RETRY = os.getenv('ADK_ENABLE_RATE_LIMIT_RETRY', 'true').lower() == 'true'
 
+# Token limit error handling configuration
+ENABLE_TOKEN_LIMIT_RECOVERY = os.getenv('ADK_ENABLE_TOKEN_LIMIT_RECOVERY', 'true').lower() == 'true'
+TOKEN_LIMIT_REDUCTION_FACTOR = float(os.getenv('ADK_TOKEN_LIMIT_REDUCTION_FACTOR', '0.7'))  # Reduce to 70% on error
+MIN_TARGET_TOKENS = int(os.getenv('ADK_MIN_TARGET_TOKENS', '1000'))  # Minimum safe target after truncation
+
 
 class LlmRateLimiter:
   """Rate limiter for LLM API requests with exponential backoff.
@@ -160,6 +165,76 @@ def _is_rate_limit_error(error: Exception) -> bool:
       or 'rpm' in error_str  # Requests Per Minute
       or 'ratelimiterror' in error_type
   )
+
+
+def _is_token_limit_error(error: Exception) -> bool:
+  """Check if an error is a token limit error (prompt too long).
+
+  Args:
+    error: The exception to check
+
+  Returns:
+    True if the error is a token limit error, False otherwise
+  """
+  error_str = str(error).lower()
+  error_type = type(error).__name__.lower()
+
+  # Check for token limit indicators
+  return (
+      '511' in error_str
+      or 'prompt exceed' in error_str
+      or 'max tokens' in error_str
+      or 'token limit' in error_str
+      or 'context length' in error_str
+      or 'prompt too long' in error_str
+      or 'request length' in error_str
+      or 'max_new_tokens is' in error_str  # Specific to the error message
+      or 'tokenlimiterror' in error_type
+  )
+
+
+def _extract_max_tokens_from_error(error: Exception) -> tuple[int | None, int | None]:
+  """Extract model max tokens and request length from error message.
+
+  Args:
+    error: The exception containing token info
+
+  Returns:
+    Tuple of (model_max_tokens, request_length), either may be None
+  """
+  import re
+
+  error_str = str(error)
+  model_max = None
+  request_len = None
+
+  # Try multiple patterns for model max tokens
+  max_patterns = [
+      r'model max tokens is (\d+)',
+      r'maximum.*?tokens.*?(\d+)',
+      r'max_tokens[:\s]+(\d+)',
+      r'context_length[:\s]+(\d+)',
+  ]
+  for pattern in max_patterns:
+    max_match = re.search(pattern, error_str, re.IGNORECASE)
+    if max_match:
+      model_max = int(max_match.group(1))
+      break
+
+  # Try multiple patterns for request length
+  len_patterns = [
+      r'request length is (\d+)',
+      r'prompt.*?length.*?(\d+)',
+      r'input.*?tokens.*?(\d+)',
+      r'requested.*?(\d+).*?tokens',
+  ]
+  for pattern in len_patterns:
+    len_match = re.search(pattern, error_str, re.IGNORECASE)
+    if len_match:
+      request_len = int(len_match.group(1))
+      break
+
+  return model_max, request_len
 
 
 class BaseLlmFlow(ABC):
@@ -1006,6 +1081,7 @@ class BaseLlmFlow(ABC):
     """Runs the response generator and processes the error with plugins.
 
     Includes automatic retry logic with exponential backoff for rate limit errors.
+    Includes automatic recovery for token limit errors by truncating session history.
     Uses proactive rate limiting to prevent hitting rate limits.
 
     Args:
@@ -1018,6 +1094,7 @@ class BaseLlmFlow(ABC):
       A generator of LlmResponse.
     """
     retry_count = 0
+    token_limit_retry_count = 0
 
     while True:
       try:
@@ -1036,9 +1113,125 @@ class BaseLlmFlow(ABC):
         # Record the error for rate limiter tracking
         self.rate_limiter.record_error(model_error)
 
-        # Check if this is a rate limit error and retry is enabled
+        # Check error types
         is_rate_limit = _is_rate_limit_error(model_error)
+        is_token_limit = _is_token_limit_error(model_error)
 
+        # Handle token limit errors with session truncation
+        if (
+            ENABLE_TOKEN_LIMIT_RECOVERY
+            and is_token_limit
+            and token_limit_retry_count < 2  # Max 2 attempts to truncate
+        ):
+          token_limit_retry_count += 1
+
+          # Extract token information from error
+          model_max, request_len = _extract_max_tokens_from_error(model_error)
+
+          logger.warning(
+              'Token limit error encountered (attempt %d/2): %s',
+              token_limit_retry_count,
+              str(model_error)[:200],  # Truncate error message for readability
+          )
+
+          if model_max or request_len:
+            logger.warning(
+                'Token info - Model max: %s, Request: %s, Overflow: %s',
+                model_max if model_max else 'unknown',
+                request_len if request_len else 'unknown',
+                request_len - model_max if (model_max and request_len) else 'unknown',
+            )
+
+          # Calculate aggressive truncation target
+          # Priority: model_max (most reliable) > request_len > DEFAULT_CONTEXT_WINDOW
+          if model_max:
+            # Reduce to 70% of model max tokens (configurable)
+            target_tokens = int(model_max * TOKEN_LIMIT_REDUCTION_FACTOR)
+            logger.info('Using model_max_tokens (%d) * %.1f = %d target tokens',
+                       model_max, TOKEN_LIMIT_REDUCTION_FACTOR, target_tokens)
+          elif request_len:
+            # Reduce current request by 40% if we don't know model max
+            target_tokens = int(request_len * 0.6)
+            logger.info('Using request_length (%d) * 0.6 = %d target tokens',
+                       request_len, target_tokens)
+          else:
+            # Fallback: aggressively truncate to 50% of assumed context window
+            from ...runners import DEFAULT_CONTEXT_WINDOW
+            target_tokens = int(DEFAULT_CONTEXT_WINDOW * 0.5)
+            logger.warning('No token info in error, using DEFAULT_CONTEXT_WINDOW (%d) * 0.5 = %d target tokens',
+                          DEFAULT_CONTEXT_WINDOW, target_tokens)
+
+          # Safety check: ensure target is reasonable (at least MIN_TARGET_TOKENS)
+          if target_tokens < MIN_TARGET_TOKENS:
+            logger.error('Calculated target_tokens (%d) below minimum (%d), aborting recovery',
+                        target_tokens, MIN_TARGET_TOKENS)
+          else:
+            logger.warning(
+                'Attempting to recover by truncating session history to ~%d tokens...',
+                target_tokens,
+            )
+
+            # Import truncation utilities
+            from ...runners import _truncate_session_history
+
+            # Get current session and truncate it
+            session = invocation_context.session
+            if session and len(session.events) > 2:
+              # Keep at least system message and last user message
+              # Truncate everything in between
+              original_event_count = len(session.events)
+
+              try:
+                # Truncate to target token count
+                truncated_session = _truncate_session_history(
+                    session,
+                    max_messages=50,  # Also limit message count
+                    enable_summarization=False,  # No summarization for quick recovery
+                    context_window=target_tokens,  # Use calculated target
+                    threshold=0.9,  # Use 90% of target to have safety margin
+                )
+
+                invocation_context.session = truncated_session
+
+                logger.warning(
+                    'Session truncated: %d → %d events (%d%% reduction)',
+                    original_event_count,
+                    len(truncated_session.events),
+                    int((1 - len(truncated_session.events) / original_event_count) * 100),
+                )
+
+                # Rebuild the request with truncated session
+                llm_request.contents = []
+                for event in truncated_session.events:
+                  if event.content:
+                    llm_request.contents.append(event.content)
+
+                logger.info('Rebuilt request with %d content items', len(llm_request.contents))
+
+                # Recreate the generator with truncated request
+                llm = self.__get_llm(invocation_context)
+                response_generator = llm.generate_content_async(
+                    llm_request,
+                    stream=invocation_context.run_config.streaming_mode
+                    == StreamingMode.SSE,
+                )
+
+                logger.info('Retrying request with truncated session...')
+                continue  # Retry with truncated session
+
+              except Exception as truncate_error:
+                logger.error(
+                    'Failed to truncate session: %s',
+                    truncate_error,
+                    exc_info=True,
+                )
+            else:
+              logger.error(
+                  'Cannot truncate session further (only %d events)',
+                  len(session.events) if session else 0,
+              )
+
+        # Handle rate limit errors with exponential backoff
         if (
             ENABLE_RATE_LIMIT_RETRY
             and is_rate_limit
@@ -1071,7 +1264,7 @@ class BaseLlmFlow(ABC):
           # Continue to next retry attempt
           continue
 
-        # Not a rate limit error or max retries reached - try plugin callback
+        # Not a recoverable error or max retries reached - try plugin callback
         callback_context = CallbackContext(
             invocation_context, event_actions=model_response_event.actions
         )
@@ -1086,11 +1279,17 @@ class BaseLlmFlow(ABC):
           yield error_response
           break
         else:
-          # Log final error details if it was a rate limit error
+          # Log final error details
           if is_rate_limit:
             logger.error(
                 'Rate limit error failed after %d retries: %s',
                 retry_count,
+                model_error,
+            )
+          elif is_token_limit:
+            logger.error(
+                'Token limit error failed after %d truncation attempts: %s',
+                token_limit_retry_count,
                 model_error,
             )
           raise model_error
