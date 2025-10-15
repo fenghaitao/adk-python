@@ -19,6 +19,8 @@ import asyncio
 import datetime
 import inspect
 import logging
+import os
+import time
 from typing import AsyncGenerator
 from typing import cast
 from typing import Optional
@@ -68,6 +70,97 @@ DEFAULT_TASK_COMPLETION_DELAY = 1.0
 # Statistics configuration
 DEFAULT_ENABLE_CACHE_STATISTICS = False
 
+# Rate limit retry configuration
+# Can be overridden via environment variables
+MAX_RATE_LIMIT_RETRIES = int(os.getenv('ADK_MAX_RATE_LIMIT_RETRIES', '3'))
+INITIAL_RETRY_DELAY = float(os.getenv('ADK_INITIAL_RETRY_DELAY', '2.0'))  # seconds
+MAX_RETRY_DELAY = float(os.getenv('ADK_MAX_RETRY_DELAY', '60.0'))  # seconds
+ENABLE_RATE_LIMIT_RETRY = os.getenv('ADK_ENABLE_RATE_LIMIT_RETRY', 'true').lower() == 'true'
+
+
+class LlmRateLimiter:
+  """Rate limiter for LLM API requests with exponential backoff.
+
+  Provides proactive rate limiting and reactive error handling with exponential backoff.
+  Inspired by the RateLimiter pattern from copilot_client.py.
+  """
+
+  def __init__(self):
+    """Initialize rate limiter."""
+    self.consecutive_errors = 0
+    self.last_error_time = 0.0
+    self.last_request_time = 0.0
+
+  async def wait_if_needed(self) -> None:
+    """Wait if needed based on error backoff."""
+    now = time.time()
+
+    # Exponential backoff for consecutive errors
+    if self.consecutive_errors > 0:
+      backoff_time = min(2 ** self.consecutive_errors, MAX_RETRY_DELAY)
+      time_since_error = now - self.last_error_time
+
+      if time_since_error < backoff_time:
+        sleep_time = backoff_time - time_since_error
+        logger.warning(
+            'Rate limit backoff active (error %d), waiting %.1f seconds...',
+            self.consecutive_errors,
+            sleep_time,
+        )
+        await asyncio.sleep(sleep_time)
+
+    # Small delay between requests to avoid burst issues
+    time_since_last_request = now - self.last_request_time
+    if time_since_last_request < 0.1:  # 100ms minimum between requests
+      await asyncio.sleep(0.1 - time_since_last_request)
+
+    self.last_request_time = time.time()
+
+  def record_success(self) -> None:
+    """Record a successful request - resets error counter."""
+    self.consecutive_errors = 0
+
+  def record_error(self, error: Exception) -> None:
+    """Record an error and determine backoff.
+
+    Args:
+      error: The exception that occurred
+    """
+    self.last_error_time = time.time()
+
+    # Only increment for rate limit errors
+    if _is_rate_limit_error(error):
+      self.consecutive_errors += 1
+      logger.warning(
+          'Rate limit error detected, consecutive errors: %d',
+          self.consecutive_errors,
+      )
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+  """Check if an error is a rate limit error (429).
+
+  Args:
+    error: The exception to check
+
+  Returns:
+    True if the error is a rate limit error, False otherwise
+  """
+  error_str = str(error).lower()
+  error_type = type(error).__name__.lower()
+
+  # Check for common rate limit indicators
+  return (
+      '429' in error_str
+      or 'rate limit' in error_str
+      or 'ratelimit' in error_str
+      or 'too many requests' in error_str
+      or 'quota exceeded' in error_str
+      or 'tpm' in error_str  # Tokens Per Minute
+      or 'rpm' in error_str  # Requests Per Minute
+      or 'ratelimiterror' in error_type
+  )
+
 
 class BaseLlmFlow(ABC):
   """A basic flow that calls the LLM in a loop until a final response is generated.
@@ -80,6 +173,11 @@ class BaseLlmFlow(ABC):
     self.response_processors: list[BaseLlmResponseProcessor] = []
 
     # Initialize configuration and managers
+    self.audio_cache_manager = AudioCacheManager()
+    self.transcription_manager = TranscriptionManager()
+
+    # Initialize rate limiter for handling rate limit errors
+    self.rate_limiter = LlmRateLimiter()
     self.audio_cache_manager = AudioCacheManager()
     self.transcription_manager = TranscriptionManager()
 
@@ -907,6 +1005,9 @@ class BaseLlmFlow(ABC):
   ) -> AsyncGenerator[LlmResponse, None]:
     """Runs the response generator and processes the error with plugins.
 
+    Includes automatic retry logic with exponential backoff for rate limit errors.
+    Uses proactive rate limiting to prevent hitting rate limits.
+
     Args:
       response_generator: The response generator to run.
       invocation_context: The invocation context.
@@ -916,25 +1017,83 @@ class BaseLlmFlow(ABC):
     Yields:
       A generator of LlmResponse.
     """
-    try:
-      async with Aclosing(response_generator) as agen:
-        async for response in agen:
-          yield response
-    except Exception as model_error:
-      callback_context = CallbackContext(
-          invocation_context, event_actions=model_response_event.actions
-      )
-      error_response = (
-          await invocation_context.plugin_manager.run_on_model_error_callback(
-              callback_context=callback_context,
-              llm_request=llm_request,
-              error=model_error,
+    retry_count = 0
+
+    while True:
+      try:
+        # Proactive rate limiting - wait if needed based on previous errors
+        await self.rate_limiter.wait_if_needed()
+
+        async with Aclosing(response_generator) as agen:
+          async for response in agen:
+            yield response
+
+        # Success - record it and break out of retry loop
+        self.rate_limiter.record_success()
+        break
+
+      except Exception as model_error:
+        # Record the error for rate limiter tracking
+        self.rate_limiter.record_error(model_error)
+
+        # Check if this is a rate limit error and retry is enabled
+        is_rate_limit = _is_rate_limit_error(model_error)
+
+        if (
+            ENABLE_RATE_LIMIT_RETRY
+            and is_rate_limit
+            and retry_count < MAX_RATE_LIMIT_RETRIES
+        ):
+          retry_count += 1
+
+          # Calculate delay with exponential backoff
+          retry_delay = min(INITIAL_RETRY_DELAY * (2 ** (retry_count - 1)), MAX_RETRY_DELAY)
+
+          logger.warning(
+              'Rate limit error encountered (attempt %d/%d): %s. '
+              'Retrying in %.1f seconds...',
+              retry_count,
+              MAX_RATE_LIMIT_RETRIES,
+              model_error,
+              retry_delay,
           )
-      )
-      if error_response is not None:
-        yield error_response
-      else:
-        raise model_error
+
+          # Wait before retrying
+          await asyncio.sleep(retry_delay)
+
+          # Recreate the generator for retry
+          llm = self.__get_llm(invocation_context)
+          response_generator = llm.generate_content_async(
+              llm_request,
+              stream=invocation_context.run_config.streaming_mode
+              == StreamingMode.SSE,
+          )
+          # Continue to next retry attempt
+          continue
+
+        # Not a rate limit error or max retries reached - try plugin callback
+        callback_context = CallbackContext(
+            invocation_context, event_actions=model_response_event.actions
+        )
+        error_response = (
+            await invocation_context.plugin_manager.run_on_model_error_callback(
+                callback_context=callback_context,
+                llm_request=llm_request,
+                error=model_error,
+            )
+        )
+        if error_response is not None:
+          yield error_response
+          break
+        else:
+          # Log final error details if it was a rate limit error
+          if is_rate_limit:
+            logger.error(
+                'Rate limit error failed after %d retries: %s',
+                retry_count,
+                model_error,
+            )
+          raise model_error
 
   def __get_llm(self, invocation_context: InvocationContext) -> BaseLlm:
     from ...agents.llm_agent import LlmAgent
