@@ -64,8 +64,9 @@ ENABLE_HISTORY_SUMMARIZATION = os.getenv('ADK_ENABLE_HISTORY_SUMMARIZATION', 'tr
 # Context window management
 # Estimated context window size in tokens (can be overridden)
 DEFAULT_CONTEXT_WINDOW = int(os.getenv('ADK_CONTEXT_WINDOW_TOKENS', '256000'))
-# Threshold at which to trigger truncation (default: 80% of context window)
-CONTEXT_THRESHOLD = float(os.getenv('ADK_CONTEXT_THRESHOLD', '0.8'))
+# Threshold at which to trigger truncation (default: 70% of context window for safety)
+# Lower threshold prevents token limit errors (511) by truncating earlier
+CONTEXT_THRESHOLD = float(os.getenv('ADK_CONTEXT_THRESHOLD', '0.7'))
 
 
 def _estimate_token_count(text: str) -> int:
