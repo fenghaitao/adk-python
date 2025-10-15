@@ -6,16 +6,35 @@ Usage: python view_session.py session_file.json
 
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-def format_timestamp(timestamp_str):
-    """Format ISO timestamp to readable format."""
+def format_timestamp(timestamp):
+    """Format timestamp (ISO string or Unix float) to readable format."""
     try:
-        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(timestamp, (int, float)):
+            # Unix timestamp
+            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
+        elif isinstance(timestamp, str):
+            # ISO format string
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            return str(timestamp)
     except:
-        return timestamp_str
+        return str(timestamp)
+
+def format_duration(duration_seconds):
+    """Format duration in seconds to human-readable format."""
+    if duration_seconds < 60:
+        return f"{duration_seconds:.1f} seconds"
+    elif duration_seconds < 3600:
+        minutes = duration_seconds / 60
+        return f"{minutes:.1f} minutes"
+    else:
+        hours = duration_seconds / 3600
+        return f"{hours:.1f} hours"
 
 def extract_text_content(content):
     """Extract text from content parts."""
@@ -100,6 +119,13 @@ def view_session(session_file):
     print(f"Created: {format_timestamp(session.get('created_time', 'N/A'))}")
     print(f"Updated: {format_timestamp(session.get('updated_time', 'N/A'))}")
     
+    # Handle last_update_time if present
+    if 'last_update_time' in session:
+        last_update = session['last_update_time']
+        print(f"Last Update: {format_timestamp(last_update)}")
+        if 'last_update_time_human' in session:
+            print(f"Last Update (Human): {session['last_update_time_human']}")
+    
     # State info
     if session.get('state'):
         print(f"State: {len(session['state'])} items")
@@ -114,10 +140,57 @@ def view_session(session_file):
     print("💬 CONVERSATION")
     print("=" * 80)
     
+    # Pre-calculate event durations
+    event_durations = []
+    for i in range(len(events)):
+        current_event = events[i]
+        current_timestamp = current_event.get('created_time') or current_event.get('timestamp')
+        
+        if current_timestamp and i > 0:
+            # Get previous event timestamp
+            prev_event = events[i-1]
+            prev_timestamp = prev_event.get('created_time') or prev_event.get('timestamp')
+            
+            if prev_timestamp:
+                # Convert both to Unix timestamps for calculation
+                current_unix = current_timestamp if isinstance(current_timestamp, (int, float)) else None
+                prev_unix = prev_timestamp if isinstance(prev_timestamp, (int, float)) else None
+                
+                # Handle ISO format conversion if needed
+                if current_unix is None and isinstance(current_timestamp, str):
+                    try:
+                        dt = datetime.fromisoformat(current_timestamp.replace('Z', '+00:00'))
+                        current_unix = dt.timestamp()
+                    except:
+                        pass
+                
+                if prev_unix is None and isinstance(prev_timestamp, str):
+                    try:
+                        dt = datetime.fromisoformat(prev_timestamp.replace('Z', '+00:00'))
+                        prev_unix = dt.timestamp()
+                    except:
+                        pass
+                
+                # Calculate duration
+                if current_unix and prev_unix:
+                    duration = current_unix - prev_unix
+                    event_durations.append(duration)
+                else:
+                    event_durations.append(None)
+            else:
+                event_durations.append(None)
+        else:
+            event_durations.append(None)  # First event has no duration
+    
     for i, event in enumerate(events, 1):
         author = event.get('author', 'unknown')
-        timestamp = format_timestamp(event.get('created_time', ''))
+        # Handle both created_time and timestamp fields
+        event_timestamp = event.get('created_time') or event.get('timestamp', '')
+        timestamp = format_timestamp(event_timestamp)
         content = extract_text_content(event.get('content'))
+        
+        # Get duration for this event
+        duration = event_durations[i-1] if i-1 < len(event_durations) else None
         
         # Format based on author
         if author == 'user':
@@ -129,7 +202,12 @@ def view_session(session_file):
         
         color_end = "\033[0m"  # Reset
         
-        print(f"{color_start}{icon} [{author}] {timestamp}{color_end}")
+        # Format the header with duration
+        if duration is not None:
+            duration_str = f" (+{format_duration(duration)})"
+            print(f"{color_start}{icon} [{author}] {timestamp}{duration_str}{color_end}")
+        else:
+            print(f"{color_start}{icon} [{author}] {timestamp}{color_end}")
         
         # Indent content
         for line in content.split('\n'):
@@ -160,6 +238,101 @@ def view_session(session_file):
         
         print()  # Blank line between events
 
+    # Calculate and display session duration
+    print("=" * 80)
+    print("⏱️  SESSION TIMING SUMMARY")
+    print("=" * 80)
+    
+    # Calculate session duration from events
+    if events:
+        # Get timestamps from events
+        event_timestamps = []
+        for event in events:
+            event_timestamp = event.get('created_time') or event.get('timestamp')
+            if event_timestamp:
+                if isinstance(event_timestamp, (int, float)):
+                    event_timestamps.append(event_timestamp)
+                elif isinstance(event_timestamp, str):
+                    try:
+                        dt = datetime.fromisoformat(event_timestamp.replace('Z', '+00:00'))
+                        event_timestamps.append(dt.timestamp())
+                    except:
+                        pass
+        
+        if event_timestamps:
+            session_start = min(event_timestamps)
+            session_end = max(event_timestamps)
+            session_duration = session_end - session_start
+            
+            print(f"Session Start: {format_timestamp(session_start)}")
+            print(f"Session End: {format_timestamp(session_end)}")
+            print(f"Session Duration: {format_duration(session_duration)}")
+            print(f"Total Events: {len(events)}")
+            
+            if session_duration > 0:
+                events_per_minute = len(events) / (session_duration / 60)
+                print(f"Average Events per Minute: {events_per_minute:.1f}")
+            
+            # Analyze time-consuming events
+            print()
+            print("🐌 TIME-CONSUMING EVENTS")
+            print("=" * 40)
+            
+            # Create list of events with durations and metadata
+            time_consuming_events = []
+            for i, (event, duration) in enumerate(zip(events, event_durations)):
+                if duration and duration > 1.0:  # Events taking more than 1 second
+                    author = event.get('author', 'unknown')
+                    event_timestamp = event.get('created_time') or event.get('timestamp', '')
+                    timestamp_str = format_timestamp(event_timestamp)
+                    content = extract_text_content(event.get('content'))
+                    
+                    # Extract summary of content (first line or function call)
+                    content_lines = content.split('\n')
+                    if content_lines:
+                        first_line = content_lines[0].strip()
+                        # Limit length for display
+                        if len(first_line) > 80:
+                            first_line = first_line[:77] + "..."
+                        content_summary = first_line
+                    else:
+                        content_summary = "[No content]"
+                    
+                    time_consuming_events.append({
+                        'index': i + 1,
+                        'duration': duration,
+                        'author': author,
+                        'timestamp': timestamp_str,
+                        'content': content_summary
+                    })
+            
+            # Sort by duration (longest first)
+            time_consuming_events.sort(key=lambda x: x['duration'], reverse=True)
+            
+            if time_consuming_events:
+                print(f"Found {len(time_consuming_events)} events taking >1 second:")
+                print()
+                for i, event_info in enumerate(time_consuming_events, 1):  # Show ALL events
+                    duration_str = format_duration(event_info['duration'])
+                    author_icon = "👤" if event_info['author'] == 'user' else "🤖"
+                    print(f"{i:3d}. {author_icon} {duration_str:>12} - {event_info['content']}")
+                    print(f"      Event #{event_info['index']} at {event_info['timestamp']}")
+                    print()
+                
+                # Show statistics
+                total_slow_time = sum(e['duration'] for e in time_consuming_events)
+                avg_slow_duration = total_slow_time / len(time_consuming_events)
+                print(f"Total time in slow events: {format_duration(total_slow_time)}")
+                print(f"Average slow event duration: {format_duration(avg_slow_duration)}")
+                print(f"Percentage of session time: {(total_slow_time / session_duration * 100):.1f}%")
+            else:
+                print("No events found taking more than 1 second")
+                print("This indicates a very responsive session!")
+        else:
+            print("No valid timestamps found in events")
+    else:
+        print("No events found in session")
+    
     print("=" * 80)
     print("✅ Session view complete")
     print("=" * 80)
