@@ -45,17 +45,17 @@ except ImportError:
 def truncate_content(content: str, max_length: int = 128000) -> str:
     """
     Truncate content to prevent token limit issues.
-    
+
     Args:
         content: The content to truncate
         max_length: Maximum character length (default 50K chars ≈ 12.5K tokens)
-    
+
     Returns:
         Truncated content with truncation notice if needed
     """
     if len(content) <= max_length:
         return content
-    
+
     truncated = content[:max_length]
     truncation_notice = f"\n\n[CONTENT TRUNCATED - Original length: {len(content)} chars, showing first {max_length} chars. Use more specific queries to get complete information.]"
     return truncated + truncation_notice
@@ -64,18 +64,18 @@ def truncate_content(content: str, max_length: int = 128000) -> str:
 def truncate_json_response(json_str: str, max_file_entries: int = 5) -> str:
     """
     Truncate JSON responses from MCP tools to prevent token limit issues.
-    
+
     Args:
         json_str: JSON string response
         max_file_entries: Maximum number of file entries to include
-    
+
     Returns:
         Truncated JSON string
     """
     try:
         import json
         data = json.loads(json_str)
-        
+
         # If there are file collections, limit them
         if isinstance(data, dict):
             for key in ['device_files', 'test_files', 'manual_files', 'guide_files']:
@@ -88,7 +88,7 @@ def truncate_json_response(json_str: str, max_file_entries: int = 5) -> str:
                         data[f'{key}_truncated'] = True
                         data[f'{key}_original_count'] = len(files)
                         data[f'{key}_showing_count'] = len(limited_files)
-        
+
         return json.dumps(data, indent=2)
     except Exception:
         # If JSON parsing fails, use simple truncation
@@ -331,34 +331,34 @@ def create_simics_mcp_toolset() -> MCPToolset:
     tool_filter = [
         # Core project management tools
         "list_installed_packages",
-        "list_simics_platforms", 
+        "list_simics_platforms",
         "get_simics_version",
-        
+
         # Device modeling and development tools
         "create_simics_project",
         "add_dml_device_skeleton",
         "build_simics_project",
         "run_simics_test",
-        
-        # Device examples and documentation tools
-        "get_simics_device_example_i2c",
-        "get_simics_device_example_ds12887",
-        "get_simics_dml_1_4_reference_manual",
-        "get_simics_model_builder_user_guide",
-        "get_simics_dml_template",
-        
+
+        # Device examples and documentation tools - FILTERED OUT (too large, cause token limit issues)
+        # "get_simics_device_example_i2c",
+        # "get_simics_device_example_ds12887",
+        # "get_simics_dml_1_4_reference_manual",
+        # "get_simics_model_builder_user_guide",
+        # "get_simics_dml_template",
+
         # Package management tools
         # "install_simics_package",
         # "uninstall_simics_package",
-        
+
         # Simulation control tools
         # "start_simulation",
-        # "stop_simulation", 
+        # "stop_simulation",
         # "pause_simulation",
         # "resume_simulation",
         # "list_simulations",
         # "get_simulation_logs",
-        
+
         # Checkpoint management tools
         # "create_checkpoint",
         # "load_checkpoint"
@@ -373,7 +373,7 @@ def create_simics_mcp_toolset() -> MCPToolset:
 def create_http_sse_mcp_toolset() -> MCPToolset:
     """Create a MCP toolset that connects to the HTTP SSE MCP server at localhost:8051 for RAG queries."""
     print("Creating HTTP SSE MCP toolset...")
-    
+
     # Create SSE connection parameters for the HTTP MCP server
     connection_params = SseConnectionParams(
         url="http://127.0.0.1:8051/sse",
@@ -381,11 +381,11 @@ def create_http_sse_mcp_toolset() -> MCPToolset:
         timeout=10.0,
         sse_read_timeout=300.0
     )
-    
+
     # Filter for RAG query tool only (focused on documentation search)
     tool_filter = lambda tool, ctx=None: tool.name == "perform_rag_query"
     print("  Using perform_rag_query tool only")
-    
+
     return MCPToolset(
         connection_params=connection_params,
         tool_filter=tool_filter

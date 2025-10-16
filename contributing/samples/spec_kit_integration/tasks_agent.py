@@ -108,9 +108,10 @@ For projects requiring hardware simulation, include specific Simics-related task
 **Device Modeling Tasks:**
 - **Simics project setup**: Use create_simics_project MCP tool
 - **Device skeleton creation**: Use add_dml_device_skeleton MCP tool
-- **DML template access**: Use get_simics_dml_template MCP tool for base device structure patterns
-- **Reference examples**: Use get_simics_device_example_i2c and get_simics_device_example_ds12887 MCP tools
-- **Documentation access**: Use get_simics_dml_1_4_reference_manual and get_simics_model_builder_user_guide MCP tools
+- **Documentation and examples**: Use perform_rag_query tool to search for DML templates, device examples, and reference manuals
+  - Example: `perform_rag_query("DML device template structure", source_type="dml", match_count=5)`
+  - Example: `perform_rag_query("I2C device implementation example", source_type="source", match_count=5)`
+  - Example: `perform_rag_query("DML 1.4 reference manual", source_type="docs", match_count=5)`
 
 **Build and Test Tasks:**
 - **Project building**: Use build_simics_project MCP tool
@@ -128,12 +129,23 @@ For projects requiring hardware simulation, include specific Simics-related task
   - `match_count` - Number of results to return (default: 5, recommended: 5)
 
 **When to Use RAG Tool:**
+- **PREFERRED METHOD**: Use RAG queries instead of large documentation MCP tools to avoid token limit errors
 - Use in Setup phase for comprehensive documentation gathering
+- **For DML templates**: `perform_rag_query("DML device template structure and patterns", source_type="dml", match_count=5)`
+- **For device examples**: `perform_rag_query("I2C device implementation example", source_type="source", match_count=5)` or `perform_rag_query("DS12887 RTC device example", source_type="source", match_count=5)`
+- **For reference manuals**: `perform_rag_query("DML 1.4 reference manual register modeling", source_type="docs", match_count=5)`
+- **For model builder guide**: `perform_rag_query("Simics Model Builder device creation guide", source_type="docs", match_count=5)`
 - Use `perform_rag_query("DML device implementation patterns", source_type="source", match_count=5)` for combined DML and test examples
 - Use `perform_rag_query("Simics register modeling", source_type="dml", match_count=5)` for DML device modeling examples
 - Use `perform_rag_query("Simics Python test patterns", source_type="python", match_count=5)` for Python test case examples
 - Use `perform_rag_query("DML register implementation", source_type="dml", match_count=5)` for specific DML implementation examples
 - Document RAG findings before proceeding to implementation phases
+
+**RAG Tool Advantages:**
+- Returns focused, relevant excerpts instead of entire large documents
+- Prevents token limit (511) errors by limiting response size
+- Allows targeted searches with specific queries
+- More efficient than loading complete manuals or examples
 
 ## Tools Available
 
@@ -200,19 +212,19 @@ REMEMBER: Your job is to execute the /tasks workflow defined in .adk/commands/ta
         # Add all toolsets for tasks command
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
-        
+
         # Try to add Simics MCP toolset
         try:
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
-        
+
         # Try to add HTTP SSE MCP toolset (RAG)
         try:
             tools.append(create_http_sse_mcp_toolset())
         except Exception as e:
             print(f"Warning: RAG toolset not available: {e}")
-        
+
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts
