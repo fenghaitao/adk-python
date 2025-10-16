@@ -71,11 +71,6 @@ When you receive a /plan command, you MUST:
 - **get_simics_version()**: Get Simics version information
 - **list_installed_packages()**: List all installed Simics packages
 - **list_simics_platforms()**: List available Simics platforms
-- **get_simics_dml_1_4_reference_manual()**: Get DML 1.4 reference manual paths
-- **get_simics_model_builder_user_guide()**: Get Model Builder User Guide paths
-- **get_simics_dml_template()**: Get DML device template for base structure
-- **get_simics_device_example_i2c()**: Get simple I2C device implementation example
-- **get_simics_device_example_ds12887()**: Get complex RTC device implementation example
 
 ### RAG Documentation Search
 - **perform_rag_query(query, source_type, match_count)**: Search Simics documentation
