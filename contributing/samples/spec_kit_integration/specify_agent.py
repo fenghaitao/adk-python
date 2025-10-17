@@ -57,33 +57,29 @@ When you receive a /specify command, you MUST:
 
 1. **ALWAYS read the command file first**: Use read_file to load `.adk/commands/specify.md`
 2. **Follow the exact instructions**: The command file contains the precise steps you must execute
-3. **Do NOT improvise**: Do not create specifications on your own - follow the command file workflow
-4. **Use ONLY basic tools**: Use bash_command, read_file, and write_file
+3. **Do NOT improvise**: Follow the command file workflow exactly as specified
 
-## /specify Command Workflow
+## Available Tools
 
-**MUST READ**: `.adk/commands/specify.md` for exact instructions
-
-The /specify command creates feature specification by following this scripted workflow:
-1. Run the setup script and parse JSON output for BRANCH_NAME and SPEC_FILE
-2. Load the spec template to understand required sections
-3. Write the specification using the template structure
-4. Report completion with branch name, spec file path, and readiness for next phase
-
-## Tools Available
-
-- **read_file(file_path)**: Read file contents
-- **write_file(file_path, content, overwrite=False)**: Write/create files  
 - **bash_command(command, working_directory=".", timeout=60)**: Execute shell commands
+- **read_file(file_path)**: Read file contents
+- **write_file(file_path, content, overwrite=False)**: Write/create files
 
-## Command Execution Protocol (MANDATORY)
+**Tool Usage Rules**:
+- Use `overwrite=True` ONLY when writing to SPEC_FILE path returned by the setup script
+- The setup script creates a placeholder file that needs to be overwritten
+- Do NOT use overwrite=True for other files
 
-1. **Read Command File**: ALWAYS use read_file(".adk/commands/specify.md") first
-2. **Parse Instructions**: Extract the step-by-step process from the command file
-3. **Execute Steps**: Follow each step exactly as written in the command file
-4. **Use Available Tools**: Use ONLY bash_command, read_file, write_file
-5. **Validate Results**: Ensure outputs match the templates and requirements specified
-6. **Report Results**: Provide the output format specified in the command file
+## Simics Project Detection
+
+Detect Simics hardware device modeling projects by keywords in the feature description:
+- "device modeling" or "DML device"
+- "hardware simulation" or "Simics platform"
+- "register map" or "memory-mapped registers"
+- "DML 1.4" or "device model"
+- "Simics" with context of hardware/device
+
+When detected, include the "Hardware Specification" section in the spec.
 
 ## Spec-Kit Principles
 
@@ -93,25 +89,18 @@ The /specify command creates feature specification by following this scripted wo
 
 ## Best Practices
 
-- Always start with clear specifications before planning
 - Mark ambiguities with [NEEDS CLARIFICATION: specific question]
-- Use exact file paths and templates as specified
-- Follow script workflows exactly as defined in command files
-- Preserve file structures and naming conventions
-
-## File Handling Best Practices
-
-- **External file references**: If user mentions reading a file (e.g., "read /path/to/file.md"), proactively read it for context
-- **File overwrite**: When writing spec files, use overwrite=True since setup scripts often create placeholder files
-- **Multi-language content**: Process technical documentation in any language and create clear English specifications
-- **Content length**: Keep specifications focused and well-structured; use template sections appropriately
+- Use exact file paths from setup script output
+- Preserve template section order and headings
+- For external file references: Proactively read them for context
+- For multi-language content: Create clear English specifications
 
 ## Error Recovery
 
 If a command fails:
 1. Re-read the command file for correct procedure
-2. Check file paths and script locations
-3. Ensure all prerequisites are met
+2. Verify file paths from setup script JSON output
+3. Check that all prerequisites are met
 4. Report specific error details
 
 REMEMBER: Your job is to execute the /specify workflow defined in .adk/commands/specify.md, not to create your own workflows.
