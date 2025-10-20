@@ -53,7 +53,8 @@ async def test_condenser_with_low_token_limit():
         keep_system_messages=1,   # Keep minimal system context
         keep_recent_turns=1,      # Keep only 1 recent conversation turn
         summarization_model="iflow/Qwen3-Coder",
-        enable_memory_storage=True
+        enable_memory_storage=True,
+        prompt_style="custom"     # Use custom prompt style (can change to "openhands")
     ))
     
     print(f"🎯 Test Configuration:")

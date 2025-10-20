@@ -31,6 +31,7 @@ class ContextConfig:
     keep_recent_turns: int = 6     # Always preserve last N user-assistant pairs
     summarization_model: str = "iflow/Qwen3-Coder"
     enable_memory_storage: bool = True
+    prompt_style: str = "custom"  # "custom" or "openhands"
 
 
 class AdvancedContextManager:
@@ -78,6 +79,13 @@ class AdvancedContextManager:
     
     def create_summary_prompt(self, contents_to_summarize: List[Any]) -> str:
         """Create a prompt for summarizing conversation history"""
+        if self.config.prompt_style == "openhands":
+            return self._create_openhands_style_prompt(contents_to_summarize)
+        else:
+            return self._create_custom_style_prompt(contents_to_summarize)
+    
+    def _create_custom_style_prompt(self, contents_to_summarize: List[Any]) -> str:
+        """Create custom-style prompt (original implementation)"""
         conversation_text = ""
         for content in contents_to_summarize:
             role = getattr(content, 'role', 'unknown')
@@ -100,6 +108,50 @@ CONVERSATION HISTORY:
 {conversation_text}
 
 Create a structured summary that captures the essential context:"""
+
+    def _create_openhands_style_prompt(self, contents_to_summarize: List[Any]) -> str:
+        """Create OpenHands-style prompt (based on their condenser implementation)"""
+        
+        # Get previous summary from memory if available
+        previous_summary = ""
+        if self.conversation_memory:
+            previous_summary = self.conversation_memory[-1]['summary']
+        
+        # Format events in OpenHands style
+        events_text = ""
+        for i, content in enumerate(contents_to_summarize):
+            role = getattr(content, 'role', 'unknown')
+            text = self._extract_text(content)
+            # Truncate long content like OpenHands does
+            truncated_text = text[:500] + "..." if len(text) > 500 else text
+            events_text += f"<EVENT id={i}>\n[{role.upper()}]: {truncated_text}\n</EVENT>\n"
+        
+        prompt = """You are maintaining a context-aware state summary for an interactive software agent. This summary is critical because it:
+1. Preserves essential context when conversation history grows too large
+2. Prevents lost work when the session length exceeds token limits
+3. Helps maintain continuity across multiple interactions
+
+You will be given:
+- A list of events (actions taken by the agent)
+- The most recent previous summary (if one exists)
+
+Capture all relevant information, especially:
+- User requirements that were explicitly stated
+- Work that has been completed
+- Tasks that remain pending
+- Current state of code, variables, and data structures
+- The status of any version control operations"""
+
+        # Add previous summary if exists
+        if previous_summary:
+            prompt += f"\n\n<PREVIOUS SUMMARY>\n{previous_summary}\n</PREVIOUS SUMMARY>\n"
+        
+        # Add events
+        prompt += f"\n\n{events_text}"
+        
+        prompt += "\nCreate a comprehensive state summary that maintains continuity and preserves all essential context."
+        
+        return prompt
 
     def _extract_text(self, content: Any) -> str:
         """Extract text from various content formats"""
