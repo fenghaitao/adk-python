@@ -112,6 +112,7 @@ For projects requiring hardware simulation, Simics simulation environments are a
 When working on projects requiring hardware simulation, the agent automatically:
 - Detects hardware simulation requirements from project specifications
 - Uses create_simics_project MCP tool to create actual Simics projects with ispm
+- Uses add_cpp_device_skeleton MCP tool to create C++ device models
 - Uses install_simics_package MCP tool to install required packages
 - Includes hardware simulation validation tasks in task breakdown
 
@@ -122,25 +123,22 @@ When working on projects requiring hardware simulation, the agent automatically:
 - **create_simics_project**: Create new Simics project using ispm (project_path)
 - **list_installed_packages**: List all installed Simics packages
 - **list_simics_platforms**: List all available Simics platforms
-- **add_dml_device_skeleton**: Create a Simics Device DML 1.4 Model skelenton for further development
+- **add_cpp_device_skeleton**: Create a Simics Device C++ Model skeleton for further development
 - **build_simics_project**: Build a Simics project (project_path, module) - compiles the device models
 - **run_simics_test**: Run Simics test suite(s) within a project (project_path, suite) - validates implementation
-- **get_simics_device_example**: Get DML device implementation examples and Python test examples from Simics packages
-- **get_dml_template**: Get sample DML device template with examples of registers, attributes, signals, and events
+- **get_simics_device_example**: Get C++ device implementation examples and Python test examples from Simics packages
 
 ### Available RAG Documentation Tool
 
 **Tool Description:**
 - **perform_rag_query**: Search documentation with Simics-specific filtering options:
   - `source_type="all"`: Search all sources (default)
-  - `source_type="dml"`: Search Simics DML documentation only (simics-dml)
+  - `source_type="source"`: Search Simics C++ and Python sources
   - `source_type="python"`: Search Simics Python API documentation only (simics-python)
-  - `source_type="source"`: Search both Simics DML and Python sources (simics-dml + simics-python)
   - `source_type="docs"`: Search Simics documentation only
 
 **When to Use RAG Tool:**
-- Use `perform_rag_query` with `source_type="source"` for general Simics development questions
-- Use `perform_rag_query` with `source_type="dml"` for DML device modeling questions  
+- Use `perform_rag_query` with `source_type="source"` for C++ device modeling and general Simics development questions
 - Use `perform_rag_query` with `source_type="python"` for Simics Python API questions
 - Use `perform_rag_query` with `source_type="docs"` for Simics documentation
 - Use `perform_rag_query` with `source_type="all"` to search across all available sources
@@ -172,12 +170,13 @@ Projects are identified as requiring Simics hardware simulation when they mentio
    - **DO NOT use MCP tools during /specify - only basic file and bash tools**
 2. **Use /plan** to generate an implementation plan with technical details
    - For hardware simulation projects: Include specific Simics project creation steps
-   - Use perform_rag_query with source_type="source" to research Simics documentation
+   - Use perform_rag_query with source_type="source" to research Simics C++ API and examples
    - Use create_simics_project MCP tool with project_path (./simics subdirectory)
+   - Use add_cpp_device_skeleton MCP tool to create C++ device models
    - Use install_simics_package MCP tool for suggested packages
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
    - For hardware simulation projects: Include specific MCP tool calls in tasks
-   - Use perform_rag_query with appropriate source_type for documentation research
+   - Use perform_rag_query with source_type="source" for C++ implementation patterns
    - Use bash_command and write_file tools for project structure creation
 4. **Use /implement** to execute the implementation plan by processing tasks.md
    - Execute tasks in dependency order with TDD approach (tests first)
@@ -189,7 +188,7 @@ Projects are identified as requiring Simics hardware simulation when they mentio
 - **Specification-Driven**: Focus on WHAT users need and WHY, not HOW to implement
 - **Test-First**: TDD is mandatory - tests before implementation
 - **Quality Standards**: Use templates, mark ambiguities, ensure testability
-- **Simics Hardware Simulation**: Seamlessly integrate Simics simulation for hardware simulation projects
+- **Simics Hardware Simulation**: Seamlessly integrate Simics C++ simulation for hardware modeling projects
 
 ## Tools Available
 
@@ -204,9 +203,9 @@ Projects are identified as requiring Simics hardware simulation when they mentio
 - Follow TDD principles strictly in task breakdown
 - Use parallel execution [P] where tasks work on different files
 - Include exact file paths in task descriptions
-- For hardware simulation projects, directly use Simics MCP tools (create_simics_project, install_simics_package)
+- For hardware simulation projects, directly use Simics MCP tools (create_simics_project, add_cpp_device_skeleton)
 - Hardware detection: look for processor types, simulation terms, embedded systems, firmware keywords
-- Package suggestions: simics-base + simics-x86/simics-arm based on detected architecture
+- Package suggestions: simics-base + simics-qsp-x86/simics-qsp-arm based on detected architecture
 - **CRITICAL**: The /specify command must NOT use any MCP tools - only basic file and bash operations
 
 ## Important Notes

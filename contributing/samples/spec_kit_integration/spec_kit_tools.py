@@ -337,6 +337,7 @@ def create_simics_mcp_toolset() -> MCPToolset:
         # Device modeling and development tools
         "create_simics_project",
         "add_dml_device_skeleton",
+        "add_cpp_device_skeleton",
         "build_simics_project",
         "run_simics_test",
 
