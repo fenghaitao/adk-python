@@ -27,6 +27,56 @@ SPEC_KIT_DIR="$SCRIPT_DIR/spec-kit"
 ADK_VENV="$SCRIPT_DIR/.venv"
 SPEC_KIT_INTEGRATION_DIR="$SCRIPT_DIR/contributing/samples/spec_kit_integration"
 
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to check if port 8051 is available
+check_port_8051() {
+    # Convert port 8051 to hex (8051 = 0x1F73)
+    if grep -q ":1F73 " /proc/net/tcp 2>/dev/null; then
+        return 0  # Port is in use
+    else
+        return 1  # Port is free
+    fi
+}
+
+# Function to wait for port 8051 to become available
+wait_for_port_8051() {
+    local max_attempts=10
+    local wait_time=2
+    local attempt=1
+    
+    echo -e "${BLUE}🔍 Waiting for MCP server to start on port 8051...${NC}"
+    
+    while [ $attempt -le $max_attempts ]; do
+        if check_port_8051; then
+            echo -e "${GREEN}✅ MCP server is running on port 8051 (attempt $attempt/$max_attempts)${NC}"
+            return 0
+        fi
+        
+        echo -e "${YELLOW}⏳ Waiting for MCP server... (attempt $attempt/$max_attempts)${NC}"
+        sleep $wait_time
+        attempt=$((attempt + 1))
+    done
+    
+    echo -e "${RED}❌ Timeout: MCP server failed to start on port 8051 after ${max_attempts} attempts${NC}"
+    return 1
+}
+
+# Function to cleanup on script exit
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}🛑 Cleaning up MCP servers...${NC}"
+    "$SPEC_KIT_INTEGRATION_DIR/stop_mcp_servers.sh"
+}
+
+# Set up trap to cleanup on script exit
+trap cleanup EXIT
+
 # Check if spec-kit virtual environment exists
 if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
     echo "Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv"
@@ -51,6 +101,21 @@ echo "Running Spec-Kit initialization..."
 echo "Spec-Kit directory: $SPEC_KIT_DIR"
 echo "ADK directory: $SCRIPT_DIR"
 echo "Integration directory: $SPEC_KIT_INTEGRATION_DIR"
+echo ""
+
+# Start MCP servers
+echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
+"$SPEC_KIT_INTEGRATION_DIR/start_mcp_servers.sh"
+
+# Wait for MCP server to be ready
+echo ""
+if wait_for_port_8051; then
+    echo -e "${GREEN}🎉 MCP server is ready!${NC}"
+else
+    echo -e "${RED}❌ MCP server failed to start properly${NC}"
+    echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
+    exit 1
+fi
 echo ""
 
 # Get project name from first argument, default to 'adk_spec_kit_project' if not provided
