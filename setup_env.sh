@@ -40,9 +40,9 @@ fi
 
 print_success "uv is installed"
 
-# Initialize and update git submodules
-print_status "Initializing and updating git submodules..."
-git submodule update --init
+# Initialize and update git submodules (skip LFS files for faster checkout)
+print_status "Initializing and updating git submodules (skipping LFS files)..."
+GIT_LFS_SKIP_SMUDGE=1 git submodule update --init
 
 if [ $? -eq 0 ]; then
     print_success "Git submodules initialized and updated"
