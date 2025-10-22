@@ -304,27 +304,11 @@ class SpecKitToolset(BaseToolset):
 def create_simics_mcp_toolset() -> MCPToolset:
     """Create a MCP toolset that connects to the simics-mcp-server with content truncation."""
     print("Creating Simics MCP toolset...")
-    current_dir = Path(__file__).parent
-    simics_server_dir = current_dir / "simics-mcp-server"
-    server_script = simics_server_dir / "run_server.py"
-
-    # Check if Simics server exists before creating toolset
-    if not server_script.exists():
-        print(f"Warning: Simics MCP server not found at {server_script}")
-        print("Simics tools will not be available")
-        # Return empty toolset or handle gracefully
-        raise FileNotFoundError(f"Simics MCP server not found: {server_script}")
-
-    # Create stdio connection parameters for the simics-mcp-server
-    simics_python = simics_server_dir / ".venv" / "bin" / "python3"
-    server_params = StdioServerParameters(
-        command=str(simics_python),
-        args=[str(server_script), "--transport", "stdio"]
-    )
-
-    connection_params = StdioConnectionParams(
-        server_params=server_params,
-        timeout=300.0
+    connection_params = SseConnectionParams(
+        url="http://127.0.0.1:8051/sse",
+        headers={"Accept": "text/event-stream"},
+        timeout=10.0,
+        sse_read_timeout=300.0
     )
 
     # Filter for specific Simics tools we want to expose
@@ -339,6 +323,9 @@ def create_simics_mcp_toolset() -> MCPToolset:
         "add_dml_device_skeleton",
         "build_simics_project",
         "run_simics_test",
+
+        # RAG query tool for documentation and source code search
+        "perform_rag_query",
 
         # Device examples and documentation tools - FILTERED OUT (too large, cause token limit issues)
         # "get_simics_device_example_i2c",
@@ -363,28 +350,6 @@ def create_simics_mcp_toolset() -> MCPToolset:
         # "create_checkpoint",
         # "load_checkpoint"
     ]
-
-    return MCPToolset(
-        connection_params=connection_params,
-        tool_filter=tool_filter
-    )
-
-
-def create_http_sse_mcp_toolset() -> MCPToolset:
-    """Create a MCP toolset that connects to the HTTP SSE MCP server at localhost:8051 for RAG queries."""
-    print("Creating HTTP SSE MCP toolset...")
-
-    # Create SSE connection parameters for the HTTP MCP server
-    connection_params = SseConnectionParams(
-        url="http://127.0.0.1:8051/sse",
-        headers={"Accept": "text/event-stream"},
-        timeout=10.0,
-        sse_read_timeout=300.0
-    )
-
-    # Filter for RAG query tool only (focused on documentation search)
-    tool_filter = lambda tool, ctx=None: tool.name == "perform_rag_query"
-    print("  Using perform_rag_query tool only")
 
     return MCPToolset(
         connection_params=connection_params,

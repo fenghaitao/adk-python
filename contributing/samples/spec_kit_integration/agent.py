@@ -31,15 +31,13 @@ except ImportError:
 
 try:
     from .spec_kit_tools import (
-        create_spec_kit_toolset, 
-        create_simics_mcp_toolset,
-        create_http_sse_mcp_toolset
+        create_spec_kit_toolset,
+        create_simics_mcp_toolset
     )
 except ImportError:
     from spec_kit_tools import (
-        create_spec_kit_toolset, 
-        create_simics_mcp_toolset,
-        create_http_sse_mcp_toolset
+        create_spec_kit_toolset,
+        create_simics_mcp_toolset
     )
 
 
@@ -76,7 +74,7 @@ Creates feature specification by following the scripted workflow.
 - Example: "/specify Create a user authentication system with email/password login"
 - **IMPORTANT**: The /specify command should NOT use MCP tools. Only use basic tools: bash_command, read_file, write_file
 
-### /plan <implementation_details>  
+### /plan <implementation_details>
 **MUST READ**: `.adk/commands/plan.md` for exact instructions
 Executes implementation planning workflow using templates.
 - Use bash_command to run scripts, read_file for analysis, write_file for artifacts
@@ -140,7 +138,7 @@ When working on projects requiring hardware simulation, the agent automatically:
 
 **When to Use RAG Tool:**
 - Use `perform_rag_query` with `source_type="source"` for general Simics development questions
-- Use `perform_rag_query` with `source_type="dml"` for DML device modeling questions  
+- Use `perform_rag_query` with `source_type="dml"` for DML device modeling questions
 - Use `perform_rag_query` with `source_type="python"` for Simics Python API questions
 - Use `perform_rag_query` with `source_type="docs"` for Simics documentation
 - Use `perform_rag_query` with `source_type="all"` to search across all available sources
@@ -157,7 +155,7 @@ Projects are identified as requiring Simics hardware simulation when they mentio
 1. **Read Command File**: ALWAYS use read_file(".adk/commands/[command].md") first where [command] is the actual command name
 2. **Parse Instructions**: Extract the step-by-step process from the command file
 3. **Execute Steps**: Follow each step exactly as written in the command file
-4. **Use Available Tools**: 
+4. **Use Available Tools**:
    - For /specify: Use ONLY bash_command, read_file, write_file (NO MCP tools)
    - For other commands: Use bash_command, read_file, write_file, and Simics MCP tools as needed
 5. **Validate Results**: Ensure outputs match the templates and requirements specified
@@ -230,19 +228,13 @@ REMEMBER: Your job is to execute the workflows defined in .adk/commands/*.md fil
         # Add all available toolsets - let the LLM decide which tools to use based on instructions
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
-        
+
         # Try to add Simics MCP toolset
         try:
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
-        
-        # Try to add HTTP SSE MCP toolset (perform_rag_query only)
-        try:
-            tools.append(create_http_sse_mcp_toolset())
-        except Exception as e:
-            print(f"Warning: HTTP SSE MCP toolset not available: {e}")
-        
+
         kwargs["tools"] = tools
 
         # Remove name and model from kwargs to avoid conflicts

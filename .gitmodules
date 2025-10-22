@@ -10,6 +10,3 @@
 [submodule "contributing/samples/agent_os_integration/simics/simics-mcp-server"]
 	path = contributing/samples/agent_os_integration/simics/simics-mcp-server
 	url = https://github.com/fenghaitao/simics-mcp-server.git
-[submodule "contributing/samples/spec_kit_integration/mcp-crawl4ai-rag"]
-	path = contributing/samples/spec_kit_integration/mcp-crawl4ai-rag
-	url = https://github.com/fenghaitao/mcp-crawl4ai-rag.git

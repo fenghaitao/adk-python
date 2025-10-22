@@ -29,9 +29,9 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
+    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset, create_http_sse_mcp_toolset
+    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
 
 
 def get_spec_kit_model():
@@ -169,17 +169,11 @@ REMEMBER: Your job is to execute the /tasks workflow defined in .adk/commands/ta
         tools = kwargs.get("tools", [])
         tools.append(create_spec_kit_toolset())
 
-        # Try to add Simics MCP toolset
+        # Try to add Simics MCP toolset (includes perform_rag_query)
         try:
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
-
-        # Try to add HTTP SSE MCP toolset (RAG)
-        try:
-            tools.append(create_http_sse_mcp_toolset())
-        except Exception as e:
-            print(f"Warning: RAG toolset not available: {e}")
 
         kwargs["tools"] = tools
 
