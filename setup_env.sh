@@ -118,6 +118,23 @@ setup_submodule_env() {
                         fi
                     fi
                 fi
+                
+                # Additional setup for simics-mcp-server
+                if [[ "$submodule_path" == *"simics-mcp-server"* ]]; then
+                    print_status "Running additional setup for simics-mcp-server..."
+                    
+                    if [ -f "setup_ispm.sh" ]; then
+                        print_status "Running setup_ispm.sh..."
+                        bash setup_ispm.sh --quiet
+                        if [ $? -eq 0 ]; then
+                            print_success "setup_ispm.sh completed successfully"
+                        else
+                            print_error "setup_ispm.sh failed"
+                        fi
+                    else
+                        print_warning "setup_ispm.sh not found in $submodule_path"
+                    fi
+                fi
             else
                 print_error "Failed to install package for $submodule_path"
             fi
