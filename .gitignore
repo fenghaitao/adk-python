@@ -77,9 +77,6 @@ wheels/
 logs/
 log/
 
-# MCP Server PID files
-contributing/samples/spec_kit_integration/crawl4ai-rag_mcp_server.pid
-
 # Local development settings
 .env.local
 .env.development.local
