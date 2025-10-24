@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Start MCP Server for Spec-Kit Integration
-# This script starts the Crawl4AI RAG server (Simics MCP uses stdio transport)
+# Start MCP Servers for Spec-Kit Integration
+# This script starts both the Simics MCP server and Crawl4AI RAG server
 
 set -e
 
@@ -33,31 +33,31 @@ start_server() {
     local port=$2
     local command=$3
     local working_dir=$4
-    
+
     echo -e "${BLUE}Starting $name on port $port...${NC}"
-    
+
     if check_port $port; then
         echo -e "${YELLOW}Warning: Port $port is already in use. $name may already be running.${NC}"
         return 0
     fi
-    
+
     cd "$working_dir"
     echo -e "${BLUE}Working directory: $working_dir${NC}"
     echo -e "${BLUE}Command: $command${NC}"
-    
+
     # Start the server in the background
     eval "$command" &
     local shell_pid=$!
-    
+
     # Give the server time to start
     sleep 3
-    
+
     # Find the actual Python process PID (child of shell)
     local python_pid=""
     if kill -0 $shell_pid 2>/dev/null; then
         # Look for Python subprocess
         python_pid=$(pgrep -P $shell_pid 2>/dev/null | head -1)
-        
+
         if [ -n "$python_pid" ] && kill -0 $python_pid 2>/dev/null; then
             echo -e "${GREEN}✅ $name started successfully (Shell PID: $shell_pid, Python PID: $python_pid)${NC}"
             echo "$shell_pid,$python_pid" > "${SCRIPT_DIR}/${name,,}_mcp_server.pid"
@@ -75,34 +75,30 @@ start_server() {
 }
 
 echo ""
-echo "Starting Crawl4AI RAG Server..."
-echo "   This server provides documentation search and RAG capabilities"
+echo "Starting Simics MCP Server..."
+echo "   This server provides Simics device modeling tools and documentation access"
 
-RAG_SERVER_DIR="$SCRIPT_DIR/mcp-crawl4ai-rag"
-if [ -d "$RAG_SERVER_DIR" ]; then
+SIMICS_SERVER_DIR="$SCRIPT_DIR/simics-mcp-server"
+if [ -d "$SIMICS_SERVER_DIR" ]; then
     # Check if the server is already running
     if check_port 8051; then
-        echo -e "${YELLOW}Crawl4AI RAG server appears to already be running on port 8051${NC}"
+        echo -e "${YELLOW}Simics MCP server appears to already be running on port 8051${NC}"
     else
-        # Check for virtual environment and choose appropriate Python
-        RAG_COMMAND=".venv/bin/python src/crawl4ai_mcp.py"
-        start_server "Crawl4AI-RAG" 8051 "$RAG_COMMAND" "$RAG_SERVER_DIR"
+        # Start Simics MCP server with SSE transport
+        SIMICS_COMMAND="python run_server_sse.py --port 8051"
+        start_server "Simics-MCP" 8051 "$SIMICS_COMMAND" "$SIMICS_SERVER_DIR"
     fi
 else
-    echo -e "${RED}❌ Crawl4AI RAG server directory not found: $RAG_SERVER_DIR${NC}"
-    echo -e "${YELLOW}Please ensure the mcp-crawl4ai-rag submodule is properly initialized${NC}"
+    echo -e "${RED}❌ Simics MCP server directory not found: $SIMICS_SERVER_DIR${NC}"
+    echo -e "${YELLOW}Please ensure the simics-mcp-server submodule is properly initialized${NC}"
 fi
 
 echo ""
-echo -e "${BLUE}ℹ️  Note: Simics MCP server uses stdio transport and is managed directly by ADK${NC}"
-echo -e "${BLUE}   No separate server process needed for Simics tools${NC}"
-
-echo ""
-echo -e "${GREEN}🎉 MCP server startup process completed!${NC}"
+echo -e "${GREEN}🎉 MCP servers startup process completed!${NC}"
 echo ""
 echo "Server Status:"
-echo "  📚 Crawl4AI RAG Server:  http://localhost:8051/sse"
-echo "  🔧 Simics MCP Tools:     Available via stdio transport (managed by ADK)"
+echo "  � Simics MCP Server:    http://localhost:8051/sse"
+echo "  � Crawl4AI RAG Server:  http://localhost:8052/sse"
 echo ""
 echo "To stop the server, run:"
 echo "  ./stop_mcp_servers.sh"
