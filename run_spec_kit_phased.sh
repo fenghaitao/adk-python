@@ -1,10 +1,16 @@
 #!/bin/bash
 
 # Phased Spec-Kit Runner Script - Saves session for each phase
-# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT]
+# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--skip-plan] [--skip-tasks] [--skip-implement]
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API for user management"
+# Example: ./run_spec_kit_phased.sh myproject "Create a REST API" --skip-plan --skip-tasks
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode for each phase
+# 
+# Options:
+#   --skip-plan      Skip the planning phase
+#   --skip-tasks     Skip the task breakdown phase  
+#   --skip-implement Skip the implementation phase
 # 
 # This script runs each subagent individually and saves separate sessions:
 # - PROJECT_NAME_specify.session.json
@@ -26,6 +32,81 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Function to display help
+show_help() {
+    cat << 'EOF'
+Phased Spec-Kit Runner Script - ADK Development Kit
+
+USAGE:
+    ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [OPTIONS]
+
+DESCRIPTION:
+    Runs the Spec-Kit integration in phases, saving session files for each phase.
+    Each phase builds upon the previous phase's output.
+
+POSITIONAL ARGUMENTS:
+    PROJECT_NAME      Name of the project (default: 'adk_spec_kit_project')
+    INITIAL_PROMPT    Initial prompt for the specification phase (optional)
+
+OPTIONS:
+    --skip-plan       Skip the planning phase (Phase 2)
+                      Note: Also skips TASKS and IMPLEMENT (cascade effect)
+    --skip-tasks      Skip the task breakdown phase (Phase 3)  
+                      Note: Also skips IMPLEMENT (cascade effect)
+    --skip-implement  Skip the implementation phase (Phase 4)
+    --help, -h        Show this help message and exit
+
+PHASES:
+    1. SPECIFY     - Always runs, creates project specification
+    2. PLAN        - Creates implementation plan (skippable)
+    3. TASKS       - Generates task breakdown (skippable, depends on PLAN)
+    4. IMPLEMENT   - Executes implementation (skippable, depends on TASKS)
+
+PHASE DEPENDENCIES:
+    Each phase builds upon the previous phase's output:
+    - TASKS phase requires PLAN phase output
+    - IMPLEMENT phase requires TASKS phase output
+    - Skipping a phase automatically skips all dependent phases
+
+OUTPUT FILES:
+    Each phase saves both JSON session files and human-readable dumps:
+    - adk_specify_agent/PROJECT_NAME_specify.session.json|.txt
+    - adk_plan_agent/PROJECT_NAME_plan.session.json|.txt
+    - adk_tasks_agent/PROJECT_NAME_tasks.session.json|.txt
+    - adk_implement_agent/PROJECT_NAME_implement.session.json|.txt
+
+EXAMPLES:
+    # Run all phases with default project name
+    ./run_spec_kit_phased.sh
+
+    # Run all phases with custom project and prompt
+    ./run_spec_kit_phased.sh myapi "Create a user management REST API"
+
+    # Skip planning and tasks phases
+    ./run_spec_kit_phased.sh myapi "Create REST API" --skip-plan --skip-tasks
+
+    # Only run specification phase
+    ./run_spec_kit_phased.sh myapi "Create REST API" --skip-plan --skip-tasks --skip-implement
+
+    # Show help
+    ./run_spec_kit_phased.sh --help
+
+REQUIREMENTS:
+    - ADK virtual environment must be activated or available
+    - MCP servers must be configured and available
+    - Spec-Kit integration components must be installed
+
+EOF
+}
+
+# Check for help flag first, before any other processing
+for arg in "$@"; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+done
 
 # Function to check if MCP server is running
 check_mcp_server() {
@@ -91,14 +172,89 @@ else
 fi
 echo ""
 
-# Get project name from first argument, default to 'adk_spec_kit_project' if not provided
-PROJECT_NAME="${1:-adk_spec_kit_project}"
-# Get initial prompt from second argument (optional)
-INITIAL_PROMPT="$2"
+# Parse command line arguments
+PROJECT_NAME=""
+INITIAL_PROMPT=""
+SKIP_PLAN=false
+SKIP_TASKS=false
+SKIP_IMPLEMENT=false
+
+# Process all arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --skip-plan)
+            SKIP_PLAN=true
+            shift
+            ;;
+        --skip-tasks)
+            SKIP_TASKS=true
+            shift
+            ;;
+        --skip-implement)
+            SKIP_IMPLEMENT=true
+            shift
+            ;;
+        *)
+            if [ -z "$PROJECT_NAME" ]; then
+                PROJECT_NAME="$1"
+            elif [ -z "$INITIAL_PROMPT" ]; then
+                INITIAL_PROMPT="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Set defaults if not provided
+PROJECT_NAME="${PROJECT_NAME:-adk_spec_kit_project}"
+
+# Apply cascade logic for phase dependencies
+if [ "$SKIP_PLAN" = true ]; then
+    echo "⚠️  PLAN phase skipped - cascading to skip TASKS and IMPLEMENT phases"
+    SKIP_TASKS=true
+    SKIP_IMPLEMENT=true
+elif [ "$SKIP_TASKS" = true ]; then
+    echo "⚠️  TASKS phase skipped - cascading to skip IMPLEMENT phase"
+    SKIP_IMPLEMENT=true
+fi
 
 echo "Project name: $PROJECT_NAME"
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
+fi
+
+# Show phase configuration
+echo ""
+echo "Phase configuration:"
+echo "  SPECIFY phase: ✅ Always runs"
+if [ "$SKIP_PLAN" = true ]; then
+    echo "  PLAN phase: ⏭️  SKIPPED"
+else
+    echo "  PLAN phase: ✅ Will run"
+fi
+if [ "$SKIP_TASKS" = true ]; then
+    if [ "$SKIP_PLAN" = true ]; then
+        echo "  TASKS phase: ⏭️  SKIPPED (cascaded from --skip-plan)"
+    else
+        echo "  TASKS phase: ⏭️  SKIPPED"
+    fi
+else
+    echo "  TASKS phase: ✅ Will run"
+fi
+if [ "$SKIP_IMPLEMENT" = true ]; then
+    if [ "$SKIP_PLAN" = true ]; then
+        echo "  IMPLEMENT phase: ⏭️  SKIPPED (cascaded from --skip-plan)"
+    elif [ "$SKIP_TASKS" = true ]; then
+        echo "  IMPLEMENT phase: ⏭️  SKIPPED (cascaded from --skip-tasks)"
+    else
+        echo "  IMPLEMENT phase: ⏭️  SKIPPED"
+    fi
+else
+    echo "  IMPLEMENT phase: ✅ Will run"
 fi
 echo ""
 
@@ -156,106 +312,127 @@ else
     echo "❌ Session file not found in adk_specify_agent/"
 fi
 
-echo ""
-echo "==========================================="
-echo "PHASE 2: PLAN - Creating implementation plan"
-echo "==========================================="
+if [ "$SKIP_PLAN" = false ]; then
+    echo ""
+    echo "==========================================="
+    echo "PHASE 2: PLAN - Creating implementation plan"
+    echo "==========================================="
 
-# Create plan agent directory
-mkdir -p "adk_plan_agent"
-cat > "adk_plan_agent/agent.py" << EOF
+    # Create plan agent directory
+    mkdir -p "adk_plan_agent"
+    cat > "adk_plan_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
 from plan_agent import plan_agent as root_agent
 EOF
 
-echo "Running PlanAgent with /plan command..."
-echo "Session will be saved as: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
-(echo "/plan"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
+    echo "Running PlanAgent with /plan command..."
+    echo "Session will be saved as: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
+    (echo "/plan"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_plan_agent" --save_session --session_id "${PROJECT_NAME}_plan"
 
-# Check if session file was created
-if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
-    echo "✅ Session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
-    
-    # Generate human-readable session dump
-    echo "📄 Generating human-readable session dump..."
-    python3 "$SCRIPT_DIR/view_session.py" "adk_plan_agent/${PROJECT_NAME}_plan.session.json" > "adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
-    if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.txt" ]; then
-        echo "✅ Human-readable session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
+    # Check if session file was created
+    if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
+        echo "✅ Session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
+        
+        # Generate human-readable session dump
+        echo "📄 Generating human-readable session dump..."
+        python3 "$SCRIPT_DIR/view_session.py" "adk_plan_agent/${PROJECT_NAME}_plan.session.json" > "adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
+        if [ -f "adk_plan_agent/${PROJECT_NAME}_plan.session.txt" ]; then
+            echo "✅ Human-readable session saved: adk_plan_agent/${PROJECT_NAME}_plan.session.txt"
+        else
+            echo "❌ Failed to generate human-readable session dump"
+        fi
     else
-        echo "❌ Failed to generate human-readable session dump"
+        echo "❌ Session file not found in adk_plan_agent/"
     fi
 else
-    echo "❌ Session file not found in adk_plan_agent/"
+    echo ""
+    echo "==========================================="
+    echo "PHASE 2: PLAN - ⏭️  SKIPPED"
+    echo "==========================================="
 fi
 
-echo ""
-echo "==========================================="
-echo "PHASE 3: TASKS - Generating task breakdown"
-echo "==========================================="
+if [ "$SKIP_TASKS" = false ]; then
+    echo ""
+    echo "==========================================="
+    echo "PHASE 3: TASKS - Generating task breakdown"
+    echo "==========================================="
 
-# Create tasks agent directory
-mkdir -p "adk_tasks_agent"
-cat > "adk_tasks_agent/agent.py" << EOF
+    # Create tasks agent directory
+    mkdir -p "adk_tasks_agent"
+    cat > "adk_tasks_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
 from tasks_agent import tasks_agent as root_agent
 EOF
 
-echo "Running TasksAgent with /tasks command..."
-echo "Session will be saved as: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
-(echo "/tasks"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
+    echo "Running TasksAgent with /tasks command..."
+    echo "Session will be saved as: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
+    (echo "/tasks"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_tasks_agent" --save_session --session_id "${PROJECT_NAME}_tasks"
 
-# Check if session file was created
-if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
-    echo "✅ Session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
-    
-    # Generate human-readable session dump
-    echo "📄 Generating human-readable session dump..."
-    python3 "$SCRIPT_DIR/view_session.py" "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" > "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
-    if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt" ]; then
-        echo "✅ Human-readable session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
+    # Check if session file was created
+    if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
+        echo "✅ Session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
+        
+        # Generate human-readable session dump
+        echo "📄 Generating human-readable session dump..."
+        python3 "$SCRIPT_DIR/view_session.py" "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" > "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
+        if [ -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt" ]; then
+            echo "✅ Human-readable session saved: adk_tasks_agent/${PROJECT_NAME}_tasks.session.txt"
+        else
+            echo "❌ Failed to generate human-readable session dump"
+        fi
     else
-        echo "❌ Failed to generate human-readable session dump"
+        echo "❌ Session file not found in adk_tasks_agent/"
     fi
 else
-    echo "❌ Session file not found in adk_tasks_agent/"
+    echo ""
+    echo "==========================================="
+    echo "PHASE 3: TASKS - ⏭️  SKIPPED"
+    echo "==========================================="
 fi
 
-echo ""
-echo "==========================================="
-echo "PHASE 4: IMPLEMENT - Executing implementation"
-echo "==========================================="
+if [ "$SKIP_IMPLEMENT" = false ]; then
+    echo ""
+    echo "==========================================="
+    echo "PHASE 4: IMPLEMENT - Executing implementation"
+    echo "==========================================="
 
-# Create implement agent directory
-mkdir -p "adk_implement_agent"
-cat > "adk_implement_agent/agent.py" << EOF
+    # Create implement agent directory
+    mkdir -p "adk_implement_agent"
+    cat > "adk_implement_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
 from implement_agent import implement_agent as root_agent
 EOF
 
-echo "Running ImplementAgent with /implement command..."
-echo "Session will be saved as: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
-(echo "/implement"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
+    echo "Running ImplementAgent with /implement command..."
+    echo "Session will be saved as: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
+    (echo "/implement"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_implement_agent" --save_session --session_id "${PROJECT_NAME}_implement"
 
-# Check if session file was created
-if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
-    echo "✅ Session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
-    
-    # Generate human-readable session dump
-    echo "📄 Generating human-readable session dump..."
-    python3 "$SCRIPT_DIR/view_session.py" "adk_implement_agent/${PROJECT_NAME}_implement.session.json" > "adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
-    if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.txt" ]; then
-        echo "✅ Human-readable session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
+    # Check if session file was created
+    if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.json" ]; then
+        echo "✅ Session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.json"
+        
+        # Generate human-readable session dump
+        echo "📄 Generating human-readable session dump..."
+        python3 "$SCRIPT_DIR/view_session.py" "adk_implement_agent/${PROJECT_NAME}_implement.session.json" > "adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
+        if [ -f "adk_implement_agent/${PROJECT_NAME}_implement.session.txt" ]; then
+            echo "✅ Human-readable session saved: adk_implement_agent/${PROJECT_NAME}_implement.session.txt"
+        else
+            echo "❌ Failed to generate human-readable session dump"
+        fi
     else
-        echo "❌ Failed to generate human-readable session dump"
+        echo "❌ Session file not found in adk_implement_agent/"
     fi
 else
-    echo "❌ Session file not found in adk_implement_agent/"
+    echo ""
+    echo "==========================================="
+    echo "PHASE 4: IMPLEMENT - ⏭️  SKIPPED"
+    echo "==========================================="
 fi
 
 echo ""
