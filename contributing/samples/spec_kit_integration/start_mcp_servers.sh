@@ -49,10 +49,25 @@ start_server() {
     eval "$command" &
     local shell_pid=$!
 
-    # Give the server time to start
-    sleep 10
+    # Wait for server to start with retry logic
+    local max_attempts=15
+    local wait_time=2
+    local attempt=1
+    
+    echo -e "${BLUE}🔍 Waiting for $name to start on port $port...${NC}"
+    
+    while [ $attempt -le $max_attempts ]; do
+        if check_port $port; then
+            echo -e "${GREEN}✅ $name is listening on port $port (attempt $attempt/$max_attempts)${NC}"
+            break
+        fi
+        
+        echo -e "${YELLOW}⏳ Waiting for $name... (attempt $attempt/$max_attempts)${NC}"
+        sleep $wait_time
+        attempt=$((attempt + 1))
+    done
 
-    # Verify the server actually started
+    # Final verification that server started
     if check_port $port; then
         # Find the actual Python process PID (child of shell)
         local python_pid=""
@@ -75,7 +90,7 @@ start_server() {
             return 1
         fi
     else
-        echo -e "${RED}❌ Failed to start $name (port not listening after 10 seconds)${NC}"
+        echo -e "${RED}❌ Failed to start $name (port not listening after $((max_attempts * wait_time)) seconds)${NC}"
         return 1
     fi
 }

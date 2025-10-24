@@ -27,37 +27,13 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to check if port 8051 is available
-check_port_8051() {
-    # Convert port 8051 to hex (8051 = 0x1F73)
-    if grep -q ":1F73 " /proc/net/tcp 2>/dev/null; then
-        return 0  # Port is in use
+# Function to check if MCP server is running
+check_mcp_server() {
+    if lsof -Pi :8051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0  # Server is running
     else
-        return 1  # Port is free
+        return 1  # Server is not running
     fi
-}
-
-# Function to wait for port 8051 to become available
-wait_for_port_8051() {
-    local max_attempts=10
-    local wait_time=2
-    local attempt=1
-    
-    echo -e "${BLUE}🔍 Waiting for MCP server to start on port 8051...${NC}"
-    
-    while [ $attempt -le $max_attempts ]; do
-        if check_port_8051; then
-            echo -e "${GREEN}✅ MCP server is running on port 8051 (attempt $attempt/$max_attempts)${NC}"
-            return 0
-        fi
-        
-        echo -e "${YELLOW}⏳ Waiting for MCP server... (attempt $attempt/$max_attempts)${NC}"
-        sleep $wait_time
-        attempt=$((attempt + 1))
-    done
-    
-    echo -e "${RED}❌ Timeout: MCP server failed to start on port 8051 after ${max_attempts} attempts${NC}"
-    return 1
 }
 
 # Function to cleanup on script exit
@@ -96,16 +72,20 @@ echo "ADK directory: $SCRIPT_DIR"
 echo "Integration directory: $SPEC_KIT_INTEGRATION_DIR"
 echo ""
 
-# Start MCP servers
+# Start MCP servers (start_mcp_servers.sh handles the waiting)
 echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
-"$SPEC_KIT_INTEGRATION_DIR/start_mcp_servers.sh"
-
-# Wait for MCP server to be ready
-echo ""
-if wait_for_port_8051; then
-    echo -e "${GREEN}🎉 MCP server is ready!${NC}"
+if "$SPEC_KIT_INTEGRATION_DIR/start_mcp_servers.sh"; then
+    echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
+    
+    # Quick verification
+    if check_mcp_server; then
+        echo -e "${GREEN}✅ MCP server confirmed running on port 8051${NC}"
+    else
+        echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ MCP server failed to start properly${NC}"
+    echo -e "${RED}❌ Failed to start MCP servers${NC}"
     echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
     exit 1
 fi
