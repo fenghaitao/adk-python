@@ -163,10 +163,9 @@ stop_server_by_port() {
 }
 
 echo ""
-echo "Stopping Crawl4AI RAG Server..."
-stop_server_by_pid "Crawl4AI-RAG"
-stop_server_by_port "Crawl4AI RAG Server" 8051
+echo "Stopping Simics MCP Server..."
+stop_server_by_pid "Simics-MCP"
+stop_server_by_port "Simics MCP Server" 8051
 
 echo ""
 echo -e "${GREEN}🎉 MCP server stopped!${NC}"
-echo -e "${YELLOW}Note: Simics MCP tools use stdio transport (no server process to stop)${NC}"
