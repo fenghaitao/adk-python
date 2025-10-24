@@ -29,10 +29,13 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import (create_spec_kit_toolset,
+                                 create_simics_mcp_toolset,
+                                 create_simicsbot_toolset)
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
-
+    from spec_kit_tools import (create_spec_kit_toolset,
+                                create_simics_mcp_toolset,
+                                create_simicsbot_toolset)
 
 def get_spec_kit_model():
     """Get Spec-Kit model from environment or use default."""
@@ -72,10 +75,19 @@ When you receive a /plan command, you MUST:
 - **list_installed_packages()**: List all installed Simics packages
 - **list_simics_platforms()**: List available Simics platforms
 
-### RAG Documentation Search
-- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation
-  - source_type options: "dml", "python", "source", "docs", "all"
-  - match_count: recommended value is 5
+### RAG Documentation Search Tools
+- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation with filtering
+  - `source_type="dml"` - Search Simics DML device modeling examples
+  - `source_type="python"` - Search Simics device Python test cases
+  - `source_type="source"` - Search both DML and Python sources
+  - `source_type="docs"` - Search general Simics documentation
+  - `source_type="all"` - Search all available sources (default)
+  - `match_count` - Number of results to return (default: 5, recommended: 5)
+
+- **ask_dmlbot(query)**: Interactive Simics 7 documentation expert for conversational help
+  - Use for direct questions about DML syntax, device modeling, and Simics APIs
+  - Examples: `ask_dmlbot("DML 1.4 language syntax basics")`, `ask_dmlbot("How to implement register banks")`
+  - Provides expert guidance from Simics 7 documentation corpus
 
 ## Tool Usage Examples
 
@@ -181,6 +193,12 @@ Think of the template as a detailed script that you must execute:
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
+
+        # Also try to add SimicsBot toolset for conversational DML help
+        try:
+            tools.append(create_simicsbot_toolset())
+        except Exception as e:
+            print(f"Warning: SimicsBot toolset not available: {e}")
 
         kwargs["tools"] = tools
 

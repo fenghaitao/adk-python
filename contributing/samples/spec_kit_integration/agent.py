@@ -32,12 +32,14 @@ except ImportError:
 try:
     from .spec_kit_tools import (
         create_spec_kit_toolset,
-        create_simics_mcp_toolset
+        create_simics_mcp_toolset,
+        create_simicsbot_toolset
     )
 except ImportError:
     from spec_kit_tools import (
         create_spec_kit_toolset,
-        create_simics_mcp_toolset
+        create_simics_mcp_toolset,
+        create_simicsbot_toolset
     )
 
 
@@ -143,6 +145,9 @@ When working on projects requiring hardware simulation, the agent automatically:
 - Use `perform_rag_query` with `source_type="docs"` for Simics documentation
 - Use `perform_rag_query` with `source_type="all"` to search across all available sources
 
+- **ask_dmlbot**: Interactive DML assistant tools available via MCP
+  - Use `ask_dmlbot(query)` for conversational Simics/DML help
+
 ### Hardware Simulation Project Detection
 Projects are identified as requiring Simics hardware simulation when they mention:
 - Hardware platforms, processors, or embedded systems that need simulation
@@ -171,15 +176,18 @@ Projects are identified as requiring Simics hardware simulation when they mentio
 2. **Use /plan** to generate an implementation plan with technical details
    - For hardware simulation projects: Include specific Simics project creation steps
    - Use perform_rag_query with source_type="source" to research Simics documentation
+   - Use `ask_dmlbot(query)` for conversational Simics/DML help
    - Use create_simics_project MCP tool with project_path (./simics subdirectory)
    - Use install_simics_package MCP tool for suggested packages
 3. **Use /tasks** to break down the plan into actionable tasks following TDD principles
    - For hardware simulation projects: Include specific MCP tool calls in tasks
    - Use perform_rag_query with appropriate source_type for documentation research
+   - Use `ask_dmlbot(query)` for conversational Simics/DML help
    - Use bash_command and write_file tools for project structure creation
 4. **Use /implement** to execute the implementation plan by processing tasks.md
    - Execute tasks in dependency order with TDD approach (tests first)
    - For hardware simulation projects: Execute Simics project setup and device modeling tasks
+   - Use `ask_dmlbot(query)` for conversational Simics/DML help
 
 ## Spec-Kit Principles
 
@@ -234,6 +242,12 @@ REMEMBER: Your job is to execute the workflows defined in .adk/commands/*.md fil
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
+
+        # Also add external simicsbot MCP toolset with the ask_dmlbot tool
+        try:
+            tools.append(create_simicsbot_toolset())
+        except Exception as e:
+            print(f"Warning: SimicsBot toolset not available: {e}")
 
         kwargs["tools"] = tools
 

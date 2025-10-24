@@ -29,9 +29,13 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import (create_spec_kit_toolset,
+                                 create_simics_mcp_toolset,
+                                 create_simicsbot_toolset)
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import (create_spec_kit_toolset,
+                                create_simics_mcp_toolset,
+                                create_simicsbot_toolset)
 
 
 def get_spec_kit_model():
@@ -96,23 +100,37 @@ For projects with Simics hardware simulation tasks:
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
 
-### Available RAG Documentation Search Tool
+### Available RAG Documentation Search Tools
 
-**Tool Description:**
-- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation with filtering options
-  - `source_type="dml"` - Search Simics DML device modeling examples
-  - `source_type="python"` - Search Simics device Python test cases
-  - `source_type="source"` - Search both DML and Python sources
-  - `source_type="docs"` - Search general Simics documentation
-  - `source_type="all"` - Search all available sources (default)
-  - `match_count` - Number of results to return (default: 5, recommended: 5)
+**Tool Descriptions:**
 
-**When to Use RAG Tool:**
-- Use when encountering implementation questions or uncertainties
-- Use `perform_rag_query("DML register implementation", source_type="dml", match_count=5)` for DML device modeling examples
-- Use `perform_rag_query("device state management Simics", source_type="source", match_count=5)` for combined DML and test examples
-- Use `perform_rag_query("Simics device interface integration", source_type="docs", match_count=5)` for documentation and integration guidance
-- Use during implementation to find specific code examples and patterns
+1. **perform_rag_query(query, source_type, match_count)**: Search Simics documentation with filtering options
+   - `source_type="dml"` - Search Simics DML device modeling examples
+   - `source_type="python"` - Search Simics device Python test cases
+   - `source_type="source"` - Search both DML and Python sources
+   - `source_type="docs"` - Search general Simics documentation
+   - `source_type="all"` - Search all available sources (default)
+   - `match_count` - Number of results to return (default: 5, recommended: 5)
+
+2. **ask_dmlbot(query)**: Interactive Simics 7 documentation expert for conversational help
+   - Use for direct questions about DML syntax, device modeling, and Simics APIs
+   - Provides expert guidance from Simics 7 documentation corpus
+   - Best for conceptual questions and "how to" queries
+
+**When to Use These Tools:**
+- **perform_rag_query**: When you need specific code examples or patterns
+  - Example: `perform_rag_query("DML register implementation", source_type="dml", match_count=5)`
+  - Example: `perform_rag_query("device state management Simics", source_type="source", match_count=5)`
+  - Use during implementation to find specific code examples and patterns
+
+- **ask_dmlbot**: When you need conceptual explanations or direct answers
+  - Example: `ask_dmlbot("How to implement register banks in DML 1.4")`
+  - Example: `ask_dmlbot("What is the difference between get and set methods in DML")`
+  - Example: `ask_dmlbot("How to fix unknown attribute error in DML")`
+
+**Best Practice:**
+- Use `ask_dmlbot()` for quick conceptual questions or error resolution
+- Use `perform_rag_query()` when you need specific code examples to reference
 - Document useful findings for future reference
 
 ## Progress Tracking and Error Handling
@@ -207,6 +225,12 @@ REMEMBER: Your job is to execute the /implement workflow defined in .adk/command
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
+
+        # Also try to add SimicsBot toolset for conversational DML help
+        try:
+            tools.append(create_simicsbot_toolset())
+        except Exception as e:
+            print(f"Warning: SimicsBot toolset not available: {e}")
         
         kwargs["tools"] = tools
 

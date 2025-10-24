@@ -26,7 +26,7 @@ try:
     from google.adk.tools.base_toolset import BaseToolset
     from google.adk.tools.tool_context import ToolContext
     from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
-    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, SseConnectionParams
+    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, SseConnectionParams, StreamableHTTPServerParams
     from mcp import StdioServerParameters
 except ImportError:
     import sys
@@ -349,6 +349,30 @@ def create_simics_mcp_toolset() -> MCPToolset:
         # Checkpoint management tools
         # "create_checkpoint",
         # "load_checkpoint"
+    ]
+
+    return MCPToolset(
+        connection_params=connection_params,
+        tool_filter=tool_filter
+    )
+
+
+def create_simicsbot_toolset() -> MCPToolset:
+    """Create a MCP toolset that connects to an external SimicsBot MCP server (SSE).
+
+    This connects to the provided simicsbot at http://10.40.133.41:8090/sse and exposes a
+    limited set of tools including the 'ask_dmlbot' conversational tool.
+    """
+    connection_params = SseConnectionParams(
+        url="http://10.40.133.41:8090/sse",
+        headers={"Accept": "text/event-stream"},
+        timeout=60.0,
+        sse_read_timeout=300.0
+    )
+
+    tool_filter = [
+        # DML conversational tool available on simicsbot
+        "ask_dmlbot",
     ]
 
     return MCPToolset(

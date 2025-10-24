@@ -29,9 +29,13 @@ except ImportError:
         from google.adk.agents.llm_agent import LlmAgent
 
 try:
-    from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .spec_kit_tools import (create_spec_kit_toolset,
+                                 create_simics_mcp_toolset,
+                                 create_simicsbot_toolset)
 except ImportError:
-    from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from spec_kit_tools import (create_spec_kit_toolset,
+                                create_simics_mcp_toolset,
+                                create_simicsbot_toolset)
 
 
 def get_spec_kit_model():
@@ -121,7 +125,9 @@ For Simics projects, include specific hardware simulation tasks:
 - Test execution: run_simics_test
 
 **Error Recovery (if needed during implement phase)**:
-- Use perform_rag_query for syntax errors or test failures not covered in research.md
+- Use `perform_rag_query(query, source_type, match_count)` for syntax errors or test failures not covered in research.md
+- Use `ask_dmlbot(query)` for direct questions about DML syntax, device modeling patterns, or Simics APIs
+  - Example: `ask_dmlbot("How to fix unknown attribute error in DML 1.4")`
 
 ## Command Execution Protocol (MANDATORY)
 
@@ -174,6 +180,12 @@ REMEMBER: Your job is to execute the /tasks workflow defined in .adk/commands/ta
             tools.append(create_simics_mcp_toolset())
         except Exception as e:
             print(f"Warning: Simics MCP toolset not available: {e}")
+
+        # Also try to add SimicsBot toolset for conversational DML help
+        try:
+            tools.append(create_simicsbot_toolset())
+        except Exception as e:
+            print(f"Warning: SimicsBot toolset not available: {e}")
 
         kwargs["tools"] = tools
 

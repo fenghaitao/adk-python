@@ -96,6 +96,11 @@ echo "ADK directory: $SCRIPT_DIR"
 echo "Integration directory: $SPEC_KIT_INTEGRATION_DIR"
 echo ""
 
+# Add specific IP (simicsbot mcp server: sse) to no_proxy
+SIMICSBOT_IP="10.40.133.41"
+export no_proxy="${no_proxy},$SIMICSBOT_IP"
+export NO_PROXY="${NO_PROXY},$SIMICSBOT_IP"
+
 # Start MCP servers
 echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
 "$SPEC_KIT_INTEGRATION_DIR/start_mcp_servers.sh"
