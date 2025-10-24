@@ -40,7 +40,7 @@ check_mcp_server() {
 cleanup() {
     echo ""
     echo -e "${YELLOW}🛑 Cleaning up MCP servers...${NC}"
-    "$SPEC_KIT_INTEGRATION_DIR/stop_mcp_servers.sh"
+    "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/stop_mcp_servers.sh"
 }
 
 # Set up trap to cleanup on script exit
@@ -74,7 +74,7 @@ echo ""
 
 # Start MCP servers (start_mcp_servers.sh handles the waiting)
 echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
-if "$SPEC_KIT_INTEGRATION_DIR/start_mcp_servers.sh"; then
+if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
     echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
     
     # Quick verification

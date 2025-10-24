@@ -51,11 +51,10 @@ else
     exit 1
 fi
 
-# List of submodules from .gitmodules (excluding agent-os and agent_os_integration simics-mcp-server)
+# List of submodules from .gitmodules (excluding agent-os and agent_os_integration)
 SUBMODULES=(
     "spec-kit"
     "contributing/samples/spec_kit_integration/simics-mcp-server"
-    "contributing/samples/spec_kit_integration/mcp-crawl4ai-rag"
 )
 
 # Function to setup virtual environment for a submodule
@@ -81,9 +80,10 @@ setup_submodule_env() {
             print_success "Virtual environment created for $submodule_path"
             
             print_status "Installing package in development mode..."
-            # Special handling for mcp-crawl4ai-rag which needs torch-backend cpu
-            if [[ "$submodule_path" == *"mcp-crawl4ai-rag"* ]]; then
-                uv pip install --torch-backend cpu -e .
+            # Special handling for simics-mcp-server which needs torch-backend cpu
+            if [[ "$submodule_path" == *"simics-mcp-server"* ]]; then
+                uv pip install --torch-backend cpu -e ./mcp-crawl4ai-rag
+                uv pip install -e .
             else
                 uv pip install -e .
             fi
@@ -91,11 +91,23 @@ setup_submodule_env() {
             if [ $? -eq 0 ]; then
                 print_success "Package installed in development mode for $submodule_path"
                 
-                # Additional setup for mcp-crawl4ai-rag
-                if [[ "$submodule_path" == *"mcp-crawl4ai-rag"* ]]; then
-                    print_status "Running additional setup for mcp-crawl4ai-rag..."
+                # Additional setup for simics-mcp-server
+                if [[ "$submodule_path" == *"simics-mcp-server"* ]]; then
+                    print_status "Running additional setup for simics-mcp-server..."
                     
-                    # Check if we have sudo permission
+                    if [ -f "setup_ispm.sh" ]; then
+                        print_status "Running setup_ispm.sh..."
+                        bash setup_ispm.sh --quiet
+                        if [ $? -eq 0 ]; then
+                            print_success "setup_ispm.sh completed successfully"
+                        else
+                            print_error "setup_ispm.sh failed"
+                        fi
+                    else
+                        print_warning "setup_ispm.sh not found in $submodule_path"
+                    fi
+                    
+                    # Check if we have sudo permission for crawl4ai setup
                     if sudo -n true 2>/dev/null; then
                         print_status "Sudo permission available, running crawl4ai-setup..."
                         .venv/bin/crawl4ai-setup
@@ -116,23 +128,6 @@ setup_submodule_env() {
                         else
                             print_warning "install_deps_without_sudo.py not found in $submodule_path"
                         fi
-                    fi
-                fi
-                
-                # Additional setup for simics-mcp-server
-                if [[ "$submodule_path" == *"simics-mcp-server"* ]]; then
-                    print_status "Running additional setup for simics-mcp-server..."
-                    
-                    if [ -f "setup_ispm.sh" ]; then
-                        print_status "Running setup_ispm.sh..."
-                        bash setup_ispm.sh --quiet
-                        if [ $? -eq 0 ]; then
-                            print_success "setup_ispm.sh completed successfully"
-                        else
-                            print_error "setup_ispm.sh failed"
-                        fi
-                    else
-                        print_warning "setup_ispm.sh not found in $submodule_path"
                     fi
                 fi
             else
