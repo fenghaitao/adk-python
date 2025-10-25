@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsample-risc-shared.a "CMakeFiles/sample-risc-shared.dir/event-queue.c.o"
+/usr/bin/ranlib libsample-risc-shared.a

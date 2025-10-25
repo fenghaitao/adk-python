@@ -1,0 +1,10 @@
+#!/bin/bash
+# this file will be overwritten by the project setup script
+SIMICS_BASE_PACKAGE="/home/hfeng1/.simics-mcp-server/simics-install/simics-7.57.0"
+export SIMICS_BASE_PACKAGE
+export SIMICS_PYTHON_PACKAGE="/home/hfeng1/.simics-mcp-server/simics-install/simics-7.57.0/scripts/../../simics-python-7.13.0/linux64/bin/../.."
+if [ -z "${SIMICS_PYTHON}" ]; then
+    _DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+    export SIMICS_PYTHON=""
+fi
+exec "/home/hfeng1/.simics-mcp-server/simics-install/simics-7.57.0/bin/gmake-to-cmake"  "$@"
