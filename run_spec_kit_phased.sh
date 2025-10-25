@@ -211,6 +211,9 @@ done
 
 # Set defaults if not provided
 PROJECT_NAME="${PROJECT_NAME:-adk_spec_kit_project}"
+# Construct robust default prompt with absolute paths
+DEFAULT_PROMPT="Read the Simics WDT specification from ${SCRIPT_DIR}/simics-wdt-spec.md and the hardware specifications from ${SCRIPT_DIR}/wdt.md to create a comprehensive Simics watchdog timer device implementation."
+INITIAL_PROMPT="${INITIAL_PROMPT:-$DEFAULT_PROMPT}"
 
 # Apply cascade logic for phase dependencies
 if [ "$SKIP_PLAN" = true ]; then
