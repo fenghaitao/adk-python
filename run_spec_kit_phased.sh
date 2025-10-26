@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Phased Spec-Kit Runner Script - Saves session for each phase
-# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--skip-plan] [--skip-tasks] [--skip-implement]
+# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--model MODEL] [--skip-plan] [--skip-tasks] [--skip-implement]
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API for user management"
-# Example: ./run_spec_kit_phased.sh myproject "Create a REST API" --skip-plan --skip-tasks
+# Example: ./run_spec_kit_phased.sh myproject "Create a REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode for each phase
 # 
 # Options:
+#   --model MODEL    Choose chat model: iflow/qwen3-coder-plus, iflow/qwen3-coder, github_copilot/claude-sonnet-4, github_copilot/claude-sonnet-4.5, github_copilot/grok-code-fast-1
 #   --skip-plan      Skip the planning phase
 #   --skip-tasks     Skip the task breakdown phase  
 #   --skip-implement Skip the implementation phase
@@ -50,6 +51,13 @@ POSITIONAL ARGUMENTS:
     INITIAL_PROMPT    Initial prompt for the specification phase (optional)
 
 OPTIONS:
+    --model MODEL     Choose chat model (default: iflow/qwen3-coder-plus)
+                      Available models:
+                      - iflow/qwen3-coder-plus
+                      - iflow/qwen3-coder
+                      - github_copilot/claude-sonnet-4
+                      - github_copilot/claude-sonnet-4.5
+                      - github_copilot/grok-code-fast-1
     --skip-plan       Skip the planning phase (Phase 2)
                       Note: Also skips TASKS and IMPLEMENT (cascade effect)
     --skip-tasks      Skip the task breakdown phase (Phase 3)  
@@ -77,17 +85,23 @@ OUTPUT FILES:
     - adk_implement_agent/PROJECT_NAME_implement.session.json|.txt
 
 EXAMPLES:
-    # Run all phases with default project name
+    # Run all phases with default project name and model
     ./run_spec_kit_phased.sh
 
     # Run all phases with custom project and prompt
     ./run_spec_kit_phased.sh myapi "Create a user management REST API"
 
-    # Skip planning and tasks phases
-    ./run_spec_kit_phased.sh myapi "Create REST API" --skip-plan --skip-tasks
+    # Use specific model
+    ./run_spec_kit_phased.sh myapi "Create REST API" --model iflow/qwen3-coder
 
-    # Only run specification phase
-    ./run_spec_kit_phased.sh myapi "Create REST API" --skip-plan --skip-tasks --skip-implement
+    # Use Claude model and skip planning phases
+    ./run_spec_kit_phased.sh myapi "Create REST API" --model github_copilot/claude-sonnet-4.5 --skip-plan --skip-tasks
+
+    # Use Grok model
+    ./run_spec_kit_phased.sh myapi "Create REST API" --model github_copilot/grok-code-fast-1
+
+    # Only run specification phase with specific model
+    ./run_spec_kit_phased.sh myapi "Create REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks --skip-implement
 
     # Show help
     ./run_spec_kit_phased.sh --help
@@ -175,6 +189,7 @@ echo ""
 # Parse command line arguments
 PROJECT_NAME=""
 INITIAL_PROMPT=""
+MODEL=""
 SKIP_PLAN=false
 SKIP_TASKS=false
 SKIP_IMPLEMENT=false
@@ -185,6 +200,15 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             show_help
             exit 0
+            ;;
+        --model)
+            if [ -z "$2" ]; then
+                echo "Error: --model requires a value"
+                echo "Available models: iflow/qwen3-coder-plus, iflow/qwen3-coder, github_copilot/claude-sonnet-4, github_copilot/claude-sonnet-4.5, github_copilot/grok-code-fast-1"
+                exit 1
+            fi
+            MODEL="$2"
+            shift 2
             ;;
         --skip-plan)
             SKIP_PLAN=true
@@ -215,6 +239,20 @@ PROJECT_NAME="${PROJECT_NAME:-adk_spec_kit_project}"
 DEFAULT_PROMPT="Read the Simics WDT specification from ${SCRIPT_DIR}/simics-wdt-spec.md and the hardware specifications from ${SCRIPT_DIR}/wdt.md to create a comprehensive Simics watchdog timer device implementation."
 INITIAL_PROMPT="${INITIAL_PROMPT:-$DEFAULT_PROMPT}"
 
+# Set default model and validate
+MODEL="${MODEL:-iflow/qwen3-coder-plus}"
+VALID_MODELS=("iflow/qwen3-coder-plus" "iflow/qwen3-coder" "github_copilot/claude-sonnet-4" "github_copilot/claude-sonnet-4.5" "github_copilot/grok-code-fast-1")
+
+# Validate model choice
+if [[ ! " ${VALID_MODELS[@]} " =~ " ${MODEL} " ]]; then
+    echo "Error: Invalid model '$MODEL'"
+    echo "Available models: ${VALID_MODELS[@]}"
+    exit 1
+fi
+
+# Export the model as environment variable for spec_kit integration
+export SPEC_KIT_MODEL="$MODEL"
+
 # Apply cascade logic for phase dependencies
 if [ "$SKIP_PLAN" = true ]; then
     echo "⚠️  PLAN phase skipped - cascading to skip TASKS and IMPLEMENT phases"
@@ -226,6 +264,7 @@ elif [ "$SKIP_TASKS" = true ]; then
 fi
 
 echo "Project name: $PROJECT_NAME"
+echo "Model: $MODEL"
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
 fi
@@ -482,8 +521,8 @@ echo "Session files generated:"
 echo "  *.session.json        - Raw JSON session data for resuming"
 echo "  *.session.txt         - Human-readable session dumps for review"
 echo ""
-echo "To resume a specific phase:"
-echo "  $ADK_VENV/bin/adk run adk_specify_agent --resume ${PROJECT_NAME}_specify.session.json"
-echo "  $ADK_VENV/bin/adk run adk_plan_agent --resume ${PROJECT_NAME}_plan.session.json"
-echo "  $ADK_VENV/bin/adk run adk_tasks_agent --resume ${PROJECT_NAME}_tasks.session.json"
-echo "  $ADK_VENV/bin/adk run adk_implement_agent --resume ${PROJECT_NAME}_implement.session.json"
+echo "To resume a specific phase (with SPEC_KIT_MODEL=$MODEL):"
+echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_specify_agent --resume ${PROJECT_NAME}_specify.session.json"
+echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_plan_agent --resume ${PROJECT_NAME}_plan.session.json"
+echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_tasks_agent --resume ${PROJECT_NAME}_tasks.session.json"
+echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_implement_agent --resume ${PROJECT_NAME}_implement.session.json"
