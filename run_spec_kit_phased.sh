@@ -181,25 +181,6 @@ echo "ADK directory: $SCRIPT_DIR"
 echo "Integration directory: $SPEC_KIT_INTEGRATION_DIR"
 echo ""
 
-# Start MCP servers (start_mcp_servers.sh handles the waiting)
-echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
-if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
-    echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
-    
-    # Quick verification
-    if check_mcp_server; then
-        echo -e "${GREEN}✅ MCP server confirmed running on port 8051${NC}"
-    else
-        echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
-        exit 1
-    fi
-else
-    echo -e "${RED}❌ Failed to start MCP servers${NC}"
-    echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
-    exit 1
-fi
-echo ""
-
 # Parse command line arguments
 PROJECT_NAME=""
 INITIAL_PROMPT=""
@@ -324,6 +305,25 @@ echo "Project name: $PROJECT_NAME"
 echo "Model: $MODEL"
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
+fi
+
+# Start MCP servers after all argument validation is complete
+echo ""
+echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
+if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
+    echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
+    
+    # Quick verification
+    if check_mcp_server; then
+        echo -e "${GREEN}✅ MCP server confirmed running on port 8051${NC}"
+    else
+        echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}❌ Failed to start MCP servers${NC}"
+    echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
+    exit 1
 fi
 
 # Show phase configuration
