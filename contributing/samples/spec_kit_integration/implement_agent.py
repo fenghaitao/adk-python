@@ -92,7 +92,10 @@ The /implement command executes implementation by processing tasks.md:
 
 For projects with Simics hardware simulation tasks:
 - **Execute Simics project setup**: Use create_simics_project MCP tool
-- **Implement device models**: Use add_dml_device_skeleton and build_simics_project MCP tools
+- **Implement device models**: Use add_dml_device_skeleton MCP tool to create device skeleton
+- **Checkout and build DMLC**: Use checkout_and_build_dmlc MCP tool after adding device skeleton to get local DML compiler
+- **Check with DMLC**: Use check_with_dmlc MCP tool before build_simics_project to validate DML code with AI diagnostics
+- **Build project**: Use build_simics_project MCP tool to compile the project
 - **Run hardware tests**: Use run_simics_test MCP tool for validation
 - **Follow TDD for hardware**: Write Simics tests before device implementation
 

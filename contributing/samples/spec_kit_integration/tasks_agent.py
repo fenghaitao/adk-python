@@ -114,9 +114,11 @@ For Simics projects, include specific hardware simulation tasks:
 **Device Modeling Tasks:**
 - Simics project setup: create_simics_project
 - Device skeleton creation: add_dml_device_skeleton
+- DMLC compiler setup: checkout_and_build_dmlc (after add_dml_device_skeleton)
 - Documentation: Reference research.md from /plan phase for DML templates, device examples, reference manuals
 
 **Build and Test Tasks:**
+- DML validation: check_with_dmlc (before build_simics_project, provides AI diagnostics)
 - Project building: build_simics_project
 - Test execution: run_simics_test
 

@@ -121,6 +121,8 @@ When working on projects requiring hardware simulation, the agent automatically:
 - **list_installed_packages**: List all installed Simics packages
 - **list_simics_platforms**: List all available Simics platforms
 - **add_dml_device_skeleton**: Create a Simics Device DML 1.4 Model skelenton for further development
+- **checkout_and_build_dmlc**: Checkout DML compiler source and build dmlc in a Simics project (use after add_dml_device_skeleton)
+- **check_with_dmlc**: Check a Simics module using locally built DMLC compiler with AI diagnostics (use before build_simics_project)
 - **build_simics_project**: Build a Simics project (project_path, module) - compiles the device models
 - **run_simics_test**: Run Simics test suite(s) within a project (project_path, suite) - validates implementation
 - **get_simics_device_example**: Get DML device implementation examples and Python test examples from Simics packages
