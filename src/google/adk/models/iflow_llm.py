@@ -40,6 +40,7 @@ class IFlowLlm(LiteLlm):
 
   Supported models:
   - iflow/Qwen3-Coder
+  - iflow/qwen3-coder-plus
 
   Attributes:
     model: The name of the iFlow model.
@@ -49,7 +50,7 @@ class IFlowLlm(LiteLlm):
     """Initializes the IFlowLlm class.
 
     Args:
-      model: The name of the iFlow model (e.g., "iflow/Qwen3-Coder").
+      model: The name of the iFlow model (e.g., "iflow/Qwen3-Coder", "iflow/qwen3-coder-plus").
       **kwargs: Additional arguments to pass to the litellm completion api.
     
     Raises:
@@ -84,6 +85,8 @@ class IFlowLlm(LiteLlm):
     """
     return [
       r"iflow/Qwen3-Coder.*",
+      r"iflow/qwen3-coder-plus.*",
       # Support models without iflow/ prefix for convenience
       r"Qwen3-Coder.*",
+      r"qwen3-coder-plus.*",
     ]
