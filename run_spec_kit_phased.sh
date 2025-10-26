@@ -145,11 +145,16 @@ check_mcp_server() {
     fi
 }
 
+# Track whether MCP servers were started
+MCP_SERVERS_STARTED=false
+
 # Function to cleanup on script exit
 cleanup() {
-    echo ""
-    echo -e "${YELLOW}🛑 Cleaning up MCP servers...${NC}"
-    "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/stop_mcp_servers.sh"
+    if [ "$MCP_SERVERS_STARTED" = true ]; then
+        echo ""
+        echo -e "${YELLOW}🛑 Cleaning up MCP servers...${NC}"
+        "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/stop_mcp_servers.sh"
+    fi
 }
 
 # Set up trap to cleanup on script exit
@@ -320,6 +325,8 @@ if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
         echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
         exit 1
     fi
+
+    MCP_SERVERS_STARTED=true
 else
     echo -e "${RED}❌ Failed to start MCP servers${NC}"
     echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
