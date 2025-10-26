@@ -1,14 +1,16 @@
 #!/bin/bash
 
 # Phased Spec-Kit Runner Script - Saves session for each phase
-# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--model MODEL] [--skip-plan] [--skip-tasks] [--skip-implement]
+# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--model MODEL] [--skip-plan] [--skip-tasks] [--skip-implement] [--resume PHASE]
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API for user management"
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks
+# Example: ./run_spec_kit_phased.sh myproject --resume plan
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode for each phase
 # 
 # Options:
 #   --model MODEL    Choose chat model: iflow/qwen3-coder-plus, iflow/qwen3-coder, github_copilot/claude-sonnet-4, github_copilot/claude-sonnet-4.5, github_copilot/grok-code-fast-1
+#   --resume PHASE   Resume from a specific phase: plan, tasks, implement (requires existing session files)
 #   --skip-plan      Skip the planning phase
 #   --skip-tasks     Skip the task breakdown phase  
 #   --skip-implement Skip the implementation phase
@@ -58,6 +60,9 @@ OPTIONS:
                       - github_copilot/claude-sonnet-4
                       - github_copilot/claude-sonnet-4.5
                       - github_copilot/grok-code-fast-1
+    --resume PHASE    Resume from a specific phase (plan, tasks, implement)
+                      Requires existing session files from previous runs
+                      Note: Will run the specified phase and all subsequent phases
     --skip-plan       Skip the planning phase (Phase 2)
                       Note: Also skips TASKS and IMPLEMENT (cascade effect)
     --skip-tasks      Skip the task breakdown phase (Phase 3)  
@@ -102,6 +107,15 @@ EXAMPLES:
 
     # Only run specification phase with specific model
     ./run_spec_kit_phased.sh myapi "Create REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks --skip-implement
+
+    # Resume from plan phase (runs plan, tasks, implement)
+    ./run_spec_kit_phased.sh myapi --resume plan
+
+    # Resume from tasks phase with specific model (runs tasks, implement)
+    ./run_spec_kit_phased.sh myapi --resume tasks --model github_copilot/claude-sonnet-4
+
+    # Resume from implement phase only
+    ./run_spec_kit_phased.sh myapi --resume implement
 
     # Show help
     ./run_spec_kit_phased.sh --help
@@ -190,6 +204,7 @@ echo ""
 PROJECT_NAME=""
 INITIAL_PROMPT=""
 MODEL=""
+RESUME_PHASE=""
 SKIP_PLAN=false
 SKIP_TASKS=false
 SKIP_IMPLEMENT=false
@@ -208,6 +223,15 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             MODEL="$2"
+            shift 2
+            ;;
+        --resume)
+            if [ -z "$2" ]; then
+                echo "Error: --resume requires a phase value"
+                echo "Available phases: plan, tasks, implement"
+                exit 1
+            fi
+            RESUME_PHASE="$2"
             shift 2
             ;;
         --skip-plan)
@@ -253,14 +277,47 @@ fi
 # Export the model as environment variable for spec_kit integration
 export SPEC_KIT_MODEL="$MODEL"
 
-# Apply cascade logic for phase dependencies
-if [ "$SKIP_PLAN" = true ]; then
-    echo "⚠️  PLAN phase skipped - cascading to skip TASKS and IMPLEMENT phases"
-    SKIP_TASKS=true
-    SKIP_IMPLEMENT=true
-elif [ "$SKIP_TASKS" = true ]; then
-    echo "⚠️  TASKS phase skipped - cascading to skip IMPLEMENT phase"
-    SKIP_IMPLEMENT=true
+# Validate and handle resume phase
+if [ -n "$RESUME_PHASE" ]; then
+    VALID_RESUME_PHASES=("plan" "tasks" "implement")
+    if [[ ! " ${VALID_RESUME_PHASES[@]} " =~ " ${RESUME_PHASE} " ]]; then
+        echo "Error: Invalid resume phase '$RESUME_PHASE'"
+        echo "Available phases: ${VALID_RESUME_PHASES[@]}"
+        exit 1
+    fi
+    
+    # Set skip flags based on resume phase
+    case "$RESUME_PHASE" in
+        "plan")
+            SKIP_PLAN=false
+            SKIP_TASKS=false
+            SKIP_IMPLEMENT=false
+            ;;
+        "tasks")
+            SKIP_PLAN=true
+            SKIP_TASKS=false
+            SKIP_IMPLEMENT=false
+            ;;
+        "implement")
+            SKIP_PLAN=true
+            SKIP_TASKS=true
+            SKIP_IMPLEMENT=false
+            ;;
+    esac
+    
+    echo "🔄 Resume mode: Starting from $RESUME_PHASE phase"
+fi
+
+# Apply cascade logic for phase dependencies (only in normal mode, not resume mode)
+if [ -z "$RESUME_PHASE" ]; then
+    if [ "$SKIP_PLAN" = true ]; then
+        echo "⚠️  PLAN phase skipped - cascading to skip TASKS and IMPLEMENT phases"
+        SKIP_TASKS=true
+        SKIP_IMPLEMENT=true
+    elif [ "$SKIP_TASKS" = true ]; then
+        echo "⚠️  TASKS phase skipped - cascading to skip IMPLEMENT phase"
+        SKIP_IMPLEMENT=true
+    fi
 fi
 
 echo "Project name: $PROJECT_NAME"
@@ -300,58 +357,84 @@ else
 fi
 echo ""
 
-# Initialize spec-kit project
-# Remove existing project directory if it exists
-if [ -d "$PROJECT_NAME" ]; then
-    echo "Removing existing project directory: $PROJECT_NAME"
-    rm -rf "$PROJECT_NAME"
+# Initialize spec-kit project or enter existing project
+if [ -n "$RESUME_PHASE" ]; then
+    # Resume mode - check if project directory exists
+    if [ ! -d "$PROJECT_NAME" ]; then
+        echo "Error: Project directory '$PROJECT_NAME' not found for resume"
+        echo "Cannot resume without existing project directory"
+        exit 1
+    fi
+    echo "🔄 Resume mode: Using existing project directory: $PROJECT_NAME"
+else
+    # Normal mode - initialize new project
+    # Remove existing project directory if it exists
+    if [ -d "$PROJECT_NAME" ]; then
+        echo "Removing existing project directory: $PROJECT_NAME"
+        rm -rf "$PROJECT_NAME"
+    fi
+    "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
 fi
-"$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
 
 echo ""
 echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
 
-echo ""
-echo "==========================================="
-echo "PHASE 1: SPECIFY - Creating specification"
-echo "==========================================="
+if [ -z "$RESUME_PHASE" ]; then
+    echo ""
+    echo "==========================================="
+    echo "PHASE 1: SPECIFY - Creating specification"
+    echo "==========================================="
 
-# Create specify agent directory
-mkdir -p "adk_specify_agent"
-cat > "adk_specify_agent/agent.py" << EOF
+    # Create specify agent directory
+    mkdir -p "adk_specify_agent"
+    cat > "adk_specify_agent/agent.py" << EOF
 import sys
 import os
 sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
 from specify_agent import specify_agent as root_agent
 EOF
 
-if [ -n "$INITIAL_PROMPT" ]; then
-    echo "Running SpecifyAgent with feature description..."
-    echo "Command: $INITIAL_PROMPT"
-    echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
-    (echo "$INITIAL_PROMPT"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
-else
-    echo "Running SpecifyAgent in interactive mode..."
-    echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
-    echo "Please provide the feature description for /specify command"
-    "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
-fi
-
-# Check if session file was created
-if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
-    echo "✅ Session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
-    
-    # Generate human-readable session dump
-    echo "📄 Generating human-readable session dump..."
-    python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
-    if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
-        echo "✅ Human-readable session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+    if [ -n "$INITIAL_PROMPT" ]; then
+        echo "Running SpecifyAgent with feature description..."
+        echo "Command: $INITIAL_PROMPT"
+        echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+        (echo "$INITIAL_PROMPT"; echo "exit") | "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
     else
-        echo "❌ Failed to generate human-readable session dump"
+        echo "Running SpecifyAgent in interactive mode..."
+        echo "Session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+        echo "Please provide the feature description for /specify command"
+        "$ADK_VENV/bin/adk" run "adk_specify_agent" --save_session --session_id "${PROJECT_NAME}_specify"
+    fi
+
+    # Check if session file was created
+    if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
+        echo "✅ Session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+        
+        # Generate human-readable session dump
+        echo "📄 Generating human-readable session dump..."
+        python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+        if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
+            echo "✅ Human-readable session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+        else
+            echo "❌ Failed to generate human-readable session dump"
+        fi
+    else
+        echo "❌ Session file not found in adk_specify_agent/"
     fi
 else
-    echo "❌ Session file not found in adk_specify_agent/"
+    echo ""
+    echo "==========================================="
+    echo "PHASE 1: SPECIFY - ⏭️  SKIPPED (resume mode)"
+    echo "==========================================="
+    
+    # Verify that required session files exist for resume
+    if [ ! -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
+        echo "❌ Error: Required session file not found: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+        echo "Cannot resume without existing specify session"
+        exit 1
+    fi
+    echo "✅ Found existing specify session: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
 fi
 
 if [ "$SKIP_PLAN" = false ]; then
@@ -400,6 +483,16 @@ if [ "$SKIP_TASKS" = false ]; then
     echo "==========================================="
     echo "PHASE 3: TASKS - Generating task breakdown"
     echo "==========================================="
+    
+    # When resuming from tasks, verify required session files exist
+    if [ "$RESUME_PHASE" = "tasks" ]; then
+        if [ ! -f "adk_plan_agent/${PROJECT_NAME}_plan.session.json" ]; then
+            echo "❌ Error: Required session file not found: adk_plan_agent/${PROJECT_NAME}_plan.session.json"
+            echo "Cannot resume tasks phase without existing plan session"
+            exit 1
+        fi
+        echo "✅ Found required plan session for tasks resume"
+    fi
 
     # Create tasks agent directory
     mkdir -p "adk_tasks_agent"
@@ -441,6 +534,16 @@ if [ "$SKIP_IMPLEMENT" = false ]; then
     echo "==========================================="
     echo "PHASE 4: IMPLEMENT - Executing implementation"
     echo "==========================================="
+    
+    # When resuming from implement, verify required session files exist
+    if [ "$RESUME_PHASE" = "implement" ]; then
+        if [ ! -f "adk_tasks_agent/${PROJECT_NAME}_tasks.session.json" ]; then
+            echo "❌ Error: Required session file not found: adk_tasks_agent/${PROJECT_NAME}_tasks.session.json"
+            echo "Cannot resume implement phase without existing tasks session"
+            exit 1
+        fi
+        echo "✅ Found required tasks session for implement resume"
+    fi
 
     # Create implement agent directory
     mkdir -p "adk_implement_agent"
@@ -521,7 +624,15 @@ echo "Session files generated:"
 echo "  *.session.json        - Raw JSON session data for resuming"
 echo "  *.session.txt         - Human-readable session dumps for review"
 echo ""
-echo "To resume a specific phase (with SPEC_KIT_MODEL=$MODEL):"
+echo "To resume from a specific phase using the --resume option:"
+echo "  ./run_spec_kit_phased.sh ${PROJECT_NAME} --resume plan    # Resume from plan phase (runs plan → tasks → implement)"
+echo "  ./run_spec_kit_phased.sh ${PROJECT_NAME} --resume tasks   # Resume from tasks phase (runs tasks → implement)"
+echo "  ./run_spec_kit_phased.sh ${PROJECT_NAME} --resume implement # Resume from implement phase only"
+echo ""
+echo "To resume with a specific model:"
+echo "  ./run_spec_kit_phased.sh ${PROJECT_NAME} --resume plan --model $MODEL"
+echo ""
+echo "To manually resume individual agent sessions (advanced):"
 echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_specify_agent --resume ${PROJECT_NAME}_specify.session.json"
 echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_plan_agent --resume ${PROJECT_NAME}_plan.session.json"
 echo "  SPEC_KIT_MODEL=$MODEL $ADK_VENV/bin/adk run adk_tasks_agent --resume ${PROJECT_NAME}_tasks.session.json"
