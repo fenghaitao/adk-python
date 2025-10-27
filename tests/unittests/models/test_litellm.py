@@ -19,6 +19,7 @@ from unittest.mock import Mock
 
 from google.adk.models.lite_llm import _content_to_message_param
 from google.adk.models.lite_llm import _function_declaration_to_tool_param
+from google.adk.models.lite_llm import _get_completion_inputs
 from google.adk.models.lite_llm import _get_content
 from google.adk.models.lite_llm import _message_to_generate_content_response
 from google.adk.models.lite_llm import _model_response_to_chunk
@@ -31,7 +32,9 @@ from google.adk.models.lite_llm import UsageMetadataChunk
 from google.adk.models.llm_request import LlmRequest
 from google.genai import types
 from litellm import ChatCompletionAssistantMessage
+from litellm import ChatCompletionDeveloperMessage
 from litellm import ChatCompletionMessageToolCall
+from litellm import ChatCompletionSystemMessage
 from litellm import Function
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from litellm.types.utils import Choices
@@ -1537,7 +1540,7 @@ def test_get_completion_inputs_generation_params():
   )
   from google.adk.models.lite_llm import _get_completion_inputs
 
-  _, _, _, generation_params = _get_completion_inputs(req)
+  _, _, _, generation_params = _get_completion_inputs(req, "test_model")
   assert generation_params["temperature"] == 0.33
   assert generation_params["max_completion_tokens"] == 123
   assert generation_params["top_p"] == 0.88
@@ -1548,3 +1551,51 @@ def test_get_completion_inputs_generation_params():
   # Should not include max_output_tokens
   assert "max_output_tokens" not in generation_params
   assert "stop_sequences" not in generation_params
+
+
+
+def test_system_instruction_handling():
+  """Test that system instructions always use system role for all models."""
+  # Create a test LlmRequest with system instruction
+  config = types.GenerateContentConfig(system_instruction="You are a helpful assistant.")
+  llm_request = LlmRequest(config=config, contents=[])
+  
+  # Test various model types - all should use system role now
+  test_models = [
+    "github_copilot/claude-sonnet-4",
+    "github_copilot/claude-sonnet-4.5", 
+    "github_copilot/gpt-5-mini",
+    "openai/gpt-4",
+    "anthropic/claude-3-opus",
+    "vertex_ai/gemini-1.5-pro",
+  ]
+  
+  for model in test_models:
+    messages, _, _, _ = _get_completion_inputs(llm_request, model)
+    
+    # First message should always be system role
+    assert len(messages) > 0, f"No messages generated for {model}"
+    assert messages[0]["role"] == "system", f"Expected 'system' role for {model}, got {messages[0]['role']}"
+    assert messages[0]["content"] == "You are a helpful assistant.", f"System instruction content mismatch for {model}"
+
+
+def test_no_system_instruction():
+  """Test that no system message is added when no system instruction is provided."""
+  # Create a test LlmRequest without system instruction
+  config = types.GenerateContentConfig()
+  llm_request = LlmRequest(config=config, contents=[])
+  
+  # Test various model types
+  test_models = [
+    "github_copilot/claude-sonnet-4",
+    "github_copilot/gpt-5-mini",
+    "openai/gpt-4",
+    "anthropic/claude-3-opus",
+  ]
+  
+  for model in test_models:
+    messages, _, _, _ = _get_completion_inputs(llm_request, model)
+    
+    # Should have no messages since no system instruction and no contents
+    assert len(messages) == 0, f"Expected no messages for {model} without system instruction, got {len(messages)}"
+

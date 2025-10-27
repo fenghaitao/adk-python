@@ -16,9 +16,14 @@
 
 from __future__ import annotations
 
+from typing import AsyncGenerator
+
+import litellm
 from typing_extensions import override
 
 from .lite_llm import LiteLlm
+from .llm_request import LlmRequest
+from .llm_response import LlmResponse
 
 class GitHubCopilotLlm(LiteLlm):
   """GitHub Copilot LLM implementation using LiteLLM direct mode.
@@ -60,15 +65,42 @@ class GitHubCopilotLlm(LiteLlm):
     if not model.startswith("github_copilot/"):
       model = f"github_copilot/{model}"
     
+    # CRITICAL: Disable LiteLLM's automatic system->assistant conversion for GitHub Copilot
+    # This is essential for system instructions to work properly with Claude models
+    litellm.disable_copilot_system_to_assistant = True
+    
     # Add GitHub Copilot specific headers
     extra_headers = kwargs.get("extra_headers", {})
     extra_headers.update({
       "Editor-Version": "vscode/1.85.0",
+      "Editor-Plugin-Version": "copilot-chat/0.11.1",
+      "User-Agent": "GitHubCopilot/1.0",
       "Copilot-Integration-Id": "vscode-chat"
     })
     kwargs["extra_headers"] = extra_headers
     
     super().__init__(model=model, **kwargs)
+
+  @override
+  def generate_content(self, llm_request: LlmRequest) -> LlmResponse:
+    """Generates content with ensured system prompt handling.
+    
+    This override ensures that the LiteLLM flag is always set before each request,
+    providing additional robustness for system prompt handling.
+    """
+    # Ensure flag is set before each request for maximum reliability
+    litellm.disable_copilot_system_to_assistant = True
+    return super().generate_content(llm_request)
+
+  @override
+  async def generate_content_async(
+      self, llm_request: LlmRequest, stream: bool = False
+  ) -> AsyncGenerator[LlmResponse, None]:
+    """Generates content asynchronously with ensured system prompt handling."""
+    # Ensure flag is set before each request for maximum reliability  
+    litellm.disable_copilot_system_to_assistant = True
+    async for response in super().generate_content_async(llm_request, stream=stream):
+      yield response
 
   @staticmethod
   @override

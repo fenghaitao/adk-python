@@ -39,6 +39,7 @@ from litellm import ChatCompletionFileObject
 from litellm import ChatCompletionImageObject
 from litellm import ChatCompletionImageUrlObject
 from litellm import ChatCompletionMessageToolCall
+from litellm import ChatCompletionSystemMessage
 from litellm import ChatCompletionTextObject
 from litellm import ChatCompletionToolMessage
 from litellm import ChatCompletionUserMessage
@@ -149,6 +150,8 @@ def _safe_json_serialize(obj) -> str:
     return json.dumps(obj, ensure_ascii=False)
   except (TypeError, OverflowError):
     return str(obj)
+
+
 
 
 def _content_to_message_param(
@@ -523,6 +526,7 @@ def _message_to_generate_content_response(
 
 def _get_completion_inputs(
     llm_request: LlmRequest,
+    model: str,
 ) -> Tuple[
     List[Message],
     Optional[List[Dict]],
@@ -533,6 +537,7 @@ def _get_completion_inputs(
 
   Args:
     llm_request: The LlmRequest to convert.
+    model: The model name to determine appropriate system instruction handling.
 
   Returns:
     The litellm inputs (message list, tool dictionary, response format and generation params).
@@ -547,10 +552,13 @@ def _get_completion_inputs(
       messages.append(message_param_or_list)
 
   if llm_request.config.system_instruction:
+    # Use standard OpenAI system role format for all models
+    # This is the correct approach based on Warp's successful implementation
+    # that works with GitHub Copilot Claude models and all other providers
     messages.insert(
         0,
-        ChatCompletionDeveloperMessage(
-            role="developer",
+        ChatCompletionSystemMessage(
+            role="system",
             content=llm_request.config.system_instruction,
         ),
     )
@@ -737,7 +745,7 @@ class LiteLlm(BaseLlm):
     logger.debug(_build_request_log(llm_request))
 
     messages, tools, response_format, generation_params = (
-        _get_completion_inputs(llm_request)
+        _get_completion_inputs(llm_request, self.model)
     )
 
     if "functions" in self._additional_args:
