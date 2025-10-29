@@ -489,6 +489,8 @@ def _model_response_to_generate_content_response(
         candidates_token_count=response["usage"].get("completion_tokens", 0),
         total_token_count=response["usage"].get("total_tokens", 0),
     )
+  # Non-streaming responses are always complete
+  llm_response.turn_complete = True
   return llm_response
 
 
@@ -852,11 +854,15 @@ class LiteLlm(BaseLlm):
         if usage_metadata:
           aggregated_llm_response.usage_metadata = usage_metadata
           usage_metadata = None
+        # Set turn_complete to signal the model has finished its response
+        aggregated_llm_response.turn_complete = True
         yield aggregated_llm_response
 
       if aggregated_llm_response_with_tool_call:
         if usage_metadata:
           aggregated_llm_response_with_tool_call.usage_metadata = usage_metadata
+        # Set turn_complete to signal the model has finished its response
+        aggregated_llm_response_with_tool_call.turn_complete = True
         yield aggregated_llm_response_with_tool_call
 
     else:
