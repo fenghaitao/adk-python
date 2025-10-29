@@ -765,6 +765,12 @@ class LiteLlm(BaseLlm):
     if generation_params:
       completion_args.update(generation_params)
 
+    # Set tool_choice to "auto" (OpenAI format) when tools are provided
+    # This allows the model to decide whether to use tools or respond directly
+    if tools and "tool_choice" not in completion_args:
+      completion_args["tool_choice"] = "auto"
+      logger.debug(f"Setting tool_choice='auto' for model with {len(tools)} tools")
+
     if stream:
       text = ""
       # Track function calls by index
