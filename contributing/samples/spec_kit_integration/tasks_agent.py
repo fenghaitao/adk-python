@@ -30,8 +30,10 @@ except ImportError:
 
 try:
     from .spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from .context_management import create_context_management_for_implementation
 except ImportError:
     from spec_kit_tools import create_spec_kit_toolset, create_simics_mcp_toolset
+    from context_management import create_context_management_for_implementation
 
 
 def get_spec_kit_model():
@@ -183,11 +185,15 @@ REMEMBER: Your job is to execute the /tasks workflow defined in .adk/commands/ta
         agent_name = kwargs.pop("name", "tasks_agent")
         agent_model = kwargs.pop("model", get_spec_kit_model())
 
+        # Create context management for task generation
+        self.context_manager = create_context_management_for_implementation()
+
         super().__init__(
             name=agent_name,
             model=agent_model,
             instruction=instruction,
             description="Agent specialized for generating actionable task breakdowns using /tasks command",
+            before_agent_callback=self.context_manager.before_agent_callback,
             **kwargs
         )
 
