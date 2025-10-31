@@ -509,9 +509,29 @@ def _message_to_generate_content_response(
   if message.get("tool_calls", None):
     for tool_call in message.get("tool_calls"):
       if tool_call.type == "function":
+        # Parse function arguments defensively to avoid JSONDecodeError when
+        # model outputs are truncated or malformed.
+        raw_args = tool_call.function.arguments or "{}"
+        parsed_args = {}
+        if isinstance(raw_args, str):
+          try:
+            parsed_args = json.loads(raw_args)
+          except json.JSONDecodeError:
+            # Try a common recovery (single quotes -> double quotes)
+            try:
+              parsed_args = json.loads(raw_args.replace("'", '"'))
+            except Exception:
+              logger.warning(
+                  "Failed to parse function arguments; using empty dict. arguments=%s",
+                  raw_args,
+              )
+              parsed_args = {}
+        else:
+          parsed_args = raw_args
+
         part = types.Part.from_function_call(
             name=tool_call.function.name,
-            args=json.loads(tool_call.function.arguments or "{}"),
+            args=parsed_args,
         )
         part.function_call.id = tool_call.id
         parts.append(part)
