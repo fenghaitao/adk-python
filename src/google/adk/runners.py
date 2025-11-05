@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import queue
 from typing import Any
 from typing import AsyncGenerator
@@ -55,218 +54,6 @@ from .tools.base_toolset import BaseToolset
 from .utils.context_utils import Aclosing
 
 logger = logging.getLogger('google_adk.' + __name__)
-
-# Configuration for message history management
-# Can be overridden via environment variables
-MAX_HISTORY_MESSAGES = int(os.getenv('ADK_MAX_HISTORY_MESSAGES', '50'))
-ENABLE_HISTORY_SUMMARIZATION = os.getenv('ADK_ENABLE_HISTORY_SUMMARIZATION', 'true').lower() == 'true'
-
-# Context window management
-# Estimated context window size in tokens (can be overridden)
-DEFAULT_CONTEXT_WINDOW = int(os.getenv('ADK_CONTEXT_WINDOW_TOKENS', '256000'))
-# Threshold at which to trigger truncation (default: 80% of context window)
-CONTEXT_THRESHOLD = float(os.getenv('ADK_CONTEXT_THRESHOLD', '0.8'))
-
-
-def _estimate_token_count(text: str) -> int:
-  """Estimates token count from text.
-
-  Uses a simple heuristic: ~4 characters per token, which is a reasonable
-  approximation for most languages and models.
-
-  Args:
-    text: The text to estimate tokens for
-
-  Returns:
-    Estimated token count
-  """
-  if not text:
-    return 0
-  return len(text) // 4
-
-
-def _estimate_session_tokens(session: Session) -> int:
-  """Estimates the total token count of a session's events.
-
-  Args:
-    session: The session to estimate tokens for
-
-  Returns:
-    Estimated total token count
-  """
-  total_tokens = 0
-
-  for event in session.events:
-    # Count tokens in event content
-    if event.content and event.content.parts:
-      for part in event.content.parts:
-        if part.text:
-          total_tokens += _estimate_token_count(part.text)
-        # Account for function calls/responses (typically smaller)
-        if hasattr(part, 'function_call') and part.function_call:
-          # Estimate ~50 tokens per function call
-          total_tokens += 50
-        if hasattr(part, 'function_response') and part.function_response:
-          # Estimate based on response content
-          if hasattr(part.function_response, 'response'):
-            response_str = str(part.function_response.response)
-            total_tokens += _estimate_token_count(response_str)
-
-  return total_tokens
-
-
-def _summarize_conversation_history(events: list[Event]) -> str:
-  """Creates a brief summary of removed conversation history.
-
-  Args:
-    events: List of events to summarize
-
-  Returns:
-    A concise summary string
-  """
-  if not events:
-    return ""
-
-  user_messages = 0
-  model_responses = 0
-  tool_calls = 0
-
-  for event in events:
-    if event.author == 'user':
-      user_messages += 1
-    elif event.author == 'model':
-      model_responses += 1
-    if event.content and event.content.parts:
-      for part in event.content.parts:
-        if hasattr(part, 'function_call') and part.function_call:
-          tool_calls += 1
-
-  summary_parts = []
-  if user_messages > 0:
-    summary_parts.append(f"{user_messages} user message{'s' if user_messages != 1 else ''}")
-  if model_responses > 0:
-    summary_parts.append(f"{model_responses} assistant response{'s' if model_responses != 1 else ''}")
-  if tool_calls > 0:
-    summary_parts.append(f"{tool_calls} tool call{'s' if tool_calls != 1 else ''}")
-
-  if summary_parts:
-    return f"[Earlier conversation: {', '.join(summary_parts)}]"
-  return "[Earlier conversation removed]"
-
-
-def _truncate_session_history(
-    session: Session,
-    max_messages: int,
-    enable_summarization: bool = True,
-    context_window: int = DEFAULT_CONTEXT_WINDOW,
-    threshold: float = CONTEXT_THRESHOLD
-) -> Session:
-  """Truncates session history based on token usage and message count.
-
-  Truncation is triggered when:
-  1. Estimated token count exceeds threshold * context_window, OR
-  2. Message count exceeds max_messages (backward compatibility)
-
-  Args:
-    session: The session to truncate
-    max_messages: Maximum number of recent messages to keep (legacy param)
-    enable_summarization: Whether to add a summary of removed messages
-    context_window: Total context window size in tokens
-    threshold: Threshold ratio (0.0-1.0) to trigger truncation
-
-  Returns:
-    Session with truncated history
-  """
-  # Estimate current token usage
-  estimated_tokens = _estimate_session_tokens(session)
-  token_limit = int(context_window * threshold)
-
-  # Check if truncation is needed
-  needs_truncation = (
-      estimated_tokens > token_limit or
-      (max_messages > 0 and len(session.events) > max_messages)
-  )
-
-  if not needs_truncation:
-    return session
-
-  logger.info(
-      f"Session exceeds limits - Estimated tokens: {estimated_tokens}/{token_limit} "
-      f"({estimated_tokens/context_window*100:.1f}% of context window), "
-      f"Messages: {len(session.events)}"
-  )
-
-  # Strategy: Remove oldest messages until we're under the threshold
-  # Target: 60% of context window to leave room for new messages
-  target_tokens = int(context_window * 0.6)
-
-  # Start from the end and work backwards, keeping messages until we hit target
-  kept_events = []
-  current_tokens = 0
-
-  for event in reversed(session.events):
-    event_tokens = 0
-    if event.content and event.content.parts:
-      for part in event.content.parts:
-        if part.text:
-          event_tokens += _estimate_token_count(part.text)
-        if hasattr(part, 'function_call') and part.function_call:
-          event_tokens += 50
-        if hasattr(part, 'function_response') and part.function_response:
-          if hasattr(part.function_response, 'response'):
-            event_tokens += _estimate_token_count(str(part.function_response.response))
-
-    # Keep adding events if we're under target
-    if current_tokens + event_tokens <= target_tokens:
-      kept_events.insert(0, event)
-      current_tokens += event_tokens
-    else:
-      # We've reached our target, stop here
-      break
-
-  # Calculate what we're removing
-  removed_events = session.events[:len(session.events) - len(kept_events)]
-  removed_count = len(removed_events)
-
-  if removed_count == 0:
-    # Nothing to remove
-    return session
-
-  logger.info(
-      f"Truncating session history: {len(session.events)} → {len(kept_events)} messages "
-      f"(removing {removed_count} oldest messages, "
-      f"target: {target_tokens} tokens, kept: ~{current_tokens} tokens)"
-  )
-
-  # Create summary of removed conversation if enabled
-  if enable_summarization and removed_events:
-    summary_text = _summarize_conversation_history(removed_events)
-
-    # Create a summary event as the first message
-    summary_event = Event(
-        invocation_id="truncation-summary",
-        author="system",
-        content=types.Content(
-            role="user",
-            parts=[types.Part(text=summary_text)]
-        )
-    )
-
-    # Update session with summary + kept events
-    session.events = [summary_event] + kept_events
-    logger.info(f"Added conversation summary: {summary_text}")
-  else:
-    # Just keep the recent events without summary
-    session.events = kept_events
-
-  # Log final token usage after truncation
-  final_tokens = _estimate_session_tokens(session)
-  logger.info(
-      f"After truncation - Estimated tokens: {final_tokens} "
-      f"({final_tokens/context_window*100:.1f}% of context window)"
-  )
-
-  return session
 
 
 class Runner:
@@ -420,22 +207,6 @@ class Runner:
         )
         if not session:
           raise ValueError(f'Session not found: {session_id}')
-
-        # Apply message history truncation if configured
-        # Truncate based on estimated token usage reaching 80% of context window
-        estimated_tokens = _estimate_session_tokens(session)
-        token_limit = int(DEFAULT_CONTEXT_WINDOW * CONTEXT_THRESHOLD)
-
-        if estimated_tokens > token_limit or (MAX_HISTORY_MESSAGES > 0 and len(session.events) > MAX_HISTORY_MESSAGES):
-          session = _truncate_session_history(
-              session,
-              MAX_HISTORY_MESSAGES,
-              ENABLE_HISTORY_SUMMARIZATION,
-              DEFAULT_CONTEXT_WINDOW,
-              CONTEXT_THRESHOLD
-          )
-          # Update the session in the service with truncated history
-          await self.session_service.update_session(session)
 
         invocation_context = self._new_invocation_context(
             session,
@@ -632,23 +403,6 @@ class Runner:
       )
       if not session:
         raise ValueError(f'Session not found: {session_id}')
-
-    # Apply message history truncation if configured
-    # Truncate based on estimated token usage reaching 80% of context window
-    estimated_tokens = _estimate_session_tokens(session)
-    token_limit = int(DEFAULT_CONTEXT_WINDOW * CONTEXT_THRESHOLD)
-
-    if estimated_tokens > token_limit or (MAX_HISTORY_MESSAGES > 0 and len(session.events) > MAX_HISTORY_MESSAGES):
-      session = _truncate_session_history(
-          session,
-          MAX_HISTORY_MESSAGES,
-          ENABLE_HISTORY_SUMMARIZATION,
-          DEFAULT_CONTEXT_WINDOW,
-          CONTEXT_THRESHOLD
-      )
-      # Update the session in the service with truncated history
-      await self.session_service.update_session(session)
-
     invocation_context = self._new_invocation_context_for_live(
         session,
         live_request_queue=live_request_queue,
