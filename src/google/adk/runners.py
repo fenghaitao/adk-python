@@ -117,98 +117,42 @@ def _estimate_session_tokens(session: Session) -> int:
 
 
 def _summarize_conversation_history(events: list[Event]) -> str:
-  """Creates an intelligent summary of removed conversation history.
-
-  Implements structured summarization similar to advanced_context_manager.py:
-  - Captures user requests and goals
-  - Tracks completed work and pending tasks
-  - Preserves important context like file paths and decisions
-  - Notes tool calls and their purposes
+  """Creates a brief summary of removed conversation history.
 
   Args:
     events: List of events to summarize
 
   Returns:
-    A structured, context-aware summary string
+    A concise summary string
   """
   if not events:
     return ""
 
-  # Collect structured information
-  user_messages = []
-  model_responses = []
-  tool_calls = []
-  file_references = []
+  user_messages = 0
+  model_responses = 0
+  tool_calls = 0
 
   for event in events:
+    if event.author == 'user':
+      user_messages += 1
+    elif event.author == 'model':
+      model_responses += 1
     if event.content and event.content.parts:
       for part in event.content.parts:
-        # Extract text content
-        if hasattr(part, 'text') and part.text:
-          text = part.text
-
-          # Collect user requests
-          if event.author == 'user':
-            # Truncate very long messages but preserve key info
-            truncated = text[:200] + "..." if len(text) > 200 else text
-            user_messages.append(truncated)
-
-            # Extract file references (common pattern)
-            import re
-            files = re.findall(r'[\w/\-\.]+\.(py|js|ts|md|json|yaml|yml|txt|dml|cc|h)', text)
-            file_references.extend(files)
-
-          # Collect model responses (key actions)
-          elif event.author == 'model':
-            # Focus on action-oriented responses
-            if any(keyword in text.lower() for keyword in ['created', 'updated', 'modified', 'implemented', 'fixed', 'completed']):
-              truncated = text[:150] + "..." if len(text) > 150 else text
-              model_responses.append(truncated)
-
-        # Track tool calls with context
         if hasattr(part, 'function_call') and part.function_call:
-          tool_name = part.function_call.name if hasattr(part.function_call, 'name') else 'unknown'
-          tool_calls.append(tool_name)
+          tool_calls += 1
 
-  # Build structured summary
-  summary_lines = ["CONVERSATION SUMMARY (condensed context):"]
+  summary_parts = []
+  if user_messages > 0:
+    summary_parts.append(f"{user_messages} user message{'s' if user_messages != 1 else ''}")
+  if model_responses > 0:
+    summary_parts.append(f"{model_responses} assistant response{'s' if model_responses != 1 else ''}")
+  if tool_calls > 0:
+    summary_parts.append(f"{tool_calls} tool call{'s' if tool_calls != 1 else ''}")
 
-  # User context
-  if user_messages:
-    summary_lines.append(f"\nUSER REQUESTS ({len(user_messages)} messages):")
-    # Show last 3 user messages for context continuity
-    for msg in user_messages[-3:]:
-      summary_lines.append(f"  • {msg}")
-
-  # Completed work
-  if model_responses:
-    summary_lines.append(f"\nCOMPLETED ACTIONS ({len(model_responses)} actions):")
-    # Show last 3 actions
-    for action in model_responses[-3:]:
-      summary_lines.append(f"  • {action}")
-
-  # Tool usage
-  if tool_calls:
-    # Count unique tools
-    unique_tools = {}
-    for tool in tool_calls:
-      unique_tools[tool] = unique_tools.get(tool, 0) + 1
-    summary_lines.append(f"\nTOOL CALLS ({len(tool_calls)} total):")
-    for tool, count in sorted(unique_tools.items(), key=lambda x: x[1], reverse=True)[:5]:
-      summary_lines.append(f"  • {tool}: {count}x")
-
-  # File context
-  if file_references:
-    unique_files = list(set(file_references))[:5]  # Top 5 files
-    if unique_files:
-      summary_lines.append(f"\nFILE REFERENCES:")
-      for file in unique_files:
-        summary_lines.append(f"  • {file}")
-
-  # Summary statistics
-  summary_lines.append(f"\n[Condensed {len(events)} messages to preserve context]")
-
-  return "\n".join(summary_lines)
+  if summary_parts:
+    return f"[Earlier conversation: {', '.join(summary_parts)}]"
+  return "[Earlier conversation removed]"
 
 
 def _truncate_session_history(
@@ -218,13 +162,7 @@ def _truncate_session_history(
     context_window: int = DEFAULT_CONTEXT_WINDOW,
     threshold: float = CONTEXT_THRESHOLD
 ) -> Session:
-  """Truncates session history using intelligent context management.
-
-  Implements advanced truncation strategy similar to advanced_context_manager.py:
-  - Always preserves system messages (first 2 by default)
-  - Always preserves recent conversation turns (last 6-8 pairs)
-  - Summarizes middle content intelligently
-  - Maintains conversation continuity
+  """Truncates session history based on token usage and message count.
 
   Truncation is triggered when:
   1. Estimated token count exceeds threshold * context_window, OR
@@ -254,82 +192,51 @@ def _truncate_session_history(
     return session
 
   logger.info(
-      f"🔄 Context condensation triggered - Estimated tokens: {estimated_tokens}/{token_limit} "
+      f"Session exceeds limits - Estimated tokens: {estimated_tokens}/{token_limit} "
       f"({estimated_tokens/context_window*100:.1f}% of context window), "
       f"Messages: {len(session.events)}"
   )
 
-  # Strategy: Intelligent preservation (like OpenHands condenser)
-  # 1. Identify message types
-  system_indices = []
-  user_indices = []
-  model_indices = []
+  # Strategy: Remove oldest messages until we're under the threshold
+  # Target: 60% of context window to leave room for new messages
+  target_tokens = int(context_window * 0.6)
 
-  for i, event in enumerate(session.events):
-    if event.author == 'system':
-      system_indices.append(i)
-    elif event.author == 'user':
-      user_indices.append(i)
-    elif event.author == 'model':
-      model_indices.append(i)
+  # Start from the end and work backwards, keeping messages until we hit target
+  kept_events = []
+  current_tokens = 0
 
-  # 2. Determine what to keep (preserve important context)
-  keep_indices = set()
+  for event in reversed(session.events):
+    event_tokens = 0
+    if event.content and event.content.parts:
+      for part in event.content.parts:
+        if part.text:
+          event_tokens += _estimate_token_count(part.text)
+        if hasattr(part, 'function_call') and part.function_call:
+          event_tokens += 50
+        if hasattr(part, 'function_response') and part.function_response:
+          if hasattr(part.function_response, 'response'):
+            event_tokens += _estimate_token_count(str(part.function_response.response))
 
-  # Always keep first 2 system messages (instructions, context)
-  keep_system = system_indices[:2]
-  keep_indices.update(keep_system)
+    # Keep adding events if we're under target
+    if current_tokens + event_tokens <= target_tokens:
+      kept_events.insert(0, event)
+      current_tokens += event_tokens
+    else:
+      # We've reached our target, stop here
+      break
 
-  # Always keep last 8 conversation turns (recent context)
-  keep_recent_turns = 8
-  recent_user = user_indices[-keep_recent_turns:]
-  recent_model = model_indices[-keep_recent_turns:]
-  keep_indices.update(recent_user)
-  keep_indices.update(recent_model)
-
-  # 3. Identify content to summarize (middle content)
-  all_indices = set(range(len(session.events)))
-  summarize_indices = sorted(all_indices - keep_indices)
-
-  if not summarize_indices:
-    # Nothing to summarize, use simple truncation
-    logger.info("No middle content to summarize, keeping recent messages only")
-    target_tokens = int(context_window * 0.6)
-    kept_events = []
-    current_tokens = 0
-
-    for event in reversed(session.events):
-      event_tokens = 0
-      if event.content and event.content.parts:
-        for part in event.content.parts:
-          if part.text:
-            event_tokens += _estimate_token_count(part.text)
-          if hasattr(part, 'function_call') and part.function_call:
-            event_tokens += 50
-          if hasattr(part, 'function_response') and part.function_response:
-            if hasattr(part.function_response, 'response'):
-              event_tokens += _estimate_token_count(str(part.function_response.response))
-
-      if current_tokens + event_tokens <= target_tokens:
-        kept_events.insert(0, event)
-        current_tokens += event_tokens
-      else:
-        break
-
-    removed_events = session.events[:len(session.events) - len(kept_events)]
-    removed_count = len(removed_events)
-  else:
-    # Smart truncation with summarization
-    removed_events = [session.events[i] for i in summarize_indices]
-    removed_count = len(summarize_indices)
-    kept_events = [session.events[i] for i in sorted(keep_indices)]
+  # Calculate what we're removing
+  removed_events = session.events[:len(session.events) - len(kept_events)]
+  removed_count = len(removed_events)
 
   if removed_count == 0:
+    # Nothing to remove
     return session
 
   logger.info(
-      f"📝 Intelligent truncation: {len(session.events)} → {len(kept_events) + 1} messages "
-      f"(condensing {removed_count} middle messages, preserving system + recent turns)"
+      f"Truncating session history: {len(session.events)} → {len(kept_events)} messages "
+      f"(removing {removed_count} oldest messages, "
+      f"target: {target_tokens} tokens, kept: ~{current_tokens} tokens)"
   )
 
   # Create summary of removed conversation if enabled
