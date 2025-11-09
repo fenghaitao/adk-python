@@ -10,3 +10,6 @@
 [submodule "contributing/samples/agent_os_integration/simics/simics-mcp-server"]
 	path = contributing/samples/agent_os_integration/simics/simics-mcp-server
 	url = https://github.com/fenghaitao/simics-mcp-server.git
+[submodule "OpenSpec"]
+	path = OpenSpec
+	url = https://github.com/fenghaitao/OpenSpec
