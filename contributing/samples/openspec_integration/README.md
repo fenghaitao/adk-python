@@ -81,13 +81,13 @@ While both samples demonstrate spec-driven development, they serve different use
 The easiest way to get started is using the `run_openspec.sh` script:
 
 ```bash
-# Interactive mode (default project name: adk_openspec_project)
+# Default mode - automatically helps populate project.md
 ./run_openspec.sh
 
-# Custom project name
+# Custom project name (still uses default prompt to populate project.md)
 ./run_openspec.sh my_project
 
-# Non-interactive mode with initial prompt
+# Custom prompt instead of default
 ./run_openspec.sh my_project "Create a user authentication feature"
 
 # Save session for later resuming
@@ -99,6 +99,11 @@ The easiest way to get started is using the `run_openspec.sh` script:
 # Use specific model
 ./run_openspec.sh my_project --model iflow/qwen3-coder-plus --save-session
 ```
+
+**Default Behavior**: When no initial prompt is provided, the script automatically sends:
+> "Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
+
+This helps you establish project context before creating change proposals.
 
 The script will:
 1. Check for OpenSpec CLI and ADK installation

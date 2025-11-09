@@ -51,6 +51,9 @@ DESCRIPTION:
 POSITIONAL ARGUMENTS:
     PROJECT_NAME      Name of the project (default: 'adk_openspec_project')
     INITIAL_PROMPT    Initial prompt for the agent (optional)
+                      Default: "Please read openspec/project.md and help me 
+                      fill it out with details about my project, tech stack, 
+                      and conventions"
 
 OPTIONS:
     --model MODEL     Choose chat model (default: iflow/Qwen3-Coder)
@@ -185,6 +188,11 @@ done
 # Set defaults
 PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
 MODEL="${MODEL:-iflow/Qwen3-Coder}"
+
+# Set default prompt if not provided and not in resume mode
+if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ]; then
+    INITIAL_PROMPT="Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
+fi
 
 # Export model as environment variable
 export OPENSPEC_MODEL="$MODEL"

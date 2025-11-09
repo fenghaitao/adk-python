@@ -14,7 +14,10 @@ That's it! The script will:
 1. ✅ Check prerequisites (OpenSpec CLI, ADK)
 2. ✅ Initialize OpenSpec project structure
 3. ✅ Launch the ADK agent
-4. ✅ Optionally save session for resuming
+4. ✅ Automatically help you populate project.md with project details
+5. ✅ Optionally save session for resuming
+
+**Default Prompt**: The agent automatically asks to help fill out `openspec/project.md` with your project details, tech stack, and conventions. This establishes important context before creating change proposals.
 
 ## First Interaction
 
