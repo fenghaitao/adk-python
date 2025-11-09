@@ -23,60 +23,129 @@ completed changes following OpenSpec best practices.
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Import ADK
 try:
-  from google.adk.agents.llm_agent import LlmAgent
-except ImportError:
-  current_dir = Path(__file__).parent
-  adk_src_dir = current_dir.parent.parent.parent / "src"
-  if adk_src_dir.exists():
-    sys.path.insert(0, str(adk_src_dir))
     from google.adk.agents.llm_agent import LlmAgent
+except ImportError:
+    current_dir = Path(__file__).parent
+    adk_src_dir = current_dir.parent.parent.parent / "src"
+    if adk_src_dir.exists():
+        sys.path.insert(0, str(adk_src_dir))
+        from google.adk.agents.llm_agent import LlmAgent
 
 try:
-  from .openspec_tools import create_openspec_toolset
+    from .openspec_tools import create_openspec_toolset
 except ImportError:
-  from openspec_tools import create_openspec_toolset
+    from openspec_tools import create_openspec_toolset
+
+
+def detect_hardware_project(text: str) -> bool:
+    """Detect if the project involves hardware device modeling.
+
+    This function analyzes text (such as feature descriptions or project context)
+    to determine if it involves hardware device modeling that would benefit from
+    Simics MCP tools.
+
+    Args:
+      text: Feature description or project context to analyze
+
+    Returns:
+      bool: True if hardware device modeling is detected, False otherwise
+
+    Detection Strategy:
+      Uses keyword matching across multiple categories:
+      - Hardware terms (processor, CPU, GPU, FPGA, microcontroller, embedded)
+      - Simulation terms (simulation, modeling, hardware validation, device model)
+      - Architecture terms (x86, ARM, RISC-V, MIPS, SPARC)
+      - Hardware components (PCI, USB, memory controller, peripheral, watchdog timer)
+      - Development terms (firmware, BIOS, bootloader, DML, register map)
+
+    Note:
+      This is a conservative heuristic that prefers false positives. If hardware
+      keywords are detected but the project is actually software-focused, the
+      developer can simply ignore the Simics-specific suggestions.
+    """
+    hardware_keywords = [
+        # Hardware terms
+        "processor",
+        "cpu",
+        "gpu",
+        "fpga",
+        "microcontroller",
+        "embedded",
+        # Simulation terms
+        "simulation",
+        "modeling",
+        "hardware validation",
+        "device model",
+        # Architecture terms
+        "x86",
+        "arm",
+        "risc-v",
+        "mips",
+        "sparc",
+        # Hardware components
+        "pci",
+        "usb",
+        "memory controller",
+        "peripheral",
+        "watchdog timer",
+        "network controller",
+        "storage device",
+        "interrupt controller",
+        # Development terms
+        "firmware",
+        "bios",
+        "bootloader",
+        "dml",
+        "register map",
+        "hardware interface",
+        "device driver",
+    ]
+
+    text_lower = text.lower()
+    return any(keyword in text_lower for keyword in hardware_keywords)
 
 
 def get_openspec_model():
-  """Get OpenSpec model from environment or use default.
+    """Get OpenSpec model from environment or use default.
 
-  Returns:
-    str: Model identifier for the OpenSpec agent
+    Returns:
+      str: Model identifier for the OpenSpec agent
 
-  Environment Variables:
-    OPENSPEC_MODEL: Override the default model selection
-  """
-  return os.environ.get("OPENSPEC_MODEL", "iflow/Qwen3-Coder")
+    Environment Variables:
+      OPENSPEC_MODEL: Override the default model selection
+    """
+    return os.environ.get("OPENSPEC_MODEL", "iflow/Qwen3-Coder")
 
 
 class OpenSpecAgent(LlmAgent):
-  """OpenSpec agent that uses OpenSpec workflow.
+    """OpenSpec agent that uses OpenSpec workflow.
 
-  This agent understands the OpenSpec spec-driven development methodology
-  and helps developers follow the proposal → review → implement → archive
-  workflow. It can read and interpret OpenSpec file structures, execute
-  OpenSpec CLI commands, and provide guidance on best practices.
+    This agent understands the OpenSpec spec-driven development methodology
+    and helps developers follow the proposal → review → implement → archive
+    workflow. It can read and interpret OpenSpec file structures, execute
+    OpenSpec CLI commands, and provide guidance on best practices.
 
-  Attributes:
-    name: Agent identifier
-    model: LLM model to use for generation
-    instruction: System instruction explaining OpenSpec concepts and workflow
-    description: Brief description of agent capabilities
-  """
-
-  def __init__(self, **kwargs):
-    """Initialize the OpenSpec agent with tools and instructions.
-
-    Args:
-      **kwargs: Additional arguments passed to LlmAgent constructor
+    Attributes:
+      name: Agent identifier
+      model: LLM model to use for generation
+      instruction: System instruction explaining OpenSpec concepts and workflow
+      description: Brief description of agent capabilities
     """
-    instruction = """
-You are an OpenSpec agent that helps with spec-driven development using the OpenSpec toolkit.
+
+    def __init__(self, **kwargs):
+        """Initialize the OpenSpec agent with tools and instructions.
+
+        Args:
+          **kwargs: Additional arguments passed to LlmAgent constructor
+        """
+        instruction = """
+You are an OpenSpec agent that helps with spec-driven development for both software 
+and hardware projects using the OpenSpec toolkit.
 
 ## OpenSpec Overview
 
@@ -111,6 +180,74 @@ The OpenSpec workflow follows four main phases:
    - Update the source-of-truth specs
    - Move change folder to openspec/changes/archive/
    - Ready for the next feature
+
+## Hardware Device Modeling with Simics
+
+**REQUIREMENTS**: Simics 7.x and DML 1.4 are required for hardware device modeling.
+
+When working on hardware device models (detected by keywords like "processor", 
+"device", "register", "DML", "watchdog timer", etc.), you have access to Simics MCP tools:
+
+### Simics Project Structure
+```
+project_root/
+├── modules/
+│   └── <device-name>/
+│       ├── <device-name>.dml      # Main device implementation
+│       ├── registers.dml          # Register definitions
+│       ├── interfaces.dml         # External interfaces
+│       ├── utility.dml            # Common utilities
+│       └── test/
+│           ├── test_registers.py  # Register tests
+│           ├── test_interfaces.py # Interface tests
+│           └── s-<device-name>.py # Main test script
+```
+
+### Simics MCP Tools Available
+
+**Project Management:**
+- `get_simics_version()` - Verify Simics installation
+- `create_simics_project(project_name, project_path)` - Create project structure
+- `add_dml_device_skeleton(project_path, device_name)` - Add device template
+
+**Build & Test:**
+- `build_simics_project(project_path, module=None)` - Build device module
+- `run_simics_test(project_path, suite=None)` - Run test suites
+
+**Package Management:**
+- `search_packages(query)` - Search available Simics packages
+- `list_installed_packages()` - List installed packages
+
+**Documentation Search (RAG):**
+- `perform_rag_query(query, source_type, match_count)` - Search Simics documentation
+  - `source_type="dml"` - Search DML 1.4 documentation and examples
+  - `source_type="python"` - Search Simics Python API documentation
+  - `source_type="docs"` - Search general Simics documentation
+  - `source_type="all"` - Search all available sources
+
+### Hardware Device Workflow
+
+1. **Research Phase**: Use `perform_rag_query()` to search DML documentation and examples
+2. **Specification Phase**: Define register map, interfaces, and behavior
+3. **Setup Phase**: Use `create_simics_project()` and `add_dml_device_skeleton()`
+4. **TDD Phase**: Write tests for registers and interfaces first
+5. **Implementation Phase**: Implement DML files (registers.dml, interfaces.dml, device.dml)
+   - Use `perform_rag_query(source_type="dml")` for DML syntax questions
+   - Use `perform_rag_query(source_type="python")` for Python API questions
+6. **Validation Phase**: Use `build_simics_project()` and `run_simics_test()`
+7. **Integration Phase**: Test device in full system context
+
+### DML 1.4 Best Practices (Required)
+
+**IMPORTANT**: All device models MUST use DML 1.4 syntax. DML 1.2 is not supported.
+
+- **Software-Visible Behavior**: Model only externally observable functionality
+- **Register Accuracy**: All registers must match hardware specification exactly
+- **Side Effects**: Implement in `write_register()` and `read_register()` methods
+- **Attributes**: Use for internal state and checkpointing
+- **Interfaces**: Implement in `connect` blocks for device communication
+- **Events**: Use for asynchronous behavior and timing
+- **DML 1.4 Syntax**: Use modern DML 1.4 constructs (not legacy DML 1.2)
 
 ## Directory Structure
 
@@ -152,6 +289,7 @@ You can execute these commands using the bash_command tool:
 
 You have access to these tools for OpenSpec operations:
 
+**File Operations:**
 - **read_file(file_path)**: Read file contents from the filesystem
   - Use to read AGENTS.md, specs, proposals, tasks, etc.
   - Provide absolute or relative file paths
@@ -166,6 +304,17 @@ You have access to these tools for OpenSpec operations:
   - Use to check directory structure
   - Specify working_directory for context
 
+**Simics Tools (for hardware projects):**
+- All Simics MCP tools listed above (if Simics MCP server is running)
+- Tools gracefully degrade if server unavailable - software projects work normally
+
+**Documentation Search (for hardware projects):**
+- **perform_rag_query(query, source_type, match_count)**: Search Simics documentation
+  - Use this tool when you need DML syntax examples
+  - Use this tool when you need Python API documentation
+  - Use this tool when you need Simics best practices
+  - Example: `perform_rag_query("DML register definition syntax", source_type="dml")`
+
 ## Best Practices
 
 Follow these best practices when working with OpenSpec:
@@ -178,6 +327,9 @@ Follow these best practices when working with OpenSpec:
 6. **Keep specs focused** on WHAT and WHY, not HOW
 7. **Make specs testable** with clear scenarios and acceptance criteria
 8. **Archive completed work** to keep the change folder clean
+9. **For hardware projects**: Include register maps and interface definitions in specs
+10. **For hardware projects**: Follow test-driven development - tests before implementation
+11. **For hardware projects**: Use Simics MCP tools for automated project setup and validation
 
 ## Working with Change Proposals
 
@@ -210,26 +362,36 @@ high-quality specifications before writing code. Always emphasize the importance
 of clear, testable requirements and the proposal → review → implement → archive cycle.
 """
 
-    # Add OpenSpec toolset to available tools
-    tools = kwargs.get("tools", [])
-    tools.append(create_openspec_toolset())
-    kwargs["tools"] = tools
+        # Add OpenSpec toolset to available tools
+        tools = kwargs.get("tools", [])
+        tools.append(create_openspec_toolset())
 
-    # Remove name and model from kwargs to avoid conflicts
-    agent_name = kwargs.pop("name", "openspec_agent")
-    agent_model = kwargs.pop("model", get_openspec_model())
+        # Try to add Simics MCP tools (includes both Simics and RAG tools)
+        try:
+            from .simics_mcp_tools import create_simics_mcp_toolset
 
-    super().__init__(
-      name=agent_name,
-      model=agent_model,
-      instruction=instruction,
-      description="OpenSpec agent for spec-driven development",
-      **kwargs
-    )
+            tools.append(create_simics_mcp_toolset())
+            print(
+                "✓ Simics MCP tools loaded successfully (includes RAG documentation search)"
+            )
+        except Exception as e:
+            print(f"ℹ Simics MCP tools not available: {e}")
+            print("  (Software projects will work normally)")
+
+        kwargs["tools"] = tools
+
+        # Remove name and model from kwargs to avoid conflicts
+        agent_name = kwargs.pop("name", "openspec_agent")
+        agent_model = kwargs.pop("model", get_openspec_model())
+
+        super().__init__(
+            name=agent_name,
+            model=agent_model,
+            instruction=instruction,
+            description="OpenSpec agent for spec-driven development (software and hardware)",
+            **kwargs,
+        )
 
 
 # Create the root agent instance for ADK to discover
-root_agent = OpenSpecAgent(
-  name="openspec_agent",
-  model=get_openspec_model()
-)
+root_agent = OpenSpecAgent(name="openspec_agent", model=get_openspec_model())
