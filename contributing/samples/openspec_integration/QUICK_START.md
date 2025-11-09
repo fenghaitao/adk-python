@@ -3,8 +3,11 @@
 ## 30-Second Start
 
 ```bash
-# From the adk-python repository root
+# From the adk-python repository root (uses default prompt)
 ./run_openspec.sh my_project
+
+# Or pure interactive mode
+./run_openspec.sh my_project --interactive
 
 # Or with session saving for resuming later
 ./run_openspec.sh my_project --save-session
@@ -14,10 +17,12 @@ That's it! The script will:
 1. ✅ Check prerequisites (OpenSpec CLI, ADK)
 2. ✅ Initialize OpenSpec project structure
 3. ✅ Launch the ADK agent
-4. ✅ Automatically help you populate project.md with project details
+4. ✅ Automatically help you populate project.md (unless `--interactive` is used)
 5. ✅ Optionally save session for resuming
 
 **Default Prompt**: The agent automatically asks to help fill out `openspec/project.md` with your project details, tech stack, and conventions. This establishes important context before creating change proposals.
+
+**Interactive Mode**: Use `--interactive` to skip the default prompt and start with a blank slate where you can type your own queries.
 
 ## First Interaction
 

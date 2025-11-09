@@ -67,6 +67,7 @@ OPTIONS:
                       Allows resuming work later with --resume
     --resume          Resume from existing session file
                       Requires PROJECT_NAME_openspec.session.json to exist
+    --interactive     Skip default prompt and start in pure interactive mode
     --help, -h        Show this help message and exit
 
 OUTPUT FILES:
@@ -75,14 +76,20 @@ OUTPUT FILES:
     - adk_openspec_agent/PROJECT_NAME_openspec.session.txt (human-readable dump)
 
 EXAMPLES:
-    # Basic usage with default project name
+    # Basic usage with default project name (uses default prompt)
     ./run_openspec.sh
 
-    # Create project with custom name and prompt
+    # Pure interactive mode without default prompt
+    ./run_openspec.sh myapi --interactive
+
+    # Create project with custom prompt
     ./run_openspec.sh myapi "Create a user authentication feature"
 
     # Save session for later resuming
     ./run_openspec.sh myapi "Create REST API" --save-session
+
+    # Interactive mode with session saving
+    ./run_openspec.sh myapi --interactive --save-session
 
     # Use specific model and save session
     ./run_openspec.sh myapi --model iflow/qwen3-coder-plus --save-session
@@ -149,6 +156,7 @@ INITIAL_PROMPT=""
 MODEL=""
 SAVE_SESSION=false
 RESUME_SESSION=false
+NO_PROMPT=false
 
 # Process all arguments
 while [[ $# -gt 0 ]]; do
@@ -174,6 +182,10 @@ while [[ $# -gt 0 ]]; do
             RESUME_SESSION=true
             shift
             ;;
+        --interactive)
+            NO_PROMPT=true
+            shift
+            ;;
         *)
             if [ -z "$PROJECT_NAME" ]; then
                 PROJECT_NAME="$1"
@@ -189,8 +201,8 @@ done
 PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
 MODEL="${MODEL:-iflow/Qwen3-Coder}"
 
-# Set default prompt if not provided and not in resume mode
-if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ]; then
+# Set default prompt if not provided and not in resume mode and not explicitly skipped
+if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ] && [ "$NO_PROMPT" = false ]; then
     INITIAL_PROMPT="Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
 fi
 
