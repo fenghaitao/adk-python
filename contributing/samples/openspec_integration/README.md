@@ -480,12 +480,241 @@ git push origin feature/my-feature
 # 5. Merge to main with updated specs
 ```
 
+## Simics Hardware Device Modeling
+
+The OpenSpec integration supports hardware device modeling using Simics and DML 1.4.
+
+### Prerequisites for Simics Projects
+
+1. **Simics Installation**: Valid Simics 7.x installation (required)
+2. **DML Version**: DML 1.4 language support (required)
+3. **Simics MCP Server**: Running on `http://127.0.0.1:8051/sse`
+4. **Python Environment**: Same environment used for ADK
+
+### Simics MCP Server Setup
+
+The Simics MCP server must be running before using hardware device features.
+
+**Start the Server:**
+```bash
+# Assuming simics-mcp-server is in a sibling directory or accessible
+cd path/to/simics-mcp-server
+python src/simics_mcp_server/server.py --transport sse --port 8051
+```
+
+**Verify Connection:**
+The agent will automatically attempt to connect when started. You'll see:
+```
+✓ Simics MCP tools loaded successfully (includes RAG documentation search)
+```
+
+If the server is not available:
+```
+ℹ Simics MCP tools not available: [connection error]
+  (Software projects will work normally)
+```
+
+### Simics Workflow Example
+
+#### 1. Create Hardware Device Change Proposal
+
+```
+You: I want to create an ARM watchdog timer device model with timeout and reset functionality.
+     Please create an OpenSpec change proposal for this Simics device.
+
+Agent: I'll create an OpenSpec change proposal for the watchdog timer device.
+       *Detects hardware keywords: "watchdog timer", "device model"*
+       *Creates openspec/changes/add-watchdog-timer/ with:*
+       - proposal.md: Explains the watchdog timer feature
+       - specs/watchdog-timer/spec.md: Hardware requirements with register map
+       - design.md: DML implementation approach and Simics project structure
+       - tasks.md: Implementation tasks using Simics MCP tools
+```
+
+#### 2. Review Hardware Specifications
+
+The spec delta will include hardware-specific requirements:
+
+```markdown
+# Delta for Watchdog Timer
+
+## ADDED Requirements
+
+### Requirement: Watchdog Timer Control Register
+The device SHALL provide a 32-bit control register at offset 0x00.
+
+#### Scenario: Enable watchdog
+- WHEN software writes 1 to bit 0 of the control register
+- THEN the watchdog timer SHALL start counting
+- AND the device SHALL generate an interrupt on first timeout
+
+### Requirement: Watchdog Timer Load Register
+The device SHALL provide a 32-bit load register at offset 0x04.
+
+#### Scenario: Set timeout value
+- WHEN software writes a value to the load register
+- THEN the watchdog timer SHALL use that value as the timeout period
+- AND the value SHALL be decremented each clock cycle when enabled
+```
+
+#### 3. Implement Using Simics MCP Tools
+
+The tasks.md will include Simics-specific tasks:
+
+```markdown
+# Implementation Tasks
+
+## 1. Setup Phase
+- [ ] 1.1 Verify Simics installation using `get_simics_version()`
+- [ ] 1.2 Create project structure using `create_simics_project(project_name="watchdog-timer", project_path=".")`
+- [ ] 1.3 Add device skeleton using `add_dml_device_skeleton(project_path=".", device_name="watchdog-timer")`
+
+## 2. Test-Driven Development
+- [ ] 2.1 Write register access tests in modules/watchdog-timer/test/test_registers.py
+- [ ] 2.2 Write timeout behavior tests in modules/watchdog-timer/test/test_timeout.py
+- [ ] 2.3 Write interrupt tests in modules/watchdog-timer/test/test_interrupts.py
+
+## 3. Implementation
+- [ ] 3.1 Implement register definitions in modules/watchdog-timer/registers.dml
+- [ ] 3.2 Implement timer logic in modules/watchdog-timer/watchdog-timer.dml
+- [ ] 3.3 Build device module using `build_simics_project(project_path=".", module="watchdog-timer")`
+
+## 4. Validation
+- [ ] 4.1 Run register tests using `run_simics_test(project_path=".", suite="test_registers")`
+- [ ] 4.2 Run full test suite using `run_simics_test(project_path=".", suite="all")`
+```
+
+#### 4. Using RAG Documentation Search
+
+During implementation, use the RAG tool to search Simics documentation:
+
+```
+You: How do I define a register in DML 1.4?
+
+Agent: Let me search the DML documentation for you.
+       *Uses: perform_rag_query("register definition syntax", source_type="dml")*
+       
+       In DML 1.4, you define registers using the `register` keyword...
+```
+
+```
+You: How do I implement a read callback for a register?
+
+Agent: *Uses: perform_rag_query("register read callback", source_type="dml")*
+       
+       You can implement a read callback using the `read` method...
+```
+
+#### 5. Archive Completed Device
+
+```
+You: The watchdog timer device is complete and tested. Please archive the change.
+
+Agent: I'll archive the add-watchdog-timer change.
+       *Runs: openspec archive add-watchdog-timer --yes*
+       ✓ Device implementation archived
+       ✓ Specs updated in openspec/specs/watchdog-timer/
+       ✓ Ready for the next hardware device!
+```
+
+### Simics Project Structure
+
+Hardware device projects follow the standard Simics structure:
+
+```
+project_root/
+├── AGENTS.md                           # OpenSpec workflow instructions
+├── openspec/
+│   ├── project.md                      # Project context
+│   ├── specs/                          # Current specifications
+│   │   └── <device-name>/
+│   │       └── spec.md                 # Device specification
+│   └── changes/                        # Change proposals
+│       └── add-<device-name>/
+│           ├── proposal.md             # Change proposal
+│           ├── design.md               # Technical design
+│           ├── tasks.md                # Implementation tasks
+│           └── specs/
+│               └── <device-name>/
+│                   └── spec.md         # Spec delta
+├── modules/                            # Simics device modules
+│   └── <device-name>/
+│       ├── <device-name>.dml           # Main device
+│       ├── registers.dml               # Register definitions
+│       ├── interfaces.dml              # External interfaces
+│       ├── utility.dml                 # Utilities
+│       └── test/
+│           ├── test_registers.py       # Register tests
+│           ├── test_interfaces.py      # Interface tests
+│           └── s-<device-name>.py      # Main test script
+└── Makefile                            # Simics build configuration
+```
+
+### Troubleshooting Simics Integration
+
+**Issue**: Simics MCP tools not available
+
+**Solution**:
+1. Verify Simics 7.x is installed and in PATH
+2. Check that Simics MCP server is running on port 8051
+3. Ensure Python environment has required dependencies
+4. Software projects will work normally without Simics tools
+
+**Issue**: Device build fails
+
+**Solution**:
+1. Check DML syntax errors in device files
+2. Verify register definitions match specification
+3. Use `build_simics_project()` to see detailed error messages
+4. Use `perform_rag_query(source_type="dml")` to search for DML syntax examples
+
+**Issue**: Tests fail
+
+**Solution**:
+1. Verify test expectations match device behavior
+2. Check register read/write operations
+3. Use Simics logging to debug device behavior
+4. Run individual test suites to isolate issues
+
+**Issue**: Simics 7.x or DML 1.4 not available
+
+**Solution**:
+1. Simics 7.x is required (not optional) for hardware device modeling
+2. DML 1.4 is required (not optional) - DML 1.2 is not supported
+3. Verify Simics version using `get_simics_version()` tool
+4. Upgrade Simics installation if using older version
+
+### RAG Documentation Search
+
+The Simics MCP server provides RAG (Retrieval-Augmented Generation) documentation search:
+
+**Search DML Documentation:**
+```python
+perform_rag_query("register definition syntax", source_type="dml")
+```
+
+**Search Python API Documentation:**
+```python
+perform_rag_query("create simulation object", source_type="python")
+```
+
+**Search General Simics Documentation:**
+```python
+perform_rag_query("checkpoint management", source_type="docs")
+```
+
+**Search All Sources:**
+```python
+perform_rag_query("device modeling best practices", source_type="all")
+```
+
 ## Related Resources
 
 - [OpenSpec Documentation](https://github.com/Fission-AI/OpenSpec)
 - [ADK Documentation](https://github.com/google/adk-python)
 - [spec-kit Integration](../spec_kit_integration/) - Alternative approach for greenfield projects
 - [AGENTS.md Convention](https://agents.md/) - Universal AI agent instructions
+- [Simics Documentation](https://www.intel.com/content/www/us/en/developer/articles/tool/simics-simulator.html) - Intel Simics simulator
 
 ## License
 
