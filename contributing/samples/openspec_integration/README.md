@@ -89,6 +89,15 @@ The easiest way to get started is using the `run_openspec.sh` script:
 
 # Non-interactive mode with initial prompt
 ./run_openspec.sh my_project "Create a user authentication feature"
+
+# Save session for later resuming
+./run_openspec.sh my_project --save-session
+
+# Resume from saved session
+./run_openspec.sh my_project --resume
+
+# Use specific model
+./run_openspec.sh my_project --model iflow/qwen3-coder-plus --save-session
 ```
 
 The script will:
@@ -96,6 +105,7 @@ The script will:
 2. Initialize an OpenSpec project with the specified name
 3. Create the OpenSpec directory structure
 4. Launch the ADK agent in the project directory
+5. Optionally save session for resuming later
 
 ### Manual Initialization
 
@@ -361,19 +371,38 @@ Agent: *Runs: openspec archive add-product-search --yes*
 
 ### Custom Model Configuration
 
-Override the default model using an environment variable:
+Override the default model using the `--model` flag:
+
+```bash
+./run_openspec.sh my_project --model iflow/qwen3-coder-plus
+./run_openspec.sh my_project --model github_copilot/claude-sonnet-4
+```
+
+Or use an environment variable:
 
 ```bash
 export OPENSPEC_MODEL="gemini-2.0-flash-exp"
 ./run_openspec.sh my_project
 ```
 
-Or set it in your shell profile for persistence:
+### Session Management
+
+Save and resume your work sessions:
 
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
-export OPENSPEC_MODEL="gemini-2.0-flash-exp"
+# Save session while working
+./run_openspec.sh my_project --save-session
+
+# Resume from saved session
+./run_openspec.sh my_project --resume
+
+# Resume with different model
+./run_openspec.sh my_project --resume --model github_copilot/claude-sonnet-4
 ```
+
+Session files are saved in:
+- `adk_openspec_agent/PROJECT_NAME_openspec.session.json` - Raw session data
+- `adk_openspec_agent/PROJECT_NAME_openspec.session.txt` - Human-readable dump
 
 ### Integration with CI/CD
 

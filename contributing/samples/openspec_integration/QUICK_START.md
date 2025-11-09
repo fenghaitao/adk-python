@@ -5,12 +5,16 @@
 ```bash
 # From the adk-python repository root
 ./run_openspec.sh my_project
+
+# Or with session saving for resuming later
+./run_openspec.sh my_project --save-session
 ```
 
 That's it! The script will:
 1. ✅ Check prerequisites (OpenSpec CLI, ADK)
 2. ✅ Initialize OpenSpec project structure
 3. ✅ Launch the ADK agent
+4. ✅ Optionally save session for resuming
 
 ## First Interaction
 
@@ -80,9 +84,26 @@ my_project/
 - Check [Troubleshooting](README.md#troubleshooting) for common issues
 - See [Examples](README.md#examples) for real-world usage patterns
 
+## Session Management
+
+Save your work and resume later:
+
+```bash
+# Save session
+./run_openspec.sh my_project --save-session
+
+# Resume later
+./run_openspec.sh my_project --resume
+
+# Use different model when resuming
+./run_openspec.sh my_project --resume --model iflow/qwen3-coder-plus
+```
+
 ## Tips
 
 - Always read `AGENTS.md` first to understand project conventions
 - Use spec deltas (ADDED/MODIFIED/REMOVED) for clarity
 - Validate specs before implementation
 - Archive completed work to keep changes/ clean
+- Save sessions with `--save-session` for long-running work
+- Resume sessions with `--resume` to continue where you left off
