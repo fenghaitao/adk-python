@@ -82,7 +82,12 @@ setup_submodule_env() {
             print_status "Installing package in development mode..."
             # Special handling for simics-mcp-server which needs torch-backend cpu
             if [[ "$submodule_path" == *"simics-mcp-server"* ]]; then
+                # Install sub-packages first (with their own dependencies)
+                # This ensures all required dependencies are available before installing main package
                 uv pip install --torch-backend cpu -e ./mcp-crawl4ai-rag
+                uv pip install -e ./mcp-mem0
+                
+                # Install main package (lightweight, depends on sub-packages being available)
                 uv pip install -e .
             else
                 uv pip install -e .
@@ -118,15 +123,15 @@ setup_submodule_env() {
                         fi
                     else
                         print_status "No sudo permission, running install_deps_without_sudo.py..."
-                        if [ -f "install_deps_without_sudo.py" ]; then
-                            .venv/bin/python install_deps_without_sudo.py
+                        if [ -f "mcp-crawl4ai-rag/install_deps_without_sudo.py" ]; then
+                            .venv/bin/python mcp-crawl4ai-rag/install_deps_without_sudo.py
                             if [ $? -eq 0 ]; then
                                 print_success "install_deps_without_sudo.py completed successfully"
                             else
                                 print_error "install_deps_without_sudo.py failed"
                             fi
                         else
-                            print_warning "install_deps_without_sudo.py not found in $submodule_path"
+                            print_warning "mcp-crawl4ai-rag/install_deps_without_sudo.py not found in $submodule_path"
                         fi
                     fi
                 fi
