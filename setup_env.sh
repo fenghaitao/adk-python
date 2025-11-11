@@ -124,7 +124,7 @@ setup_submodule_env() {
                     else
                         print_status "No sudo permission, running install_deps_without_sudo.py..."
                         if [ -f "mcp-crawl4ai-rag/install_deps_without_sudo.py" ]; then
-                            .venv/bin/python mcp-crawl4ai-rag/install_deps_without_sudo.py
+                            uv run python mcp-crawl4ai-rag/install_deps_without_sudo.py
                             if [ $? -eq 0 ]; then
                                 print_success "install_deps_without_sudo.py completed successfully"
                             else
