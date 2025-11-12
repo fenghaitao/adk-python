@@ -16,7 +16,7 @@
 #
 # This script initializes an OpenSpec project and runs the ADK agent with
 # OpenSpec integration. It supports both TypeScript CLI (openspec) and
-# Python port (uvx openspec) for initialization.
+# Python port for initialization.
 #
 # Session files are saved in: adk_openspec_agent/PROJECT_NAME_openspec.session.json
 # Human-readable dumps: adk_openspec_agent/PROJECT_NAME_openspec.session.txt
@@ -68,6 +68,7 @@ OPTIONS:
     --resume          Resume from existing session file
                       Requires PROJECT_NAME_openspec.session.json to exist
     --interactive     Skip default prompt and start in pure interactive mode
+    --force-python    Force use of Python port instead of TypeScript CLI
     --help, -h        Show this help message and exit
 
 OUTPUT FILES:
@@ -121,10 +122,28 @@ done
 
 # Function to check if OpenSpec CLI is available
 check_openspec_cli() {
+    # Check if we have the Python port available locally
+    if [ -f "$SCRIPT_DIR/OpenSpec/python_port/.venv/bin/openspec" ]; then
+        PYTHON_AVAILABLE=true
+    else
+        PYTHON_AVAILABLE=false
+    fi
+    
+    # If force-python flag is set, only check for Python version
+    if [ "$FORCE_PYTHON" = true ]; then
+        if [ "$PYTHON_AVAILABLE" = true ]; then
+            echo "Python"
+            return 0
+        else
+            return 1
+        fi
+    fi
+    
+    # Default behavior - prefer TypeScript (via npm), then fallback to Python port
     if command -v openspec &> /dev/null; then
         echo "TypeScript"
         return 0
-    elif command -v uvx &> /dev/null; then
+    elif [ "$PYTHON_AVAILABLE" = true ]; then
         echo "Python"
         return 0
     else
@@ -157,6 +176,7 @@ MODEL=""
 SAVE_SESSION=false
 RESUME_SESSION=false
 NO_PROMPT=false
+FORCE_PYTHON=false
 
 # Process all arguments
 while [[ $# -gt 0 ]]; do
@@ -184,6 +204,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --interactive)
             NO_PROMPT=true
+            shift
+            ;;
+        --force-python)
+            FORCE_PYTHON=true
             shift
             ;;
         *)
@@ -235,17 +259,17 @@ if [ $? -ne 0 ]; then
     echo ""
     echo "Option 2: Python port (requires uv)"
     echo "  # Install uv first: https://docs.astral.sh/uv/getting-started/installation/"
-    echo "  # Then OpenSpec will be available via: uvx openspec"
+    echo "  # Then OpenSpec will be available via: openspec"
     echo ""
     exit 1
 fi
 
 if [ "$OPENSPEC_TYPE" = "TypeScript" ]; then
-    echo -e "${GREEN}✅ Found OpenSpec TypeScript CLI${NC}"
+    echo -e "${GREEN}✅ Using OpenSpec TypeScript (npm)${NC}"
     OPENSPEC_CMD="openspec"
 else
-    echo -e "${GREEN}✅ Found OpenSpec Python port (uvx)${NC}"
-    OPENSPEC_CMD="uvx openspec"
+    echo -e "${GREEN}✅ Using OpenSpec Python port${NC}"
+    OPENSPEC_CMD="$SCRIPT_DIR/OpenSpec/python_port/.venv/bin/openspec"
 fi
 echo ""
 
@@ -275,11 +299,7 @@ else
     fi
 
     echo -e "${BLUE}🚀 Initializing OpenSpec project...${NC}"
-    if [ "$OPENSPEC_TYPE" = "TypeScript" ]; then
-        $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
-    else
-        uvx openspec init "$PROJECT_NAME" --tools none
-    fi
+    $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}❌ Failed to initialize OpenSpec project${NC}"
