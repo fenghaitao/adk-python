@@ -1,15 +1,16 @@
 #!/bin/bash
 
 # Phased Spec-Kit Runner Script - Saves session for each phase
-# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--model MODEL] [--skip-plan] [--skip-tasks] [--skip-implement] [--resume PHASE]
+# Usage: ./run_spec_kit_phased.sh [PROJECT_NAME] [INITIAL_PROMPT] [--model MODEL] [--port PORT] [--skip-plan] [--skip-tasks] [--skip-implement] [--resume PHASE]
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API for user management"
 # Example: ./run_spec_kit_phased.sh myproject "Create a REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks
-# Example: ./run_spec_kit_phased.sh myproject --resume plan
+# Example: ./run_spec_kit_phased.sh myproject --resume plan --port 8052
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode for each phase
 # 
 # Options:
 #   --model MODEL    Choose chat model: iflow/qwen3-coder-plus, iflow/qwen3-coder, github_copilot/claude-sonnet-4, github_copilot/claude-sonnet-4.5, github_copilot/grok-code-fast-1
+#   --port PORT      MCP server port (default: 8051)
 #   --resume PHASE   Resume from a specific phase: plan, tasks, implement (requires existing session files)
 #   --skip-plan      Skip the planning phase
 #   --skip-tasks     Skip the task breakdown phase  
@@ -60,6 +61,8 @@ OPTIONS:
                       - github_copilot/claude-sonnet-4
                       - github_copilot/claude-sonnet-4.5
                       - github_copilot/grok-code-fast-1
+    --port PORT       MCP server port (default: 8051)
+                      Useful for WSL2 when default port has issues
     --resume PHASE    Resume from a specific phase (plan, tasks, implement)
                       Requires existing session files from previous runs
                       Note: Will run the specified phase and all subsequent phases
@@ -99,11 +102,14 @@ EXAMPLES:
     # Use specific model
     ./run_spec_kit_phased.sh myapi "Create REST API" --model iflow/qwen3-coder
 
+    # Use custom port (useful for WSL2)
+    ./run_spec_kit_phased.sh myapi "Create REST API" --port 8052
+
     # Use Claude model and skip planning phases
     ./run_spec_kit_phased.sh myapi "Create REST API" --model github_copilot/claude-sonnet-4.5 --skip-plan --skip-tasks
 
-    # Use Grok model
-    ./run_spec_kit_phased.sh myapi "Create REST API" --model github_copilot/grok-code-fast-1
+    # Use Grok model with custom port
+    ./run_spec_kit_phased.sh myapi "Create REST API" --model github_copilot/grok-code-fast-1 --port 8052
 
     # Only run specification phase with specific model
     ./run_spec_kit_phased.sh myapi "Create REST API" --model iflow/qwen3-coder-plus --skip-plan --skip-tasks --skip-implement
@@ -138,7 +144,8 @@ done
 
 # Function to check if MCP server is running
 check_mcp_server() {
-    if lsof -Pi :8051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    local port="${1:-8051}"
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         return 0  # Server is running
     else
         return 1  # Server is not running
@@ -190,6 +197,7 @@ echo ""
 PROJECT_NAME=""
 INITIAL_PROMPT=""
 MODEL=""
+MCP_PORT=""
 RESUME_PHASE=""
 SKIP_PLAN=false
 SKIP_TASKS=false
@@ -209,6 +217,14 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             MODEL="$2"
+            shift 2
+            ;;
+        --port)
+            if [ -z "$2" ]; then
+                echo "Error: --port requires a value"
+                exit 1
+            fi
+            MCP_PORT="$2"
             shift 2
             ;;
         --resume)
@@ -249,8 +265,15 @@ PROJECT_NAME="${PROJECT_NAME:-adk_spec_kit_project}"
 DEFAULT_PROMPT="Read the Simics WDT specification from ${SCRIPT_DIR}/simics-wdt-spec.md and the hardware specifications from ${SCRIPT_DIR}/wdt.md to create a comprehensive Simics watchdog timer device implementation."
 INITIAL_PROMPT="${INITIAL_PROMPT:-$DEFAULT_PROMPT}"
 
-# Set default model and validate
+# Set default model and port
 MODEL="${MODEL:-iflow/qwen3-coder-plus}"
+MCP_PORT="${MCP_PORT:-8051}"
+
+# Validate port number
+if ! [[ "$MCP_PORT" =~ ^[0-9]+$ ]] || [ "$MCP_PORT" -lt 1024 ] || [ "$MCP_PORT" -gt 65535 ]; then
+    echo "Error: Invalid port number '$MCP_PORT'. Must be between 1024 and 65535."
+    exit 1
+fi
 VALID_MODELS=("iflow/qwen3-coder-plus" "iflow/qwen3-coder" "github_copilot/claude-sonnet-4" "github_copilot/claude-sonnet-4.5" "github_copilot/grok-code-fast-1")
 
 # Validate model choice
@@ -308,21 +331,22 @@ fi
 
 echo "Project name: $PROJECT_NAME"
 echo "Model: $MODEL"
+echo "MCP Port: $MCP_PORT"
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
 fi
 
 # Start MCP servers after all argument validation is complete
 echo ""
-echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
-if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
+echo -e "${BLUE}🚀 Starting MCP servers on port $MCP_PORT...${NC}"
+if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh" "$MCP_PORT"; then
     echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
     
     # Quick verification
-    if check_mcp_server; then
-        echo -e "${GREEN}✅ MCP server confirmed running on port 8051${NC}"
+    if check_mcp_server "$MCP_PORT"; then
+        echo -e "${GREEN}✅ MCP server confirmed running on port $MCP_PORT${NC}"
     else
-        echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
+        echo -e "${RED}❌ MCP server not responding on port $MCP_PORT${NC}"
         exit 1
     fi
 
