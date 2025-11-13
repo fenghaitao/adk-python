@@ -1,10 +1,14 @@
 #!/bin/bash
 
 # Spec-Kit Runner Script
-# Usage: ./run_spec_kit.sh [PROJECT_NAME] [INITIAL_PROMPT]
+# Usage: ./run_spec_kit.sh [PROJECT_NAME] [INITIAL_PROMPT] [--port PORT]
 # Example: ./run_spec_kit.sh myproject "Create a REST API for user management"
+# Example: ./run_spec_kit.sh myproject "Create REST API" --port 8052
 # If no project name is provided, defaults to 'adk_spec_kit_project'
 # If no prompt is provided, starts interactive mode
+# 
+# Options:
+#   --port PORT      MCP server port (default: 8051)
 # 
 # NOTE: This script does NOT save sessions because:
 # - SequentialAgent does not support session saving (not an LlmAgent)
@@ -36,7 +40,8 @@ NC='\033[0m' # No Color
 
 # Function to check if MCP server is running
 check_mcp_server() {
-    if lsof -Pi :8051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    local port="${1:-8051}"
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         return 0  # Server is running
     else
         return 1  # Server is not running
@@ -79,16 +84,55 @@ echo "ADK directory: $SCRIPT_DIR"
 echo "Integration directory: $SPEC_KIT_INTEGRATION_DIR"
 echo ""
 
+# Parse command line arguments
+PROJECT_NAME=""
+INITIAL_PROMPT=""
+MCP_PORT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port)
+            if [ -z "$2" ]; then
+                echo "Error: --port requires a value"
+                exit 1
+            fi
+            MCP_PORT="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$PROJECT_NAME" ]; then
+                PROJECT_NAME="$1"
+            elif [ -z "$INITIAL_PROMPT" ]; then
+                INITIAL_PROMPT="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Set defaults
+PROJECT_NAME="${PROJECT_NAME:-adk_spec_kit_project}"
+MCP_PORT="${MCP_PORT:-8051}"
+
+# Validate port number
+if ! [[ "$MCP_PORT" =~ ^[0-9]+$ ]] || [ "$MCP_PORT" -lt 1024 ] || [ "$MCP_PORT" -gt 65535 ]; then
+    echo "Error: Invalid port number '$MCP_PORT'. Must be between 1024 and 65535."
+    exit 1
+fi
+
+# Export port as environment variable
+export MCP_PORT="$MCP_PORT"
+
 # Start MCP servers (start_mcp_servers.sh handles the waiting)
-echo -e "${BLUE}🚀 Starting MCP servers...${NC}"
-if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh"; then
+echo -e "${BLUE}🚀 Starting MCP servers on port $MCP_PORT...${NC}"
+if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh" "$MCP_PORT"; then
     echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
     
     # Quick verification
-    if check_mcp_server; then
-        echo -e "${GREEN}✅ MCP server confirmed running on port 8051${NC}"
+    if check_mcp_server "$MCP_PORT"; then
+        echo -e "${GREEN}✅ MCP server confirmed running on port $MCP_PORT${NC}"
     else
-        echo -e "${RED}❌ MCP server not responding on port 8051${NC}"
+        echo -e "${RED}❌ MCP server not responding on port $MCP_PORT${NC}"
         exit 1
     fi
 else
@@ -98,12 +142,8 @@ else
 fi
 echo ""
 
-# Get project name from first argument, default to 'adk_spec_kit_project' if not provided
-PROJECT_NAME="${1:-adk_spec_kit_project}"
-# Get initial prompt from second argument (optional)
-INITIAL_PROMPT="$2"
-
 echo "Project name: $PROJECT_NAME"
+echo "MCP Port: $MCP_PORT"
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
 fi

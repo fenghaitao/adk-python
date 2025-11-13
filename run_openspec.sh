@@ -4,12 +4,13 @@
 # Usage: ./run_openspec.sh [PROJECT_NAME] [INITIAL_PROMPT] [OPTIONS]
 # Example: ./run_openspec.sh myproject "Create a REST API for user management"
 # Example: ./run_openspec.sh myproject --model iflow/qwen3-coder-plus --save-session
-# Example: ./run_openspec.sh myproject --resume
+# Example: ./run_openspec.sh myproject --resume --port 8052
 # If no project name is provided, defaults to 'adk_openspec_project'
 # If no prompt is provided, starts interactive mode
 #
 # Options:
 #   --model MODEL       Choose chat model (default: iflow/Qwen3-Coder)
+#   --port PORT         MCP server port (default: 8051)
 #   --save-session      Save session to PROJECT_NAME_openspec.session.json
 #   --resume            Resume from existing session file
 #   --help, -h          Show help message
@@ -63,6 +64,8 @@ OPTIONS:
                       - github_copilot/claude-sonnet-4
                       - github_copilot/claude-sonnet-4.5
                       - github_copilot/grok-code-fast-1
+    --port PORT       MCP server port (default: 8051)
+                      Useful for WSL2 when default port has issues
     --save-session    Save session to PROJECT_NAME_openspec.session.json
                       Allows resuming work later with --resume
     --resume          Resume from existing session file
@@ -95,11 +98,14 @@ EXAMPLES:
     # Use specific model and save session
     ./run_openspec.sh myapi --model iflow/qwen3-coder-plus --save-session
 
+    # Use custom port (useful for WSL2)
+    ./run_openspec.sh myapi --port 8052
+
     # Resume from saved session
     ./run_openspec.sh myapi --resume
 
-    # Resume with different model
-    ./run_openspec.sh myapi --resume --model github_copilot/claude-sonnet-4
+    # Resume with different model and custom port
+    ./run_openspec.sh myapi --resume --model github_copilot/claude-sonnet-4 --port 8052
 
     # Show help
     ./run_openspec.sh --help
@@ -173,6 +179,7 @@ echo ""
 PROJECT_NAME=""
 INITIAL_PROMPT=""
 MODEL=""
+MCP_PORT=""
 SAVE_SESSION=false
 RESUME_SESSION=false
 NO_PROMPT=false
@@ -192,6 +199,14 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             MODEL="$2"
+            shift 2
+            ;;
+        --port)
+            if [ -z "$2" ]; then
+                echo "Error: --port requires a value"
+                exit 1
+            fi
+            MCP_PORT="$2"
             shift 2
             ;;
         --save-session)
@@ -224,17 +239,26 @@ done
 # Set defaults
 PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
 MODEL="${MODEL:-iflow/Qwen3-Coder}"
+MCP_PORT="${MCP_PORT:-8051}"
+
+# Validate port number
+if ! [[ "$MCP_PORT" =~ ^[0-9]+$ ]] || [ "$MCP_PORT" -lt 1024 ] || [ "$MCP_PORT" -gt 65535 ]; then
+    echo "Error: Invalid port number '$MCP_PORT'. Must be between 1024 and 65535."
+    exit 1
+fi
 
 # Set default prompt if not provided and not in resume mode and not explicitly skipped
 if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ] && [ "$NO_PROMPT" = false ]; then
     INITIAL_PROMPT="Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
 fi
 
-# Export model as environment variable
+# Export model and port as environment variables
 export OPENSPEC_MODEL="$MODEL"
+export MCP_PORT="$MCP_PORT"
 
 echo "Project name: $PROJECT_NAME"
 echo "Model: $MODEL"
+echo "MCP Port: $MCP_PORT"
 if [ "$SAVE_SESSION" = true ]; then
     echo "Session saving: ENABLED"
 fi
