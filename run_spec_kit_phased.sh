@@ -283,8 +283,9 @@ if [[ ! " ${VALID_MODELS[@]} " =~ " ${MODEL} " ]]; then
     exit 1
 fi
 
-# Export the model as environment variable for spec_kit integration
+# Export the model and port as environment variables for spec_kit integration
 export SPEC_KIT_MODEL="$MODEL"
+export MCP_PORT="$MCP_PORT"
 
 # Validate and handle resume phase
 if [ -n "$RESUME_PHASE" ]; then

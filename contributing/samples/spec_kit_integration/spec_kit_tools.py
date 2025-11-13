@@ -301,11 +301,20 @@ class SpecKitToolset(BaseToolset):
         return self.tools
 
 
-def create_simics_mcp_toolset() -> MCPToolset:
-    """Create a MCP toolset that connects to the simics-mcp-server with content truncation."""
-    print("Creating Simics MCP toolset...")
+def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
+    """Create a MCP toolset that connects to the simics-mcp-server with content truncation.
+    
+    Args:
+        port: MCP server port. If not provided, reads from MCP_PORT environment variable
+              or defaults to 8051.
+    """
+    # Get port from parameter, environment variable, or default
+    if port is None:
+        port = int(os.environ.get('MCP_PORT', '8051'))
+    
+    print(f"Creating Simics MCP toolset connecting to port {port}...")
     connection_params = SseConnectionParams(
-        url="http://127.0.0.1:8051/sse",
+        url=f"http://127.0.0.1:{port}/sse",
         headers={"Accept": "text/event-stream"},
         timeout=10.0,
         sse_read_timeout=300.0
