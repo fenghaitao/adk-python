@@ -526,12 +526,12 @@ if [ -n "$SPEC_FILE" ]; then
     export SPEC_FILE="$SPEC_FILE_BASENAME"
 fi
 
+# Define Simics agent directory for potential use
+SIMICS_AGENT_DIR="$SCRIPT_DIR/contributing/samples/simics_integration"
+
 # Create Simics agent configuration if DDM_XML, SPEC_FILE, or DEVICE_NAME is provided
 if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     echo -e "${BLUE}🔧 Configuring Simics integration for hardware development...${NC}"
-    
-    # Use the Simics integration agent instead of the default OpenSpec agent
-    SIMICS_AGENT_DIR="$SCRIPT_DIR/contributing/samples/simics_integration"
     
     if [ -d "$SIMICS_AGENT_DIR" ]; then
         echo -e "${GREEN}✅ Simics integration agent found${NC}"
@@ -561,48 +561,97 @@ fi
 # Create agent directory for session management
 mkdir -p "adk_openspec_agent"
 
-# Determine which agent to use based on hardware context
-if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
-    if [ -d "$SIMICS_AGENT_DIR" ]; then
-        echo -e "${BLUE}📋 Using Simics integration agent for hardware development${NC}"
-        cat > "adk_openspec_agent/agent.py" << EOF
+# Always use the standard OpenSpec agent for the main interactive session
+echo -e "${BLUE}📋 Using OpenSpec integration agent for main interactive session${NC}"
+cat > "adk_openspec_agent/agent.py" << EOF
 import sys
 import os
 
 # Add parent directory to path for spec_kit_integration imports
 sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
+
+# Import the OpenSpec agent directly
+sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
+from agent import root_agent
+EOF
+
+# Run Simics setup agent first if hardware development is detected
+if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+    if [ -d "$SIMICS_AGENT_DIR" ]; then
+        echo -e "${BLUE}🔧 Running Simics project setup first...${NC}"
+        
+        # Create temporary Simics setup agent
+        mkdir -p "adk_simics_setup_agent"
+        cat > "adk_simics_setup_agent/agent.py" << EOF
+import sys
+import os
+
+# Add parent directory to path for simics_integration imports
+sys.path.insert(0, os.path.dirname('$SIMICS_AGENT_DIR'))
 
 # Import the Simics integration agent
 sys.path.insert(0, '$SIMICS_AGENT_DIR')
 from agent import root_agent
 EOF
-    else
-        echo -e "${YELLOW}⚠️  Simics agent not available, using standard OpenSpec agent${NC}"
-        cat > "adk_openspec_agent/agent.py" << EOF
-import sys
-import os
 
-# Add parent directory to path for spec_kit_integration imports
-sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
+        # Prepare initial setup prompt for Simics
+        SIMICS_SETUP_PROMPT="I need to set up a Simics hardware development project integrated with this OpenSpec project. Please:
 
-# Import the OpenSpec agent directly
-sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
-from agent import root_agent
-EOF
+1. Create a simics-project/ directory in the current working directory
+2. Use the create_simics_project tool with project path: ./simics-project
+3. Use the add_dml_device_skeleton tool with project path: ./simics-project and device name: $DEVICE_NAME
+4. After setup is complete, explain:
+   - The created file structure
+   - How the Simics project integrates with the existing OpenSpec workflow
+   - Next steps for DML device development based on the available DDM XML and specification content
+   - Best practices for hardware modeling in this integrated environment
+
+Please proceed with the automated setup now.
+
+exit"
+
+        echo ""
+        echo -e "${BLUE}📋 Setting up Simics project structure for device: $DEVICE_NAME${NC}"
+        echo "   This will create the simics-project/ directory and DML device skeleton..."
+        echo "   Working directory: $(pwd)"
+        echo "   Simics agent path: $SIMICS_AGENT_DIR"
+        echo ""
+        
+        # Check if the Simics agent file exists
+        if [ ! -f "$SIMICS_AGENT_DIR/agent.py" ]; then
+            echo -e "${RED}❌ Simics agent.py not found at $SIMICS_AGENT_DIR/agent.py${NC}"
+            echo "   Skipping Simics setup..."
+        else
+            echo -e "${GREEN}✅ Simics agent.py found${NC}"
+            echo "   Running Simics setup..."
+            echo ""
+            
+            # Run Simics setup with the setup prompt and exit command
+            echo -e "${BLUE}Executing Simics setup agent...${NC}"
+            if { echo "$SIMICS_SETUP_PROMPT"; echo "exit"; } | $ADK_VENV/bin/adk run adk_simics_setup_agent 2>&1; then
+                echo ""
+                echo -e "${GREEN}✅ Simics setup agent completed${NC}"
+            else
+                echo ""
+                echo -e "${YELLOW}⚠️  Simics setup agent completed with warnings${NC}"
+            fi
+            
+            # Check if the simics-project directory was actually created
+            if [ -d "simics-project" ]; then
+                echo -e "${GREEN}✅ simics-project/ directory created successfully${NC}"
+                echo "   Contents: $(ls -la simics-project/ 2>/dev/null || echo 'Directory empty or inaccessible')"
+            else
+                echo -e "${RED}❌ simics-project/ directory was not created${NC}"
+                echo "   This may indicate an issue with the MCP tools or agent execution"
+            fi
+        fi
+        
+        # Keep the Simics setup agent for potential reuse or debugging
+        
+        echo ""
+        echo -e "${BLUE}🎯 Now launching main agent for interactive development...${NC}"
+        echo ""
     fi
-else
-    echo -e "${BLUE}📋 Using standard OpenSpec agent${NC}"
-    cat > "adk_openspec_agent/agent.py" << EOF
-import sys
-import os
-
-# Add parent directory to path for spec_kit_integration imports
-sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
-
-# Import the OpenSpec agent directly
-sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
-from agent import root_agent
-EOF
 fi
 
 echo "Running ADK with OpenSpec integration..."
