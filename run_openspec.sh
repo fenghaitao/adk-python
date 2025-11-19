@@ -526,129 +526,25 @@ if [ -n "$SPEC_FILE" ]; then
     export SPEC_FILE="$SPEC_FILE_BASENAME"
 fi
 
-# Set up Simics project if DDM_XML or SPEC_FILE is provided
-if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ]; then
-    echo -e "${BLUE}Setting up Simics project...${NC}"
+# Create Simics agent configuration if DDM_XML, SPEC_FILE, or DEVICE_NAME is provided
+if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+    echo -e "${BLUE}🔧 Configuring Simics integration for hardware development...${NC}"
     
-    # Create a Python script to call the MCP server
-    SETUP_SCRIPT=$(mktemp)
-    cat > "$SETUP_SCRIPT" << 'PYTHON_EOF'
-import sys
-import os
-import json
-import subprocess
-from pathlib import Path
-
-# Get the project path (current directory)
-project_path = os.getcwd()
-
-# Path to the Simics MCP server
-spec_kit_integration_dir = sys.argv[1]
-mcp_server_path = Path(spec_kit_integration_dir) / "simics-mcp-server" / "simics_mcp_server.py"
-
-if not mcp_server_path.exists():
-    print(f"Error: Simics MCP server not found at {mcp_server_path}", file=sys.stderr)
-    sys.exit(1)
-
-# Import the create_simics_project function directly
-sys.path.insert(0, str(mcp_server_path.parent))
-try:
-    from simics_mcp_server import create_simics_project
+    # Use the Simics integration agent instead of the default OpenSpec agent
+    SIMICS_AGENT_DIR="$SCRIPT_DIR/contributing/samples/simics_integration"
     
-    # Create the Simics project
-    result = create_simics_project(project_path)
-    result_data = json.loads(result)
-    
-    if "error" in result_data:
-        print(f"Error: {result_data['error']}", file=sys.stderr)
-        sys.exit(1)
-    else:
-        print(f"Success: {result_data.get('message', 'Simics project created')}")
-        sys.exit(0)
-        
-except ImportError as e:
-    print(f"Error importing Simics MCP server: {e}", file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f"Error creating Simics project: {e}", file=sys.stderr)
-    sys.exit(1)
-PYTHON_EOF
-
-    # Run the setup script
-    if python3 "$SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
-        echo -e "${GREEN}Simics project setup completed${NC}"
+    if [ -d "$SIMICS_AGENT_DIR" ]; then
+        echo -e "${GREEN}✅ Simics integration agent found${NC}"
+        echo "   The agent will help you set up Simics projects and DML device skeletons."
+        echo "   You can ask it to:"
+        echo "   • 'Create a new Simics project for my device'"
+        echo "   • 'Add a DML skeleton for the $DEVICE_NAME device'"
+        echo "   • 'Help me implement hardware registers from DDM XML'"
+        echo ""
     else
-        echo -e "${YELLOW}Warning: Simics project setup failed or not available${NC}"
-        echo "Continuing without Simics project setup..."
+        echo -e "${YELLOW}⚠️  Simics integration agent not found at $SIMICS_AGENT_DIR${NC}"
+        echo "   Continuing with standard OpenSpec agent..."
     fi
-    
-    # Clean up
-    rm -f "$SETUP_SCRIPT"
-fi
-
-# Set up device skeleton if DEVICE_NAME is provided
-if [ -n "$DEVICE_NAME" ]; then
-    echo -e "${BLUE}Setting up DML device skeleton...${NC}"
-    
-    # Create a Python script to call the MCP server
-    DEVICE_SETUP_SCRIPT=$(mktemp)
-    cat > "$DEVICE_SETUP_SCRIPT" << 'PYTHON_EOF'
-import sys
-import os
-import json
-from pathlib import Path
-
-# Get the project path (current directory)
-project_path = os.getcwd()
-
-# Get device name from environment
-device_name = os.environ.get('DEVICE_NAME')
-if not device_name:
-    print("Error: DEVICE_NAME not set", file=sys.stderr)
-    sys.exit(1)
-
-# Path to the Simics MCP server
-spec_kit_integration_dir = sys.argv[1]
-mcp_server_path = Path(spec_kit_integration_dir) / "simics-mcp-server" / "simics_mcp_server.py"
-
-if not mcp_server_path.exists():
-    print(f"Error: Simics MCP server not found at {mcp_server_path}", file=sys.stderr)
-    sys.exit(1)
-
-# Import the add_dml_device_skeleton function directly
-sys.path.insert(0, str(mcp_server_path.parent))
-try:
-    from simics_mcp_server import add_dml_device_skeleton
-    
-    # Add the DML device skeleton
-    result = add_dml_device_skeleton(project_path, device_name)
-    result_data = json.loads(result)
-    
-    if "error" in result_data:
-        print(f"Error: {result_data['error']}", file=sys.stderr)
-        sys.exit(1)
-    else:
-        print(f"Success: {result_data.get('message', f'Device skeleton {device_name} created')}")
-        sys.exit(0)
-        
-except ImportError as e:
-    print(f"Error importing Simics MCP server: {e}", file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f"Error creating device skeleton: {e}", file=sys.stderr)
-    sys.exit(1)
-PYTHON_EOF
-
-    # Run the device setup script
-    if python3 "$DEVICE_SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
-        echo -e "${GREEN}DML device skeleton '$DEVICE_NAME' created successfully${NC}"
-    else
-        echo -e "${YELLOW}Warning: DML device skeleton setup failed or not available${NC}"
-        echo "Continuing without device skeleton..."
-    fi
-    
-    # Clean up
-    rm -f "$DEVICE_SETUP_SCRIPT"
 fi
 
 # copy the ddm_xml file to {PROJECT_NAME}/modules/{DEVICE_NAME} if it was provided
@@ -664,7 +560,25 @@ fi
 
 # Create agent directory for session management
 mkdir -p "adk_openspec_agent"
-cat > "adk_openspec_agent/agent.py" << EOF
+
+# Determine which agent to use based on hardware context
+if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+    if [ -d "$SIMICS_AGENT_DIR" ]; then
+        echo -e "${BLUE}📋 Using Simics integration agent for hardware development${NC}"
+        cat > "adk_openspec_agent/agent.py" << EOF
+import sys
+import os
+
+# Add parent directory to path for spec_kit_integration imports
+sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
+
+# Import the Simics integration agent
+sys.path.insert(0, '$SIMICS_AGENT_DIR')
+from agent import root_agent
+EOF
+    else
+        echo -e "${YELLOW}⚠️  Simics agent not available, using standard OpenSpec agent${NC}"
+        cat > "adk_openspec_agent/agent.py" << EOF
 import sys
 import os
 
@@ -675,6 +589,21 @@ sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
 sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
 from agent import root_agent
 EOF
+    fi
+else
+    echo -e "${BLUE}📋 Using standard OpenSpec agent${NC}"
+    cat > "adk_openspec_agent/agent.py" << EOF
+import sys
+import os
+
+# Add parent directory to path for spec_kit_integration imports
+sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
+
+# Import the OpenSpec agent directly
+sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
+from agent import root_agent
+EOF
+fi
 
 echo "Running ADK with OpenSpec integration..."
 echo ""
