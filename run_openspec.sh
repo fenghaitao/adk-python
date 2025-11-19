@@ -9,7 +9,7 @@
 # If no prompt is provided, starts interactive mode
 #
 # Options:
-#   --model MODEL       Choose chat model (default: iflow/Qwen3-Coder)
+#   --model MODEL       Choose chat model (default: iflow/qwen3-coder-plus)
 #   --port PORT         MCP server port (default: 8051)
 #   --ddm_xml FILE      Register definition XML file with absolute path
 #   --spec FILE         Hardware specification file with absolute path
@@ -55,15 +55,15 @@ DESCRIPTION:
 POSITIONAL ARGUMENTS:
     PROJECT_NAME      Name of the project (default: 'adk_openspec_project')
     INITIAL_PROMPT    Initial prompt for the agent (optional)
-                      Default: "Please read openspec/project.md and help me 
-                      fill it out with details about my project, tech stack, 
+                      Default: "Please read this project first, then read openspec/project.md
+                      and help me fill it out with details about my project, tech stack,
                       and conventions"
 
 OPTIONS:
-    --model MODEL     Choose chat model (default: iflow/Qwen3-Coder)
+    --model MODEL     Choose chat model (default: iflow/qwen3-coder-plus)
                       Available models:
-                      - iflow/Qwen3-Coder
                       - iflow/qwen3-coder-plus
+                      - iflow/qwen3-coder
                       - github_copilot/claude-sonnet-4
                       - github_copilot/claude-sonnet-4.5
                       - github_copilot/grok-code-fast-1
@@ -213,7 +213,7 @@ while [[ $# -gt 0 ]]; do
         --model)
             if [ -z "$2" ]; then
                 echo "Error: --model requires a value"
-                echo "Available models: iflow/Qwen3-Coder, iflow/qwen3-coder-plus, github_copilot/claude-sonnet-4, etc."
+                echo "Available models: iflow/qwen3-coder-plus, iflow/qwen3-coder, github_copilot/claude-sonnet-4, etc."
                 exit 1
             fi
             MODEL="$2"
@@ -280,7 +280,7 @@ done
 
 # Set defaults
 PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
-MODEL="${MODEL:-iflow/Qwen3-Coder}"
+MODEL="${MODEL:-iflow/qwen3-coder-plus}"
 MCP_PORT="${MCP_PORT:-8051}"
 
 # Validate port number
@@ -291,7 +291,7 @@ fi
 
 # Set default prompt if not provided and not in resume mode and not explicitly skipped
 if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ] && [ "$NO_PROMPT" = false ]; then
-    INITIAL_PROMPT="Please read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
+    INITIAL_PROMPT="Please read this project first, then read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
 fi
 
 # Export model and port as environment variables
