@@ -334,6 +334,7 @@ def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
         "check_with_dmlc",
         "build_simics_project",
         "run_simics_test",
+        "generate_dml_registers",
 
         # RAG query tool for documentation and source code search
         "perform_rag_query",

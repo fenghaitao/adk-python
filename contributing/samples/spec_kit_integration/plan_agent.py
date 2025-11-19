@@ -61,19 +61,6 @@ Do NOT improvise. Do NOT create your own workflow. The command file contains ALL
 5. **Validate completion** using the checklists in the template
 6. **Report results** in the exact format specified in the template
 
-## Available Tools
-
-### Basic Tools
-- `read_file(file_path)` - Read file contents
-- `write_file(file_path, content, overwrite=False)` - Write/create files
-- `bash_command(command, working_directory=".", timeout=60)` - Execute shell commands
-
-### Simics MCP Tools (for hardware projects)
-- `get_simics_version()` - Get Simics version
-- `list_installed_packages()` - List Simics packages
-- `list_simics_platforms()` - List Simics platforms
-- `perform_rag_query(query, source_type, match_count)` - Search Simics documentation and example codes
-
 Your instructions are in `.adk/commands/plan.md` - read it and follow it.
 """
 

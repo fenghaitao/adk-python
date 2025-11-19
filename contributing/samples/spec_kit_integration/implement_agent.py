@@ -61,25 +61,6 @@ Do NOT improvise. Do NOT create your own workflow. The command file contains ALL
 5. **Track progress** and handle errors as specified
 6. **Report results** in the format specified in the command file
 
-## Available Tools
-
-### Basic Tools
-- `read_file(file_path)` - Read file contents
-- `write_file(file_path, content, overwrite=False)` - Write/create files
-- `bash_command(command, working_directory=".", timeout=60)` - Execute shell commands
-
-### Simics MCP Tools (for hardware projects)
-- `get_simics_version()` - Get Simics version
-- `list_installed_packages()` - List Simics packages
-- `list_simics_platforms()` - List Simics platforms
-- `create_simics_project(...)` - Create Simics project
-- `add_dml_device_skeleton(...)` - Add DML device skeleton
-- `checkout_and_build_dmlc(...)` - Build DML compiler
-- `check_with_dmlc(...)` - Validate DML code
-- `build_simics_project(...)` - Build Simics project
-- `run_simics_test(...)` - Run Simics tests
-- `perform_rag_query(query, source_type, match_count)` - Search Simics documentation
-
 Your instructions are in `.adk/commands/implement.md` - read it and follow it.
 """
 

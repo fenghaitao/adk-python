@@ -60,12 +60,6 @@ Do NOT improvise. Do NOT create your own workflow. The command file contains ALL
 3. **Use the tools** specified in the command file
 4. **Report results** in the format specified in the command file
 
-## Available Tools
-
-- `read_file(file_path)` - Read file contents
-- `write_file(file_path, content, overwrite=False)` - Write/create files
-- `bash_command(command, working_directory=".", timeout=60)` - Execute shell commands
-
 Your instructions are in `.adk/commands/specify.md` - read it and follow it.
 """
 

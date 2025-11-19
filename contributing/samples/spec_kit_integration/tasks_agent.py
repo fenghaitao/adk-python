@@ -60,19 +60,6 @@ Do NOT improvise. Do NOT create your own workflow. The command file contains ALL
 4. **Generate tasks** following the rules and format in the command file
 5. **Report results** in the format specified in the command file
 
-## Available Tools
-
-### Basic Tools
-- `read_file(file_path)` - Read file contents
-- `write_file(file_path, content, overwrite=False)` - Write/create files
-- `bash_command(command, working_directory=".", timeout=60)` - Execute shell commands
-
-### Simics MCP Tools (for hardware projects)
-- `get_simics_version()` - Get Simics version
-- `list_installed_packages()` - List Simics packages
-- `list_simics_platforms()` - List Simics platforms
-- `perform_rag_query(query, source_type, match_count)` - Search Simics documentation
-
 Your instructions are in `.adk/commands/tasks.md` - read it and follow it.
 """
 
