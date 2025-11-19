@@ -24,9 +24,19 @@ if spec_kit_integration_path.exists():
   sys.path.insert(0, str(spec_kit_integration_path))
 
 from google.adk.agents.llm_agent import LlmAgent
-from google.adk.agents.run_config import RunConfig
-from google.adk.models.gemini_llm_connection import GeminiLlmConnection
 from spec_kit_tools import create_simics_mcp_toolset
+
+
+def get_simics_model():
+    """Get Simics model from environment or use default.
+
+    Returns:
+      str: Model identifier for the Simics agent
+
+    Environment Variables:
+      SIMICS_MODEL: Override the default model selection
+    """
+    return os.environ.get("SIMICS_MODEL", "iflow/qwen3-coder-plus")
 
 
 class SimicsIntegrationAgent(LlmAgent):
@@ -34,7 +44,7 @@ class SimicsIntegrationAgent(LlmAgent):
   
   This agent specializes in creating Simics project structures and DML device
   skeletons within OpenSpec projects. It automatically:
-  - Creates simics/ folder structure in the current OpenSpec project
+  - Creates simics-project/ folder structure in the current OpenSpec project
   - Sets up Simics projects using MCP tools
   - Creates DML device skeletons
   - Manages DDM XML and hardware specifications
@@ -52,6 +62,9 @@ class SimicsIntegrationAgent(LlmAgent):
     Args:
       **kwargs: Additional arguments passed to LlmAgent constructor
     """
+    # Remove name and model from kwargs to avoid conflicts
+    agent_name = kwargs.pop("name", "simics_integration_agent")
+    agent_model = kwargs.pop("model", get_simics_model())
     # Get environment variables
     ddm_xml = os.getenv('DDM_XML')
     spec_file = os.getenv('SPEC_FILE') 
@@ -74,7 +87,7 @@ class SimicsIntegrationAgent(LlmAgent):
 ## Your Mission
 
 You specialize in setting up Simics hardware development within OpenSpec projects by:
-1. Creating proper Simics project structure in a `simics/` folder
+1. Creating proper Simics project structure in a `simics-project/` folder
 2. Setting up DML device skeletons for hardware modeling
 3. Integrating DDM XML specifications with the development workflow
 4. Following OpenSpec conventions for hardware specifications
@@ -106,11 +119,11 @@ You have access to Simics MCP tools:
 When setting up hardware development:
 
 1. **Create Simics Structure**: 
-   - Create a `simics/` directory in the current OpenSpec project
-   - Use `create_simics_project(./simics)` to set up Simics project structure
+   - Create a `simics-project/` directory in the current OpenSpec project
+   - Use `create_simics_project(./simics-project)` to set up Simics project structure
 
 2. **Add Device Skeleton**:
-   - Use `add_dml_device_skeleton(./simics, {device_name})` to create DML files
+   - Use `add_dml_device_skeleton(./simics-project, {device_name})` to create DML files
    - This creates modules/{device_name}/ with .dml files
 
 3. **Integrate with OpenSpec**:
@@ -132,7 +145,7 @@ current_project/
 │   ├── project.md
 │   ├── specs/
 │   └── changes/
-├── simics/                # Simics project (you create this)
+├── simics-project/        # Simics project (you create this)
 │   ├── modules/
 │   │   └── {device_name}/
 │   │       ├── {device_name}.dml
@@ -144,7 +157,7 @@ current_project/
 
 ## Best Practices
 
-- Always create `simics/` folder first for organization
+- Always create `simics-project/` folder first for organization
 - Use provided device name ({device_name}) unless user specifies otherwise
 - Reference DDM XML content when explaining register implementation
 - Integrate hardware specs into OpenSpec workflow
@@ -158,16 +171,16 @@ Start by offering to create the Simics project structure and asking what specifi
     
     # Initialize the LlmAgent
     super().__init__(
-      llm_connection=GeminiLlmConnection(),
-      system_instructions=system_instructions,
+      name=agent_name,
+      model=agent_model,
+      instruction=system_instructions,
+      description="Simics integration agent for hardware development within OpenSpec projects",
       tools=[simics_toolset],
-      run_config=RunConfig(
-        turn_based=True,
-        max_turns=10
-      ),
       **kwargs
     )
 
 
 # Create the root agent instance for ADK to discover
-root_agent = SimicsIntegrationAgent(name="simics_integration_agent")
+root_agent = SimicsIntegrationAgent(
+    name="simics_integration_agent", model=get_simics_model()
+)
