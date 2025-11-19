@@ -43,7 +43,7 @@ except ImportError:
 
 def get_spec_kit_model():
     """Get Spec-Kit model from environment or use default."""
-    return os.environ.get("SPEC_KIT_MODEL", "iflow/Qwen3-Coder")
+    return os.environ.get("SPEC_KIT_MODEL", "iflow/qwen3-coder-plus")
 
 
 class SpecKitAgent(LlmAgent):
