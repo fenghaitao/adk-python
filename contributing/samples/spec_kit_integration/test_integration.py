@@ -205,7 +205,7 @@ async def test_environment_variables():
     
     default_model = get_spec_kit_model()
     
-    assert default_model == "iflow/Qwen3-Coder"
+    assert default_model == "iflow/qwen3-coder-plus"
     
     # Test with environment variables
     os.environ["SPEC_KIT_MODEL"] = "custom-model"
