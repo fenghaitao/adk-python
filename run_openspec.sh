@@ -11,6 +11,9 @@
 # Options:
 #   --model MODEL       Choose chat model (default: iflow/Qwen3-Coder)
 #   --port PORT         MCP server port (default: 8051)
+#   --ddm_xml FILE      Register definition XML file with absolute path
+#   --spec FILE         Hardware specification file with absolute path
+#   --device NAME       Simics model device name to generate from DDM XML and spec
 #   --save-session      Save session to PROJECT_NAME_openspec.session.json
 #   --resume            Resume from existing session file
 #   --help, -h          Show help message
@@ -66,6 +69,12 @@ OPTIONS:
                       - github_copilot/grok-code-fast-1
     --port PORT       MCP server port (default: 8051)
                       Useful for WSL2 when default port has issues
+    --ddm_xml FILE    Register definition XML file with absolute path
+                      Specifies the DDM XML file for hardware register definitions
+    --spec FILE       Hardware specification file with absolute path
+                      Specifies the hardware specification document
+    --device NAME     Simics model device name to generate from DDM XML and spec
+                      This will be the name of the DML device module to create
     --save-session    Save session to PROJECT_NAME_openspec.session.json
                       Allows resuming work later with --resume
     --resume          Resume from existing session file
@@ -88,6 +97,12 @@ EXAMPLES:
 
     # Create project with custom prompt
     ./run_openspec.sh myapi "Create a user authentication feature"
+
+    # With DDM XML and spec files
+    ./run_openspec.sh myproject --ddm_xml /path/to/registers.xml --spec /path/to/spec.md
+
+    # With DDM XML, spec files, and device name
+    ./run_openspec.sh myproject --ddm_xml /path/to/registers.xml --spec /path/to/spec.md --device my_device
 
     # Save session for later resuming
     ./run_openspec.sh myapi "Create REST API" --save-session
@@ -180,6 +195,9 @@ PROJECT_NAME=""
 INITIAL_PROMPT=""
 MODEL=""
 MCP_PORT=""
+DDM_XML=""
+SPEC_FILE=""
+DEVICE_NAME=""
 SAVE_SESSION=false
 RESUME_SESSION=false
 NO_PROMPT=false
@@ -207,6 +225,30 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             MCP_PORT="$2"
+            shift 2
+            ;;
+        --ddm_xml)
+            if [ -z "$2" ]; then
+                echo "Error: --ddm_xml requires a file path"
+                exit 1
+            fi
+            DDM_XML="$2"
+            shift 2
+            ;;
+        --spec)
+            if [ -z "$2" ]; then
+                echo "Error: --spec requires a file path"
+                exit 1
+            fi
+            SPEC_FILE="$2"
+            shift 2
+            ;;
+        --device)
+            if [ -z "$2" ]; then
+                echo "Error: --device requires a device name"
+                exit 1
+            fi
+            DEVICE_NAME="$2"
             shift 2
             ;;
         --save-session)
@@ -256,9 +298,29 @@ fi
 export OPENSPEC_MODEL="$MODEL"
 export MCP_PORT="$MCP_PORT"
 
+# Export DDM_XML and SPEC_FILE if provided
+if [ -n "$DDM_XML" ]; then
+    export DDM_XML="$DDM_XML"
+fi
+if [ -n "$SPEC_FILE" ]; then
+    export SPEC_FILE="$SPEC_FILE"
+fi
+if [ -n "$DEVICE_NAME" ]; then
+    export DEVICE_NAME="$DEVICE_NAME"
+fi
+
 echo "Project name: $PROJECT_NAME"
 echo "Model: $MODEL"
 echo "MCP Port: $MCP_PORT"
+if [ -n "$DDM_XML" ]; then
+    echo "DDM XML: $DDM_XML"
+fi
+if [ -n "$SPEC_FILE" ]; then
+    echo "Spec File: $SPEC_FILE"
+fi
+if [ -n "$DEVICE_NAME" ]; then
+    echo "Device Name: $DEVICE_NAME"
+fi
 if [ "$SAVE_SESSION" = true ]; then
     echo "Session saving: ENABLED"
 fi
@@ -336,6 +398,200 @@ fi
 echo ""
 echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
+
+# Handle DDM_XML and SPEC_FILE - copy to project if not already there
+DDM_XML_PROJECT_PATH=""
+SPEC_FILE_PROJECT_PATH=""
+
+if [ -n "$DDM_XML" ]; then
+    # Check if DDM_XML file exists
+    if [ ! -f "$DDM_XML" ]; then
+        echo -e "${RED}Error: DDM XML file not found: $DDM_XML${NC}"
+        exit 1
+    fi
+    
+    DDM_XML_BASENAME=$(basename "$DDM_XML")
+    DDM_XML_PROJECT_PATH="$PROJECT_NAME/$DDM_XML_BASENAME"
+    
+    # Check if file is already in project directory
+    if [ -f "$DDM_XML_BASENAME" ]; then
+        echo -e "${GREEN}✅ DDM XML already in project: $DDM_XML_BASENAME${NC}"
+    else
+        echo -e "${BLUE}📋 Copying DDM XML to project: $DDM_XML_BASENAME${NC}"
+        cp "$DDM_XML" "$DDM_XML_BASENAME"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: Failed to copy DDM XML file${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✅ DDM XML copied successfully${NC}"
+    fi
+    
+    # Update DDM_XML to point to the project-relative path
+    export DDM_XML="$DDM_XML_BASENAME"
+fi
+
+if [ -n "$SPEC_FILE" ]; then
+    # Check if SPEC_FILE exists
+    if [ ! -f "$SPEC_FILE" ]; then
+        echo -e "${RED}Error: Spec file not found: $SPEC_FILE${NC}"
+        exit 1
+    fi
+    
+    SPEC_FILE_BASENAME=$(basename "$SPEC_FILE")
+    SPEC_FILE_PROJECT_PATH="$PROJECT_NAME/$SPEC_FILE_BASENAME"
+    
+    # Check if file is already in project directory
+    if [ -f "$SPEC_FILE_BASENAME" ]; then
+        echo -e "${GREEN}✅ Spec file already in project: $SPEC_FILE_BASENAME${NC}"
+    else
+        echo -e "${BLUE}📋 Copying Spec file to project: $SPEC_FILE_BASENAME${NC}"
+        cp "$SPEC_FILE" "$SPEC_FILE_BASENAME"
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: Failed to copy Spec file${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✅ Spec file copied successfully${NC}"
+    fi
+    
+    # Update SPEC_FILE to point to the project-relative path
+    export SPEC_FILE="$SPEC_FILE_BASENAME"
+fi
+
+# Set up Simics project if DDM_XML or SPEC_FILE is provided
+if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ]; then
+    echo -e "${BLUE}🔧 Setting up Simics project...${NC}"
+    
+    # Create a Python script to call the MCP server
+    SETUP_SCRIPT=$(mktemp)
+    cat > "$SETUP_SCRIPT" << 'PYTHON_EOF'
+import sys
+import os
+import json
+import subprocess
+from pathlib import Path
+
+# Get the project path (current directory)
+project_path = os.getcwd()
+
+# Path to the Simics MCP server
+spec_kit_integration_dir = sys.argv[1]
+mcp_server_path = Path(spec_kit_integration_dir) / "simics-mcp-server" / "simics_mcp_server.py"
+
+if not mcp_server_path.exists():
+    print(f"Error: Simics MCP server not found at {mcp_server_path}", file=sys.stderr)
+    sys.exit(1)
+
+# Import the create_simics_project function directly
+sys.path.insert(0, str(mcp_server_path.parent))
+try:
+    from simics_mcp_server import create_simics_project
+    
+    # Create the Simics project
+    result = create_simics_project(project_path)
+    result_data = json.loads(result)
+    
+    if "error" in result_data:
+        print(f"Error: {result_data['error']}", file=sys.stderr)
+        sys.exit(1)
+    else:
+        print(f"Success: {result_data.get('message', 'Simics project created')}")
+        sys.exit(0)
+        
+except ImportError as e:
+    print(f"Error importing Simics MCP server: {e}", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f"Error creating Simics project: {e}", file=sys.stderr)
+    sys.exit(1)
+PYTHON_EOF
+
+    # Run the setup script
+    if python3 "$SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
+        echo -e "${GREEN}✅ Simics project setup completed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Warning: Simics project setup failed or not available${NC}"
+        echo "Continuing without Simics project setup..."
+    fi
+    
+    # Clean up
+    rm -f "$SETUP_SCRIPT"
+fi
+
+# Set up device skeleton if DEVICE_NAME is provided
+if [ -n "$DEVICE_NAME" ]; then
+    echo -e "${BLUE}🔧 Setting up DML device skeleton...${NC}"
+    
+    # Create a Python script to call the MCP server
+    DEVICE_SETUP_SCRIPT=$(mktemp)
+    cat > "$DEVICE_SETUP_SCRIPT" << 'PYTHON_EOF'
+import sys
+import os
+import json
+from pathlib import Path
+
+# Get the project path (current directory)
+project_path = os.getcwd()
+
+# Get device name from environment
+device_name = os.environ.get('DEVICE_NAME')
+if not device_name:
+    print("Error: DEVICE_NAME not set", file=sys.stderr)
+    sys.exit(1)
+
+# Path to the Simics MCP server
+spec_kit_integration_dir = sys.argv[1]
+mcp_server_path = Path(spec_kit_integration_dir) / "simics-mcp-server" / "simics_mcp_server.py"
+
+if not mcp_server_path.exists():
+    print(f"Error: Simics MCP server not found at {mcp_server_path}", file=sys.stderr)
+    sys.exit(1)
+
+# Import the add_dml_device_skeleton function directly
+sys.path.insert(0, str(mcp_server_path.parent))
+try:
+    from simics_mcp_server import add_dml_device_skeleton
+    
+    # Add the DML device skeleton
+    result = add_dml_device_skeleton(project_path, device_name)
+    result_data = json.loads(result)
+    
+    if "error" in result_data:
+        print(f"Error: {result_data['error']}", file=sys.stderr)
+        sys.exit(1)
+    else:
+        print(f"Success: {result_data.get('message', f'Device skeleton {device_name} created')}")
+        sys.exit(0)
+        
+except ImportError as e:
+    print(f"Error importing Simics MCP server: {e}", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f"Error creating device skeleton: {e}", file=sys.stderr)
+    sys.exit(1)
+PYTHON_EOF
+
+    # Run the device setup script
+    if python3 "$DEVICE_SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
+        echo -e "${GREEN}✅ DML device skeleton '$DEVICE_NAME' created successfully${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Warning: DML device skeleton setup failed or not available${NC}"
+        echo "Continuing without device skeleton..."
+    fi
+    
+    # Clean up
+    rm -f "$DEVICE_SETUP_SCRIPT"
+fi
+
+# copy the ddm_xml file to {PROJECT_NAME}/modules/{DEVICE_NAME} if it was provided
+if [ -n "$DDM_XML" ] && [ -n "$DEVICE_NAME" ]; then
+    echo -e "${BLUE}📦 Copying DDM XML file...${NC}"
+    mkdir -p "$PROJECT_NAME/modules/$DEVICE_NAME"
+    cp "$DDM_XML" "$PROJECT_NAME/modules/$DEVICE_NAME/"
+fi
+
+# TODO: call the ddm script to generatre the DDM skeleton
+
+# TODO: change the agent prompt to "generate registers side effects for ddm device"
 
 # Create agent directory for session management
 mkdir -p "adk_openspec_agent"
