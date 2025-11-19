@@ -1,0 +1,257 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "hnf-common.dml";
+import "hni-common.dml";
+import "rnsam-common.dml";
+
+import "simics/simulator-api.dml";
+import "simics/model-iface/image.dml";
+import "simics/model-iface/state.dml";
+
+extern int VLEN(...);
+extern void VADD(...);
+
+template read_write {}
+
+template cmn_device is (rnsam_attributes, hnf_attributes, hni_attributes) {
+    bank regs {
+        param use_io_memory = false;
+        method transaction_access(transaction_t *t, uint64 offset,
+                                  void *aux) -> (exception_type_t) {
+            if (HRESET.signal.high && !SIM_transaction_is_inquiry(t))
+                return impl.IGNORE.transaction.issue(t, offset);
+            else
+                return default(t, offset, aux);
+        }
+    }
+
+    group impl {
+        port INVALID_NODE_ID {
+            implement io_memory "Terminates access, used for invalid NIDs" {
+                method operation(generic_transaction_t *mop,
+                                 map_info_t nfo) -> (exception_type_t) {
+                    log error: "%s-access to invalid NID %d terminated",
+                        SIM_mem_op_is_read(mop) ? "read" : "write",
+                        nfo.function;
+                    return Sim_PE_IO_Not_Taken;
+                }
+            }
+        }
+        port IGNORE {
+            implement transaction {
+                method issue(transaction_t *t,
+                             uint64 addr) -> (exception_type_t) {
+                    log info, 2: "access during reset, ignored";
+                    if (SIM_transaction_is_read(t))
+                        SIM_set_transaction_bytes_constant(t, 0);
+                    return Sim_PE_No_Exception;
+                }
+            }
+        }
+    }
+
+
+    attribute rootnodebase is read_only_attr {
+        param documentation =
+            "Base address of the root node, offset from PERIPHBASE";
+        param type = "i";
+        method get() -> (attr_value_t) {
+            return SIM_make_attr_uint64(ROOTNODEBASE);
+        }
+    }
+
+    attribute periphbase is uint64_attr {
+        param documentation =
+            "Defines PERIPHBASE, the base of the configuration address space";
+
+        method update(uint64 value) {
+            if ((value & (this.length - 1)) != 0) {
+                log spec_viol: "%s 0x%x is not aligned to 0x%x",
+                    qname, value, this.length;
+                value &= ~(this.length - 1);
+            }
+            this.val = value;
+            if (!SIM_is_restoring_state(obj)) {
+                foreach ms in (each rnsam_space in (parent))
+                    ms.map_periphbase();
+            }
+        }
+
+        method set(attr_value_t value) throws {
+            update(SIM_attr_integer(value));
+        }
+    }
+
+    port CFGM_PERIPHBASE {
+        implement uint64_state {
+            method set(uint64 value) {
+                periphbase.update(value);
+            }
+        }
+    }
+
+    is hreset;
+    port HRESET {
+        implement signal {
+            saved bool high;
+            method signal_raise() {
+                high = true;
+                default();
+                foreach ms in (each rnsam_space in (dev))
+                    ms.set_default_target(impl.IGNORE.obj);
+            }
+            method signal_lower() {
+                high = false;
+                default();
+                foreach ms in (each rnsam_space in (dev))
+                    ms.set_default_target(NULL);
+            }
+        }
+    }
+}
+
+param NODE_TYPE_DVM   = 0x01;  // Distributed Virtual Memory Node
+param NODE_TYPE_CFG   = 0x02;  // Configuration Node
+param NODE_TYPE_DTC   = 0x03;  // Debug Trace Control Node
+param NODE_TYPE_HNI   = 0x04;  // I/O Home Node
+param NODE_TYPE_HNF   = 0x05;  // Fully coherent Home Node
+param NODE_TYPE_XP    = 0x06;  // Crosspath Node
+param NODE_TYPE_SBSX  = 0x07;  // AMBA 5 CHI to ACE5-Lite bridge Node
+param NODE_TYPE_RNI   = 0x0A;  // I/O coherent Requesting Node
+param NODE_TYPE_RND   = 0x0D;  // I/O coherent Requesting Node with DVM
+param NODE_TYPE_RNSAM = 0x0F;  // Requesting Node Source Address Mapping
+param NODE_TYPE_HNP   = 0x11;  // I/O coherent Home Node + PCIe optimization
+
+template node {
+    param node_id : uint64;
+    param node_type : uint64;
+}
+
+template node_info {
+    param nid : uint64;
+    param nid = init_val[31:16];
+    param ntype : uint64;
+    param ntype = init_val[15:0];
+}
+
+method report_bad_nid(uint64 nid, const char *type) {
+    session uint64 vect invalid_nids;
+    local bool found;
+    for (local int i; i < VLEN(invalid_nids); i++) {
+        if (invalid_nids[i] == nid)
+            found = true;
+    }
+    if (!found)
+        VADD(invalid_nids, nid);
+    log spec_viol, (found ? 3 : 1): "no %s with Node ID %d", type, nid;
+}
+
+template image_subobj is (init_as_subobj, post_init) {
+    param classname = "image";
+    interface image;
+    session uint32 size;
+
+    method post_init() {
+        size = image.size();
+    }
+
+    method read(uint64 offset) -> (uint64) {
+        local uint64_le_t value;
+        image.read(&value, offset, 8);
+        return value;
+    }
+
+    method write(uint64 offset, uint64 value) {
+        image.write(&value, offset, 8);
+    }
+}
+
+
+template simple_regs is bank {
+    // Depends on these symbols (generated by parse-xml.py):
+    // simple_regs_info - array of simple_register_t, sorted by increasing offset
+    // simple_regs_len - length of the simple_regs_info array
+
+    group simple_regs is (init, post_init, hard_reset) {
+        connect data is image_subobj;
+        connect write_mask is image_subobj;
+        connect read_mask is image_subobj;
+
+        method init() {
+            if (SIM_is_restoring_state(dev.obj))
+                return;  // no need to set size again
+
+            // waste 8 bytes, this way we're always able to do 8-byte access
+            local simple_register_t r = simple_regs_info[simple_regs_len - 1];
+            local uint64 size = r.offset + r.size + 8;
+            local attr_value_t val = SIM_make_attr_uint64(size);
+            SIM_set_attribute_default(data.obj, "size", val);
+            SIM_set_attribute_default(write_mask.obj, "size", val);
+            SIM_set_attribute_default(read_mask.obj, "size", val);
+        }
+
+        method post_init() {
+            if (!SIM_is_restoring_state(dev.obj)) {
+                for (local int i = 0; i < simple_regs_len; i++) {
+                    local simple_register_t r = simple_regs_info[i];
+                    data.image.write(&r.init_val, r.offset, r.size);
+                    write_mask.image.write(&r.write_mask, r.offset, r.size);
+                    read_mask.image.fill(r.offset, r.size, 0xff);
+                }
+            }
+        }
+
+        method hard_reset() {
+            for (local int i = 0; i < simple_regs_len; i++) {
+                local simple_register_t r = simple_regs_info[i];
+                data.image.write(&r.init_val, r.offset, r.size);
+            }
+        }
+    }
+
+    method unmapped_read(uint64 offset, uint64 bits,
+                         void *aux) -> (uint64) throws {
+        if (offset > (simple_regs.data.size - 8))
+            throw;
+        local uint64 mask = simple_regs.read_mask.read(offset) & bits;
+        if ((bits & ~mask) != 0)
+            throw;
+        return simple_regs.data.read(offset) & bits;
+    }
+
+    method unmapped_write(uint64 offset, uint64 value, uint64 bits,
+                          void *aux) throws {
+        local uint64 current = unmapped_read(offset, bits, aux);
+        local uint64 mask = simple_regs.write_mask.read(offset) & bits;
+        local uint64 patched = (current & ~mask) | (value & mask);
+        if ((value & bits) != (patched & bits)) {
+            mask = simple_regs.write_mask.read(offset);
+            log spec_viol, 1 then 3: "Write to read-only bits in"
+                + " register @ 0x%x, current value 0x%x, written 0x%x,"
+                + " write mask 0x%x", offset, current, value, mask;
+        }
+        simple_regs.data.write(offset, patched);
+    }
+}
+
+typedef struct {
+    uint64 offset;
+    uint64 size;
+    uint64 init_val;
+    uint64 write_mask;
+} simple_register_t;

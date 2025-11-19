@@ -1,0 +1,32 @@
+# desc: ARM Coherent Mesh Network common code
+# type: Other
+# ip-owner: ARM
+# keywords:
+# docs: https://intel.sharepoint.com/sites/systemsimulationcenter/3RDPARTY/Shared%20Documents/ARM%20Documentation/Vendor%20Docs/corelink_cmn600_coherent_mesh_network_technical_reference_manual_100180_0201_00_en.pdf
+# NDA: Public
+# comment:
+
+Group:cmn-common/shared/src
+Require-tokens: public
+  src/devices/cmn-common/CMakeLists.txt
+  src/devices/cmn-common/cmn-600.dml
+  src/devices/cmn-common/cmn-700.dml
+  src/devices/cmn-common/cmn-common.dml
+  src/devices/cmn-common/cmn_commands.py
+  src/devices/cmn-common/hnf-600.dml
+  src/devices/cmn-common/hnf-700.dml
+  src/devices/cmn-common/hnf-common.dml
+  src/devices/cmn-common/hni-600.dml
+  src/devices/cmn-common/hni-700.dml
+  src/devices/cmn-common/hni-common.dml
+  src/devices/cmn-common/parse-xml.py
+  src/devices/cmn-common/rnsam-600.dml
+  src/devices/cmn-common/rnsam-700.dml
+  src/devices/cmn-common/rnsam-common.dml
+  src/devices/cmn-common/test/cmn-add-test.cmake
+  src/devices/cmn-common/test/cmn_600_common.py
+  src/devices/cmn-common/test/s-commands.py
+  src/devices/cmn-common/test/s-hnf.py
+  src/devices/cmn-common/test/s-hni.py
+  src/devices/cmn-common/test/s-register-access.py
+  src/devices/cmn-common/test/s-rnsam.py

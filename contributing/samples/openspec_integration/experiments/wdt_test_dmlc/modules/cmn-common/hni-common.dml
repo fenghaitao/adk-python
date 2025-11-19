@@ -1,0 +1,195 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+header %{
+    #ifndef min
+     #define min(a, b) ((a) < (b) ? (a) : (b))
+    #endif
+    #ifndef max
+     #define max(a, b) ((a) > (b) ? (a) : (b))
+    #endif
+%}
+
+extern uint64 min(uint64 a, uint64 b);
+extern uint64 max(uint64 a, uint64 b);
+
+template hni_node is node {
+    register por_hni_sam_addrregion_cfg[i < 4] "Configures Address Region <n>.";
+    register por_hni_sam_addrregion_cfg[i < 4] @ 0x0c00 + hni_offs + 8 * i ;
+
+    register por_hni_sam_addrregion_cfg[i < 4] {
+        field valid @ [63];
+        field pos_early_wr_comp_en @ [62];
+        field pos_early_rdack_en @ [61];
+        field ser_devne_wr @ [60];
+        field ser_all_wr @ [59];
+        field physical_mem_en @ [58];
+        // bitranges of these two differ between cmn-600 and cmn-700
+        field base_addr;
+        field addr_region_size;
+        field order_region_size @ [5:0] {
+            param init_val = i == 0 ? 0x3f : 0;
+        }
+
+        // in index 0, the valid and addr_region_size fields are missing and
+        // the corresponding bits are 0 in the spec, yet the region is always
+        // valid with a hardcoded, possibly nonzero, address width.
+        // The base_addr field is similarly missing, but no accessor is needed
+        // there since the hardcoded behaviour matches the zero value of the
+        // reserved bits.
+        method is_valid() -> (bool) {
+            return i == 0 ? true : valid.val != 0;
+        }
+        method get_addr_region_size() -> (uint8) {
+            return i == 0 ? ADDRESS_WIDTH - 12 : addr_region_size.val;
+        }
+        param base = base_addr.val << 12;
+        param length = 0x1000 << get_addr_region_size();
+
+        method write_register(uint64 value, uint64 bytes, void *aux) {
+            if (i == 0) {
+                // three fields are absent in index 0 and thus reserved.
+                // Suppress writes to these.
+                bytes[valid.lsb] = 0;
+                bytes[base_addr.msb:base_addr.lsb] = 0;
+                bytes[addr_region_size.msb:addr_region_size.lsb] = 0;
+            }
+
+            default(value, bytes, aux);
+            if (i != 0 && get_addr_region_size() > ADDRESS_WIDTH - 12) {
+                log spec_viol: "%s must not be greater than 2^%d",
+                    qname, ADDRESS_WIDTH;
+                addr_region_size.val = ADDRESS_WIDTH - 12;
+            }
+        }
+    }
+
+    shared method map(rnsam_space_t ms, map_info_t nfo);
+    method map(rnsam_space_t ms, map_info_t nfo) {
+        for (local int i = 0; i < por_hni_sam_addrregion_cfg.len; i++) {
+            if (por_hni_sam_addrregion_cfg[i].is_valid()) {
+                local conf_object_t *tgt = hni_regions.lookup(node_id, i);
+                if (!tgt) {
+                    tgt = dev.impl.INVALID_NODE_ID.obj;
+                    nfo.function = node_id;
+                }
+                local uint64 base = por_hni_sam_addrregion_cfg[i].base;
+                local uint64 length = por_hni_sam_addrregion_cfg[i].length;
+                local uint64 begin = max(base, nfo.base);
+                local uint64 end =
+                    min(base + length, nfo.base + nfo.length);
+                if (begin < end) {
+                    local map_info_t region_nfo;
+                    region_nfo.base = begin;
+                    region_nfo.start = begin;
+                    region_nfo.length = end - begin;
+                    region_nfo.function = nfo.function;
+                    region_nfo.priority = nfo.priority;
+                    if (i == 0) {
+                        // region 0 is 'default', region 1-3 are discrete
+                        region_nfo.priority++;
+                    }
+                    region_nfo.align_size = nfo.align_size;
+                    region_nfo.reverse_endian = nfo.reverse_endian;
+
+                    ms.map(tgt, region_nfo);
+                } else {
+                    log info, 2: "HN-I %d region %d [0x%x - 0x%x] is outside"
+                        + " address mapped in RN-SAM [0x%x - 0x%x]",
+                        node_id, i, base, base + length - 1,
+                        nfo.base, nfo.base + nfo.length - 1;
+                }
+            }
+        }
+    }
+}
+
+template hni_attributes {
+    attribute hni_regions is init {
+        param documentation = "A list of HN-I NodeIDs and an object, or a list"
+            + " of 1-4 objects, describing the targets of the address regions.";
+        param type = "[[io|[o{1:4}]]*]";
+        session attr_value_t val;
+
+        method init() {
+            val = SIM_alloc_attr_list(0);
+        }
+
+        method bad_hni_node_id(uint64 nid) -> (bool) {
+            foreach hni in (each hni_node in (dev)) {
+                if (hni.node_id == nid)
+                    return false;
+            }
+            return true;
+        }
+
+        method set(attr_value_t value) throws {
+            for (local int i = 0; i < SIM_attr_list_size(value); ++i) {
+                local uint64 nid = SIM_attr_integer(
+                    SIM_attr_list_item(SIM_attr_list_item(value, i), 0));
+                if (bad_hni_node_id(nid)) {
+                    SIM_c_attribute_error(
+                        "'%lld' is not a valid HNI node id", nid);
+                    throw;
+                }
+            }
+            SIM_free_attribute(val);
+            val = SIM_attr_copy(value);
+        }
+
+        method get() -> (attr_value_t) {
+            return SIM_attr_copy(val);
+        }
+
+        method lookup(uint64 nodeid, uint64 rid) -> (conf_object_t *) {
+            if (SIM_attr_is_invalid(val))
+                val = SIM_alloc_attr_list(0);
+            for (local int i = 0; i < SIM_attr_list_size(val); i++) {
+                local attr_value_t hni_target = SIM_attr_list_item(val, i);
+                local uint64 nid =
+                    SIM_attr_integer(SIM_attr_list_item(hni_target, 0));
+                if (nodeid != nid)
+                    continue;
+                local attr_value_t regions = SIM_attr_list_item(hni_target, 1);
+                if (SIM_attr_is_object(regions))
+                    return SIM_attr_object(regions);
+                if (rid < SIM_attr_list_size(regions))
+                    return SIM_attr_object(SIM_attr_list_item(regions, rid));
+
+                log error: "HN-I %d region id %d requested but only"
+                    + " %d connected", nodeid, rid, SIM_attr_list_size(regions);
+                break;
+            }
+            log info, 2: "couldn't find HN-I %d region %d in %s",
+                nodeid, rid, name;
+            return NULL;
+        }
+
+        method clear_map(rnsam_space_t ms) {
+            for (local int i = 0; i < SIM_attr_list_size(val); ++i) {
+                local attr_value_t hni_target = SIM_attr_list_item(val, i);
+                local attr_value_t regions = SIM_attr_list_item(hni_target, 1);
+                if (SIM_attr_is_object(regions)) {
+                    ms.unmap(SIM_attr_object(regions));
+                } else {
+                    for (local int r = 0; r < SIM_attr_list_size(regions); ++r)
+                        ms.unmap(SIM_attr_object(SIM_attr_list_item(regions, r)));
+                }
+            }
+        }
+    }
+}

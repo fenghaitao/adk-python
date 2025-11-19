@@ -1,0 +1,149 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+dml 1.4;
+
+import "internal.dml";
+import "ddm-lib.dml";
+import "test-ddm-lib-data-model.dml";
+
+template test_vars {
+    saved uint64 write_offset;
+    saved uint64 read_offset;
+    saved uint64 curr_val;
+    saved uint64 written_val;
+    saved uint64 enabled_bits;
+    saved uint64 aux;
+    saved uint64 validate_ret;
+    saved uint64 ret;
+    saved bool impl_called;
+
+    shared method clear() {
+        this.write_offset = this.read_offset = this.curr_val =
+            this.written_val = this.enabled_bits = this.aux =
+            this.validate_ret = this.ret = 0;
+        this.impl_called = false;
+    }
+}
+
+is test_vars;
+
+attribute clear_all is write_only_attr {
+    param type = "n";
+
+    method set(attr_value_t _val) throws {
+        dev.clear();
+        foreach vars in (each test_vars in (dev)) {
+            vars.clear();
+        }
+    }
+}
+
+independent method get_test_vars(test_dia_reg_t reg) -> (test_vars) {
+    try {
+        local test_dia_assoc_to_reg assoc = test_dia.reg.get_assoc(reg);
+        return assoc.test_vars_set;
+    } catch {
+        return cast(dev, test_vars);
+    }
+}
+
+template test_dia_assoc_to_bank is test_dia_assoc_to_bank_base {
+    shared method little_endian_byte_order(test_dia_reg_t reg) -> (bool) {
+        return true;
+    }
+
+    shared method validate_reg_write_impl(test_dia_reg_t reg,
+                                          uint64 curr_val, uint64 written_val,
+                                          uint64 enabled_bits, void *aux)
+                                      -> (uint64) default {
+        local test_vars vars = get_test_vars(reg);
+        vars.write_offset = test_dia.reg.offset(reg);
+        vars.curr_val = curr_val;
+        vars.written_val = written_val;
+        vars.enabled_bits = enabled_bits;
+        vars.aux = cast(aux, uintptr_t);
+        return vars.validate_ret;
+    }
+
+    shared method validate_reg_read_impl(test_dia_reg_t reg, uint64 curr_val,
+                                         uint64 enabled_bits, void *aux)
+                                     -> (uint64) default {
+        local test_vars vars = get_test_vars(reg);
+        vars.read_offset = test_dia.reg.offset(reg);
+        vars.curr_val = curr_val;
+        vars.enabled_bits = enabled_bits;
+        vars.aux = cast(aux, uintptr_t);
+        return vars.validate_ret;
+    }
+
+    shared method reg_write_impl(test_dia_reg_t reg,
+                                 uint64 curr_val, uint64 written_val,
+                                 uint64 enabled_bits, void *aux)
+                             -> (uint64) default {
+        local test_vars vars = get_test_vars(reg);
+        vars.impl_called = true;
+        // should get the same args
+        assert test_dia.reg.offset(reg) == vars.write_offset;
+        assert curr_val == vars.curr_val;
+        assert written_val == vars.written_val;
+        assert cast(aux, uintptr_t) == vars.aux;
+        // ... except possibly for enabled_bits, as the write can get
+        // redirected to DML
+        local uint64 redirected = 0;
+        local rel_assocs_t reg_assocs = test_dia.reg.overrides(reg);
+        for (local rel_assocs_iter_t iter = test_dia.rel_assocs.iter.make(
+                 &reg_assocs);
+             !test_dia.rel_assocs.iter.end(iter);
+             iter = test_dia.rel_assocs.iter.next(iter)) {
+            redirected |= test_dia.rel_assocs.iter.mapped_write(iter);
+        }
+        assert enabled_bits == (vars.validate_ret & ~redirected);
+        return vars.ret;
+    }
+
+    shared method reg_read_impl(test_dia_reg_t reg,
+                                uint64 curr_val, uint64 enabled_bits,
+                                void *aux)
+                            -> (uint64) default {
+        local test_vars vars = get_test_vars(reg);
+        vars.impl_called = true;
+        assert test_dia.reg.offset(reg) == vars.read_offset;
+        assert curr_val == vars.curr_val;
+        assert enabled_bits == vars.validate_ret;
+        assert cast(aux, uintptr_t) == vars.aux;
+
+        return vars.ret;
+    }
+
+    method read(uint64 offset, uint64 enabled_bits,
+                void *aux) -> (uint64) throws default {
+        return default(offset, enabled_bits,
+                       cast(cast(14, uintptr_t), void *));
+    }
+    method write(uint64 offset, uint64 val, uint64 enabled_bits,
+                 void *aux) throws default {
+        default(offset, val, enabled_bits,
+                cast(cast(15, uintptr_t), void *));
+    }
+}
+
+template test_dia_assoc_vtable is ddm_assoc_vtable {}
+template test_dia_assoc_to_reg is test_dia_assoc_to_reg_base {
+    param test_vars_set : test_vars;
+    param test_vars_set default cast(dev, test_vars);
+}
+template test_dia_assoc_to_field is test_dia_assoc_to_field_base {}
+
+template test_dia_assoc_to_field_group is test_dia_assoc_to_field_group_base {}

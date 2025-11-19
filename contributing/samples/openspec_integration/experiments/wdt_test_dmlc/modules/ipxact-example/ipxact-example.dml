@@ -1,0 +1,190 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+device ipxact_example;
+
+param classname = "ipxact_example";
+
+param desc = "IP-XACT Example Device";
+
+param documentation =
+    "Example device generated from IP-XACT specification using DDM library. "
+    + "This device demonstrates how to use the DDM (Data-Driven Modeling) "
+    + "library to create Simics device models from IP-XACT register specifications.";
+
+// Import the DIA (Device Interface Abstract) and generated glue code
+import "ipxact-example-dia.dml";
+import "ipxact-example-glue.dml";
+
+// Watchdog timer state variables
+session uint32 wdt_counter = 0xFFFFFFFF;    // Current counter value
+session bool wdt_interrupt_pending = false;  // Interrupt state
+session bool wdt_reset_pending = false;      // Reset state
+session bool wdt_enabled = false;            // Timer enabled state
+session bool wdt_unlocked = false;           // Lock state (true = unlocked)
+session double wdt_tick_frequency = 1000000000.0; // 1GHz default
+
+// Port signals (simulated)
+session bool wdogint_signal = false;
+session bool wdogres_signal = false;
+
+// Timer event
+event wdt_timer is simple_time_event {
+    method event() {
+        tick_watchdog();
+    }
+}
+
+// Initialize the device
+method init() {
+    // Set initial counter value
+    wdt_counter = 0xFFFFFFFF;
+    wdt_interrupt_pending = false;
+    wdt_reset_pending = false;
+    wdt_enabled = false;
+    wdt_unlocked = false;
+
+    // Initialize WDOGLOCK register to locked state (1)
+    watchdog_memap.WDOGLOCK.val = 1;
+    watchdog_memap.WDOGLOCK.wdog_lock.val = 1;
+}
+
+// Timer tick handler method
+method tick_watchdog() {
+    if (!wdt_enabled) return;
+
+    // Simple decrement by 1 for now
+    if (wdt_counter > 0) {
+        wdt_counter -= 1;
+    }
+
+    // Check for timeout
+    if (wdt_counter == 0) {
+        handle_timeout();
+    }
+
+    // Schedule next tick
+    if (wdt_enabled) {
+        wdt_timer.post(1.0 / wdt_tick_frequency);
+    }
+}
+
+// Handle counter timeout
+method handle_timeout() {
+    if (!wdt_interrupt_pending) {
+        // First timeout - trigger interrupt if enabled
+        wdt_interrupt_pending = true;
+        log info, 1: "Watchdog timeout - interrupt triggered";
+        // Reload counter
+        wdt_counter = 0xFFFFFFFF;  // Use default for now
+    } else {
+        // Second timeout - trigger reset if enabled
+        wdt_reset_pending = true;
+        log info, 1: "Watchdog timeout - reset triggered";
+        // Reload counter again
+        wdt_counter = 0xFFFFFFFF;
+    }
+}
+
+// Simple register side effects for key registers
+bank watchdog_memap {
+    register WDOGLOAD {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGLOAD write_register() CALLED with value=0x%x", value;
+            // Write to the register first
+            default(value, enabled_bytes, aux);
+
+            // Update the counter with the new load value
+            wdt_counter = cast(this.val, uint32);
+
+            // Also update WDOGVALUE register to reflect the new counter
+            watchdog_memap.WDOGVALUE.val = wdt_counter;
+            watchdog_memap.WDOGVALUE.count_read.val = wdt_counter;
+
+            log info, 1: ">>> Watchdog counter loaded with value 0x%x", wdt_counter;
+        }
+    }
+
+    register WDOGCONTROL {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            // Call parent write first
+            default(value, enabled_bytes, aux);
+
+            // Check INTEN bit to enable/disable timer
+            local bool inten = (this.val & 1) != 0;
+
+            if (inten && !wdt_enabled) {
+                // Enable timer
+                wdt_enabled = true;
+                wdt_counter = 0xFFFFFFFF;  // Default reload value
+                wdt_timer.post(1.0 / wdt_tick_frequency);
+                log info, 2: "Watchdog timer enabled";
+            } else if (!inten && wdt_enabled) {
+                // Disable timer
+                wdt_enabled = false;
+                log info, 2: "Watchdog timer disabled";
+            }
+        }
+    }
+
+    register WDOGINTCLR {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            // Clear interrupt and reload counter
+            wdt_interrupt_pending = false;
+            wdt_counter = 0xFFFFFFFF;  // Default reload
+            log info, 2: "Watchdog interrupt cleared, counter reloaded";
+        }
+    }
+
+    register WDOGLOCK {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGLOCK write_register() CALLED with value=0x%x", value;
+
+            // Check unlock key BEFORE writing to register
+            if (value == 0x1ACCE551) {
+                wdt_unlocked = true;
+                log info, 1: ">>> WATCHDOG UNLOCKED! (wdt_unlocked = true)";
+                // Set register and field to 0 to indicate unlocked
+                this.val = 0;
+                this.wdog_lock.val = 0;
+            } else {
+                wdt_unlocked = false;
+                log info, 1: ">>> WATCHDOG LOCKED! (wdt_unlocked = false)";
+                // Set register and field to 1 to indicate locked
+                this.val = 1;
+                this.wdog_lock.val = 1;
+            }
+        }
+
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            // Return the current lock status based on internal state
+            local uint64 result = wdt_unlocked ? 0 : 1;
+            log info, 1: ">>> WDOGLOCK read_register() CALLED, returning %d (0=unlocked, 1=locked)", result;
+            // Return lock status: 0 = unlocked, 1 = locked
+            return result;
+        }
+    }
+
+    register WDOGVALUE {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            // Simply return the current counter value
+            // The register storage is updated when WDOGLOAD is written
+            log info, 1: ">>> WDOGVALUE read_register() CALLED, returning wdt_counter=0x%x", wdt_counter;
+            return wdt_counter;
+        }
+    }
+}

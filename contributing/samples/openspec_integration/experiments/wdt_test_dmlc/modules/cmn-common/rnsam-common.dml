@@ -1,0 +1,376 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "simics/devs/map-demap.dml";
+
+template rnsam_node {
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM]  "Configures non-hashed memory regions";
+    register non_hash_tgt_nodeid[i < NUM_NON_HASH_TGT]  "Configures non-hashed target node IDs";
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP] "Configures hashed memory regions";
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP] "Configures hashed secondary memory regions";
+    register sys_cache_grp_hn_nodeid[i < NUM_SYS_CACHE_GRP_HN] "Configures hashed node IDs for system cache groups";
+    register sys_cache_group_hn_count "Indicates number of HN-Fs in system cache groups";
+
+    register por_rnsam_secure_register_groups_override is (unimpl);
+    register sys_cache_grp_nonhash_nodeid is (unimpl);
+    register rnsam_region_cmp_addr_mask_reg is (unimpl);
+
+    register gic_mem_region_reg is (mem_region) {
+        param priority = 0;
+        param length = 0x10000 * (1 << sz.val[1:0]);
+        param max_sz = 3;
+
+        param base = gic_region_base_addr.val;
+        param sz = gic_region_size;
+        param target_type = gic_region_target_type;
+        param valid = gic_region_valid;
+        param nodeid = gic_region_nodeid;
+        // fields defined by xml
+    }
+
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM] is (mem_region) {
+        param nodeid = non_hash_tgt_nodeid[i / 4].nid[i % 4];
+        param priority = gic_mem_region_reg.priority + (i + 1) * 20;
+        // fields defined by implementation
+    }
+
+    register non_hash_tgt_nodeid[i < NUM_NON_HASH_TGT] {
+        field nid[n < 4] @ [n * 12 + 10:n * 12];
+    }
+
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP] is (scg_region) {
+        param priority = non_hash_mem_region[
+            non_hash_mem_region.len - 1].priority + (i + 1) * 20;
+        // fields defined by implementation
+    }
+
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP] is (scg_region) {
+        param priority = sys_cache_grp_region[
+            sys_cache_grp_region.len - 1].priority + (i + 1) * 20;
+        // fields defined by implementation
+    }
+
+    register sys_cache_grp_hn_nodeid[i < NUM_SYS_CACHE_GRP_HN] {
+        field nid[n < 4] @ [n * 12 + 10:n * 12];
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            default(value, enabled_bytes, aux);
+            if (rnsam_status.nstall_req.val) {
+                log info, 3: "rnsam unstalled, clear and remap";
+                address_space.clear_map();
+                add_mappings();
+            }
+        }
+    }
+
+    register sys_cache_group_hn_count {
+        field num[n < 4] @ [n * 8 + 6:n * 8];
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            default(value, enabled_bytes, aux);
+            local uint64 sum = 0;
+            #foreach i in ([0, 1, 2, 3])
+                sum += num[i].val;
+            if (sum > NUM_SCG_TARGETS) {
+                log spec_viol: "%s: invalid total HN-count in SCGs (%d)",
+                    qname, sum;
+            }
+            if (rnsam_status.nstall_req.val) {
+                log info, 3: "rnsam unstalled, clear and remap";
+                address_space.clear_map();
+                add_mappings();
+            }
+        }
+    }
+
+    register rnsam_status is hard_reset {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            if (nstall_req.val) {
+                log unimpl: "reconfiguration is not supported";
+            } else {
+                default(value, enabled_bytes, aux);
+                if (nstall_req.val)
+                    add_mappings();
+            }
+        }
+
+        method hard_reset() {
+            if (SIM_object_is_configured(obj))
+                address_space.clear_map();
+            default();
+        }
+    }
+
+    connect address_space is rnsam_space;
+    method add_mappings() {
+        if (address_space.configured)
+            return;
+        // if 'use_default_node' is 0, default node is used when nothing matches
+        // if 'use_default_node' is 1, default node is used for -all- accesses
+        if (rnsam_status.use_default_node.val == 0) {
+            foreach rgn in (each mem_region in (this))
+                rgn.map(address_space.ms);
+        }
+        local conf_object_t *tgt =
+            hni_regions.lookup(rnsam_status.default_nodeid.val, 0);
+        if (tgt == NULL) {
+            log spec_viol: "default_nodeid %d not found",
+                rnsam_status.default_nodeid.val;
+        }
+        address_space.set_default_target(tgt);
+        address_space.configured = true;
+    }
+}
+
+template mem_region is register {
+    param length default 0x4000000 * (1 << sz.val);
+    param base default base_addr.val << base_addr.lsb;
+    param max_sz default 22;
+
+    method region_valid() -> (bool) default {
+        if (!valid.val)
+            return false;
+        if (sz.val > max_sz) {
+            log spec_viol: "%s: size must be in range [0, %d]", qname, max_sz;
+            return false;
+        }
+        if ((base % length) != 0) {
+            log spec_viol: "%s: base addr (0x%x) must be integer multiple of"
+                + " size (0x%x)", qname, base, length;
+            return false;
+        }
+        return true;
+    }
+
+    method hnf_map(uint64 nid, rnsam_space_t ms, map_info_t nfo, int idx) {
+        foreach hnf in (each hnf_node in (dev)) {
+            if (hnf.node_id == nid) {
+                hnf.map_ocm(ms, nfo, idx);
+                nfo.priority += 5;
+                if (idx == 0)
+                    hnf.map_sn(ms, nfo);
+                return;
+            }
+        }
+        report_bad_nid(nid, "HNF");
+    }
+
+    method hni_map(uint64 nid, rnsam_space_t ms, map_info_t nfo) {
+        foreach hni in (each hni_node in (dev)) {
+            if (hni.node_id == nid) {
+                hni.map(ms, nfo);
+                return;
+            }
+        }
+        report_bad_nid(nid, "HNI");
+    }
+
+    shared method map(rnsam_space_t ms);
+    method map(rnsam_space_t ms) default {
+        if (!region_valid())
+            return;
+
+        log info, 2: "%s region @ 0x%x length 0x%x prio %d",
+            target_type.val == 0b00 ? "HN-F" :
+            target_type.val == 0b01 ? "HN-I" :
+            target_type.val == 0b11 ? "HN-P" : "CXRA",
+            base, length, priority;
+
+        local map_info_t nfo;
+        nfo.base = base;
+        nfo.length = length;
+        nfo.priority = priority;
+        if (target_type.val == 0)
+            hnf_map(nodeid.val, ms, nfo, 0);
+        else if (target_type.val == 0b01 || target_type.val == 0b11)
+            hni_map(nodeid.val, ms, nfo);
+        else
+            log unimpl: "CXRA targets are not supported";
+    }
+
+    method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+        default(value, enabled_bytes, aux);
+        if (valid.val != 0) {
+            log info, 2: "%s mapped @ 0x%x sz 0x%x", qname, base, length;
+            if (rnsam_status.nstall_req.val) {
+                log info, 3: "rnsam unstalled, clear and remap";
+                address_space.clear_map();
+                add_mappings();
+            }
+        }
+    }
+}
+
+template scg_region is mem_region {
+    // CMN-600: Table 2-23 Permitted allocation of HN-Fs into SCGs
+    // CMN-700: Table 3-23 Permitted allocation of HN‑Fs into SCGs
+    param MIN_NID_REGS_PER_SCG = NUM_SYS_CACHE_GRP_HN / NUM_SYS_CACHE_GRP;
+    param FIRST_NID_REG = i * MIN_NID_REGS_PER_SCG;
+    param hn_count = sys_cache_group_hn_count.num[i].val;
+
+    method map(rnsam_space_t ms) {
+        if (!region_valid())
+            return;
+
+        log info, 2: "SCG%d hashed over %d nodes", i, hn_count;
+
+        if (target_type.val != 0) {
+            log unimpl: "SCGs targetting HN-I/CXRA nodes is not supported";
+            return;
+        }
+
+        local map_info_t nfo;
+        nfo.base = base;
+        nfo.length = length;
+        nfo.priority = priority;
+
+        // CMN-700 TRM: 3.4.5.6 HN‑F with CAL support:
+
+        // In normal mode, each HN‑F node ID is explicitly assigned to an SCG
+        // The HN‑F count field is equal to the number of HN-F nodes in the SCG
+
+        // In CAL2 and CAL4 mode, only one of the two/four HN‑Fs on the CAL has
+        // its node ID entered into the SCG target ID registers.
+        // The HN-F count field is equal to the number of HN-F nodes in the
+        // SCG, divided by two or four respectively.
+
+        local int cal = sys_cache_grp_cal_mode_reg.val[i * 16 + 1:i * 16];
+        local uint64 s = FIRST_NID_REG;
+        local uint64 hnc = 0;
+        local uint64 idx = 0;
+
+        while (s < NUM_SYS_CACHE_GRP_HN && hnc < hn_count) {
+            for (local int n = 0; n < 4 && hnc < hn_count; n++) {
+                local uint64 nid = sys_cache_grp_hn_nodeid[s].nid[n].val;
+                hnf_map(nid, ms, nfo, idx++);
+                if (cal[0]) {
+                    // CAL2 or CAL4 mode
+                    hnf_map(nid + 1, ms, nfo, idx++);
+                    if (cal[1]) {
+                        // CAL4 mode
+                        hnf_map(nid + 2, ms, nfo, idx++);
+                        hnf_map(nid + 3, ms, nfo, idx++);
+                    }
+                }
+                hnc++;
+            }
+            s++;
+        }
+    }
+}
+
+typedef rnsam_space rnsam_space_t;
+template rnsam_space is (init_as_subobj, post_init) {
+    param node_id : uint64;
+    param node_id = parent.node_id;
+    param classname = "memory-space";
+    interface map_demap;
+
+    param ms = cast(this, rnsam_space_t);
+    saved bool configured;
+
+    method init() {
+        if (!this.obj)
+           default();
+    }
+
+    method clear_map() {
+        if (configured) {
+            sbsx_targets.clear_map(this.ms);
+            hni_regions.clear_map(this.ms);
+            foreach hnf in (each hnf_node in (dev))
+                hnf.unmap_ocm(this.ms);
+            configured = false;
+        }
+    }
+
+    shared method map(conf_object_t *mobj, map_info_t nfo);
+    method map(conf_object_t *mobj, map_info_t nfo) {
+        map_demap.map_simple(mobj, NULL, nfo);
+    }
+
+    shared method unmap(conf_object_t *mobj);
+    method unmap(conf_object_t *mobj) {
+        map_demap.unmap(mobj, NULL);
+    }
+
+    shared method set_default_target(conf_object_t *tgt) {
+        if (tgt) {
+            local map_info_t nfo;
+            map(tgt, nfo);
+        } else {
+            // map_demap can't unset default target
+            local attr_value_t nil = SIM_make_attr_nil();
+            SIM_set_attribute(this.obj, "default_target", &nil);
+        }
+    }
+
+    shared method map_periphbase() {
+        unmap(regs.obj);
+        local map_info_t nfo;
+        nfo.base = periphbase.val;
+        nfo.length = periphbase.length;
+        nfo.priority = 0x7fff;
+        map(regs.obj, nfo);
+    }
+
+    method post_init() {
+        if (!SIM_is_restoring_state(obj))
+            map_periphbase();
+    }
+}
+
+template rnsam_attributes {
+    attribute memory_space is read_only_attr {
+        param documentation =
+            "The memory space for each RN-SAM, keyed by Node ID";
+        param type = "D";
+        method get() -> (attr_value_t) {
+            local uint64 sz = 0;
+            local attr_value_t val = SIM_alloc_attr_dict(0);
+            foreach ms in (each rnsam_space in (dev)) {
+                SIM_attr_dict_resize(&val, ++sz);
+                SIM_attr_dict_set_item(&val, sz - 1,
+                                       SIM_make_attr_uint64(ms.node_id),
+                                       SIM_make_attr_object(ms.obj));
+            }
+            return val;
+        }
+    }
+
+    implement translator {
+        method translate(physical_address_t addr, access_t access,
+                         const map_target_t *dt) -> (translation_t) {
+            local translation_t txl;
+            txl.target = default_space.map_target;
+            return txl;
+        }
+    }
+
+    connect default_space is (map_target, init) {
+        param documentation = "RN-SAM space used by top-level 'translator'."
+            + " Defaults to the first RN-SAM space found";
+        param internal = true;
+
+        method init() {
+            foreach ms in (each rnsam_space in (dev)) {
+                ms.init();
+                set(ms.obj);
+                break;
+            }
+        }
+    }
+
+}

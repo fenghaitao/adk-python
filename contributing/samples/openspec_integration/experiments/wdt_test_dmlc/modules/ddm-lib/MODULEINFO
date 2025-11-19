@@ -1,0 +1,25 @@
+# desc: Library for Data Driven Models
+# type: Other
+# ip-owner: Simics
+# keywords:
+# docs: None
+# NDA: Public
+# comment:
+
+Group: ddm-lib
+Require-tokens: public
+Make: ddm-lib
+  $(HOST)/lib/ddm-lib$(SO)
+  @module_py(ddm_lib/module_resources)
+
+Group: ddm-lib/shared/src
+Require-tokens: public
+  @cmn-common/shared/src
+  src/devices/ddm-lib/Makefile
+  src/devices/ddm-lib/config-schema.json
+  src/devices/ddm-lib/data_model_lib.py
+  src/devices/ddm-lib/ddm_lib.py
+  src/devices/ddm-lib/ddm-lib.dml
+  src/devices/ddm-lib/glue_config.py
+  src/devices/ddm-lib/glued_data_lib.py
+  src/devices/ddm-lib/module_resources.py

@@ -1,0 +1,33 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "utility.dml";
+import "simics/simulator-api.dml";
+
+template hnf is hnf_node {
+    register cmn_hns_sam_control {
+        field hn_cfg_sn0_nodeid is sbsx_nodeid;
+        field hn_cfg_sn1_nodeid is sbsx_nodeid;
+        field hn_cfg_sn2_nodeid is sbsx_nodeid;
+    }
+    register cmn_hns_sam_6sn_nodeid {
+        field hn_cfg_sn3_nodeid is sbsx_nodeid;
+        field hn_cfg_sn4_nodeid is sbsx_nodeid;
+        field hn_cfg_sn5_nodeid is sbsx_nodeid;
+    }
+
+}

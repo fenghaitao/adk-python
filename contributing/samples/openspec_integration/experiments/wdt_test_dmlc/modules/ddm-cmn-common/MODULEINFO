@@ -1,0 +1,29 @@
+# desc: ARM Coherent Mesh Network common code -- DDM variant
+# type: Other
+# ip-owner: ARM
+# keywords:
+# docs: https://intel.sharepoint.com/sites/systemsimulationcenter/3RDPARTY/Shared%20Documents/ARM%20Documentation/Vendor%20Docs/corelink_cmn600_coherent_mesh_network_technical_reference_manual_100180_0201_00_en.pdf
+# NDA: Public
+# comment:
+
+Group: ddm-cmn-common
+Require-tokens: public
+Make: ddm-cmn-common
+  @ddm-lib
+
+Group: ddm-cmn-common/shared/src
+Require-tokens: public
+  @cmn-common/shared/src
+  @ddm-lib/shared/src
+  src/devices/ddm-cmn-common/Makefile
+  src/devices/ddm-cmn-common/MODULEDEPS
+  src/devices/ddm-cmn-common/cmn-dia.dml
+  src/devices/ddm-cmn-common/model_spec.py
+  src/devices/ddm-cmn-common/parse-xml.py
+  src/devices/ddm-cmn-common/test/cmn-add-test.cmake
+  src/devices/ddm-cmn-common/test/cmn_600_common.py
+  src/devices/ddm-cmn-common/test/s-commands.py
+  src/devices/ddm-cmn-common/test/s-hnf.py
+  src/devices/ddm-cmn-common/test/s-hni.py
+  src/devices/ddm-cmn-common/test/s-register-access.py
+  src/devices/ddm-cmn-common/test/s-rnsam.py

@@ -1,0 +1,108 @@
+
+dml 1.4;
+
+header %{
+    static __attribute__((noinline)) bytes_t _ddm_instance_ddmdef(void) {
+        bytes_t ret;
+        asm volatile (
+            ".section .rodata\n"
+            ".align 8\n"
+            "_instance_ddmdef_data_start:\n"
+            ".incbin \"instance_ddmdef\"\n"
+            "_instance_ddmdef_data_end:\n"
+            ".text\n"
+            "leaq _instance_ddmdef_data_start(%%rip), %0\n"
+            "movq $(_instance_ddmdef_data_end - _instance_ddmdef_data_start),"
+                " %1\n"
+            : "=r" (ret.data), "=r" (ret.len)
+        );
+        return ret;
+    }
+%}
+extern bytes_t _ddm_instance_ddmdef(void);
+
+group ipxact_dia is ddm_dialect_base {
+    param ddmdef_resource = _ddm_instance_ddmdef;
+    param ddmdef_resource_hash = 4086694980063310293;
+}
+bank watchdog_memap is (ipxact_dia_assoc_to_bank) {
+    param first_bank_index = 0;
+    register WDOGLOAD size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 0;
+        param init_val = 0xffffffff;
+        field wdog_load @ [0x1f : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 0;
+        }
+    }
+    register WDOGVALUE size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 1;
+        param init_val = 0xffffffff;
+        field count_read @ [0x1f : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 1;
+        }
+    }
+    register WDOGCONTROL size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 2;
+        param init_val = 0x0;
+        field RESERVED @ [0x1f : 0x5] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 2;
+        }
+        field step_value @ [0x4 : 0x2] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 3;
+        }
+        field RESEN @ [0x1 : 0x1] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 4;
+        }
+        field INTEN @ [0x0 : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 5;
+        }
+    }
+    register WDOGINTCLR size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 3;
+        param init_val = 0x0;
+        field intclr @ [0x1f : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 6;
+        }
+    }
+    register WDOGRIS size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 4;
+        param init_val = 0x0;
+        field RESERVED @ [0x1f : 0x1] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 7;
+        }
+        field raw_watchdog_int @ [0x0 : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 8;
+        }
+    }
+    register WDOGMIS size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 5;
+        param init_val = 0x0;
+        field RESERVED @ [0x1f : 0x1] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 9;
+        }
+        field watchdog_int @ [0x0 : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 10;
+        }
+    }
+    register WDOGLOCK size 4 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 6;
+        param init_val = 0x0;
+        field wdog_lock @ [0x1f : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 11;
+        }
+    }
+    register WDOGPERIPHID0 size 1 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 7;
+        param init_val = 0x0;
+        field periph_id0 @ [0x7 : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 12;
+        }
+    }
+    register WDOGPCELLID0 size 1 is (ipxact_dia_assoc_to_reg, ddm_assoc_register_to_reg) {
+        param first_reg_index = 8;
+        param init_val = 0xd;
+        field pcell_id0 @ [0x7 : 0x0] is (ipxact_dia_assoc_to_field, ddm_assoc_field_to_field) {
+            param first_field_index = 13;
+        }
+    }
+}

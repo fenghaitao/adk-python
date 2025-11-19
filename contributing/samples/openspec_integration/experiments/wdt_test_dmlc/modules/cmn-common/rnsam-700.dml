@@ -1,0 +1,75 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+template rnsam is rnsam_node {
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM]          @ 0x0c00 + i * 8 + rnsam_offs;
+    register non_hash_tgt_nodeid[i < NUM_NON_HASH_TGT]          @ 0x0d80 + i * 8 + rnsam_offs;
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP]        @ 0x0e00 + i * 8 + rnsam_offs;
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP]     @ 0x0e40 + i * 8 + rnsam_offs;
+    register sys_cache_grp_hn_nodeid[i < NUM_SYS_CACHE_GRP_HN]  @ 0x0f00 + i * 8 + rnsam_offs;
+    register sys_cache_group_hn_count                           @ 0x0ea0 + rnsam_offs;
+
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM]          size 8;
+    register non_hash_tgt_nodeid[i < NUM_NON_HASH_TGT]          size 8;
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP]        size 8;
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP]     size 8;
+    register sys_cache_grp_hn_nodeid[i < NUM_SYS_CACHE_GRP_HN]  size 8;
+    register sys_cache_group_hn_count                           size 8;
+
+    register rnsam_status {
+        field default_target_type is unimpl { param init_val = 1; }
+    }
+
+    register non_hash_mem_region_cfg2[i < NUM_NON_HASH_MEM] {
+        param offset default unmapped_offset;
+        param rcomp_lsb = por_rnsam_unit_info1.nonhash_rcomp_lsb.val;
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            enabled_bytes[63:52] = 0;
+            if (rcomp_lsb > 0)
+                enabled_bytes[rcomp_lsb - 1:0] = 0;
+            default(value, enabled_bytes, aux);
+        }
+    }
+
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM] {
+        param init_val = 0x80;
+        param length = por_rnsam_unit_info.nonhash_range_comp_en.val
+            ? non_hash_mem_region_cfg2[i].val - base + 1
+            : 0x4000000 * (1 << sz.val);
+        field valid @ [0:0];
+        field target_type @ [4:2];
+        field secure @ [7:6];
+        field base_addr @ [51:16];
+        field sz @ [62:56];
+    }
+
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP] {
+        param init_val = 0x80;
+        field valid @ [0:0];
+        field target_type @ [4:2];
+        field secure @ [7:6];
+        field base_addr @ [51:16];
+        field sz @ [62:56];
+    }
+
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP] {
+        field valid @ [0:0];
+        field target_type @ [4:2];
+        field base_addr @ [51:16];
+        field sz @ [62:56];
+    }
+}

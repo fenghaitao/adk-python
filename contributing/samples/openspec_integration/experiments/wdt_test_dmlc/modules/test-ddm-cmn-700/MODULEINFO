@@ -1,0 +1,32 @@
+# desc: Test instance of ARM CMN-700
+# type: SOC
+# ip-owner: ARM
+# keywords:
+# docs: https://intel.sharepoint.com/sites/systemsimulationcenter/3RDPARTY/Shared%20Documents/ARM%20Documentation/Vendor%20Docs/corelink_cmn700_coherent_mesh_network_technical_reference_manual_100180_0201_00_en.pdf
+# NDA: Public
+# comment:
+
+Group: test-ddm-cmn-700
+Require-tokens: internal-intel
+Release-notes: $(HOST)/lib/test-ddm-cmn-700-limitations.docu
+Make: test-ddm-cmn-700
+       @ddm-lib
+       @ddm-cmn-common
+       $(HOST)/lib/test-ddm-cmn-700$(SO)
+       $(HOST)/lib/test_ddm_cmn_700.xml
+       @module_py(test_ddm_cmn_700/cmn_commands)
+       @module_py(test_ddm_cmn_700/regs)
+       @module_load_py(test_ddm_cmn_700)
+
+
+Group: test-ddm-cmn-700/src
+Require-tokens: internal-intel
+       @ddm-cmn-common/shared/src
+       src/devices/test-ddm-cmn-700/Makefile
+       src/devices/test-ddm-cmn-700/MODULEDEPS
+       src/devices/test-ddm-cmn-700/module_load.py
+       src/devices/test-ddm-cmn-700/test-cmn-700.dml
+       src/devices/test-ddm-cmn-700/test/SUITEINFO
+       src/devices/test-ddm-cmn-700/test/s-apb-access.py
+       src/devices/test-ddm-cmn-700/test/s-lock.py
+       src/devices/test-ddm-cmn-700/test/tests.py

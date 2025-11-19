@@ -1,0 +1,275 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+device demo_watchdog;
+
+param classname = "demo_watchdog";
+
+param desc = "DEMO_WATCHDOG Device";
+
+param documentation =
+    "Device generated from IP-XACT specification using DDM library. "
+    + "This device demonstrates how to use the DDM (Data-Driven Modeling) "
+    + "library to create Simics device models from IP-XACT register specifications.";
+
+// Import the DIA (Device Interface Abstract) and generated glue code
+import "demo_watchdog-dia.dml";
+import "demo_watchdog-glue.dml";
+import "simics/devs/signal.dml";
+
+// TODO: Add device-specific state variables here
+// Example:
+// session uint32 counter = 0;
+// session bool interrupt_pending = false;
+
+// TODO: Initialize the device
+method init() {
+    // TODO: Set initial state and register values
+    // Example:
+    // counter = 0;
+    // interrupt_pending = false;
+}
+
+// TODO: Add device-specific methods here
+// Example:
+// method my_custom_method() {
+//     log info, 1: "Custom method called";
+// }
+
+// Port and connect declarations
+port wclk {
+    implement signal {
+        // TODO: Implement wclk signal handling here
+        method signal_raise() {
+            log info, 1: "wclk signal raised";
+            // TODO: Add your signal raise logic
+        }
+        method signal_lower() {
+            log info, 1: "wclk signal lowered";
+            // TODO: Add your signal lower logic
+        }
+    }
+}
+
+port wclk_en {
+    implement signal {
+        // TODO: Implement wclk_en signal handling here
+        method signal_raise() {
+            log info, 1: "wclk_en signal raised";
+            // TODO: Add your signal raise logic
+        }
+        method signal_lower() {
+            log info, 1: "wclk_en signal lowered";
+            // TODO: Add your signal lower logic
+        }
+    }
+}
+
+port wrst_n {
+    implement signal {
+        // TODO: Implement wrst_n signal handling here
+        method signal_raise() {
+            log info, 1: "wrst_n signal raised";
+            // TODO: Add your signal raise logic
+        }
+        method signal_lower() {
+            log info, 1: "wrst_n signal lowered";
+            // TODO: Add your signal lower logic
+        }
+    }
+}
+
+port prst_n {
+    implement signal {
+        // TODO: Implement prst_n signal handling here
+        method signal_raise() {
+            log info, 1: "prst_n signal raised";
+            // TODO: Add your signal raise logic
+        }
+        method signal_lower() {
+            log info, 1: "prst_n signal lowered";
+            // TODO: Add your signal lower logic
+        }
+    }
+}
+
+connect wdogint {
+    interface signal;
+    method signal_raise() {
+        this.signal.signal_raise();
+    }
+    method signal_lower() {
+        this.signal.signal_lower();
+    }
+}
+
+connect wdogres {
+    interface signal;
+    method signal_raise() {
+        this.signal.signal_raise();
+    }
+    method signal_lower() {
+        this.signal.signal_lower();
+    }
+}
+
+// Register implementations with side effects
+// Bank: watchdog_memap
+bank watchdog_memap {
+    register WDOGLOAD {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGLOAD write_register() CALLED with value=0x%x", value;
+
+            // Call default write behavior first
+            default(value, enabled_bytes, aux);
+
+            // Side effect: Store the reload value for the watchdog timer
+            // This value will be used to reload the counter when:
+            // 1. INTEN bit transitions from 0 to 1 in WDOGCONTROL
+            // 2. WDOGINTCLR is written (clears interrupt and reloads counter)
+            // The actual reload logic is implemented in those respective registers
+
+            log info, 1: ">>> WDOGLOAD updated, reload_value=0x%x", this.val;
+        }
+    }
+
+    register WDOGVALUE {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            log info, 1: ">>> WDOGVALUE read_register() CALLED";
+
+            // TODO: Implement read-only register logic for WDOGVALUE
+            // Description: Watchdog Value Register - Current counter value
+            // Fields:
+            //   - count_read: [31:0] - Current value of watchdog counter
+            // TODO: Return the current register value or computed value
+
+            return this.val;
+        }
+    }
+
+    register WDOGCONTROL {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGCONTROL write_register() CALLED with value=0x%x", value;
+
+            // Call default write behavior first
+            default(value, enabled_bytes, aux);
+
+            // TODO: Implement side effects for WDOGCONTROL
+            // Description: Watchdog Control Register
+            // Fields:
+            //   - RESERVED: [31:5] - Reserved bits
+            //   - step_value: [4:2] - Step value for counter decrement
+            //   - RESEN: [1:1] - Enable watchdog reset output
+            //   - INTEN: [0:0] - Enable watchdog interrupt
+            // TODO: Add your implementation here
+
+            log info, 1: ">>> WDOGCONTROL updated, value=0x%x", this.val;
+        }
+    }
+
+    register WDOGINTCLR {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGINTCLR write_register() CALLED with value=0x%x", value;
+
+            // Call default write behavior first
+            default(value, enabled_bytes, aux);
+
+            // TODO: Implement side effects for WDOGINTCLR
+            // Description: Watchdog Interrupt Clear Register
+            // Fields:
+            //   - intclr: [31:0] - Writing any value clears the interrupt and reloads counter from WDOGLOAD
+            // TODO: Add your implementation here
+
+            log info, 1: ">>> WDOGINTCLR updated, value=0x%x", this.val;
+        }
+    }
+
+    register WDOGRIS {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            log info, 1: ">>> WDOGRIS read_register() CALLED";
+
+            // TODO: Implement read-only register logic for WDOGRIS
+            // Description: Watchdog Raw Interrupt Status Register
+            // Fields:
+            //   - RESERVED: [31:1] - Reserved bits
+            //   - raw_watchdog_int: [0:0] - Raw interrupt status from the counter (WS0)
+            // TODO: Return the current register value or computed value
+
+            return this.val;
+        }
+    }
+
+    register WDOGMIS {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            log info, 1: ">>> WDOGMIS read_register() CALLED";
+
+            // TODO: Implement read-only register logic for WDOGMIS
+            // Description: Watchdog Masked Interrupt Status Register (WDOGRIS & INTEN)
+            // Fields:
+            //   - RESERVED: [31:1] - Reserved bits
+            //   - watchdog_int: [0:0] - Masked interrupt status (WDOGRIS & INTEN)
+            // TODO: Return the current register value or computed value
+
+            return this.val;
+        }
+    }
+
+    register WDOGLOCK {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            log info, 1: ">>> WDOGLOCK write_register() CALLED with value=0x%x", value;
+
+            // Call default write behavior first
+            default(value, enabled_bytes, aux);
+
+            // TODO: Implement side effects for WDOGLOCK
+            // Description: Watchdog Lock Register
+            // Fields:
+            //   - wdog_lock: [31:0] - Register write access control. Write 0x1ACCE551 to enable write access, any other value to disable.
+            // TODO: Add your implementation here
+
+            log info, 1: ">>> WDOGLOCK updated, value=0x%x", this.val;
+        }
+    }
+
+    register WDOGPERIPHID0 {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            log info, 1: ">>> WDOGPERIPHID0 read_register() CALLED";
+
+            // TODO: Implement read-only register logic for WDOGPERIPHID0
+            // Description: Peripheral ID Register 0
+            // Fields:
+            //   - periph_id0: [7:0] - Part number bits [7:0]
+            // TODO: Return the current register value or computed value
+
+            return this.val;
+        }
+    }
+
+    register WDOGPCELLID0 {
+        method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+            log info, 1: ">>> WDOGPCELLID0 read_register() CALLED";
+
+            // TODO: Implement read-only register logic for WDOGPCELLID0
+            // Description: PrimeCell ID Register 0
+            // Fields:
+            //   - pcell_id0: [7:0] - PrimeCell ID bits [7:0]
+            // TODO: Return the current register value or computed value
+
+            return this.val;
+        }
+    }
+}

@@ -1,0 +1,32 @@
+bank test_bank:
+  anchor: "b"
+  group r[i < 3]:
+    anchor_type: reg
+    anchor: ".g.r{i}"
+    group f[i < 4]:
+      anchor_type: field
+      anchor: [".lo.f0", ".lo.f1", ".hi.f2", ".hi.f3"]
+  register r3:
+    anchor: ".g.r3"
+    group hi:
+      anchor_prefix: ".hi"
+      field f2:
+        anchor: ".f2"
+  group r3_f1:
+    anchor: ".g.r3.lo.f1"
+    anchor_type: field
+  group r4_f0:
+    anchor: ".g.r4.lo.f0"
+    anchor_type: field
+  register r5:
+    field f0:
+      anchor_qualified: "b.g.r5.lo.f0"
+    group hi:
+      field f2:
+        anchor_qualified: "b.g.r5.hi.f2"
+
+bank test_bank_overlap:
+  anchor: "b_overlap"
+  group r[i < 2]:
+    anchor_type: reg
+    anchor: ".r{i}"

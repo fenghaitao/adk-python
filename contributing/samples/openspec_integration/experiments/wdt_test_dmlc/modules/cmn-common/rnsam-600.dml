@@ -1,0 +1,101 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2019 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "utility.dml";
+import "simics/util/hashtab.dml";
+import "simics/devs/map-demap.dml";
+
+template rnsam is rnsam_node {
+    register rnsam_status {
+        field default_nodeid @ [58:48] is (read_zero, ignore_write) {
+            // This field doesn't exist in CMN-600, added as read-zero to make
+            // the common code simpler
+            param init_val = HND_NID;
+        }
+    }
+
+    register non_hash_mem_region[i < NUM_NON_HASH_MEM] {
+        param size = 4;
+        param offset = ((i < 10) ? 0xc08 : 0xca0) + (i % 10) * 4  + rnsam_offs;
+        param base = base_addr.val << 26;
+        field base_addr @ [30:9];
+        field sz @ [8:4];
+        field target_type @ [3:2];
+        field valid @ [0:0];
+    }
+
+    register non_hash_tgt_nodeid[i < NUM_NON_HASH_TGT] {
+        param offset = ((i <  3) ? 0xc30 : 0xce0) + (i % 3) * 8 + rnsam_offs;
+    }
+
+    register sys_cache_grp_region[i < NUM_SYS_CACHE_GRP] {
+        param size = 4;
+        param offset = 0xc48 + rnsam_offs + i * 4;
+        param base = base_addr.val << 26;
+        field base_addr @ [30:9];
+        field sz @ [8:4];
+        field target_type @ [3:2];
+        field valid @ [0:0];
+    }
+
+    register sys_cache_grp_secondary[i < NUM_SYS_CACHE_GRP] {
+        param size = 4;
+        param offset = 0xf00 + rnsam_offs + i * 4;
+        param base = base_addr.val << 26;
+        field base_addr @ [30:9];
+        field sz @ [8:4];
+        field target_type @ [3:2];
+        field valid @ [0:0];
+    }
+
+    register sys_cache_grp_hn_nodeid[i < NUM_SYS_CACHE_GRP_HN] {
+        param offset = ((i <  8) ? 0xc58 : 0xf58) + (i % 8) * 8 + rnsam_offs;
+    }
+
+    register sys_cache_group_hn_count @ 0xd00 + rnsam_offs;
+
+    connect lecacy_nonsecure_marker is (init_as_subobj, post_init) {
+        param classname = "arm-ns-marker";
+        method post_init() {
+            if (SIM_is_restoring_state(dev.obj))
+                return;
+            if (support_legacy_nonsecure_addresses == false)
+                return;
+            local attr_value_t val = SIM_make_attr_object(address_space.obj);
+            SIM_set_attribute(obj, "default_target", &val);
+            local map_info_t nfo;
+            nfo.base[63] = 1;
+            nfo.length[63] = 1;
+            address_space.map_demap.map_simple(obj, NULL, nfo);
+        }
+    }
+
+    in each mem_region {
+        method region_valid() -> (bool) {
+            if (!default())
+                return false;
+            if (target_type.val == 0b11) {
+                // CMN-600 doesn't have HN-P nodes
+                log spec_viol: "%s: target_type reserved value 0b11", qname;
+                return false;
+            }
+            return true;
+        }
+    }
+}
+
+saved bool support_legacy_nonsecure_addresses = true;

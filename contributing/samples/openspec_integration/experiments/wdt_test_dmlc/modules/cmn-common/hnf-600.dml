@@ -1,0 +1,56 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2019 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "utility.dml";
+import "simics/simulator-api.dml";
+
+template hnf is hnf_node {
+    // cmn-600 used 'por_hnf' prefix rather than 'cmn_hns'
+    register cmn_hns_sam_memregion[i < 2] {
+        param name = "por_hnf_sam_memregion";
+    }
+    register cmn_hns_slc_lock_base[i < 4] {
+        param name = "por_hnf_slc_lock_base";
+    }
+
+    register por_hnf_sam_control {
+        field hn_cfg_sn0_nodeid is sbsx_nodeid;
+        field hn_cfg_sn1_nodeid is sbsx_nodeid;
+        field hn_cfg_sn2_nodeid is sbsx_nodeid;
+    }
+    register por_hnf_sam_6sn_nodeid {
+        field hn_cfg_sn3_nodeid is sbsx_nodeid;
+        field hn_cfg_sn4_nodeid is sbsx_nodeid;
+        field hn_cfg_sn5_nodeid is sbsx_nodeid;
+    }
+
+    param sn0_nodeid = por_hnf_sam_control.hn_cfg_sn0_nodeid.val;
+    param ocm_en = por_hnf_cfg_ctl.hnf_ocm_en.val;
+    param ocm_allways_en = por_hnf_cfg_ctl.hnf_ocm_allways_en.val;
+    param slc_size =
+        por_hnf_unit_info.slc_size.val == 0 ? 0 :
+        por_hnf_unit_info.slc_size.val == 1 ? 0x020000 :
+        por_hnf_unit_info.slc_size.val == 2 ? 0x040000 :
+        por_hnf_unit_info.slc_size.val == 3 ? 0x080000 :
+        por_hnf_unit_info.slc_size.val == 4 ? 0x100000 :
+        por_hnf_unit_info.slc_size.val == 5 ? 0x200000 :
+        por_hnf_unit_info.slc_size.val == 6 ? 0x300000 :
+        por_hnf_unit_info.slc_size.val == 7 ? 0x400000 : 0;
+    param slc_ways = por_hnf_unit_info.num_ways.val;
+    param slc_lock_ways = por_hnf_slc_lock_ways.ways.val;
+}
+

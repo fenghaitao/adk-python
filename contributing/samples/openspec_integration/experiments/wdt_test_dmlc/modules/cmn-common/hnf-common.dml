@@ -1,0 +1,305 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+template hnf_node is node {
+    register cmn_hns_sam_memregion[i < 2] "Range-based memory regions in HN-F SAM";
+    register cmn_hns_slc_lock_base[i < 4] "Base register for SLC lock regions";
+
+    register cmn_hns_sam_memregion[i < 2] @ 0x0d08 + hnf_offs + i * 8;
+    register cmn_hns_slc_lock_base[i < 4] @ 0x0c08 + hnf_offs + i * 8;
+
+    // cmn-600 and cmn-700 have slightly different names for these registers
+    // and fields
+    param sn0_nodeid default cmn_hns_sam_control.hn_cfg_sn0_nodeid.val;
+    param ocm_en default cmn_hns_cfg_ctl.hns_ocm_en.val;
+    param ocm_allways_en default cmn_hns_cfg_ctl.hns_ocm_allways_en.val;
+    param slc_size default
+        cmn_hns_unit_info.slc_size.val == 0 ? 0 :
+        cmn_hns_unit_info.slc_size.val == 1 ? 0x020000 :
+        cmn_hns_unit_info.slc_size.val == 2 ? 0x040000 :
+        cmn_hns_unit_info.slc_size.val == 3 ? 0x080000 :
+        cmn_hns_unit_info.slc_size.val == 4 ? 0x100000 :
+        cmn_hns_unit_info.slc_size.val == 5 ? 0x180000 :
+        cmn_hns_unit_info.slc_size.val == 6 ? 0x200000 :
+        cmn_hns_unit_info.slc_size.val == 7 ? 0x300000 :
+        cmn_hns_unit_info.slc_size.val == 8 ? 0x400000 : 0;
+    param slc_ways default cmn_hns_unit_info.slc_num_ways.val;
+    param slc_lock_ways default cmn_hns_slc_lock_ways.ways.val;
+
+    register cmn_hns_sam_memregion[i < 2] {
+        field valid @ [63];
+        field base_addr @ [47:26];
+        field sz @ [16:12];
+        field nodeid @ [10:0];
+
+        param length = 0x4000000 * (1 << sz.val);
+        param base = base_addr.val << base_addr.lsb;
+
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            local bool was_valid = valid.val;
+            default(value, enabled_bytes, aux);
+            if (!was_valid && valid.val) {
+                log info, 2: "HNF %d memory region %d @ 0x%x size 0x%x targets"
+                    + " nodeid %d", node_id, i, base, length, nodeid.val;
+            } else if (was_valid && !valid.val) {
+                log info, 2: "HNF %d memory region %d disabled", node_id, i;
+            }
+        }
+
+        method map(rnsam_space_t ms, map_info_t nfo) {
+            if (valid.val != 0) {
+                if (!((base + length) < nfo.base ||
+                      base > (nfo.base + nfo.length))) {
+                    local conf_object_t *tgt = sbsx_targets.lookup(nodeid.val);
+                    if (!tgt) {
+                        tgt = dev.impl.INVALID_NODE_ID.obj;
+                        nfo.function = nodeid.val;
+                    }
+                    nfo.base = base;
+                    nfo.start = base;
+                    nfo.length = length;
+                    ms.map(tgt, nfo);
+                } else {
+                    log info, 2: "%s range-based region [0x%x - 0x%x]"
+                        + " is outside mapped region [0x%x - 0x%x]",
+                        qname, base, base + length, nfo.base,
+                        nfo.base + nfo.length;
+                }
+            }
+        }
+    }
+
+    register cmn_hns_slc_lock_base[i < 4] {
+        field valid @ [63];
+        field base @ [47:0];
+
+        method map(rnsam_space_t ms, map_info_t nfo, int idx) -> (uint64) {
+            if (valid.val == 0)
+                return 0;
+
+            local uint64 ways_in_region;
+            if (ocm_allways_en == 1) {
+                // The docs are unclear, but states that when ocm_allways_en is
+                // 1 the OCM region must be contiguous and aligned to the SLC
+                // size. We assume this means SW should program at least
+                // slc_lock_base0 to the base of the OCM region, maybe even the
+                // other base-registers but we don't check that.
+                if (i > 0)
+                    return 0;
+                ways_in_region = slc_ways;
+            } else {
+                switch (slc_lock_ways) {
+                case 12:
+                    ways_in_region = i < 2 ? 2 : 4;
+                    break;
+                case 8:
+                    ways_in_region = 2;
+                    break;
+                case 2:
+                    ways_in_region = i < 2 ? 1 : 0;
+                    break;
+                case 1:
+                    ways_in_region = i == 0 ? 1 : 0;
+                    break;
+                case 4:
+                    ways_in_region = 1;
+                    break;
+                default:
+                    log spec_viol: "invalid num SLC ways locked (%d)",
+                        slc_lock_ways;
+                    return 0;
+                }
+            }
+            if (ways_in_region > 0) {
+                // nfo holds the region in 'ms' that targeted this HN-F. Any
+                // address outside of that region is not actually reachable, so
+                // we make sure to map only the intersection of the local
+                // region and the remote.
+                local uint64 length = ways_in_region * (slc_size / slc_ways);
+                if (base.val % length != 0) {
+                    log spec_viol: "%s 0x%x unaligned (region size 0x%x),"
+                        + " effective base address is 0x%x",
+                        qname, base.val, length, base.val & ~(length - 1);
+                    base.val &= ~(length - 1);
+                }
+                local uint64 base_addr = base.val + length * idx;
+                local uint64 begin = max(base_addr, nfo.base);
+                local uint64 end =
+                    min(base_addr + length, nfo.base + nfo.length);
+                if (begin < end) {
+                    nfo.base = begin;
+                    nfo.length = end - begin;
+                    ms.map(ocm.ram.obj, nfo);
+                } else {
+                    log info, 2: "%s locked slc region [0x%x - 0x%x]"
+                        + " is outside mapped region [0x%x - 0x%x]",
+                        qname, base.val, base.val + length - 1,
+                        nfo.base, nfo.base + nfo.length - 1;
+                }
+                return length;
+            } else {
+                log spec_viol, 1: "%s is not enabled with %d locked ways",
+                    qname, slc_lock_ways;
+                return 0;
+            }
+        }
+    }
+
+    shared method map_ocm(rnsam_space_t ms, map_info_t nfo, int idx);
+    method map_ocm(rnsam_space_t ms, map_info_t nfo, int idx) {
+        // We don't hash out regions across HN-F's, but map continuous blocks
+        // instead. The argument 'idx' is used to calculate the offset of this
+        // particular HN-F in the OCM map-target
+        if (slc_size == 0) {
+            log info, 2: "HNF %d has no SLC, OCM not mapped", node_id;
+            return;
+        }
+        log info, 2: "HNF %d has OCM %s (%d/%d ways locked)", node_id,
+            ocm_en != 0 ? "enabled" : "disabled",
+            ocm_allways_en != 0 ?
+            16 : slc_lock_ways, slc_ways;
+
+        if (ocm_en != 0) {
+            for (local int i = 0; i < cmn_hns_slc_lock_base.len; i++) {
+                nfo.start += cmn_hns_slc_lock_base[i].map(ms, nfo, idx);
+                nfo.priority++;
+            }
+        }
+    }
+
+    shared method unmap_ocm(rnsam_space_t ms);
+    method unmap_ocm(rnsam_space_t ms) {
+        ms.unmap(ocm.ram.obj);
+    }
+
+    shared method map_sn(rnsam_space_t ms, map_info_t nfo);
+    method map_sn(rnsam_space_t ms, map_info_t nfo) {
+        // We don't actually hash access to the SNs, instead we assume that all
+        // SNs are actually the same object (typically RAM) and map SN0 only
+        for (local int i = 0; i < cmn_hns_sam_memregion.len; ++i) {
+            cmn_hns_sam_memregion[i].map(ms, nfo);
+            nfo.priority++;
+        }
+        log unimpl, 2: "mapping SN0 (%d) @ 0x%x length 0x%x",
+            sn0_nodeid, nfo.base, nfo.length;
+        local conf_object_t *tgt = sbsx_targets.lookup(sn0_nodeid);
+        if (!tgt) {
+            tgt = dev.impl.INVALID_NODE_ID.obj;
+            nfo.function = sn0_nodeid;
+        }
+        nfo.start = nfo.base;
+        ms.map(tgt, nfo);
+    }
+
+    group ocm {
+        connect ram is init_as_subobj {
+            param classname = "ram";
+            method init() {
+                default();
+                image.init();
+                local attr_value_t val = SIM_make_attr_object(image.obj);
+                SIM_set_attribute_default(this.obj, "image", val);
+            }
+        }
+
+        connect image is init_as_subobj {
+            param classname = "image";
+            session bool initialized;
+            method init() {
+                if (initialized)
+                    return;
+                default();
+                SIM_set_attribute_default(
+                    this.obj, "size", SIM_make_attr_uint64(0x800000));
+                initialized = true;
+            }
+        }
+    }
+}
+
+template sbsx_nodeid is write {
+    method write(uint64 value) {
+        if (this.val != value) {
+            if (bad_sbsx_node_id(value)) {
+                report_bad_nid(value, "SBSX");
+            } else if (!sbsx_targets.lookup(value)) {
+                log error: "SBSX %d was not found in %s",
+                    value, sbsx_targets.qname;
+            }
+            default(value);
+        }
+    }
+}
+
+method bad_sbsx_node_id(uint64 nid) -> (bool) {
+    foreach nfo in (each node_info in (dev)) {
+        if (nfo.nid == nid && nfo.ntype == NODE_TYPE_SBSX)
+            return false;
+    }
+    return true;
+}
+
+template hnf_attributes {
+    attribute sbsx_targets is init {
+        param documentation =
+            "A list of SBSX NodeIDs and objects, used by the HN-F SAMs";
+        param type = "[[io]*]";
+        session attr_value_t val;
+
+        method init() {
+            val = SIM_alloc_attr_list(0);
+        }
+
+        method set(attr_value_t value) throws {
+            for (local int i = 0; i < SIM_attr_list_size(value); ++i) {
+                local uint64 nid = SIM_attr_integer(
+                    SIM_attr_list_item(SIM_attr_list_item(value, i), 0));
+                if (bad_sbsx_node_id(nid)) {
+                    SIM_c_attribute_error(
+                        "'%lld' is not a valid SBSX node id", nid);
+                    throw;
+                }
+            }
+            SIM_free_attribute(val);
+            val = SIM_attr_copy(value);
+        }
+
+        method get() -> (attr_value_t) {
+            return SIM_attr_copy(val);
+        }
+
+        method lookup(uint64 nodeid) -> (conf_object_t *) {
+            for (local int i = 0; i < SIM_attr_list_size(val); i++) {
+                local attr_value_t sbsx_target = SIM_attr_list_item(val, i);
+                local uint64 nid =
+                    SIM_attr_integer(SIM_attr_list_item(sbsx_target, 0));
+                if (nodeid == nid)
+                    return SIM_attr_object(SIM_attr_list_item(sbsx_target, 1));
+            }
+            log info, 2: "couldn't find SBSX %d in %s", nodeid, name;
+            return NULL;
+        }
+
+        method clear_map(rnsam_space_t ms) {
+            for (local int i = 0; i < SIM_attr_list_size(val); i++) {
+                local attr_value_t sbsx_target = SIM_attr_list_item(val, i);
+                ms.unmap(SIM_attr_object(SIM_attr_list_item(sbsx_target, 1)));
+            }
+            ms.unmap(dev.impl.INVALID_NODE_ID.obj);
+        }
+    }
+}

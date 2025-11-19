@@ -1,0 +1,758 @@
+dml 1.4;
+
+header %{
+#include <simics/base/types.h>
+#include <simics/util/alloc.h>
+#include <simics/util/help-macros.h>
+#include <simics/util/swabber.h>
+typedef struct { uint32 idx; } cmn_bank_t;
+typedef struct { uint32 idx; } cmn_reg_t;
+typedef struct { uint32 idx; } cmn_field_t;
+typedef struct { uint32 idx; } cmn_handles_t;
+typedef struct {
+  uint32 bank;
+  uint32 reg;
+  uint32 field;
+  uint32 handles;
+  uint32 string_pool;
+  uint32 uint32_pool;
+} _cmn_sizes_t;
+typedef struct {
+  uint32 regs_size;
+  uint32 regs_first_pool_idx;
+} _cmn_bank_t;
+typedef struct {
+  uint64 offset;
+  uint64 init_val;
+  uint64 field_bits;
+  uint32 bank;
+  uint32 name_pool_idx;
+  uint32 fields_first_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 fields_size;
+  uint8 size;
+  uint8 _bits[1];
+} _cmn_reg_t;
+typedef struct {
+  uint64 lock_value;
+  uint32 reg;
+  uint32 name_pool_idx;
+  uint32 desc_pool_idx;
+  uint32 lock_ref_first_pool_idx;
+  uint8 lsb;
+  uint8 bitsize;
+  uint8 lock_ref_size;
+  uint8 _bits[1];
+} _cmn_field_t;
+typedef struct {
+  uint32 bank_size;
+  uint32 bank_first_pool_idx;
+  uint32 reg_size;
+  uint32 reg_first_pool_idx;
+  uint32 field_size;
+  uint32 field_first_pool_idx;
+} _cmn_handles_t;
+typedef struct {
+  _cmn_sizes_t sz;
+  const _cmn_bank_t *bank;
+  const _cmn_reg_t *reg;
+  const _cmn_field_t *field;
+  const _cmn_handles_t *handles;
+  const char *string_pool;
+  const uint32 *uint32_pool;
+} cmn_t;
+static inline cmn_bank_t
+cmn__mk__bank(uint32 i)
+{
+  return (cmn_bank_t){i};
+}
+
+static inline uint32
+cmn__id__bank(cmn_bank_t i)
+{
+  return i.idx;
+}
+
+static inline cmn_reg_t
+cmn__mk__reg(uint32 i)
+{
+  return (cmn_reg_t){i};
+}
+
+static inline uint32
+cmn__id__reg(cmn_reg_t i)
+{
+  return i.idx;
+}
+
+static inline cmn_field_t
+cmn__mk__field(uint32 i)
+{
+  return (cmn_field_t){i};
+}
+
+static inline uint32
+cmn__id__field(cmn_field_t i)
+{
+  return i.idx;
+}
+
+static inline cmn_handles_t
+cmn__mk__handles(uint32 i)
+{
+  return (cmn_handles_t){i};
+}
+
+static inline uint32
+cmn__id__handles(cmn_handles_t i)
+{
+  return i.idx;
+}
+
+static inline uint32
+cmn__num__bank(const cmn_t *_indep)
+{
+  return _indep->sz.bank;
+}
+
+static inline uint32
+cmn_bank_regs_len(const cmn_t *_indep, cmn_bank_t bank)
+{
+  return _indep->bank[bank.idx].regs_size;
+}
+
+static inline cmn_reg_t
+cmn_bank_regs_item(const cmn_t *_indep, cmn_bank_t bank, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->bank[bank.idx].regs_size, "index %u out-of-bounds in list of size %u", index, _indep->bank[bank.idx].regs_size);
+  return cmn__mk__reg(_indep->uint32_pool[_indep->bank[bank.idx].regs_first_pool_idx + index]);
+}
+
+static inline uint32
+cmn__num__reg(const cmn_t *_indep)
+{
+  return _indep->sz.reg;
+}
+
+static inline cmn_bank_t
+cmn_reg_bank(const cmn_t *_indep, cmn_reg_t reg)
+
+{
+  return (cmn_bank_t){.idx=_indep->reg[reg.idx].bank};
+}
+
+static inline uint64
+cmn_reg_offset(const cmn_t *_indep, cmn_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].offset;
+}
+
+static inline uint64
+cmn_reg_init_val(const cmn_t *_indep, cmn_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].init_val;
+}
+
+static inline uint64
+cmn_reg_field_bits(const cmn_t *_indep, cmn_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].field_bits;
+}
+
+static inline bool
+cmn_reg_read_only(const cmn_t *_indep, cmn_reg_t reg)
+{
+  return (_indep->reg[reg.idx]._bits[0] & 1) != 0;
+}
+
+static inline const char *
+cmn_reg_name(const cmn_t *_indep, cmn_reg_t reg)
+{
+  return &_indep->string_pool[_indep->reg[reg.idx].name_pool_idx];
+}
+
+static inline uint8
+cmn_reg_fields_len(const cmn_t *_indep, cmn_reg_t reg)
+{
+  return _indep->reg[reg.idx].fields_size;
+}
+
+static inline cmn_field_t
+cmn_reg_fields_item(const cmn_t *_indep, cmn_reg_t reg, uint8 index)
+{
+  FATAL_ERROR_IF(index >=_indep->reg[reg.idx].fields_size, "index %u out-of-bounds in list of size %u", index, _indep->reg[reg.idx].fields_size);
+  return cmn__mk__field(_indep->uint32_pool[_indep->reg[reg.idx].fields_first_pool_idx + index]);
+}
+
+static inline uint8
+cmn_reg_size(const cmn_t *_indep, cmn_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].size;
+}
+
+static inline const char *
+cmn_reg_desc(const cmn_t *_indep, cmn_reg_t reg)
+{
+  return &_indep->string_pool[_indep->reg[reg.idx].desc_pool_idx];
+}
+
+static inline uint32
+cmn__num__field(const cmn_t *_indep)
+{
+  return _indep->sz.field;
+}
+
+static inline cmn_reg_t
+cmn_field_reg(const cmn_t *_indep, cmn_field_t field)
+
+{
+  return (cmn_reg_t){.idx=_indep->field[field.idx].reg};
+}
+
+static inline uint8
+cmn_field_lsb(const cmn_t *_indep, cmn_field_t field)
+
+{
+  return _indep->field[field.idx].lsb;
+}
+
+static inline uint8
+cmn_field_bitsize(const cmn_t *_indep, cmn_field_t field)
+
+{
+  return _indep->field[field.idx].bitsize;
+}
+
+static inline bool
+cmn_field_read_only(const cmn_t *_indep, cmn_field_t field)
+{
+  return (_indep->field[field.idx]._bits[0] & 1) != 0;
+}
+
+static inline const char *
+cmn_field_name(const cmn_t *_indep, cmn_field_t field)
+{
+  return &_indep->string_pool[_indep->field[field.idx].name_pool_idx];
+}
+
+static inline const char *
+cmn_field_desc(const cmn_t *_indep, cmn_field_t field)
+{
+  return &_indep->string_pool[_indep->field[field.idx].desc_pool_idx];
+}
+
+static inline uint8
+cmn_field_lock_ref_len(const cmn_t *_indep, cmn_field_t field)
+{
+  return _indep->field[field.idx].lock_ref_size;
+}
+
+static inline cmn_field_t
+cmn_field_lock_ref_item(const cmn_t *_indep, cmn_field_t field, uint8 index)
+{
+  FATAL_ERROR_IF(index >=_indep->field[field.idx].lock_ref_size, "index %u out-of-bounds in list of size %u", index, _indep->field[field.idx].lock_ref_size);
+  return cmn__mk__field(_indep->uint32_pool[_indep->field[field.idx].lock_ref_first_pool_idx + index]);
+}
+
+static inline uint64
+cmn_field_lock_value(const cmn_t *_indep, cmn_field_t field)
+
+{
+  return _indep->field[field.idx].lock_value;
+}
+
+static inline uint32
+cmn__num__handles(const cmn_t *_indep)
+{
+  return _indep->sz.handles;
+}
+
+static inline uint32
+cmn_handles_bank_len(const cmn_t *_indep, cmn_handles_t handles)
+{
+  return _indep->handles[handles.idx].bank_size;
+}
+
+static inline cmn_bank_t
+cmn_handles_bank_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].bank_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].bank_size);
+  return cmn__mk__bank(_indep->uint32_pool[_indep->handles[handles.idx].bank_first_pool_idx + index]);
+}
+
+static inline uint32
+cmn_handles_reg_len(const cmn_t *_indep, cmn_handles_t handles)
+{
+  return _indep->handles[handles.idx].reg_size;
+}
+
+static inline cmn_reg_t
+cmn_handles_reg_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].reg_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].reg_size);
+  return cmn__mk__reg(_indep->uint32_pool[_indep->handles[handles.idx].reg_first_pool_idx + index]);
+}
+
+static inline uint32
+cmn_handles_field_len(const cmn_t *_indep, cmn_handles_t handles)
+{
+  return _indep->handles[handles.idx].field_size;
+}
+
+static inline cmn_field_t
+cmn_handles_field_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].field_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].field_size);
+  return cmn__mk__field(_indep->uint32_pool[_indep->handles[handles.idx].field_first_pool_idx + index]);
+}
+
+static inline cmn_t *
+__new_cmn(bytes_t data, uint64 expected_hash)
+{
+  cmn_t *ret = MM_MALLOC(1, cmn_t);
+  const uint8 *mapped = data.data;
+  uint64 size = data.len;
+  ASSERT(size >= 8);
+  uint64 hash = UNALIGNED_LOAD_LE64(mapped);
+  FATAL_ERROR_IF(hash != expected_hash, "Glue and generated binary out-of-sync");
+  int64 pos = 8;
+  ASSERT(sizeof(_cmn_sizes_t) <= size);
+  memcpy(&ret->sz, mapped + pos, sizeof(_cmn_sizes_t));
+  pos += sizeof(_cmn_sizes_t);
+  pos = (pos + 7) & ~7;
+  ret->bank = (const _cmn_bank_t *)(mapped + pos);
+  pos += sizeof(*ret->bank) * ret->sz.bank;
+  pos = (pos + 7) & ~7;
+  ret->reg = (const _cmn_reg_t *)(mapped + pos);
+  pos += sizeof(*ret->reg) * ret->sz.reg;
+  pos = (pos + 7) & ~7;
+  ret->field = (const _cmn_field_t *)(mapped + pos);
+  pos += sizeof(*ret->field) * ret->sz.field;
+  pos = (pos + 7) & ~7;
+  ret->handles = (const _cmn_handles_t *)(mapped + pos);
+  pos += sizeof(*ret->handles) * ret->sz.handles;
+  pos = (pos + 7) & ~7;
+  ret->string_pool = (const char *)(mapped + pos);
+  pos += sizeof(char) * ret->sz.string_pool;
+  pos = (pos + 7) & ~7;
+  ret->uint32_pool = (const uint32 *)(mapped + pos);
+  pos += sizeof(uint32) * ret->sz.uint32_pool;
+  pos = (pos + 7) & ~7;
+  FATAL_ERROR_IF(pos != size,
+      "unexpected datablob size: expected %lld, got %lld",
+      pos, size);
+  return ret;
+}
+
+%}
+
+extern typedef struct { uint32 idx; } cmn_bank_t;
+extern typedef struct { uint32 idx; } cmn_reg_t;
+extern typedef struct { uint32 idx; } cmn_field_t;
+extern typedef struct { uint32 idx; } cmn_handles_t;
+extern typedef struct {
+  uint32 bank;
+  uint32 reg;
+  uint32 field;
+  uint32 handles;
+  uint32 string_pool;
+  uint32 uint32_pool;
+} _cmn_sizes_t;
+extern typedef struct {
+  uint32 regs_size;
+  uint32 regs_first_pool_idx;
+} _cmn_bank_t;
+extern typedef struct {
+  uint64 offset;
+  uint64 init_val;
+  uint64 field_bits;
+  uint32 bank;
+  uint32 name_pool_idx;
+  uint32 fields_first_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 fields_size;
+  uint8 size;
+  uint8 _bits[1];
+} _cmn_reg_t;
+extern typedef struct {
+  uint64 lock_value;
+  uint32 reg;
+  uint32 name_pool_idx;
+  uint32 desc_pool_idx;
+  uint32 lock_ref_first_pool_idx;
+  uint8 lsb;
+  uint8 bitsize;
+  uint8 lock_ref_size;
+  uint8 _bits[1];
+} _cmn_field_t;
+extern typedef struct {
+  uint32 bank_size;
+  uint32 bank_first_pool_idx;
+  uint32 reg_size;
+  uint32 reg_first_pool_idx;
+  uint32 field_size;
+  uint32 field_first_pool_idx;
+} _cmn_handles_t;
+extern typedef struct {
+  _cmn_sizes_t sz;
+  const _cmn_bank_t *bank;
+  const _cmn_reg_t *reg;
+  const _cmn_field_t *field;
+  const _cmn_handles_t *handles;
+  const char *string_pool;
+  const uint32 *uint32_pool;
+} cmn_t;
+extern cmn_bank_t
+cmn__mk__bank(uint32 i);
+extern uint32
+cmn__id__bank(cmn_bank_t i);
+extern cmn_reg_t
+cmn__mk__reg(uint32 i);
+extern uint32
+cmn__id__reg(cmn_reg_t i);
+extern cmn_field_t
+cmn__mk__field(uint32 i);
+extern uint32
+cmn__id__field(cmn_field_t i);
+extern cmn_handles_t
+cmn__mk__handles(uint32 i);
+extern uint32
+cmn__id__handles(cmn_handles_t i);
+extern uint32
+cmn__num__bank(const cmn_t *_indep);
+extern uint32
+cmn_bank_regs_len(const cmn_t *_indep, cmn_bank_t bank);
+extern cmn_reg_t
+cmn_bank_regs_item(const cmn_t *_indep, cmn_bank_t bank, uint32 index);
+extern uint32
+cmn__num__reg(const cmn_t *_indep);
+extern cmn_bank_t
+cmn_reg_bank(const cmn_t *_indep, cmn_reg_t reg)
+;
+extern uint64
+cmn_reg_offset(const cmn_t *_indep, cmn_reg_t reg)
+;
+extern uint64
+cmn_reg_init_val(const cmn_t *_indep, cmn_reg_t reg)
+;
+extern uint64
+cmn_reg_field_bits(const cmn_t *_indep, cmn_reg_t reg)
+;
+extern bool
+cmn_reg_read_only(const cmn_t *_indep, cmn_reg_t reg);
+extern const char *
+cmn_reg_name(const cmn_t *_indep, cmn_reg_t reg);
+extern uint8
+cmn_reg_fields_len(const cmn_t *_indep, cmn_reg_t reg);
+extern cmn_field_t
+cmn_reg_fields_item(const cmn_t *_indep, cmn_reg_t reg, uint8 index);
+extern uint8
+cmn_reg_size(const cmn_t *_indep, cmn_reg_t reg)
+;
+extern const char *
+cmn_reg_desc(const cmn_t *_indep, cmn_reg_t reg);
+extern uint32
+cmn__num__field(const cmn_t *_indep);
+extern cmn_reg_t
+cmn_field_reg(const cmn_t *_indep, cmn_field_t field)
+;
+extern uint8
+cmn_field_lsb(const cmn_t *_indep, cmn_field_t field)
+;
+extern uint8
+cmn_field_bitsize(const cmn_t *_indep, cmn_field_t field)
+;
+extern bool
+cmn_field_read_only(const cmn_t *_indep, cmn_field_t field);
+extern const char *
+cmn_field_name(const cmn_t *_indep, cmn_field_t field);
+extern const char *
+cmn_field_desc(const cmn_t *_indep, cmn_field_t field);
+extern uint8
+cmn_field_lock_ref_len(const cmn_t *_indep, cmn_field_t field);
+extern cmn_field_t
+cmn_field_lock_ref_item(const cmn_t *_indep, cmn_field_t field, uint8 index);
+extern uint64
+cmn_field_lock_value(const cmn_t *_indep, cmn_field_t field)
+;
+extern uint32
+cmn__num__handles(const cmn_t *_indep);
+extern uint32
+cmn_handles_bank_len(const cmn_t *_indep, cmn_handles_t handles);
+extern cmn_bank_t
+cmn_handles_bank_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index);
+extern uint32
+cmn_handles_reg_len(const cmn_t *_indep, cmn_handles_t handles);
+extern cmn_reg_t
+cmn_handles_reg_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index);
+extern uint32
+cmn_handles_field_len(const cmn_t *_indep, cmn_handles_t handles);
+extern cmn_field_t
+cmn_handles_field_item(const cmn_t *_indep, cmn_handles_t handles, uint32 index);
+extern cmn_t *
+__new_cmn(bytes_t data, uint64 expected_hash);
+
+group cmn is ddm_dialect_base {
+  param spec_type_carrier = *cast(NULL, cmn_t *);
+  param _new_spec = __new_cmn;
+  param assoc_vtable_type_carrier = *cast(NULL, cmn_assoc_vtable *);
+  param each_dia_bank_expr = each cmn_assoc_to_bank in (dev);
+  param bank_type_carrier = *cast(NULL, cmn_bank_t *);
+  param bank_template_carrier = *cast(NULL, cmn_assoc_to_bank *);
+  group bank is cmn_dialect_base_bank;
+  param reg_type_carrier = *cast(NULL, cmn_reg_t *);
+  group reg is cmn_dialect_base_reg;
+  param field_type_carrier = *cast(NULL, cmn_field_t *);
+  group field is cmn_dialect_base_field;
+  param handles_type_carrier = *cast(NULL, cmn_handles_t *);
+  group handles is cmn_dialect_base_handles;
+}
+template cmn_dialect_base_bank is ddm_dialect_base_bank {
+  param __count = cmn__num__bank;
+  param __id   = cmn__id__bank;
+  param __mk   = cmn__mk__bank;
+  param _regs_item = cmn_bank_regs_item;
+  param _regs_len = cmn_bank_regs_len;
+  independent method regs_len(cmn_bank_t _bank) -> (uint32) default {
+    return this._regs_len(dia.spec(), _bank);
+  }
+  independent method regs_item(cmn_bank_t _bank, uint32 _i) -> (cmn_reg_t) default {
+    return this._regs_item(dia.spec(), _bank, _i);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each cmn_assoc_to_bank in (dev)) {
+        local cmn_assoc_to_bank *entry = new cmn_assoc_to_bank;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_bank()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(cmn_bank_t item) -> (cmn_assoc_to_bank) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local cmn_assoc_to_bank *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template cmn_dialect_base_reg is ddm_dialect_base_reg {
+  param __count = cmn__num__reg;
+  param __id   = cmn__id__reg;
+  param __mk   = cmn__mk__reg;
+  param _bank = cmn_reg_bank;
+  independent method bank(cmn_reg_t _reg) -> (cmn_bank_t) default {
+    return this._bank(dia.spec(), _reg);
+  }
+  param _offset = cmn_reg_offset;
+  independent method offset(cmn_reg_t _reg) -> (uint64) default {
+    return this._offset(dia.spec(), _reg);
+  }
+  param _init_val = cmn_reg_init_val;
+  independent method init_val(cmn_reg_t _reg) -> (uint64) default {
+    return this._init_val(dia.spec(), _reg);
+  }
+  param _field_bits = cmn_reg_field_bits;
+  independent method field_bits(cmn_reg_t _reg) -> (uint64) default {
+    return this._field_bits(dia.spec(), _reg);
+  }
+  param _read_only = cmn_reg_read_only;
+  independent method read_only(cmn_reg_t _reg) -> (bool) default {
+    return this._read_only(dia.spec(), _reg);
+  }
+  param _name_ = cmn_reg_name;
+  independent method name_(cmn_reg_t _reg) -> (const char *) default {
+    return this._name_(dia.spec(), _reg);
+  }
+  param _fields_item = cmn_reg_fields_item;
+  param _fields_len = cmn_reg_fields_len;
+  independent method fields_len(cmn_reg_t _reg) -> (uint32) default {
+    return this._fields_len(dia.spec(), _reg);
+  }
+  independent method fields_item(cmn_reg_t _reg, uint32 _i) -> (cmn_field_t) default {
+    return this._fields_item(dia.spec(), _reg, _i);
+  }
+  param _size = cmn_reg_size;
+  independent method size(cmn_reg_t _reg) -> (uint8) default {
+    return this._size(dia.spec(), _reg);
+  }
+  param _desc_ = cmn_reg_desc;
+  independent method desc_(cmn_reg_t _reg) -> (const char *) default {
+    return this._desc_(dia.spec(), _reg);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each cmn_assoc_to_reg in (dev)) {
+        local cmn_assoc_to_reg *entry = new cmn_assoc_to_reg;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_reg()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(cmn_reg_t item) -> (cmn_assoc_to_reg) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local cmn_assoc_to_reg *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template cmn_dialect_base_field is ddm_dialect_base_field {
+  param __count = cmn__num__field;
+  param __id   = cmn__id__field;
+  param __mk   = cmn__mk__field;
+  param _reg = cmn_field_reg;
+  independent method reg(cmn_field_t _field) -> (cmn_reg_t) default {
+    return this._reg(dia.spec(), _field);
+  }
+  param _lsb = cmn_field_lsb;
+  independent method lsb(cmn_field_t _field) -> (uint8) default {
+    return this._lsb(dia.spec(), _field);
+  }
+  param _bitsize = cmn_field_bitsize;
+  independent method bitsize(cmn_field_t _field) -> (uint8) default {
+    return this._bitsize(dia.spec(), _field);
+  }
+  param _read_only = cmn_field_read_only;
+  independent method read_only(cmn_field_t _field) -> (bool) default {
+    return this._read_only(dia.spec(), _field);
+  }
+  param _name_ = cmn_field_name;
+  independent method name_(cmn_field_t _field) -> (const char *) default {
+    return this._name_(dia.spec(), _field);
+  }
+  param _desc_ = cmn_field_desc;
+  independent method desc_(cmn_field_t _field) -> (const char *) default {
+    return this._desc_(dia.spec(), _field);
+  }
+  param _lock_ref_item = cmn_field_lock_ref_item;
+  param _lock_ref_len = cmn_field_lock_ref_len;
+  independent method lock_ref_len(cmn_field_t _field) -> (uint32) default {
+    return this._lock_ref_len(dia.spec(), _field);
+  }
+  independent method lock_ref_item(cmn_field_t _field, uint32 _i) -> (cmn_field_t) default {
+    return this._lock_ref_item(dia.spec(), _field, _i);
+  }
+  param _lock_value = cmn_field_lock_value;
+  independent method lock_value(cmn_field_t _field) -> (uint64) default {
+    return this._lock_value(dia.spec(), _field);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each cmn_assoc_to_field in (dev)) {
+        local cmn_assoc_to_field *entry = new cmn_assoc_to_field;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_field()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(cmn_field_t item) -> (cmn_assoc_to_field) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local cmn_assoc_to_field *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template cmn_dialect_base_handles is ddm_dialect_base_handles {
+  param __count = cmn__num__handles;
+  param __id   = cmn__id__handles;
+  param __mk   = cmn__mk__handles;
+  param _bank_item = cmn_handles_bank_item;
+  param _bank_len = cmn_handles_bank_len;
+  independent method bank_len(cmn_handles_t _handles) -> (uint32) default {
+    return this._bank_len(dia.spec(), _handles);
+  }
+  independent method bank_item(cmn_handles_t _handles, uint32 _i) -> (cmn_bank_t) default {
+    return this._bank_item(dia.spec(), _handles, _i);
+  }
+  param _reg_item = cmn_handles_reg_item;
+  param _reg_len = cmn_handles_reg_len;
+  independent method reg_len(cmn_handles_t _handles) -> (uint32) default {
+    return this._reg_len(dia.spec(), _handles);
+  }
+  independent method reg_item(cmn_handles_t _handles, uint32 _i) -> (cmn_reg_t) default {
+    return this._reg_item(dia.spec(), _handles, _i);
+  }
+  param _field_item = cmn_handles_field_item;
+  param _field_len = cmn_handles_field_len;
+  independent method field_len(cmn_handles_t _handles) -> (uint32) default {
+    return this._field_len(dia.spec(), _handles);
+  }
+  independent method field_item(cmn_handles_t _handles, uint32 _i) -> (cmn_field_t) default {
+    return this._field_item(dia.spec(), _handles, _i);
+  }
+
+}
+
+
+template _cmn_assoc_vtable_downcast_impl is cmn_assoc_vtable {
+  shared independent method _ddm_assoc_vtable_downcast() -> (_traitref_t) {
+    local cmn_assoc_vtable ref = cast(this, cmn_assoc_vtable);
+    return *cast(&ref, _traitref_t *);
+  }
+}
+
+in each cmn_assoc_vtable { is _cmn_assoc_vtable_downcast_impl; }
+
+template cmn_assoc_to_field_base is ddm_assoc_to_field {
+  param dia = dev.cmn;
+  shared independent method ddm_field() -> (cmn_field_t) {
+    local cmn_assoc_to_field_base assoc = this;
+    return cmn.handles._field_item(dev.cmn.spec(),
+        cmn.handles.__mk(0),
+        assoc.first_field_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+}
+in each cmn_assoc_to_field { is cmn_assoc_to_field_base; }
+template cmn_assoc_to_bank_base is ddm_assoc_to_bank {
+  param dia = dev.cmn;
+  shared independent method ddm_bank() -> (cmn_bank_t) {
+    local cmn_assoc_to_bank_base assoc = this;
+    return cmn.handles._bank_item(dev.cmn.spec(),
+        cmn.handles.__mk(0),
+        assoc.first_bank_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+  in each ddm_assoc_vtable { is _cmn_assoc_vtable_downcast_impl; }
+
+  shared method little_endian_byte_order(cmn_reg_t reg) -> (bool);
+
+  shared method validate_reg_write_impl(cmn_reg_t reg,
+                                        uint64 curr_val, uint64 written_val,
+                                        uint64 enabled_bits, void *aux)
+                                    -> (uint64);
+  shared method validate_reg_read_impl(cmn_reg_t reg, uint64 curr_val,
+                                       uint64 enabled_bits, void *aux)
+                                   -> (uint64);
+
+  shared method reg_write_impl(cmn_reg_t reg, uint64 curr_val,
+                               uint64 written_val, uint64 enabled_bits,
+                               void *aux) -> (uint64);
+
+  shared method reg_read_impl(cmn_reg_t reg, uint64 curr_val,
+                              uint64 enabled_bits, void *aux) -> (uint64);
+}
+in each cmn_assoc_to_bank { is cmn_assoc_to_bank_base; }
+template cmn_assoc_to_reg_base is ddm_assoc_to_reg {
+  param dia = dev.cmn;
+  shared independent method ddm_reg() -> (cmn_reg_t) {
+    local cmn_assoc_to_reg_base assoc = this;
+    return cmn.handles._reg_item(dev.cmn.spec(),
+        cmn.handles.__mk(0),
+        assoc.first_reg_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+}
+in each cmn_assoc_to_reg { is cmn_assoc_to_reg_base; }

@@ -1,0 +1,65 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2019 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+device test_cmn_700;
+
+param classname = "test-ddm-cmn-700";
+
+param desc = "test incarnation of a CMN-700";
+
+param documentation =
+    "Test incarnation of an ARM CMN-700 Coherent Mesh Network";
+
+param limitations = "This implementation only simulates the dynamic"
+    + " configuration of the address space through the RN-SAM nodes. All other"
+    + " functionality is out of scope and unimplemented. Specifically:"
+    + "<ul>"
+    + "<li>Secure access control is not implemented</li>"
+    + "<li>Hashing is not implemented, hashed regions are directed to the"
+    + " first nodeid in the SCGs sys_cache_grpX_hn_nodeid_regX register"
+    + " which in turn maps the access to SN0. It is assumed all participating"
+    + " SN's are actually the same (ram) object.</li>"
+    + "<li>System Level Caches are not implemented</li>"
+    + "<li>Address bit masking on non-hashed regions is not implemented</li>"
+    + "</ul>";
+
+import "cmn-dia.dml";
+import "cmn-700.dml";
+import "cmn-registers.dml";
+
+// Workaround incorrect reset-value for num_sys_cache_group
+param NUM_SYS_CACHE_GRP = 4;
+
+// // Workaround incorrect reset-value for hns_unit_info: zero-sized SLC.
+// // Hardcode to 1 MB SLC over 16 ways
+// in each (register) {
+//     #if (name == "cmn_hns_unit_info") {
+//         field slc_size { param init_val = 0b100; }
+//         field slc_num_ways { param init_val = 16; }
+//     }
+// }
+
+bank regs {
+    saved bool f3_is_locked;
+    register locked size 8 is unmapped {
+        field f3 @ [47:32] is (lock_field) {
+            method is_locked() -> (bool) {
+                return dev.regs.f3_is_locked;
+            }
+        }
+    }
+}

@@ -1,0 +1,2 @@
+# Empty dependencies file for tsc_update_interface_tsc-update-interface.h_wrappers.
+# This may be replaced when dependencies are built.

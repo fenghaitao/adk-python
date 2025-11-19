@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcycle-common.a "CMakeFiles/cycle-common.dir/generic-cycle-iface.c.o"
+/usr/bin/ranlib libcycle-common.a

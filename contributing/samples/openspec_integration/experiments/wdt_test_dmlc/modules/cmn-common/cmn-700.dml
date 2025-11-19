@@ -1,0 +1,92 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2022 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "simics/devs/signal.dml";
+import "simics/arch/arm.dml";
+
+import "cmn-common.dml";
+import "hnf-700.dml";
+import "hni-700.dml";
+import "rnsam-700.dml";
+
+is cmn_device;
+
+attribute periphbase is init {
+    param length = _length;
+    session uint64 _length;
+
+    method cfgm_length() -> (uint64) {
+        // For a CMN‑700 system where both the X and Y dimensions are eight or
+        // less, PERIPHBASE is aligned to 256 MB.  For a CMN‑700 system where
+        // either the X or Y dimensions are nine or more, PERIPHBASE is aligned
+        // to 1GB. Figure out which this is by inspecting the nid-field of each
+        // node, to see how many bits are used.
+        foreach r in (each node_info in (parent)) {
+            if (r.nid[10:9] > 0)  // 9 or more dimensons
+                return 0x40000000;  // 1GB
+        }
+        return 0x10000000;  // 256MB
+    }
+
+    method init() {
+        _length = cfgm_length();
+    }
+}
+
+bank apb_regs {
+    param documentation = "APB interface";
+    param use_io_memory = false;
+    method transaction_access(transaction_t *t, uint64 offset,
+                                void *aux) -> (exception_type_t) {
+        if (offset < 0x10000) {
+            return regs.transaction_access(t, offset, aux);
+        } else if (offset < 0x20000) {
+            local uint64 apb_offset = offset - 0x10000;
+            local bool ns = ATOM_get_transaction_arm_nonsecure(t);
+            if (ns && (apb_offset >= 0x980 && apb_offset < 0x990)
+                && !SIM_transaction_is_inquiry(t)) {
+                log info, 2: "non-secure access to secure registers (0x%x)", offset;
+                return Sim_PE_IO_Not_Taken;
+            }
+            return default(t, apb_offset, aux);
+        } else {
+            return regs.transaction_access(t, offset, aux);
+        }
+    }
+}
+
+bank chi_axi_regs {
+    param documentation = "CHI/AXI interface";
+    param use_io_memory = false;
+    method transaction_access(transaction_t *t, uint64 offset,
+                                void *aux) -> (exception_type_t) {
+        if (apb_regs.apb_only_access.cmn_apb_only.val == 1) {
+            if (SIM_transaction_is_read(t)) {
+                log info, 2: "cmn_apb_only is set to 1. The read from"
+                           + " CHI and AXI is returned 0";
+                SIM_set_transaction_bytes_constant(t, 0);
+                return Sim_PE_No_Exception;
+            } else {
+                log info, 2: "cmn_apb_only is set to 1. The write from"
+                           + " CHI and AXI is acknowledged and dropped";
+                return Sim_PE_IO_Not_Taken;
+            }
+        } else {
+            return regs.transaction_access(t, offset, aux);
+        }
+    }
+}

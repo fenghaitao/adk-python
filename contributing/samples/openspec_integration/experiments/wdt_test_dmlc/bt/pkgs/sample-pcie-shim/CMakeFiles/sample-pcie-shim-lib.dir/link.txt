@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsample-pcie-shim-lib.a "CMakeFiles/sample-pcie-shim-lib.dir/pcie-shim.cc.o"
+/usr/bin/ranlib libsample-pcie-shim-lib.a

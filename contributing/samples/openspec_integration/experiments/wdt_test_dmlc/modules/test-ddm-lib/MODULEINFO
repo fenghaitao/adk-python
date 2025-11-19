@@ -1,0 +1,26 @@
+# desc: Devices used to test ddm-lib
+# type: Other
+# ip-owner: Intel
+# keywords:
+# docs: None
+# NDA: Public
+# comment:
+
+Group: test-ddm-lib
+Require-tokens: public
+Make: test-ddm-lib
+  $(HOST)/lib/test-ddm-lib$(SO)
+  $(HOST)/lib/test_ddm_lib.xml
+
+Group: test-ddm-lib/shared/src
+Require-tokens: public
+  @ddm-lib/shared/src
+  src/devices/test-ddm-lib/Makefile
+  src/devices/test-ddm-lib/gen_ddm.py
+  src/devices/test-ddm-lib/glue_config.yaml
+  src/devices/test-ddm-lib/model_spec.py
+  src/devices/test-ddm-lib/test-ddm-lib-dia.dml
+  src/devices/test-ddm-lib/test-ddm-lib.dml
+  src/devices/test-ddm-lib/test/SUITEINFO
+  src/devices/test-ddm-lib/test/s-basic.py
+  src/devices/test-ddm-lib/test/tests.py

@@ -1,0 +1,429 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+device test_ddm_lib;
+
+param desc = "test device for ddm-lib";
+
+import "test-ddm-lib-dia.dml";
+import "test-ddm-lib-glue.dml";
+
+extern void ASSERT_FMT(bool, const char *, ...);
+
+template test_attr is write_only_attr {
+    param type = "n";
+
+    shared method test();
+    method set(attr_value_t val) throws {
+        test();
+    }
+}
+// No longer used since there's now only one public way to derive rel_assocs
+// for a reg/field
+/*
+method eq_rel_assocs(const rel_assocs_t *actual,
+                     const rel_assocs_t *expected,
+                     const char *trace) {
+    assert actual->bank_id == expected->bank_id
+        && actual->bank_id == test_dia.bank.__id(test_bank.ddm_bank());
+
+    ASSERT_FMT(actual->lsbs == expected->lsbs,
+               "(%s): actual.lsbs=%#.64llx != expected.lsbs=%#.64llx",
+               trace, actual->lsbs, expected->lsbs);
+    ASSERT_FMT(actual->used == expected->used,
+               "(%s): actual.used=%#.64llx != expected.used=%#.64llx",
+               trace, actual->used, expected->used);
+    ASSERT_FMT(actual->mapped == expected->mapped,
+               "(%s): actual.mapped=%#.64llx != expected.mapped=%#.64llx",
+               trace, actual->mapped, expected->mapped);
+    if (actual->lsbs[0]) {
+        ASSERT_FMT(
+            actual->lsb_diff_of_first == expected->lsb_diff_of_first,
+            "(%s): actual.lsb_diff_of_first=%d != "
+            + "expected.lsb_diff_of_first=%d",
+            trace, actual->lsb_diff_of_first, expected->lsb_diff_of_first);
+    }
+
+    local uint64 remaining = actual->lsbs;
+    while (remaining != 0) {
+        local uint32 lsb = count_trailing_zeros64(remaining);
+        ASSERT_FMT(actual->assoc_kinds[lsb] == expected->assoc_kinds[lsb],
+                   "(%s): actual.assoc_kinds[%u]=%s != "
+                   + "expected.assoc_kinds[%u]=%s",
+                   trace,
+                   lsb, stringify_assoc_kind(actual->assoc_kinds[lsb]),
+                   lsb, stringify_assoc_kind(expected->assoc_kinds[lsb]));
+        ASSERT_FMT(
+            actual->assoc_indices[lsb] == expected->assoc_indices[lsb],
+            "(%s): actual.assoc_indices[%u]=%u != "
+            + "expected.assoc_indices[%u]=%u",
+            trace,
+            lsb, actual->assoc_indices[lsb],
+            lsb, expected->assoc_indices[lsb]);
+
+        remaining &= remaining - 1;
+    }
+}
+*/
+
+typedef struct {
+    test_dia_assoc_vtable vtable;
+    uint8 assoc_kind;
+    uint8 lsb;
+    uint8 bitsize;
+    uint8 lsb_diff;
+    test_dia_reg_t reg;
+} expected_assoc_t;
+
+method stringify_assoc_kind(uint1 kind) -> (const char *) {
+    return kind == ASSOC_KIND_ARBITRARY ? "ASSOC_KIND_ARBITRARY"
+         : "ASSOC_KIND_REG";
+}
+
+method validate_rel_assocs(const rel_assocs_t *assocs,
+                           const expected_assoc_t *expected,
+                           uint32 count,
+                           const char *trace) {
+    ASSERT_FMT(test_dia.rel_assocs.count(assocs) == count,
+               "(%s): actual assocs count: %u; expected: %u",
+               trace, test_dia.rel_assocs.count(assocs), count);
+
+    local rel_assocs_iter_t iter = test_dia.rel_assocs.iter.make(assocs);
+
+    for (local uint32 i = 0; i < count; ++i) {
+        assert !test_dia.rel_assocs.iter.end(iter);
+
+        local expected_assoc_t item = expected[i];
+        ASSERT_FMT(test_dia.rel_assocs.iter.lsb(iter) == item.lsb,
+                   "(%s): assoc %u: actual reg: %u; expected: %u",
+                   trace, i, test_dia.rel_assocs.iter.lsb(iter), item.lsb);
+
+        local assoc_t item_assoc = test_dia.rel_assocs.iter.assoc(iter);
+
+        ASSERT_FMT(item_assoc.assoc_kind == item.assoc_kind,
+                   "(%s): assoc %u: actual kind: %s; expected: %s",
+                   trace, i, stringify_assoc_kind(item_assoc.assoc_kind),
+                   stringify_assoc_kind(item.assoc_kind));
+        if (item.assoc_kind == ASSOC_KIND_REG) {
+            local test_dia_reg_t actual_reg = test_dia.reg.__mk(
+                item_assoc.reg);
+            ASSERT_FMT(test_dia.reg.__id(actual_reg)
+                       == test_dia.reg.__id(item.reg),
+                       "(%s): assoc %u: actual reg: %s; expected: %s",
+                       trace, i, test_dia.reg.name_(actual_reg),
+                        test_dia.reg.name_(item.reg));
+        }
+
+        ASSERT_FMT(
+            test_dia.rel_assocs.iter.vtable(iter) == item.vtable,
+            "(%s): assoc %u: actual vtable: %s; expected: %s",
+            trace, i,
+            test_dia.rel_assocs.iter.vtable(iter).templates.object._qname(),
+            item.vtable.templates.object._qname());
+        ASSERT_FMT(test_dia.rel_assocs.iter.lsb(iter) == item.lsb,
+                   "(%s): assoc %u: actual lsb: %u; expected: %u",
+                   trace, i, test_dia.rel_assocs.iter.lsb(iter), item.lsb);
+        local uint64 expected_mask;
+        expected_mask[item.bitsize+item.lsb-1:item.lsb] = ~0;
+        ASSERT_FMT(test_dia.rel_assocs.iter.mask(iter) == expected_mask,
+                   "(%s): assoc %u: actual mask: %#.64llx; expected: %#.64llx",
+                   trace, i, test_dia.rel_assocs.iter.mask(iter),
+                   expected_mask);
+        ASSERT_FMT(test_dia.rel_assocs.iter.vtable_bitoffset(iter)
+                   == item.lsb_diff,
+                   "(%s): assoc %u: actual lsb_diff: %u; expected: %u",
+                   trace, i,
+                   test_dia.rel_assocs.iter.vtable_bitoffset(iter),
+                   item.lsb_diff);
+        local uint64 expected_mapped_write =
+            ((item.vtable.assoc_mapped_write_bits() >> item.lsb_diff)
+             << item.lsb)
+            & expected_mask;
+        ASSERT_FMT(
+            test_dia.rel_assocs.iter.mapped_write(iter)
+            == expected_mapped_write,
+            "(%s): assoc %u: actual mapped_write: %#.64llx; expected: %#.64llx",
+            trace, i,
+            test_dia.rel_assocs.iter.mapped_write(iter),
+            expected_mapped_write);
+        local uint64 expected_mapped_read =
+            ((item.vtable.assoc_mapped_read_bits() >> item.lsb_diff)
+             << item.lsb)
+            & expected_mask;
+        ASSERT_FMT(
+            test_dia.rel_assocs.iter.mapped_read(iter)
+            == expected_mapped_read,
+            "(%s): assoc %u: actual mapped_read: %#.64llx; expected: %#.64llx",
+            trace, i,
+            test_dia.rel_assocs.iter.mapped_read(iter),
+            expected_mapped_read);
+
+        // Derived. If any of these fail it must be a mistake in the rel_assocs
+        // API
+        assert test_dia.rel_assocs.iter.bitsize(iter) == item.bitsize;
+
+        local (uint8 act_msb, uint8 act_lsb) =
+            test_dia.rel_assocs.iter.msb_lsb(iter);
+        assert act_msb == test_dia.rel_assocs.iter.msb(iter)
+            && act_lsb == test_dia.rel_assocs.iter.lsb(iter);
+        assert act_msb == item.bitsize + item.lsb - 1;
+
+        local (test_dia_assoc_vtable vtable, uint8 v_msb, uint8 v_lsb) =
+            test_dia.rel_assocs.iter.vtable_with_bitrange(iter);
+        assert vtable == item.vtable
+            && v_lsb == item.lsb_diff
+            && v_msb == item.lsb_diff + item.bitsize - 1;
+
+        assert test_dia.rel_assocs.iter.mapped_write_sub(iter)
+            == expected_mapped_write >> item.lsb;
+        assert test_dia.rel_assocs.iter.mapped_read_sub(iter)
+            == expected_mapped_read >> item.lsb;
+
+        iter = test_dia.rel_assocs.iter.next(iter);
+    }
+    assert test_dia.rel_assocs.iter.end(iter);
+}
+
+attribute test_init is test_attr {
+    method test() {
+        assert test_bank.r3.val == cast(~0, uint64);
+        assert test_bank.r5.f0.val == 0x3ff;
+        assert test_bank.r5.hi.f2.val == 0x3ff;
+    }
+}
+
+attribute test_rel_assocs_api is test_attr {
+    method test() {
+        local rel_assocs_t reg_assocs;
+        local rel_assocs_t field_assocs;
+        local rel_assocs_t arbitrary_assocs;
+        local expected_assoc_t expected_assocs[2];
+
+        reg_assocs = test_dia.reg.overrides(test_bank.r3.ddm_reg());
+        expected_assocs[0] = {
+            .vtable = cast(test_bank.r3, test_dia_assoc_vtable),
+            .lsb = 0,
+            .bitsize = 64,
+            .lsb_diff = 0,
+            .assoc_kind = ASSOC_KIND_REG,
+            .reg = test_bank.r3.ddm_reg(),
+        };
+
+        validate_rel_assocs(&reg_assocs, expected_assocs, 1, "overrides(r3)");
+
+        ASSERT_FMT(
+            test_bank.r3.assoc_mapped_write_bits() == (~0)[9:0] << 34,
+            "actual: %#.64llx; expected: %#.64llx",
+            test_bank.r3.assoc_mapped_write_bits(), (~0)[9:0] << 34);
+        ASSERT_FMT(
+            test_bank.r3.assoc_mapped_read_bits() == 0,
+            "actual: %#.64llx; expected: %#.64llx",
+            test_bank.r3.assoc_mapped_read_bits(), 0);
+
+        ASSERT_FMT(
+            test_bank.r5.assoc_mapped_write_bits() == (~0)[9:0] << 11,
+            "actual: %#.64llx; expected: %#.64llx",
+            test_bank.r5.assoc_mapped_write_bits(), (~0)[9:0] << 11);
+        ASSERT_FMT(
+            test_bank.r5.assoc_mapped_read_bits() == (~0)[9:0] << 1,
+            "actual: %#.64llx; expected: %#.64llx",
+            test_bank.r5.assoc_mapped_read_bits(), (~0)[9:0] << 1);
+
+        // TODO can also test test_bank.r3.hi.f2.ddm_reg()
+        field_assocs = test_dia.field.overrides(test_bank.r3_f1.ddm_field());
+        expected_assocs[0].lsb_diff = 18;
+        expected_assocs[0].bitsize  = 10;
+        validate_rel_assocs(&field_assocs, expected_assocs, 1,
+                            "overrides(r3.lo.f1)");
+
+        field_assocs = test_dia.field.overrides(test_bank.r5.hi.f2.ddm_field());
+        expected_assocs[0].vtable = cast(test_bank.r5, test_dia_assoc_vtable);
+        expected_assocs[0].lsb_diff = 11;
+        expected_assocs[0].bitsize  = 10;
+        expected_assocs[0].reg      = test_dia.field.reg(
+            test_bank.r5.hi.f2.ddm_field());
+        validate_rel_assocs(&field_assocs, expected_assocs, 1,
+                            "overrides(r5.hi.f2)");
+
+        local rel_assocs_iter_t iter =
+            test_dia.rel_assocs.iter.make(&reg_assocs);
+        assert test_dia.rel_assocs.iter.lsb(iter) == 0;
+        test_bank.r3.val = ~0;
+        local uint64 val = test_dia.rel_assocs.iter.get(iter);
+        assert val == cast(~0, uint64);
+
+        val[47:32] = 0;
+        assert !test_bank.r3.hi.f2.set_flag;
+        test_dia.rel_assocs.iter.set(iter, val);
+        assert test_bank.r3.val == val;
+        assert test_bank.r3.hi.f2.set_flag;
+
+        iter = test_dia.rel_assocs.iter.next(iter);
+        assert test_dia.rel_assocs.iter.end(iter);
+
+        test_bank.r3.hi.f2.set_flag = false;
+        test_bank.r3.val = 0;
+
+        // TODO Add more tests to really test out offset assocs
+        field_assocs = test_dia.field.overrides(test_bank.r[0].f[3].ddm_field());
+        expected_assocs[0] = {
+            .vtable = cast(test_bank.by_offs_1, test_dia_assoc_vtable),
+            .lsb = 0,
+            .bitsize = 6,
+            .lsb_diff = 2,
+            .assoc_kind = ASSOC_KIND_ARBITRARY,
+            ...
+        };
+        expected_assocs[1] = {
+            .vtable = cast(test_bank.by_offs_2, test_dia_assoc_vtable),
+            .lsb = 6,
+            .bitsize = 4,
+            .lsb_diff = 0,
+            .assoc_kind = ASSOC_KIND_ARBITRARY,
+            ...
+        };
+
+        validate_rel_assocs(&field_assocs, expected_assocs, 2,
+                            "overrides(r0.hi.f3)");
+
+        field_assocs = test_dia.field.overrides(test_bank.r[1].f[1].ddm_field());
+        expected_assocs[0] = {
+            .vtable = cast(test_bank.by_offs_2, test_dia_assoc_vtable),
+            .lsb = 0,
+            .bitsize = 6,
+            .lsb_diff = 26,
+            .assoc_kind = ASSOC_KIND_ARBITRARY,
+            ...
+        };
+
+        validate_rel_assocs(&field_assocs, expected_assocs, 1,
+                            "overrides(r1.lo.f1)");
+    }
+}
+
+attribute test_misc is test_attr {
+    method test() {
+        test_bank.r3.val = 0;
+        local uint64 r3_f1_mask = test_dia.field.mask_reg(
+            test_bank.r3_f1.ddm_field());
+        assert r3_f1_mask == ((1 << 10) - 1) << 18;
+
+        test_dia.field.set(test_bank.r3_f1.ddm_field(), ~0);
+        assert test_bank.r3.val == r3_f1_mask;
+        assert !test_bank.r3.hi.f2.set_flag;
+
+        local uint64 r3_f2_mask = (~0)[test_bank.r3.hi.f2.bitsize-1:0]
+                                  << test_bank.r3.hi.f2.lsb;
+        test_dia.field.set(test_bank.r3.hi.f2.ddm_field(), ~0);
+        assert test_bank.r3.val == (r3_f1_mask | r3_f2_mask);
+        assert test_bank.r3.hi.f2.set_flag;
+
+        test_bank.r3.hi.f2.set_flag = false;
+        test_bank.r3.val = 0;
+
+        test_bank.set(0x11d, 4, 0xffffffff);
+        try {
+            local uint64 ret = test_bank.get(0x11d, 4);
+            assert ret == 0xffffffff;
+        } catch assert false;
+
+        assert test_bank.r3.val == 0xffffff0000000000;
+        assert test_bank.r3.hi.f2.set_flag;
+
+        local test_dia_field_t field = test_bank.r4_f0.ddm_field();
+        assert test_dia.field.get(field) == 0x3f;
+        local (uint8 msb, uint8 lsb) = test_dia.field.msb_lsb(field);
+        assert msb == 11 && lsb == 2;
+        local uint64 test_val = (~0 << 18) | (0x3333 << 2) | 0b01;
+        assert test_dia.field.from_reg_val(field, test_val) == test_val[msb:lsb];
+        assert test_dia.field.to_reg_val(field, ~0) == (~0)[msb:lsb] << lsb;
+        // TODO test set on group-in-group assoced field
+    }
+}
+
+template set_flag_register {
+        group hi {
+            field f2 is (write, set) {
+                saved bool set_flag;
+                method set(uint64 v) {
+                    if (v != this.val) {
+                        set_flag = true;
+                    }
+                    default(v);
+                }
+            }
+            method write_register(uint64 value, uint64 enabled_bits,
+                                  void *aux) -> (uint64) {
+                assert value == dev.written_val;
+                assert enabled_bits == dev.validate_ret;
+                assert aux == dev.aux;
+                override_called = true;
+            }
+            method read_register(uint64 enabled_bits, void *aux) -> (uint64) {
+                assert enabled_bits == dev.validate_ret;
+                assert aux == dev.aux;
+                override_called = true;
+                return dev.ret;
+            }
+        }
+}
+
+bank test_bank {
+    param typed = cast(this, test_dia_assoc_to_bank);
+
+    // Covers the lower half of r0_f3
+    register by_offs_1  size 1 @ 0x106;
+    // Covers the higher half of r0_f3, the entirety of r1_f0, and the lower half of r1_f1
+    register by_offs_2 size 4 @ 0x107;
+
+    saved bool override_called;
+    register r3 is set_flag_register;
+    register r5 size 8 is (unmapped, set_flag_register) {
+        field f0 @ [10:1] is read;
+        group hi {
+            field f2 @ [20:11];
+        }
+    }
+
+    group r[i < 3] {
+        group f[i < 4];
+    }
+    group r2_f0;
+    group r3_f1;
+}
+
+group test_overlap[i < 2] is test_vars;
+
+saved bool bypass_read_asserts;
+
+bank test_bank_overlap {
+    group r[i < 2] {
+        param test_vars_set = cast(dev.test_overlap[i], test_vars);
+    }
+
+    method reg_read_impl(test_dia_reg_t reg,
+                         uint64 curr_val, uint64 enabled_bits,
+                         void *aux)
+                     -> (uint64) default {
+        if (bypass_read_asserts) {
+            local test_vars vars = get_test_vars(reg);
+            vars.impl_called = true;
+            return vars.ret;
+        }
+        return default(reg, curr_val, enabled_bits, aux);
+    }
+}

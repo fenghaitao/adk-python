@@ -1,0 +1,2 @@
+/usr/bin/ar qc libkeycodes-common.a "CMakeFiles/keycodes-common.dir/keycodes.c.o"
+/usr/bin/ranlib libkeycodes-common.a

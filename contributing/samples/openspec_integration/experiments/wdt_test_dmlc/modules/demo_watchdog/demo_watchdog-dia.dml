@@ -1,0 +1,129 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "ddm-lib.dml";
+import "demo_watchdog-data-model.dml";
+
+// This file defines the DIA (Device Interface Abstract) for the demo_watchdog device
+// It provides the interface to access the data model defined in the DDM
+
+// Define the assoc vtable template
+template demo_watchdog_dia_assoc_vtable is ddm_assoc_vtable {}
+
+// Define the assoc templates that map DML objects to DDM data model entities
+// These templates inherit from the base templates provided by the data model
+
+template demo_watchdog_dia_assoc_to_bank is demo_watchdog_dia_assoc_to_bank_base {
+    // Implement required methods for bank
+    shared method little_endian_byte_order(demo_watchdog_dia_reg_t reg) -> (bool) {
+        return true;  // IP-XACT registers are little-endian
+    }
+
+    shared method validate_reg_read_impl(demo_watchdog_dia_reg_t reg, uint64 curr_val,
+                                         uint64 enabled_bits, void *aux)
+                                     -> (uint64) {
+        return enabled_bits & demo_watchdog_dia.reg.field_bits(reg);
+    }
+
+    shared method validate_reg_write_impl(demo_watchdog_dia_reg_t reg,
+                                          uint64 curr_val, uint64 new_val,
+                                          uint64 enabled_bits, void *aux)
+                                      -> (uint64) {
+        if (demo_watchdog_dia.reg.read_only(reg)) {
+            log spec_viol: "%s: write to read-only register",
+                         demo_watchdog_dia.reg.name_(reg);
+            return 0;
+        }
+
+        local uint8 reg_size = demo_watchdog_dia.reg.size(reg);
+        local uint64 allowed_bits = 0;
+        local uint8 fields_len = demo_watchdog_dia.reg.fields_len(reg);
+
+        for (local uint32 i = 0; i < fields_len; ++i) {
+            local demo_watchdog_dia_field_t field = demo_watchdog_dia.reg.fields_item(reg, i);
+            local uint8 lsb = demo_watchdog_dia.field.lsb(field);
+            local uint8 bitsize = demo_watchdog_dia.field.bitsize(field);
+            local uint8 msb = lsb + bitsize - 1;
+
+            local (uint64 curr_field_val,
+                   uint64 new_field_val,
+                   uint64 accessed_field_bits) = (curr_val[msb:lsb],
+                                                  new_val[msb:lsb],
+                                                  enabled_bits[msb:lsb]);
+
+            local bool read_only = demo_watchdog_dia.field.read_only(field);
+            if (read_only && ((curr_field_val ^ new_field_val)
+                              & accessed_field_bits) != 0) {
+                log spec_viol: "write to read-only field %s",
+                               demo_watchdog_dia.field.name_(field);
+                continue;
+            }
+
+            allowed_bits[msb:lsb] = accessed_field_bits;
+        }
+
+        local uint64 unmapped_bits = enabled_bits
+                                   & ~demo_watchdog_dia.reg.field_bits(reg)
+                                   & (curr_val ^ new_val);
+
+        if (unmapped_bits != 0) {
+            log spec_viol: "%s: write outside fields: 0x%0*llx",
+                           demo_watchdog_dia.reg.name_(reg),
+                           cast(reg_size * 2, int), unmapped_bits;
+        }
+
+        return allowed_bits;
+    }
+
+    shared method reg_write_impl(demo_watchdog_dia_reg_t reg,
+                                 uint64 curr_val, uint64 written_val,
+                                 uint64 enabled_bits, void *aux) -> (uint64) {
+        local int reg_nibbles = demo_watchdog_dia.reg.size(reg) * 2;
+        local uint64 new_val = (curr_val & ~enabled_bits)
+                             | (written_val & enabled_bits);
+        log info, 4: "%s: simple write with 0x%0*llx enabled. "
+                   + "0x%0*llx -> 0x%0*llx",
+                     demo_watchdog_dia.reg.name_(reg), reg_nibbles, enabled_bits,
+                     reg_nibbles, curr_val,
+                     reg_nibbles, new_val;
+        return new_val;
+    }
+
+    shared method reg_read_impl(demo_watchdog_dia_reg_t reg,
+                                uint64 curr_val, uint64 enabled_bits,
+                                void *aux)
+                            -> (uint64) {
+        local int reg_nibbles = demo_watchdog_dia.reg.size(reg) * 2;
+        if (enabled_bits != 0) {
+            log info, 4: "%s: simple read with 0x%0*llx enabled: "
+                       + "0x%0*llx", demo_watchdog_dia.reg.name_(reg), reg_nibbles,
+                         enabled_bits, reg_nibbles, curr_val;
+        }
+
+        return curr_val;
+    }
+}
+
+template demo_watchdog_dia_assoc_to_reg is demo_watchdog_dia_assoc_to_reg_base {
+}
+
+template demo_watchdog_dia_assoc_to_field is demo_watchdog_dia_assoc_to_field_base {
+}
+
+// Group templates - only field_group_base exists in the generated model
+template demo_watchdog_dia_assoc_to_field_group is demo_watchdog_dia_assoc_to_field_group_base {
+}

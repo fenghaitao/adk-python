@@ -1,0 +1,26 @@
+# desc: IP-XACT Example Device using DDM
+# type: Other
+# ip-owner: Intel
+# keywords: IP-XACT, DDM
+# docs: None
+# NDA: Public
+# comment: Example device generated from IP-XACT specification using DDM library
+
+Group: ipxact-example
+Require-tokens: public
+Make: ipxact-example
+  $(HOST)/lib/ipxact-example$(SO)
+  $(HOST)/lib/ipxact_example.xml
+
+Group: ipxact-example/shared/src
+Require-tokens: public
+  @ddm-lib/shared/src
+  src/devices/ipxact-example/Makefile
+  src/devices/ipxact-example/MODULEDEPS
+  src/devices/ipxact-example/parse_ipxact.py
+  src/devices/ipxact-example/model_spec.py
+  src/devices/ipxact-example/generic_example.xml
+  src/devices/ipxact-example/ipxact-example-dia.dml
+  src/devices/ipxact-example/ipxact-example.dml
+  src/devices/ipxact-example/test/SUITEINFO
+  src/devices/ipxact-example/test/s-basic.py

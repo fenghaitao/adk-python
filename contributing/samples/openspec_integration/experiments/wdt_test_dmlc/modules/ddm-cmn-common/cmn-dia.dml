@@ -1,0 +1,195 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+import "ddm-lib.dml";
+import "cmn-model.dml";
+
+group cmn {
+    group field {
+        method is_locked(cmn_field_t field) -> (bool) {
+            try {
+                local cmn_assoc_to_field assoc = cmn.field.get_assoc(field);
+                if (assoc.is_lock_field) {
+                    return assoc.as_lock_field().is_locked();
+                }
+            } catch;
+
+            if (cmn.field.lock_ref_len(field) == 0) {
+                return false;
+            }
+
+            local cmn_field_t lock_field = cmn.field.lock_ref_item(field, 0);
+
+            local uint64 actual = cmn.field.get(lock_field);
+            local uint64 wanted = cmn.field.lock_value(field);
+            if (actual != wanted) {
+                log info, 4: "writing field %s denied by lock field %s:"
+                           + " value 0x%llx should be 0x%llx",
+                             cmn.field.name_(field),
+                             cmn.field.name_(lock_field),
+                             actual, wanted;
+                    return true;
+            } else {
+                    return false;
+            }
+        }
+    }
+}
+
+template cmn_assoc_to_bank is (cmn_assoc_to_bank_base, init, hard_reset) {
+    shared method init() default {
+        local uint32 num_regs = cmn.bank.regs_len(ddm_bank());
+        for (local uint32 i = 0; i < num_regs; ++i) {
+            local cmn_reg_t reg = cmn.bank.regs_item(ddm_bank(), i);
+
+            local uint64 init_val = cmn.reg.init_val(reg);
+            cmn.reg.set(reg, init_val);
+        }
+    }
+
+    shared method hard_reset() default {
+        default();
+        init();
+    }
+
+    shared method little_endian_byte_order(cmn_reg_t reg) -> (bool) {
+        return true;
+    }
+
+    shared method validate_reg_write_impl(cmn_reg_t reg,
+                                          uint64 curr_val, uint64 new_val,
+                                          uint64 enabled_bits, void *aux)
+                                      -> (uint64) {
+        if (cmn.reg.read_only(reg)) {
+            log spec_viol: "%s: write to read-only register"
+                         , cmn.reg.name_(reg);
+            return 0;
+        }
+
+
+        local uint8 reg_size = cmn.reg.size(reg);
+        local uint64 allowed_bits;
+        local uint8 fields_len = cmn.reg.fields_len(reg);
+        for (local uint32 i = 0; i < fields_len; ++i) {
+            local cmn_field_t field = cmn.reg.fields_item(reg, i);
+            local (uint8 msb, uint8 lsb) = (cmn.field.msb(field),
+                                            cmn.field.lsb(field));
+
+            local (uint64 curr_field_val,
+                   uint64 new_field_val,
+                   uint64 accessed_field_bits) = (curr_val[msb:lsb],
+                                                  new_val[msb:lsb],
+                                                  enabled_bits[msb:lsb]);
+
+            local bool read_only = cmn.field.read_only(field);
+            if (read_only && ((curr_field_val ^ new_field_val)
+                              & accessed_field_bits) != 0) {
+                log spec_viol: "write to read-only field %s",
+                               cmn.field.name_(field);
+                continue;
+            }
+            if (cmn.field.is_locked(field)) {
+                continue;
+            }
+
+            allowed_bits[msb:lsb] = accessed_field_bits;
+        }
+
+        local uint64 unmapped_bits = enabled_bits
+                                   & ~cmn.reg.field_bits(reg)
+                                   & (curr_val ^ new_val);
+
+        if (unmapped_bits != 0) {
+            log spec_viol: "%s: write outside fields: 0x%0*llx",
+                           cmn.reg.name_(reg),
+                           cast(reg_size * 2, int), unmapped_bits;
+        }
+
+        return allowed_bits;
+    }
+
+    shared method validate_reg_read_impl(cmn_reg_t reg, uint64 curr_val,
+                                         uint64 enabled_bits, void *aux)
+                                     -> (uint64) {
+        return enabled_bits & cmn.reg.field_bits(reg);
+    }
+
+    shared method reg_write_impl(cmn_reg_t reg,
+                             uint64 curr_val, uint64 written_val,
+                             uint64 enabled_bits, void *aux) -> (uint64) {
+            local int reg_nibbles = cmn.reg.size(reg) * 2;
+            local uint64 new_val = (curr_val & ~enabled_bits)
+                                 | (written_val & enabled_bits);
+            log info, 4: "%s: simple write with 0x%0*llx enabled. "
+                       + "0x%0*llx -> 0x%0*llx",
+                         cmn.reg.name_(reg), reg_nibbles, enabled_bits,
+                         reg_nibbles, curr_val,
+                         reg_nibbles, new_val;
+            return new_val;
+    }
+
+    shared method reg_read_impl(cmn_reg_t reg,
+                                uint64 curr_val, uint64 enabled_bits,
+                                void *aux)
+                            -> (uint64) {
+        local int reg_nibbles = cmn.reg.size(reg) * 2;
+        if (enabled_bits != 0) {
+            log info, 4: "%s: simple read with 0x%0*llx enabled: "
+                       + "0x%0*llx", cmn.reg.name_(reg), reg_nibbles,
+                         enabled_bits, reg_nibbles, curr_val;
+        }
+
+        return curr_val;
+    }
+}
+
+in each (ddm_assoc_register_to_reg) {
+    is ddm_assoc_register_fully_mapped;
+}
+
+template cmn_assoc_vtable is ddm_assoc_vtable {}
+
+template cmn_assoc_to_reg is cmn_assoc_to_reg_base {}
+template cmn_assoc_to_field is (cmn_assoc_to_field_base, maybe_lock_field) {}
+
+template lock_field is field {
+    // param lock_ref : get;
+    // param lock_value : uint64;
+
+    shared method is_locked() -> (bool);
+    //     return lock_ref.get() != lock_value;
+    // }
+}
+
+template maybe_lock_field {
+    param is_lock_field : bool;
+    param is_lock_field default false;
+
+    shared method as_lock_field() -> (lock_field) default {
+        assert false;
+    }
+}
+
+template maybe_lock_field_yes is (maybe_lock_field, lock_field) {
+    param is_lock_field = true;
+
+    shared method as_lock_field() -> (lock_field) {
+        return cast(this, lock_field);
+    }
+}
+
+in each (maybe_lock_field, lock_field) { is maybe_lock_field_yes; }

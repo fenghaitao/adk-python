@@ -1,0 +1,81 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/intel-innersource/applications.simulators.simics.simics-base/blob/6/src/devices/ddm-lib/config-schema.json",
+    "type": "object",
+    "title": "Glue config file for table-based bank model",
+    "allOf": [{
+        "$ref": "#/$defs/props"
+    }, {
+        "$ref": "#/$defs/device"
+    }],
+    "$defs": {
+        "props": {
+            "$anchor": "props",
+            "patternProperties": {
+                "^[a-z]+ [a-zA-Z_][a-zA-Z0-9_]*(\\[([a-zA-Z_][a-zA-Z0-9_]*) *< *((0x[0-9a-fA-F]+)|([1-9][0-9]*))\\])*$": {
+                    "$ref": "#props"
+                }
+            },
+            "properties": {
+                "anchor": {
+                    "type": "string"
+                }
+            },
+            "unevaluatedProperties": false
+        },
+        "device": {
+            "patternProperties": {
+                "^group .*$": { "$ref": "#" },
+                "^subdevice .*$": { "$ref": "#" },
+                "^port .*$": { "$ref": "#/$defs/port" },
+                "^bank .*$": { "$ref": "#/$defs/bank" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        },
+        "leaf": {
+            "patternProperties": {
+                "^group .*$": { "$ref": "#/$defs/leaf" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        },
+        "port": {
+            "patternProperties": {
+                "^implement [^[]*$": { "$ref": "#/$defs/leaf" },
+                "^group .*$": { "$ref": "#/$defs/leaf" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        },
+        "bank": {
+            "type": "object",
+            "patternProperties": {
+                "^group .*$": { "$ref": "#/$defs/bank-group" },
+                "^register .*$": { "$ref": "#/$defs/register" },
+                "^implement [^[]*$": { "$ref": "#/$defs/leaf" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        },
+        "bank-group": {
+            "type": "object",
+            "name": "Group within a bank",
+            "patternProperties": {
+                "^group .*$": { "$ref": "#/$defs/bank-group" },
+                "^register .*$": { "$ref": "#/$defs/register" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        },
+        "register": {
+            "name": "Register",
+            "patternProperties": {
+                "^group .*$": { "$ref": "#/$defs/register" },
+                "^field .*$": { "$ref": "#/$defs/leaf" },
+                "^[^ ]*$": {}
+            },
+            "unevaluatedProperties": false
+        }
+    }
+}
