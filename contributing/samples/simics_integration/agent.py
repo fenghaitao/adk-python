@@ -166,8 +166,29 @@ current_project/
 
 Start by offering to create the Simics project structure and asking what specific hardware development assistance is needed."""
 
-    # Create MCP toolset for Simics
-    simics_toolset = create_simics_mcp_toolset(port=mcp_port)
+    # Create MCP toolset for Simics with restricted tool filter
+    # Import MCPToolset and connection params directly to create custom filtered toolset
+    from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+    from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
+    
+    # Create connection params
+    connection_params = SseConnectionParams(
+        url=f"http://127.0.0.1:{mcp_port}/sse",
+        headers={"Accept": "text/event-stream"},
+        timeout=10.0,
+        sse_read_timeout=300.0
+    )
+    
+    # Restrict to only the two Simics project creation tools
+    simics_tool_filter = [
+        "create_simics_project",
+        "add_dml_device_skeleton"
+    ]
+    
+    simics_toolset = MCPToolset(
+        connection_params=connection_params,
+        tool_filter=simics_tool_filter
+    )
     
     # Initialize the LlmAgent
     super().__init__(
