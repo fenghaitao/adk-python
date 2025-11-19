@@ -1,0 +1,1281 @@
+{
+  "project": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj",
+  "total_tasks": 19,
+  "tasks_by_type": {
+    "register_impl": 9,
+    "test_impl": 9,
+    "integration": 1
+  },
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "title": "Implement Watchdog Load register logic",
+      "description": "Implement the Watchdog Load register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Load\n- Address: 0x00\n- Width: 32 bits\n- Access: RW\n- Reset Value: 0xFFFFFFFF\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-0: wdog_load - 0xFFFFFFFF\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u91cd\u8f7d\u503c\u5bc4\u5b58\u5668\n2. \u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF\n3. |Bit|Name|R/W|Reset|Description|\n4. |31-0|wdog_load|R/W|0xFFFFFFFF|\u770b\u95e8\u72d7\u9012\u51cf\u8ba1\u65f6\u5668\u91cd\u8f7d\u503c|\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (RW)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 0xFFFFFFFF)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Load",
+        "address": "0x00",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0xFFFFFFFF",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "wdog_load",
+            "access": "R/W",
+            "description": "0xFFFFFFFF"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u91cd\u8f7d\u503c\u5bc4\u5b58\u5668",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|wdog_load|R/W|0xFFFFFFFF|\u770b\u95e8\u72d7\u9012\u51cf\u8ba1\u65f6\u5668\u91cd\u8f7d\u503c|"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-002",
+      "title": "Create tests for Watchdog Load register",
+      "description": "Create comprehensive Python tests for the Watchdog Load register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 0xFFFFFFFF)\n3. Test access restrictions (RW)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u91cd\u8f7d\u503c\u5bc4\u5b58\u5668\n   - \u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF\n   - |Bit|Name|R/W|Reset|Description|\n   - |31-0|wdog_load|R/W|0xFFFFFFFF|\u770b\u95e8\u72d7\u9012\u51cf\u8ba1\u65f6\u5668\u91cd\u8f7d\u503c|\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog load.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Load",
+        "address": "0x00",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0xFFFFFFFF",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "wdog_load",
+            "access": "R/W",
+            "description": "0xFFFFFFFF"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u91cd\u8f7d\u503c\u5bc4\u5b58\u5668",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|wdog_load|R/W|0xFFFFFFFF|\u770b\u95e8\u72d7\u9012\u51cf\u8ba1\u65f6\u5668\u91cd\u8f7d\u503c|"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-001"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog load.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-003",
+      "title": "Implement Watchdog Value register logic",
+      "description": "Implement the Watchdog Value register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Value\n- Address: 0x04\n- Width: 32 bits\n- Access: RW\n- Reset Value: 0xFFFFFFFF\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-0: count_read - 0xFFFFFFFF\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u9012\u51cf\u8ba1\u6570\u5f53\u524d\u503c\u5bc4\u5b58\u5668\uff0c\u8bfb\u8be5\u5bc4\u5b58\u5668\u53ef\u4ee5\u83b7\u53d6\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u5f53\u524d\u8ba1\u6570\u503c\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF\n3. |Bit|Name|R/W|Reset|Description|\n4. |31-0|count_read|R|0xFFFFFFFF|The current value of watchdog counter<br><br>32\u2019hffffffff: current value is 32\u2019hffffffff<br><br>32\u2019hfffffffe: current value is 32\u2019hfffffffe<br><br>......<br><br>32\u2019h00000\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (RW)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 0xFFFFFFFF)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Value",
+        "address": "0x04",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0xFFFFFFFF",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "count_read",
+            "access": "R",
+            "description": "0xFFFFFFFF"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u9012\u51cf\u8ba1\u6570\u5f53\u524d\u503c\u5bc4\u5b58\u5668\uff0c\u8bfb\u8be5\u5bc4\u5b58\u5668\u53ef\u4ee5\u83b7\u53d6\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u5f53\u524d\u8ba1\u6570\u503c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|count_read|R|0xFFFFFFFF|The current value of watchdog counter<br><br>32\u2019hffffffff: current value is 32\u2019hffffffff<br><br>32\u2019hfffffffe: current value is 32\u2019hfffffffe<br><br>......<br><br>32\u2019h00000"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-004",
+      "title": "Create tests for Watchdog Value register",
+      "description": "Create comprehensive Python tests for the Watchdog Value register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 0xFFFFFFFF)\n3. Test access restrictions (RW)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u9012\u51cf\u8ba1\u6570\u5f53\u524d\u503c\u5bc4\u5b58\u5668\uff0c\u8bfb\u8be5\u5bc4\u5b58\u5668\u53ef\u4ee5\u83b7\u53d6\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u5f53\u524d\u8ba1\u6570\u503c\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF\n   - |Bit|Name|R/W|Reset|Description|\n   - |31-0|count_read|R|0xFFFFFFFF|The current value of watchdog counter<br><br>32\u2019hffffffff: current value is 32\u2019hffffffff<br><br>32\u2019hfffffffe: current value is 32\u2019hfffffffe<br><br>......<br><br>32\u2019h00000\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog value.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Value",
+        "address": "0x04",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0xFFFFFFFF",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "count_read",
+            "access": "R",
+            "description": "0xFFFFFFFF"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u9012\u51cf\u8ba1\u6570\u5f53\u524d\u503c\u5bc4\u5b58\u5668\uff0c\u8bfb\u8be5\u5bc4\u5b58\u5668\u53ef\u4ee5\u83b7\u53d6\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u5f53\u524d\u8ba1\u6570\u503c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0xFFFFFFFF",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|count_read|R|0xFFFFFFFF|The current value of watchdog counter<br><br>32\u2019hffffffff: current value is 32\u2019hffffffff<br><br>32\u2019hfffffffe: current value is 32\u2019hfffffffe<br><br>......<br><br>32\u2019h00000"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-003"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog value.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-005",
+      "title": "Implement Watchdog Control register logic",
+      "description": "Implement the Watchdog Control register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Control\n- Address: 0x08\n- Width: 32 bits\n- Access: RW\n- Reset Value: 0x00\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-5: Reserved - -\n- Bits 4-2: step_value - 3\u2019b000\n- Bits 1: RESEN - 1\u2019b0\n- Bits 0: INTEN - 1\u2019b0\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u9012\u51cf\u6b65\u8fdb\u503c\u548c\u590d\u4f4d\u3001\u4e2d\u65ad\u53ca\u8ba1\u65f6\u5668\u4f7f\u80fd\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a0x00\n3. | Bit  | Name       | R/W | Reset  | Description                                                                                                                                                        \n4. | 1    | RESEN      | R/W | 1\u2019b0   | Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.                            \n5. | 0    | INTEN      | R/W | 1\u2019b0   | Enable the interrupt event, WDOGINT. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable aft\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (RW)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 0x00)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Control",
+        "address": "0x08",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0x00",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-5",
+            "name": "Reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "4-2",
+            "name": "step_value",
+            "access": "R/W",
+            "description": "3\u2019b000"
+          },
+          {
+            "bit_range": "1",
+            "name": "RESEN",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "0",
+            "name": "INTEN",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u9012\u51cf\u6b65\u8fdb\u503c\u548c\u590d\u4f4d\u3001\u4e2d\u65ad\u53ca\u8ba1\u65f6\u5668\u4f7f\u80fd\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0x00",
+          "| Bit  | Name       | R/W | Reset  | Description                                                                                                                                                        ",
+          "| 1    | RESEN      | R/W | 1\u2019b0   | Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.                            ",
+          "| 0    | INTEN      | R/W | 1\u2019b0   | Enable the interrupt event, WDOGINT. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable aft"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-006",
+      "title": "Create tests for Watchdog Control register",
+      "description": "Create comprehensive Python tests for the Watchdog Control register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 0x00)\n3. Test access restrictions (RW)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u9012\u51cf\u6b65\u8fdb\u503c\u548c\u590d\u4f4d\u3001\u4e2d\u65ad\u53ca\u8ba1\u65f6\u5668\u4f7f\u80fd\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a0x00\n   - | Bit  | Name       | R/W | Reset  | Description                                                                                                                                                        \n   - | 1    | RESEN      | R/W | 1\u2019b0   | Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.                            \n   - | 0    | INTEN      | R/W | 1\u2019b0   | Enable the interrupt event, WDOGINT. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable aft\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog control.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Control",
+        "address": "0x08",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "0x00",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-5",
+            "name": "Reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "4-2",
+            "name": "step_value",
+            "access": "R/W",
+            "description": "3\u2019b000"
+          },
+          {
+            "bit_range": "1",
+            "name": "RESEN",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "0",
+            "name": "INTEN",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u9012\u51cf\u8ba1\u65f6\u5668\u7684\u9012\u51cf\u6b65\u8fdb\u503c\u548c\u590d\u4f4d\u3001\u4e2d\u65ad\u53ca\u8ba1\u65f6\u5668\u4f7f\u80fd\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0x00",
+          "| Bit  | Name       | R/W | Reset  | Description                                                                                                                                                        ",
+          "| 1    | RESEN      | R/W | 1\u2019b0   | Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.                            ",
+          "| 0    | INTEN      | R/W | 1\u2019b0   | Enable the interrupt event, WDOGINT. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable aft"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-005"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog control.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-007",
+      "title": "Implement Watchdog Interrupt Clear register logic",
+      "description": "Implement the Watchdog Interrupt Clear register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Interrupt Clear\n- Address: 0x0C\n- Width: 32 bits\n- Access: W\n- Reset Value: 0x00\n- Description: **\n\n**Fields:**\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u4e2d\u65ad\u6e05\u9664\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u88ab\u5199\u5165\u4efb\u4f55\u503c\u5747\u53ef\u6e05\u9664\u770b\u95e8\u72d7\u4e2d\u65ad\u4fe1\u53f7\uff0c\u5e76\u4eceWDOGLOAD\u5bc4\u5b58\u5668\u4e2d\u91cd\u8f7d\u8ba1\u6570\u521d\u503c\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a0x00\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (W)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 0x00)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Interrupt Clear",
+        "address": "0x0C",
+        "width": 32,
+        "access": "W",
+        "reset_value": "0x00",
+        "description": "**",
+        "fields": [],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u4e2d\u65ad\u6e05\u9664\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u88ab\u5199\u5165\u4efb\u4f55\u503c\u5747\u53ef\u6e05\u9664\u770b\u95e8\u72d7\u4e2d\u65ad\u4fe1\u53f7\uff0c\u5e76\u4eceWDOGLOAD\u5bc4\u5b58\u5668\u4e2d\u91cd\u8f7d\u8ba1\u6570\u521d\u503c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0x00"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-008",
+      "title": "Create tests for Watchdog Interrupt Clear register",
+      "description": "Create comprehensive Python tests for the Watchdog Interrupt Clear register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 0x00)\n3. Test access restrictions (W)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u4e2d\u65ad\u6e05\u9664\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u88ab\u5199\u5165\u4efb\u4f55\u503c\u5747\u53ef\u6e05\u9664\u770b\u95e8\u72d7\u4e2d\u65ad\u4fe1\u53f7\uff0c\u5e76\u4eceWDOGLOAD\u5bc4\u5b58\u5668\u4e2d\u91cd\u8f7d\u8ba1\u6570\u521d\u503c\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a0x00\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog interrupt clear.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Interrupt Clear",
+        "address": "0x0C",
+        "width": 32,
+        "access": "W",
+        "reset_value": "0x00",
+        "description": "**",
+        "fields": [],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u4e2d\u65ad\u6e05\u9664\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u88ab\u5199\u5165\u4efb\u4f55\u503c\u5747\u53ef\u6e05\u9664\u770b\u95e8\u72d7\u4e2d\u65ad\u4fe1\u53f7\uff0c\u5e76\u4eceWDOGLOAD\u5bc4\u5b58\u5668\u4e2d\u91cd\u8f7d\u8ba1\u6570\u521d\u503c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a0x00"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-007"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog interrupt clear.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-009",
+      "title": "Implement Watchdog Raw Interrupt Status register logic",
+      "description": "Implement the Watchdog Raw Interrupt Status register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Raw Interrupt Status\n- Address: 0x10\n- Width: 1 bits\n- Access: R\n- Reset Value: 1\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-1: reserved - -\n- Bits 0: raw watchdog interrupt - 1\u2019b0\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u672a\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u6307\u793a\u770b\u95e8\u72d7\u6a21\u5757\u4ea7\u751f\u7684\u539f\u59cb\u4e2d\u65ad\uff08WS0\uff09\u7684\u72b6\u6001\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n3. | Bit  | Name                   | R/W | Reset | Description                           |\n4. | 0    | raw watchdog interrupt | R   | 1\u2019b0  | Raw interrupt status from the counter |\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (R)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 1)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Raw Interrupt Status",
+        "address": "0x10",
+        "width": 1,
+        "access": "R",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "raw watchdog interrupt",
+            "access": "R",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u672a\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u6307\u793a\u770b\u95e8\u72d7\u6a21\u5757\u4ea7\u751f\u7684\u539f\u59cb\u4e2d\u65ad\uff08WS0\uff09\u7684\u72b6\u6001\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "| Bit  | Name                   | R/W | Reset | Description                           |",
+          "| 0    | raw watchdog interrupt | R   | 1\u2019b0  | Raw interrupt status from the counter |"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-010",
+      "title": "Create tests for Watchdog Raw Interrupt Status register",
+      "description": "Create comprehensive Python tests for the Watchdog Raw Interrupt Status register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 1)\n3. Test access restrictions (R)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u672a\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u6307\u793a\u770b\u95e8\u72d7\u6a21\u5757\u4ea7\u751f\u7684\u539f\u59cb\u4e2d\u65ad\uff08WS0\uff09\u7684\u72b6\u6001\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n   - | Bit  | Name                   | R/W | Reset | Description                           |\n   - | 0    | raw watchdog interrupt | R   | 1\u2019b0  | Raw interrupt status from the counter |\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog raw interrupt status.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Raw Interrupt Status",
+        "address": "0x10",
+        "width": 1,
+        "access": "R",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "raw watchdog interrupt",
+            "access": "R",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u672a\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u6307\u793a\u770b\u95e8\u72d7\u6a21\u5757\u4ea7\u751f\u7684\u539f\u59cb\u4e2d\u65ad\uff08WS0\uff09\u7684\u72b6\u6001\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "| Bit  | Name                   | R/W | Reset | Description                           |",
+          "| 0    | raw watchdog interrupt | R   | 1\u2019b0  | Raw interrupt status from the counter |"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-009"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog raw interrupt status.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-011",
+      "title": "Implement Watchdog Interrupt Status register logic",
+      "description": "Implement the Watchdog Interrupt Status register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Interrupt Status\n- Address: 0x14\n- Width: 1 bits\n- Access: R\n- Reset Value: 1\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-1: reserved - -\n- Bits 0: watchdog interrupt - 1\u2019b0\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668bit[0]\u4e3aWDOGRIS\u5bc4\u5b58\u5668\u7684WS0\u548cWDOGCONTROL\u5bc4\u5b58\u5668\u7684INTEN\u7684\u903b\u8f91\u4e0e\uff0c\u5373WS0 & INTEN\uff0c\u4e0e\u4e2d\u65ad\u8f93\u51fa\u503c\u76f8\u540c\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n3. |Bit|Name|R/W|Reset|Description|\n4. |0|watchdog interrupt|R|1\u2019b0|Enable interrupt status from the counter|\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (R)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 1)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Interrupt Status",
+        "address": "0x14",
+        "width": 1,
+        "access": "R",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "watchdog interrupt",
+            "access": "R",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668bit[0]\u4e3aWDOGRIS\u5bc4\u5b58\u5668\u7684WS0\u548cWDOGCONTROL\u5bc4\u5b58\u5668\u7684INTEN\u7684\u903b\u8f91\u4e0e\uff0c\u5373WS0 & INTEN\uff0c\u4e0e\u4e2d\u65ad\u8f93\u51fa\u503c\u76f8\u540c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|0|watchdog interrupt|R|1\u2019b0|Enable interrupt status from the counter|"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-012",
+      "title": "Create tests for Watchdog Interrupt Status register",
+      "description": "Create comprehensive Python tests for the Watchdog Interrupt Status register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 1)\n3. Test access restrictions (R)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668bit[0]\u4e3aWDOGRIS\u5bc4\u5b58\u5668\u7684WS0\u548cWDOGCONTROL\u5bc4\u5b58\u5668\u7684INTEN\u7684\u903b\u8f91\u4e0e\uff0c\u5373WS0 & INTEN\uff0c\u4e0e\u4e2d\u65ad\u8f93\u51fa\u503c\u76f8\u540c\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n   - |Bit|Name|R/W|Reset|Description|\n   - |0|watchdog interrupt|R|1\u2019b0|Enable interrupt status from the counter|\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog interrupt status.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Interrupt Status",
+        "address": "0x14",
+        "width": 1,
+        "access": "R",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "watchdog interrupt",
+            "access": "R",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u5c4f\u853d\u4e2d\u65ad\u72b6\u6001\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668bit[0]\u4e3aWDOGRIS\u5bc4\u5b58\u5668\u7684WS0\u548cWDOGCONTROL\u5bc4\u5b58\u5668\u7684INTEN\u7684\u903b\u8f91\u4e0e\uff0c\u5373WS0 & INTEN\uff0c\u4e0e\u4e2d\u65ad\u8f93\u51fa\u503c\u76f8\u540c\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|0|watchdog interrupt|R|1\u2019b0|Enable interrupt status from the counter|"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-011"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog interrupt status.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-013",
+      "title": "Implement Watchdog Lock register logic",
+      "description": "Implement the Watchdog Lock register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Lock\n- Address: 0xC00\n- Width: 32 bits\n- Access: RW\n- Reset Value: 32\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-0: wdog_lock - 32\u2019h00000000\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757LOCK\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u8bbf\u95ee\u6743\u9650\uff0c\u4fdd\u62a4\u5931\u63a7\u8f6f\u4ef6\u5bf9\u770b\u95e8\u72d7\u6a21\u5757\u5bc4\u5b58\u5668\u7684\u6076\u610f\u66f4\u6539\u3002\u5f53\u5199\u51650x1ACCE551\u65f6\u4f7f\u80fd\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u6743\u9650\uff1b\u5f53\u5199\u5165\u5176\u4ed6\u503c\u65f6\u4f7f\u5176\u4ed6\u5bc4\u5b58\u5668\u4e27\u5931\u5199\u8bbf\u95ee\u6743\u9650\u3002\u8bfb\u8be5\u5bc4\u5b58\u5668\u65f6\u6839\u636e\u5199\u5165\u503c\u662f\u5426\u4e3a0x1ACCE551\u8fd4\u56deLOCK\u72b6\u6001\uff1a\n2. \u00d8\u00a0 0 -- \u5bc4\u5b58\u5668\u5199\u6743\u9650\u4f7f\u80fd\uff0cunlock\uff1b\n3. \u590d\u4f4d\u65f6\u503c\uff1a32\u2019h00000000\n4. |Bit|Name|R/W|Reset|Description|\n5. |31-0|wdog_lock|R/W|32\u2019h00000000|Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value.<br><br>A read return the lock status:<br><br>0x0 -- \n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (RW)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 32)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Lock",
+        "address": "0xC00",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "32",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "wdog_lock",
+            "access": "R/W",
+            "description": "32\u2019h00000000"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757LOCK\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u8bbf\u95ee\u6743\u9650\uff0c\u4fdd\u62a4\u5931\u63a7\u8f6f\u4ef6\u5bf9\u770b\u95e8\u72d7\u6a21\u5757\u5bc4\u5b58\u5668\u7684\u6076\u610f\u66f4\u6539\u3002\u5f53\u5199\u51650x1ACCE551\u65f6\u4f7f\u80fd\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u6743\u9650\uff1b\u5f53\u5199\u5165\u5176\u4ed6\u503c\u65f6\u4f7f\u5176\u4ed6\u5bc4\u5b58\u5668\u4e27\u5931\u5199\u8bbf\u95ee\u6743\u9650\u3002\u8bfb\u8be5\u5bc4\u5b58\u5668\u65f6\u6839\u636e\u5199\u5165\u503c\u662f\u5426\u4e3a0x1ACCE551\u8fd4\u56deLOCK\u72b6\u6001\uff1a",
+          "\u00d8\u00a0 0 -- \u5bc4\u5b58\u5668\u5199\u6743\u9650\u4f7f\u80fd\uff0cunlock\uff1b",
+          "\u590d\u4f4d\u65f6\u503c\uff1a32\u2019h00000000",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|wdog_lock|R/W|32\u2019h00000000|Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value.<br><br>A read return the lock status:<br><br>0x0 -- "
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-014",
+      "title": "Create tests for Watchdog Lock register",
+      "description": "Create comprehensive Python tests for the Watchdog Lock register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 32)\n3. Test access restrictions (RW)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757LOCK\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u8bbf\u95ee\u6743\u9650\uff0c\u4fdd\u62a4\u5931\u63a7\u8f6f\u4ef6\u5bf9\u770b\u95e8\u72d7\u6a21\u5757\u5bc4\u5b58\u5668\u7684\u6076\u610f\u66f4\u6539\u3002\u5f53\u5199\u51650x1ACCE551\u65f6\u4f7f\u80fd\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u6743\u9650\uff1b\u5f53\u5199\u5165\u5176\u4ed6\u503c\u65f6\u4f7f\u5176\u4ed6\u5bc4\u5b58\u5668\u4e27\u5931\u5199\u8bbf\u95ee\u6743\u9650\u3002\u8bfb\u8be5\u5bc4\u5b58\u5668\u65f6\u6839\u636e\u5199\u5165\u503c\u662f\u5426\u4e3a0x1ACCE551\u8fd4\u56deLOCK\u72b6\u6001\uff1a\n   - \u00d8\u00a0 0 -- \u5bc4\u5b58\u5668\u5199\u6743\u9650\u4f7f\u80fd\uff0cunlock\uff1b\n   - \u590d\u4f4d\u65f6\u503c\uff1a32\u2019h00000000\n   - |Bit|Name|R/W|Reset|Description|\n   - |31-0|wdog_lock|R/W|32\u2019h00000000|Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value.<br><br>A read return the lock status:<br><br>0x0 -- \n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog lock.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Lock",
+        "address": "0xC00",
+        "width": 32,
+        "access": "RW",
+        "reset_value": "32",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-0",
+            "name": "wdog_lock",
+            "access": "R/W",
+            "description": "32\u2019h00000000"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757LOCK\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u8bbf\u95ee\u6743\u9650\uff0c\u4fdd\u62a4\u5931\u63a7\u8f6f\u4ef6\u5bf9\u770b\u95e8\u72d7\u6a21\u5757\u5bc4\u5b58\u5668\u7684\u6076\u610f\u66f4\u6539\u3002\u5f53\u5199\u51650x1ACCE551\u65f6\u4f7f\u80fd\u5176\u4ed6\u5bc4\u5b58\u5668\u7684\u5199\u6743\u9650\uff1b\u5f53\u5199\u5165\u5176\u4ed6\u503c\u65f6\u4f7f\u5176\u4ed6\u5bc4\u5b58\u5668\u4e27\u5931\u5199\u8bbf\u95ee\u6743\u9650\u3002\u8bfb\u8be5\u5bc4\u5b58\u5668\u65f6\u6839\u636e\u5199\u5165\u503c\u662f\u5426\u4e3a0x1ACCE551\u8fd4\u56deLOCK\u72b6\u6001\uff1a",
+          "\u00d8\u00a0 0 -- \u5bc4\u5b58\u5668\u5199\u6743\u9650\u4f7f\u80fd\uff0cunlock\uff1b",
+          "\u590d\u4f4d\u65f6\u503c\uff1a32\u2019h00000000",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|31-0|wdog_lock|R/W|32\u2019h00000000|Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value.<br><br>A read return the lock status:<br><br>0x0 -- "
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-013"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog lock.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-015",
+      "title": "Implement Watchdog Integration Test Control register logic",
+      "description": "Implement the Watchdog Integration Test Control register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Integration Test Control\n- Address: 0xF00\n- Width: 1 bits\n- Access: RW\n- Reset Value: 1\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-1: reserved - -\n- Bits 0: Integration test mode enable - 1\u2019b0\n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u7684\u4f7f\u80fd\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n3. |Bit|Name|R/W|Reset|Description|\n4. |0|Integration test mode enable|R/W|1\u2019b0|1 --\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\uff1b<br><br>0 --\u5904\u4e8e\u6b63\u5e38\u9012\u51cf\u8ba1\u6570\u6a21\u5f0f\u3002|\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (RW)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 1)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Integration Test Control",
+        "address": "0xF00",
+        "width": 1,
+        "access": "RW",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "Integration test mode enable",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u7684\u4f7f\u80fd\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|0|Integration test mode enable|R/W|1\u2019b0|1 --\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\uff1b<br><br>0 --\u5904\u4e8e\u6b63\u5e38\u9012\u51cf\u8ba1\u6570\u6a21\u5f0f\u3002|"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-016",
+      "title": "Create tests for Watchdog Integration Test Control register",
+      "description": "Create comprehensive Python tests for the Watchdog Integration Test Control register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 1)\n3. Test access restrictions (RW)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u7684\u4f7f\u80fd\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0\n   - |Bit|Name|R/W|Reset|Description|\n   - |0|Integration test mode enable|R/W|1\u2019b0|1 --\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\uff1b<br><br>0 --\u5904\u4e8e\u6b63\u5e38\u9012\u51cf\u8ba1\u6570\u6a21\u5f0f\u3002|\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog integration test control.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Integration Test Control",
+        "address": "0xF00",
+        "width": 1,
+        "access": "RW",
+        "reset_value": "1",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "0",
+            "name": "Integration test mode enable",
+            "access": "R/W",
+            "description": "1\u2019b0"
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u63a7\u5236\u5bc4\u5b58\u5668\uff0c\u8be5\u5bc4\u5b58\u5668\u63a7\u5236\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u7684\u4f7f\u80fd\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a1\u2019b0",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|0|Integration test mode enable|R/W|1\u2019b0|1 --\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\uff1b<br><br>0 --\u5904\u4e8e\u6b63\u5e38\u9012\u51cf\u8ba1\u6570\u6a21\u5f0f\u3002|"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-015"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog integration test control.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-017",
+      "title": "Implement Watchdog Integration Test Output Set register logic",
+      "description": "Implement the Watchdog Integration Test Output Set register in the DML device model.\n\n**Register Specifications:**\n- Name: Watchdog Integration Test Output Set\n- Address: 0xF04\n- Width: 2 bits\n- Access: W\n- Reset Value: 2\n- Description: **\n\n**Fields:**\n- Bits :  - \n- Bits 31-1: reserved - -\n- Bits 1: Integration test mode WDOGINT value - 1\u2019b0\n- Bits 0: Integration test mode WDOGRES value - 1\u2019b0\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID4 - 0x04\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID5 - 0x00\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID6 - 0x00\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID7 - 0x00\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID0 - 0x24\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID1 - 0xB8\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PERIPH_ID2 - 0x1B\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-4: ECOREVNUM - 0x0\n- Bits 3-0: WDOG_PERIPH_ID3 - 0x0\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PCELL_ID0 - 0x0D\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PCELL_ID1 - 0xF0\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PCELL_ID2 - 0x05\n- Bits :  - \n- Bits 31-8: reserved - -\n- Bits 7-0: WDOG_PCELL_ID3 - 0xB1\n- Bits :  - \n\n**Side Effects to Implement:**\n1. \u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u8f93\u51fa\u5bc4\u5b58\u5668\uff0c\u5f53\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u65f6\uff0c\u8be5\u5bc4\u5b58\u5668\u76f4\u63a5\u9a71\u52a8\u4f7f\u80fd\u770b\u95e8\u72d7\u7684\u4e2d\u65ad\u548c\u590d\u4f4d\u8f93\u51fa\u3002\n2. \u590d\u4f4d\u65f6\u503c\uff1a2\u2019b00\n3. |Bit|Name|R/W|Reset|Description|\n4. |1|Integration test mode WDOGINT value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u4e2d\u65ad\u8f93\u51fa\u503c|\n5. |0|Integration test mode WDOGRES value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u590d\u4f4d\u8f93\u51fa\u503c|\n\n**Implementation Requirements:**\n1. Add register field in the DML bank structure\n2. Implement read logic following the access type (W)\n3. Implement write logic with proper side effects\n4. Handle reset behavior (reset to 2)\n5. Add logging for debugging\n6. Follow DML 1.4 best practices\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- DML file: modules/demo_watchdog/demo_watchdog.dml\n",
+      "register": {
+        "name": "Watchdog Integration Test Output Set",
+        "address": "0xF04",
+        "width": 2,
+        "access": "W",
+        "reset_value": "2",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "1",
+            "name": "Integration test mode WDOGINT value",
+            "access": "W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "0",
+            "name": "Integration test mode WDOGRES value",
+            "access": "W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID4",
+            "access": "R",
+            "description": "0x04"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID5",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID6",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID7",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID0",
+            "access": "R",
+            "description": "0x24"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID1",
+            "access": "R",
+            "description": "0xB8"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID2",
+            "access": "R",
+            "description": "0x1B"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-4",
+            "name": "ECOREVNUM",
+            "access": "R",
+            "description": "0x0"
+          },
+          {
+            "bit_range": "3-0",
+            "name": "WDOG_PERIPH_ID3",
+            "access": "R",
+            "description": "0x0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID0",
+            "access": "R",
+            "description": "0x0D"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID1",
+            "access": "R",
+            "description": "0xF0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID2",
+            "access": "R",
+            "description": "0x05"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID3",
+            "access": "R",
+            "description": "0xB1"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u8f93\u51fa\u5bc4\u5b58\u5668\uff0c\u5f53\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u65f6\uff0c\u8be5\u5bc4\u5b58\u5668\u76f4\u63a5\u9a71\u52a8\u4f7f\u80fd\u770b\u95e8\u72d7\u7684\u4e2d\u65ad\u548c\u590d\u4f4d\u8f93\u51fa\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a2\u2019b00",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|1|Integration test mode WDOGINT value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u4e2d\u65ad\u8f93\u51fa\u503c|",
+          "|0|Integration test mode WDOGRES value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u590d\u4f4d\u8f93\u51fa\u503c|"
+        ]
+      },
+      "task_type": "register_impl",
+      "dependencies": [],
+      "files_to_modify": [
+        "modules/demo_watchdog/demo_watchdog.dml"
+      ],
+      "priority": 1
+    },
+    {
+      "task_id": "task-018",
+      "title": "Create tests for Watchdog Integration Test Output Set register",
+      "description": "Create comprehensive Python tests for the Watchdog Integration Test Output Set register.\n\n**Test Coverage Requirements:**\n1. Test basic read/write operations\n2. Test reset behavior (should reset to 2)\n3. Test access restrictions (W)\n4. Test all register fields individually\n5. Test side effects:\n   - \u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u8f93\u51fa\u5bc4\u5b58\u5668\uff0c\u5f53\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u65f6\uff0c\u8be5\u5bc4\u5b58\u5668\u76f4\u63a5\u9a71\u52a8\u4f7f\u80fd\u770b\u95e8\u72d7\u7684\u4e2d\u65ad\u548c\u590d\u4f4d\u8f93\u51fa\u3002\n   - \u590d\u4f4d\u65f6\u503c\uff1a2\u2019b00\n   - |Bit|Name|R/W|Reset|Description|\n   - |1|Integration test mode WDOGINT value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u4e2d\u65ad\u8f93\u51fa\u503c|\n   - |0|Integration test mode WDOGRES value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u590d\u4f4d\u8f93\u51fa\u503c|\n\n**Test Template:**\nCreate a new file: `modules/demo_watchdog/test/test_watchdog integration test output set.py`\n\nThe test should:\n- Use Python Simics API to interact with the device model\n- Follow the existing test patterns in the test directory\n- Include both positive and negative test cases\n- Verify expected behavior and side effects\n- Use proper assertions and error messages\n\n**Reference:**\n- Hardware spec: /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/wdt.md\n- Existing tests in: modules/demo_watchdog/test/\n",
+      "register": {
+        "name": "Watchdog Integration Test Output Set",
+        "address": "0xF04",
+        "width": 2,
+        "access": "W",
+        "reset_value": "2",
+        "description": "**",
+        "fields": [
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-1",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "1",
+            "name": "Integration test mode WDOGINT value",
+            "access": "W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "0",
+            "name": "Integration test mode WDOGRES value",
+            "access": "W",
+            "description": "1\u2019b0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID4",
+            "access": "R",
+            "description": "0x04"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID5",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID6",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID7",
+            "access": "R",
+            "description": "0x00"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID0",
+            "access": "R",
+            "description": "0x24"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID1",
+            "access": "R",
+            "description": "0xB8"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PERIPH_ID2",
+            "access": "R",
+            "description": "0x1B"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-4",
+            "name": "ECOREVNUM",
+            "access": "R",
+            "description": "0x0"
+          },
+          {
+            "bit_range": "3-0",
+            "name": "WDOG_PERIPH_ID3",
+            "access": "R",
+            "description": "0x0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID0",
+            "access": "R",
+            "description": "0x0D"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID1",
+            "access": "R",
+            "description": "0xF0"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID2",
+            "access": "R",
+            "description": "0x05"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          },
+          {
+            "bit_range": "31-8",
+            "name": "reserved",
+            "access": "-",
+            "description": "-"
+          },
+          {
+            "bit_range": "7-0",
+            "name": "WDOG_PCELL_ID3",
+            "access": "R",
+            "description": "0xB1"
+          },
+          {
+            "bit_range": "",
+            "name": "",
+            "access": "",
+            "description": ""
+          }
+        ],
+        "side_effects": [
+          "\u770b\u95e8\u72d7\u6a21\u5757\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u8f93\u51fa\u5bc4\u5b58\u5668\uff0c\u5f53\u8fdb\u5165\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u65f6\uff0c\u8be5\u5bc4\u5b58\u5668\u76f4\u63a5\u9a71\u52a8\u4f7f\u80fd\u770b\u95e8\u72d7\u7684\u4e2d\u65ad\u548c\u590d\u4f4d\u8f93\u51fa\u3002",
+          "\u590d\u4f4d\u65f6\u503c\uff1a2\u2019b00",
+          "|Bit|Name|R/W|Reset|Description|",
+          "|1|Integration test mode WDOGINT value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u4e2d\u65ad\u8f93\u51fa\u503c|",
+          "|0|Integration test mode WDOGRES value|W|1\u2019b0|\u96c6\u6210\u6d4b\u8bd5\u6a21\u5f0f\u4e0b\u770b\u95e8\u72d7\u590d\u4f4d\u8f93\u51fa\u503c|"
+        ]
+      },
+      "task_type": "test_impl",
+      "dependencies": [
+        "task-017"
+      ],
+      "files_to_modify": [
+        "modules/demo_watchdog/test/test_watchdog integration test output set.py"
+      ],
+      "priority": 2
+    },
+    {
+      "task_id": "task-019",
+      "title": "Integration testing and verification",
+      "description": "Run all tests and verify the complete watchdog implementation",
+      "register": null,
+      "task_type": "integration",
+      "dependencies": [
+        "task-002",
+        "task-004",
+        "task-006",
+        "task-008",
+        "task-010",
+        "task-012",
+        "task-014",
+        "task-016",
+        "task-018"
+      ],
+      "files_to_modify": [
+        "modules/*/test/*.py"
+      ],
+      "priority": 3
+    }
+  ]
+}

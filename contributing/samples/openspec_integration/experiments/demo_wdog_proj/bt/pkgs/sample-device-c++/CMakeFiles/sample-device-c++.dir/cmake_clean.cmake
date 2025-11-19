@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/linux64/lib/python-py3/simmod/sample_device_c____"
+  "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/linux64/lib/sample-device-c++.pdb"
+  "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/linux64/lib/sample-device-c++.so"
+  "CMakeFiles/sample-device-c++.dir/init.c.o"
+  "CMakeFiles/sample-device-c++.dir/init.c.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-after-bank.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-after-bank.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-after.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-after.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-attribute.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-attribute.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-bank-by-code.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-bank-by-code.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-bank-by-data.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-bank-by-data.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-class.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-class.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-connect.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-connect.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-device-c++-module-id.c.o"
+  "CMakeFiles/sample-device-c++.dir/sample-device-c++-module-id.c.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-event.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-event.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-interface-c.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-interface-c.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-interface.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-interface.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-logging.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-logging.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/sample-port.cc.o"
+  "CMakeFiles/sample-device-c++.dir/sample-port.cc.o.d"
+  "CMakeFiles/sample-device-c++.dir/solve-methods-collision.cc.o"
+  "CMakeFiles/sample-device-c++.dir/solve-methods-collision.cc.o.d"
+  "sample-device-c++-module-id.c"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C CXX)
+  include(CMakeFiles/sample-device-c++.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

@@ -1,0 +1,971 @@
+dml 1.4;
+
+header %{
+#include <simics/base/types.h>
+#include <simics/util/alloc.h>
+#include <simics/util/help-macros.h>
+#include <simics/util/swabber.h>
+typedef struct { uint32 idx; } demo_watchdog_dia_bank_t;
+typedef struct { uint32 idx; } demo_watchdog_dia_reg_t;
+typedef struct { uint32 idx; } demo_watchdog_dia_field_t;
+typedef struct { uint32 idx; } demo_watchdog_dia_field_group_t;
+typedef struct { uint32 idx; } demo_watchdog_dia_reg_group_t;
+typedef struct { uint32 idx; } demo_watchdog_dia_handles_t;
+typedef struct {
+  uint32 bank;
+  uint32 reg;
+  uint32 field;
+  uint32 field_group;
+  uint32 reg_group;
+  uint32 handles;
+  uint32 string_pool;
+  uint32 uint32_pool;
+} _demo_watchdog_dia_sizes_t;
+typedef struct {
+  uint32 regs_size;
+  uint32 regs_first_pool_idx;
+} _demo_watchdog_dia_bank_t;
+typedef struct {
+  uint64 offset;
+  uint64 init_val;
+  uint64 field_bits;
+  uint32 bank;
+  uint32 group_first_pool_idx;
+  uint32 name_pool_idx;
+  uint32 fields_first_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 group_size;
+  uint8 fields_size;
+  uint8 size;
+  uint8 _bits[1];
+} _demo_watchdog_dia_reg_t;
+typedef struct {
+  uint32 reg;
+  uint32 group_first_pool_idx;
+  uint32 name_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 group_size;
+  uint8 lsb;
+  uint8 bitsize;
+  uint8 _bits[1];
+} _demo_watchdog_dia_field_t;
+typedef struct {
+  uint32 name_pool_idx;
+} _demo_watchdog_dia_field_group_t;
+typedef struct {
+  uint32 name_pool_idx;
+} _demo_watchdog_dia_reg_group_t;
+typedef struct {
+  uint32 bank_size;
+  uint32 bank_first_pool_idx;
+  uint32 reg_size;
+  uint32 reg_first_pool_idx;
+  uint32 field_size;
+  uint32 field_first_pool_idx;
+  uint32 field_group_size;
+  uint32 field_group_first_pool_idx;
+} _demo_watchdog_dia_handles_t;
+typedef struct {
+  _demo_watchdog_dia_sizes_t sz;
+  const _demo_watchdog_dia_bank_t *bank;
+  const _demo_watchdog_dia_reg_t *reg;
+  const _demo_watchdog_dia_field_t *field;
+  const _demo_watchdog_dia_field_group_t *field_group;
+  const _demo_watchdog_dia_reg_group_t *reg_group;
+  const _demo_watchdog_dia_handles_t *handles;
+  const char *string_pool;
+  const uint32 *uint32_pool;
+} demo_watchdog_dia_t;
+static inline demo_watchdog_dia_bank_t
+demo_watchdog_dia__mk__bank(uint32 i)
+{
+  return (demo_watchdog_dia_bank_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__bank(demo_watchdog_dia_bank_t i)
+{
+  return i.idx;
+}
+
+static inline demo_watchdog_dia_reg_t
+demo_watchdog_dia__mk__reg(uint32 i)
+{
+  return (demo_watchdog_dia_reg_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__reg(demo_watchdog_dia_reg_t i)
+{
+  return i.idx;
+}
+
+static inline demo_watchdog_dia_field_t
+demo_watchdog_dia__mk__field(uint32 i)
+{
+  return (demo_watchdog_dia_field_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__field(demo_watchdog_dia_field_t i)
+{
+  return i.idx;
+}
+
+static inline demo_watchdog_dia_field_group_t
+demo_watchdog_dia__mk__field_group(uint32 i)
+{
+  return (demo_watchdog_dia_field_group_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__field_group(demo_watchdog_dia_field_group_t i)
+{
+  return i.idx;
+}
+
+static inline demo_watchdog_dia_reg_group_t
+demo_watchdog_dia__mk__reg_group(uint32 i)
+{
+  return (demo_watchdog_dia_reg_group_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__reg_group(demo_watchdog_dia_reg_group_t i)
+{
+  return i.idx;
+}
+
+static inline demo_watchdog_dia_handles_t
+demo_watchdog_dia__mk__handles(uint32 i)
+{
+  return (demo_watchdog_dia_handles_t){i};
+}
+
+static inline uint32
+demo_watchdog_dia__id__handles(demo_watchdog_dia_handles_t i)
+{
+  return i.idx;
+}
+
+static inline uint32
+demo_watchdog_dia__num__bank(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.bank;
+}
+
+static inline uint32
+demo_watchdog_dia_bank_regs_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_bank_t bank)
+{
+  return _indep->bank[bank.idx].regs_size;
+}
+
+static inline demo_watchdog_dia_reg_t
+demo_watchdog_dia_bank_regs_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_bank_t bank, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->bank[bank.idx].regs_size, "index %u out-of-bounds in list of size %u", index, _indep->bank[bank.idx].regs_size);
+  return demo_watchdog_dia__mk__reg(_indep->uint32_pool[_indep->bank[bank.idx].regs_first_pool_idx + index]);
+}
+
+static inline uint32
+demo_watchdog_dia__num__reg(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.reg;
+}
+
+static inline demo_watchdog_dia_bank_t
+demo_watchdog_dia_reg_bank(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+
+{
+  return (demo_watchdog_dia_bank_t){.idx=_indep->reg[reg.idx].bank};
+}
+
+static inline uint8
+demo_watchdog_dia_reg_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return _indep->reg[reg.idx].group_size;
+}
+
+static inline demo_watchdog_dia_reg_group_t
+demo_watchdog_dia_reg_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg, uint8 index)
+{
+  FATAL_ERROR_IF(index >=_indep->reg[reg.idx].group_size, "index %u out-of-bounds in list of size %u", index, _indep->reg[reg.idx].group_size);
+  return demo_watchdog_dia__mk__reg_group(_indep->uint32_pool[_indep->reg[reg.idx].group_first_pool_idx + index]);
+}
+
+static inline uint64
+demo_watchdog_dia_reg_offset(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].offset;
+}
+
+static inline uint64
+demo_watchdog_dia_reg_init_val(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].init_val;
+}
+
+static inline uint64
+demo_watchdog_dia_reg_field_bits(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].field_bits;
+}
+
+static inline bool
+demo_watchdog_dia_reg_read_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return (_indep->reg[reg.idx]._bits[0] & 1) != 0;
+}
+
+static inline bool
+demo_watchdog_dia_reg_write_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return (_indep->reg[reg.idx]._bits[0] & 2) != 0;
+}
+
+static inline const char *
+demo_watchdog_dia_reg_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return &_indep->string_pool[_indep->reg[reg.idx].name_pool_idx];
+}
+
+static inline uint8
+demo_watchdog_dia_reg_fields_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return _indep->reg[reg.idx].fields_size;
+}
+
+static inline demo_watchdog_dia_field_t
+demo_watchdog_dia_reg_fields_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg, uint8 index)
+{
+  FATAL_ERROR_IF(index >=_indep->reg[reg.idx].fields_size, "index %u out-of-bounds in list of size %u", index, _indep->reg[reg.idx].fields_size);
+  return demo_watchdog_dia__mk__field(_indep->uint32_pool[_indep->reg[reg.idx].fields_first_pool_idx + index]);
+}
+
+static inline uint8
+demo_watchdog_dia_reg_size(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+
+{
+  return _indep->reg[reg.idx].size;
+}
+
+static inline const char *
+demo_watchdog_dia_reg_desc(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+{
+  return &_indep->string_pool[_indep->reg[reg.idx].desc_pool_idx];
+}
+
+static inline uint32
+demo_watchdog_dia__num__field(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.field;
+}
+
+static inline demo_watchdog_dia_reg_t
+demo_watchdog_dia_field_reg(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+
+{
+  return (demo_watchdog_dia_reg_t){.idx=_indep->field[field.idx].reg};
+}
+
+static inline uint8
+demo_watchdog_dia_field_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+{
+  return _indep->field[field.idx].group_size;
+}
+
+static inline demo_watchdog_dia_field_group_t
+demo_watchdog_dia_field_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field, uint8 index)
+{
+  FATAL_ERROR_IF(index >=_indep->field[field.idx].group_size, "index %u out-of-bounds in list of size %u", index, _indep->field[field.idx].group_size);
+  return demo_watchdog_dia__mk__field_group(_indep->uint32_pool[_indep->field[field.idx].group_first_pool_idx + index]);
+}
+
+static inline uint8
+demo_watchdog_dia_field_lsb(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+
+{
+  return _indep->field[field.idx].lsb;
+}
+
+static inline uint8
+demo_watchdog_dia_field_bitsize(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+
+{
+  return _indep->field[field.idx].bitsize;
+}
+
+static inline bool
+demo_watchdog_dia_field_read_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+{
+  return (_indep->field[field.idx]._bits[0] & 1) != 0;
+}
+
+static inline bool
+demo_watchdog_dia_field_write_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+{
+  return (_indep->field[field.idx]._bits[0] & 2) != 0;
+}
+
+static inline const char *
+demo_watchdog_dia_field_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+{
+  return &_indep->string_pool[_indep->field[field.idx].name_pool_idx];
+}
+
+static inline const char *
+demo_watchdog_dia_field_desc(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+{
+  return &_indep->string_pool[_indep->field[field.idx].desc_pool_idx];
+}
+
+static inline uint32
+demo_watchdog_dia__num__field_group(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.field_group;
+}
+
+static inline const char *
+demo_watchdog_dia_field_group_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_group_t field_group)
+{
+  return &_indep->string_pool[_indep->field_group[field_group.idx].name_pool_idx];
+}
+
+static inline uint32
+demo_watchdog_dia__num__reg_group(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.reg_group;
+}
+
+static inline const char *
+demo_watchdog_dia_reg_group_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_group_t reg_group)
+{
+  return &_indep->string_pool[_indep->reg_group[reg_group.idx].name_pool_idx];
+}
+
+static inline uint32
+demo_watchdog_dia__num__handles(const demo_watchdog_dia_t *_indep)
+{
+  return _indep->sz.handles;
+}
+
+static inline uint32
+demo_watchdog_dia_handles_bank_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles)
+{
+  return _indep->handles[handles.idx].bank_size;
+}
+
+static inline demo_watchdog_dia_bank_t
+demo_watchdog_dia_handles_bank_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].bank_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].bank_size);
+  return demo_watchdog_dia__mk__bank(_indep->uint32_pool[_indep->handles[handles.idx].bank_first_pool_idx + index]);
+}
+
+static inline uint32
+demo_watchdog_dia_handles_reg_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles)
+{
+  return _indep->handles[handles.idx].reg_size;
+}
+
+static inline demo_watchdog_dia_reg_t
+demo_watchdog_dia_handles_reg_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].reg_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].reg_size);
+  return demo_watchdog_dia__mk__reg(_indep->uint32_pool[_indep->handles[handles.idx].reg_first_pool_idx + index]);
+}
+
+static inline uint32
+demo_watchdog_dia_handles_field_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles)
+{
+  return _indep->handles[handles.idx].field_size;
+}
+
+static inline demo_watchdog_dia_field_t
+demo_watchdog_dia_handles_field_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].field_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].field_size);
+  return demo_watchdog_dia__mk__field(_indep->uint32_pool[_indep->handles[handles.idx].field_first_pool_idx + index]);
+}
+
+static inline uint32
+demo_watchdog_dia_handles_field_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles)
+{
+  return _indep->handles[handles.idx].field_group_size;
+}
+
+static inline demo_watchdog_dia_field_group_t
+demo_watchdog_dia_handles_field_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index)
+{
+  FATAL_ERROR_IF(index >=_indep->handles[handles.idx].field_group_size, "index %u out-of-bounds in list of size %u", index, _indep->handles[handles.idx].field_group_size);
+  return demo_watchdog_dia__mk__field_group(_indep->uint32_pool[_indep->handles[handles.idx].field_group_first_pool_idx + index]);
+}
+
+static inline demo_watchdog_dia_t *
+__new_demo_watchdog_dia(bytes_t data, uint64 expected_hash)
+{
+  demo_watchdog_dia_t *ret = MM_MALLOC(1, demo_watchdog_dia_t);
+  const uint8 *mapped = data.data;
+  uint64 size = data.len;
+  ASSERT(size >= 8);
+  uint64 hash = UNALIGNED_LOAD_LE64(mapped);
+  FATAL_ERROR_IF(hash != expected_hash, "Glue and generated binary out-of-sync");
+  int64 pos = 8;
+  ASSERT(sizeof(_demo_watchdog_dia_sizes_t) <= size);
+  memcpy(&ret->sz, mapped + pos, sizeof(_demo_watchdog_dia_sizes_t));
+  pos += sizeof(_demo_watchdog_dia_sizes_t);
+  pos = (pos + 7) & ~7;
+  ret->bank = (const _demo_watchdog_dia_bank_t *)(mapped + pos);
+  pos += sizeof(*ret->bank) * ret->sz.bank;
+  pos = (pos + 7) & ~7;
+  ret->reg = (const _demo_watchdog_dia_reg_t *)(mapped + pos);
+  pos += sizeof(*ret->reg) * ret->sz.reg;
+  pos = (pos + 7) & ~7;
+  ret->field = (const _demo_watchdog_dia_field_t *)(mapped + pos);
+  pos += sizeof(*ret->field) * ret->sz.field;
+  pos = (pos + 7) & ~7;
+  ret->field_group = (const _demo_watchdog_dia_field_group_t *)(mapped + pos);
+  pos += sizeof(*ret->field_group) * ret->sz.field_group;
+  pos = (pos + 7) & ~7;
+  ret->reg_group = (const _demo_watchdog_dia_reg_group_t *)(mapped + pos);
+  pos += sizeof(*ret->reg_group) * ret->sz.reg_group;
+  pos = (pos + 7) & ~7;
+  ret->handles = (const _demo_watchdog_dia_handles_t *)(mapped + pos);
+  pos += sizeof(*ret->handles) * ret->sz.handles;
+  pos = (pos + 7) & ~7;
+  ret->string_pool = (const char *)(mapped + pos);
+  pos += sizeof(char) * ret->sz.string_pool;
+  pos = (pos + 7) & ~7;
+  ret->uint32_pool = (const uint32 *)(mapped + pos);
+  pos += sizeof(uint32) * ret->sz.uint32_pool;
+  pos = (pos + 7) & ~7;
+  FATAL_ERROR_IF(pos != size,
+      "unexpected datablob size: expected %lld, got %lld",
+      pos, size);
+  return ret;
+}
+
+%}
+
+extern typedef struct { uint32 idx; } demo_watchdog_dia_bank_t;
+extern typedef struct { uint32 idx; } demo_watchdog_dia_reg_t;
+extern typedef struct { uint32 idx; } demo_watchdog_dia_field_t;
+extern typedef struct { uint32 idx; } demo_watchdog_dia_field_group_t;
+extern typedef struct { uint32 idx; } demo_watchdog_dia_reg_group_t;
+extern typedef struct { uint32 idx; } demo_watchdog_dia_handles_t;
+extern typedef struct {
+  uint32 bank;
+  uint32 reg;
+  uint32 field;
+  uint32 field_group;
+  uint32 reg_group;
+  uint32 handles;
+  uint32 string_pool;
+  uint32 uint32_pool;
+} _demo_watchdog_dia_sizes_t;
+extern typedef struct {
+  uint32 regs_size;
+  uint32 regs_first_pool_idx;
+} _demo_watchdog_dia_bank_t;
+extern typedef struct {
+  uint64 offset;
+  uint64 init_val;
+  uint64 field_bits;
+  uint32 bank;
+  uint32 group_first_pool_idx;
+  uint32 name_pool_idx;
+  uint32 fields_first_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 group_size;
+  uint8 fields_size;
+  uint8 size;
+  uint8 _bits[1];
+} _demo_watchdog_dia_reg_t;
+extern typedef struct {
+  uint32 reg;
+  uint32 group_first_pool_idx;
+  uint32 name_pool_idx;
+  uint32 desc_pool_idx;
+  uint8 group_size;
+  uint8 lsb;
+  uint8 bitsize;
+  uint8 _bits[1];
+} _demo_watchdog_dia_field_t;
+extern typedef struct {
+  uint32 name_pool_idx;
+} _demo_watchdog_dia_field_group_t;
+extern typedef struct {
+  uint32 name_pool_idx;
+} _demo_watchdog_dia_reg_group_t;
+extern typedef struct {
+  uint32 bank_size;
+  uint32 bank_first_pool_idx;
+  uint32 reg_size;
+  uint32 reg_first_pool_idx;
+  uint32 field_size;
+  uint32 field_first_pool_idx;
+  uint32 field_group_size;
+  uint32 field_group_first_pool_idx;
+} _demo_watchdog_dia_handles_t;
+extern typedef struct {
+  _demo_watchdog_dia_sizes_t sz;
+  const _demo_watchdog_dia_bank_t *bank;
+  const _demo_watchdog_dia_reg_t *reg;
+  const _demo_watchdog_dia_field_t *field;
+  const _demo_watchdog_dia_field_group_t *field_group;
+  const _demo_watchdog_dia_reg_group_t *reg_group;
+  const _demo_watchdog_dia_handles_t *handles;
+  const char *string_pool;
+  const uint32 *uint32_pool;
+} demo_watchdog_dia_t;
+extern demo_watchdog_dia_bank_t
+demo_watchdog_dia__mk__bank(uint32 i);
+extern uint32
+demo_watchdog_dia__id__bank(demo_watchdog_dia_bank_t i);
+extern demo_watchdog_dia_reg_t
+demo_watchdog_dia__mk__reg(uint32 i);
+extern uint32
+demo_watchdog_dia__id__reg(demo_watchdog_dia_reg_t i);
+extern demo_watchdog_dia_field_t
+demo_watchdog_dia__mk__field(uint32 i);
+extern uint32
+demo_watchdog_dia__id__field(demo_watchdog_dia_field_t i);
+extern demo_watchdog_dia_field_group_t
+demo_watchdog_dia__mk__field_group(uint32 i);
+extern uint32
+demo_watchdog_dia__id__field_group(demo_watchdog_dia_field_group_t i);
+extern demo_watchdog_dia_reg_group_t
+demo_watchdog_dia__mk__reg_group(uint32 i);
+extern uint32
+demo_watchdog_dia__id__reg_group(demo_watchdog_dia_reg_group_t i);
+extern demo_watchdog_dia_handles_t
+demo_watchdog_dia__mk__handles(uint32 i);
+extern uint32
+demo_watchdog_dia__id__handles(demo_watchdog_dia_handles_t i);
+extern uint32
+demo_watchdog_dia__num__bank(const demo_watchdog_dia_t *_indep);
+extern uint32
+demo_watchdog_dia_bank_regs_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_bank_t bank);
+extern demo_watchdog_dia_reg_t
+demo_watchdog_dia_bank_regs_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_bank_t bank, uint32 index);
+extern uint32
+demo_watchdog_dia__num__reg(const demo_watchdog_dia_t *_indep);
+extern demo_watchdog_dia_bank_t
+demo_watchdog_dia_reg_bank(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+;
+extern uint8
+demo_watchdog_dia_reg_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern demo_watchdog_dia_reg_group_t
+demo_watchdog_dia_reg_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg, uint8 index);
+extern uint64
+demo_watchdog_dia_reg_offset(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+;
+extern uint64
+demo_watchdog_dia_reg_init_val(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+;
+extern uint64
+demo_watchdog_dia_reg_field_bits(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+;
+extern bool
+demo_watchdog_dia_reg_read_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern bool
+demo_watchdog_dia_reg_write_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern const char *
+demo_watchdog_dia_reg_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern uint8
+demo_watchdog_dia_reg_fields_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern demo_watchdog_dia_field_t
+demo_watchdog_dia_reg_fields_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg, uint8 index);
+extern uint8
+demo_watchdog_dia_reg_size(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg)
+;
+extern const char *
+demo_watchdog_dia_reg_desc(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_t reg);
+extern uint32
+demo_watchdog_dia__num__field(const demo_watchdog_dia_t *_indep);
+extern demo_watchdog_dia_reg_t
+demo_watchdog_dia_field_reg(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+;
+extern uint8
+demo_watchdog_dia_field_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field);
+extern demo_watchdog_dia_field_group_t
+demo_watchdog_dia_field_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field, uint8 index);
+extern uint8
+demo_watchdog_dia_field_lsb(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+;
+extern uint8
+demo_watchdog_dia_field_bitsize(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field)
+;
+extern bool
+demo_watchdog_dia_field_read_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field);
+extern bool
+demo_watchdog_dia_field_write_only(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field);
+extern const char *
+demo_watchdog_dia_field_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field);
+extern const char *
+demo_watchdog_dia_field_desc(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_t field);
+extern uint32
+demo_watchdog_dia__num__field_group(const demo_watchdog_dia_t *_indep);
+extern const char *
+demo_watchdog_dia_field_group_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_field_group_t field_group);
+extern uint32
+demo_watchdog_dia__num__reg_group(const demo_watchdog_dia_t *_indep);
+extern const char *
+demo_watchdog_dia_reg_group_name(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_reg_group_t reg_group);
+extern uint32
+demo_watchdog_dia__num__handles(const demo_watchdog_dia_t *_indep);
+extern uint32
+demo_watchdog_dia_handles_bank_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles);
+extern demo_watchdog_dia_bank_t
+demo_watchdog_dia_handles_bank_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index);
+extern uint32
+demo_watchdog_dia_handles_reg_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles);
+extern demo_watchdog_dia_reg_t
+demo_watchdog_dia_handles_reg_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index);
+extern uint32
+demo_watchdog_dia_handles_field_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles);
+extern demo_watchdog_dia_field_t
+demo_watchdog_dia_handles_field_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index);
+extern uint32
+demo_watchdog_dia_handles_field_group_len(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles);
+extern demo_watchdog_dia_field_group_t
+demo_watchdog_dia_handles_field_group_item(const demo_watchdog_dia_t *_indep, demo_watchdog_dia_handles_t handles, uint32 index);
+extern demo_watchdog_dia_t *
+__new_demo_watchdog_dia(bytes_t data, uint64 expected_hash);
+
+group demo_watchdog_dia is ddm_dialect_base {
+  param spec_type_carrier = *cast(NULL, demo_watchdog_dia_t *);
+  param _new_spec = __new_demo_watchdog_dia;
+  param assoc_vtable_type_carrier = *cast(NULL, demo_watchdog_dia_assoc_vtable *);
+  param each_dia_bank_expr = each demo_watchdog_dia_assoc_to_bank in (dev);
+  param bank_type_carrier = *cast(NULL, demo_watchdog_dia_bank_t *);
+  param bank_template_carrier = *cast(NULL, demo_watchdog_dia_assoc_to_bank *);
+  group bank is demo_watchdog_dia_dialect_base_bank;
+  param reg_type_carrier = *cast(NULL, demo_watchdog_dia_reg_t *);
+  group reg is demo_watchdog_dia_dialect_base_reg;
+  param field_type_carrier = *cast(NULL, demo_watchdog_dia_field_t *);
+  group field is demo_watchdog_dia_dialect_base_field;
+  param field_group_type_carrier = *cast(NULL, demo_watchdog_dia_field_group_t *);
+  group field_group is demo_watchdog_dia_dialect_base_field_group;
+  param reg_group_type_carrier = *cast(NULL, demo_watchdog_dia_reg_group_t *);
+  group reg_group is demo_watchdog_dia_dialect_base_reg_group;
+  param handles_type_carrier = *cast(NULL, demo_watchdog_dia_handles_t *);
+  group handles is demo_watchdog_dia_dialect_base_handles;
+}
+template demo_watchdog_dia_dialect_base_bank is ddm_dialect_base_bank {
+  param __count = demo_watchdog_dia__num__bank;
+  param __id   = demo_watchdog_dia__id__bank;
+  param __mk   = demo_watchdog_dia__mk__bank;
+  param _regs_item = demo_watchdog_dia_bank_regs_item;
+  param _regs_len = demo_watchdog_dia_bank_regs_len;
+  independent method regs_len(demo_watchdog_dia_bank_t _bank) -> (uint32) default {
+    return this._regs_len(dia.spec(), _bank);
+  }
+  independent method regs_item(demo_watchdog_dia_bank_t _bank, uint32 _i) -> (demo_watchdog_dia_reg_t) default {
+    return this._regs_item(dia.spec(), _bank, _i);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each demo_watchdog_dia_assoc_to_bank in (dev)) {
+        local demo_watchdog_dia_assoc_to_bank *entry = new demo_watchdog_dia_assoc_to_bank;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_bank()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(demo_watchdog_dia_bank_t item) -> (demo_watchdog_dia_assoc_to_bank) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local demo_watchdog_dia_assoc_to_bank *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template demo_watchdog_dia_dialect_base_reg is ddm_dialect_base_reg {
+  param __count = demo_watchdog_dia__num__reg;
+  param __id   = demo_watchdog_dia__id__reg;
+  param __mk   = demo_watchdog_dia__mk__reg;
+  param _bank = demo_watchdog_dia_reg_bank;
+  independent method bank(demo_watchdog_dia_reg_t _reg) -> (demo_watchdog_dia_bank_t) default {
+    return this._bank(dia.spec(), _reg);
+  }
+  param _group_item = demo_watchdog_dia_reg_group_item;
+  param _group_len = demo_watchdog_dia_reg_group_len;
+  independent method group_len(demo_watchdog_dia_reg_t _reg) -> (uint32) default {
+    return this._group_len(dia.spec(), _reg);
+  }
+  independent method group_item(demo_watchdog_dia_reg_t _reg, uint32 _i) -> (demo_watchdog_dia_reg_group_t) default {
+    return this._group_item(dia.spec(), _reg, _i);
+  }
+  param _offset = demo_watchdog_dia_reg_offset;
+  independent method offset(demo_watchdog_dia_reg_t _reg) -> (uint64) default {
+    return this._offset(dia.spec(), _reg);
+  }
+  param _init_val = demo_watchdog_dia_reg_init_val;
+  independent method init_val(demo_watchdog_dia_reg_t _reg) -> (uint64) default {
+    return this._init_val(dia.spec(), _reg);
+  }
+  param _field_bits = demo_watchdog_dia_reg_field_bits;
+  independent method field_bits(demo_watchdog_dia_reg_t _reg) -> (uint64) default {
+    return this._field_bits(dia.spec(), _reg);
+  }
+  param _read_only = demo_watchdog_dia_reg_read_only;
+  independent method read_only(demo_watchdog_dia_reg_t _reg) -> (bool) default {
+    return this._read_only(dia.spec(), _reg);
+  }
+  param _write_only = demo_watchdog_dia_reg_write_only;
+  independent method write_only(demo_watchdog_dia_reg_t _reg) -> (bool) default {
+    return this._write_only(dia.spec(), _reg);
+  }
+  param _name_ = demo_watchdog_dia_reg_name;
+  independent method name_(demo_watchdog_dia_reg_t _reg) -> (const char *) default {
+    return this._name_(dia.spec(), _reg);
+  }
+  param _fields_item = demo_watchdog_dia_reg_fields_item;
+  param _fields_len = demo_watchdog_dia_reg_fields_len;
+  independent method fields_len(demo_watchdog_dia_reg_t _reg) -> (uint32) default {
+    return this._fields_len(dia.spec(), _reg);
+  }
+  independent method fields_item(demo_watchdog_dia_reg_t _reg, uint32 _i) -> (demo_watchdog_dia_field_t) default {
+    return this._fields_item(dia.spec(), _reg, _i);
+  }
+  param _size = demo_watchdog_dia_reg_size;
+  independent method size(demo_watchdog_dia_reg_t _reg) -> (uint8) default {
+    return this._size(dia.spec(), _reg);
+  }
+  param _desc_ = demo_watchdog_dia_reg_desc;
+  independent method desc_(demo_watchdog_dia_reg_t _reg) -> (const char *) default {
+    return this._desc_(dia.spec(), _reg);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each demo_watchdog_dia_assoc_to_reg in (dev)) {
+        local demo_watchdog_dia_assoc_to_reg *entry = new demo_watchdog_dia_assoc_to_reg;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_reg()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(demo_watchdog_dia_reg_t item) -> (demo_watchdog_dia_assoc_to_reg) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local demo_watchdog_dia_assoc_to_reg *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template demo_watchdog_dia_dialect_base_field is ddm_dialect_base_field {
+  param __count = demo_watchdog_dia__num__field;
+  param __id   = demo_watchdog_dia__id__field;
+  param __mk   = demo_watchdog_dia__mk__field;
+  param _reg = demo_watchdog_dia_field_reg;
+  independent method reg(demo_watchdog_dia_field_t _field) -> (demo_watchdog_dia_reg_t) default {
+    return this._reg(dia.spec(), _field);
+  }
+  param _group_item = demo_watchdog_dia_field_group_item;
+  param _group_len = demo_watchdog_dia_field_group_len;
+  independent method group_len(demo_watchdog_dia_field_t _field) -> (uint32) default {
+    return this._group_len(dia.spec(), _field);
+  }
+  independent method group_item(demo_watchdog_dia_field_t _field, uint32 _i) -> (demo_watchdog_dia_field_group_t) default {
+    return this._group_item(dia.spec(), _field, _i);
+  }
+  param _lsb = demo_watchdog_dia_field_lsb;
+  independent method lsb(demo_watchdog_dia_field_t _field) -> (uint8) default {
+    return this._lsb(dia.spec(), _field);
+  }
+  param _bitsize = demo_watchdog_dia_field_bitsize;
+  independent method bitsize(demo_watchdog_dia_field_t _field) -> (uint8) default {
+    return this._bitsize(dia.spec(), _field);
+  }
+  param _read_only = demo_watchdog_dia_field_read_only;
+  independent method read_only(demo_watchdog_dia_field_t _field) -> (bool) default {
+    return this._read_only(dia.spec(), _field);
+  }
+  param _write_only = demo_watchdog_dia_field_write_only;
+  independent method write_only(demo_watchdog_dia_field_t _field) -> (bool) default {
+    return this._write_only(dia.spec(), _field);
+  }
+  param _name_ = demo_watchdog_dia_field_name;
+  independent method name_(demo_watchdog_dia_field_t _field) -> (const char *) default {
+    return this._name_(dia.spec(), _field);
+  }
+  param _desc_ = demo_watchdog_dia_field_desc;
+  independent method desc_(demo_watchdog_dia_field_t _field) -> (const char *) default {
+    return this._desc_(dia.spec(), _field);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each demo_watchdog_dia_assoc_to_field in (dev)) {
+        local demo_watchdog_dia_assoc_to_field *entry = new demo_watchdog_dia_assoc_to_field;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_field()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(demo_watchdog_dia_field_t item) -> (demo_watchdog_dia_assoc_to_field) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local demo_watchdog_dia_assoc_to_field *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template demo_watchdog_dia_dialect_base_field_group {
+  param __count = demo_watchdog_dia__num__field_group;
+  param __id   = demo_watchdog_dia__id__field_group;
+  param __mk   = demo_watchdog_dia__mk__field_group;
+  param _name_ = demo_watchdog_dia_field_group_name;
+  independent method name_(demo_watchdog_dia_field_group_t _field_group) -> (const char *) default {
+    return this._name_(dia.spec(), _field_group);
+  }
+
+  independent startup memoized method _assoc_ht() -> (ht_int_table_t) {
+    local ht_int_table_t ret;
+    ht_init_int_table(&ret);
+    foreach assoc in (each demo_watchdog_dia_assoc_to_field_group in (dev)) {
+        local demo_watchdog_dia_assoc_to_field_group *entry = new demo_watchdog_dia_assoc_to_field_group;
+        *entry = assoc;
+        ht_insert_int(&ret, this.__id(entry->ddm_field_group()), entry);
+    }
+    return ret;
+  }
+
+  independent method get_assoc(demo_watchdog_dia_field_group_t item) -> (demo_watchdog_dia_assoc_to_field_group) throws {
+    local ht_int_table_t ht = _assoc_ht();
+    local demo_watchdog_dia_assoc_to_field_group *assoc = ht_lookup_int(&ht, this.__id(item));
+    if (assoc == NULL) throw;
+    return *assoc;
+  }
+}
+template demo_watchdog_dia_dialect_base_reg_group {
+  param __count = demo_watchdog_dia__num__reg_group;
+  param __id   = demo_watchdog_dia__id__reg_group;
+  param __mk   = demo_watchdog_dia__mk__reg_group;
+  param _name_ = demo_watchdog_dia_reg_group_name;
+  independent method name_(demo_watchdog_dia_reg_group_t _reg_group) -> (const char *) default {
+    return this._name_(dia.spec(), _reg_group);
+  }
+
+}
+template demo_watchdog_dia_dialect_base_handles is ddm_dialect_base_handles {
+  param __count = demo_watchdog_dia__num__handles;
+  param __id   = demo_watchdog_dia__id__handles;
+  param __mk   = demo_watchdog_dia__mk__handles;
+  param _bank_item = demo_watchdog_dia_handles_bank_item;
+  param _bank_len = demo_watchdog_dia_handles_bank_len;
+  independent method bank_len(demo_watchdog_dia_handles_t _handles) -> (uint32) default {
+    return this._bank_len(dia.spec(), _handles);
+  }
+  independent method bank_item(demo_watchdog_dia_handles_t _handles, uint32 _i) -> (demo_watchdog_dia_bank_t) default {
+    return this._bank_item(dia.spec(), _handles, _i);
+  }
+  param _reg_item = demo_watchdog_dia_handles_reg_item;
+  param _reg_len = demo_watchdog_dia_handles_reg_len;
+  independent method reg_len(demo_watchdog_dia_handles_t _handles) -> (uint32) default {
+    return this._reg_len(dia.spec(), _handles);
+  }
+  independent method reg_item(demo_watchdog_dia_handles_t _handles, uint32 _i) -> (demo_watchdog_dia_reg_t) default {
+    return this._reg_item(dia.spec(), _handles, _i);
+  }
+  param _field_item = demo_watchdog_dia_handles_field_item;
+  param _field_len = demo_watchdog_dia_handles_field_len;
+  independent method field_len(demo_watchdog_dia_handles_t _handles) -> (uint32) default {
+    return this._field_len(dia.spec(), _handles);
+  }
+  independent method field_item(demo_watchdog_dia_handles_t _handles, uint32 _i) -> (demo_watchdog_dia_field_t) default {
+    return this._field_item(dia.spec(), _handles, _i);
+  }
+  param _field_group_item = demo_watchdog_dia_handles_field_group_item;
+  param _field_group_len = demo_watchdog_dia_handles_field_group_len;
+  independent method field_group_len(demo_watchdog_dia_handles_t _handles) -> (uint32) default {
+    return this._field_group_len(dia.spec(), _handles);
+  }
+  independent method field_group_item(demo_watchdog_dia_handles_t _handles, uint32 _i) -> (demo_watchdog_dia_field_group_t) default {
+    return this._field_group_item(dia.spec(), _handles, _i);
+  }
+
+}
+
+
+template _demo_watchdog_dia_assoc_vtable_downcast_impl is demo_watchdog_dia_assoc_vtable {
+  shared independent method _ddm_assoc_vtable_downcast() -> (_traitref_t) {
+    local demo_watchdog_dia_assoc_vtable ref = cast(this, demo_watchdog_dia_assoc_vtable);
+    return *cast(&ref, _traitref_t *);
+  }
+}
+
+in each demo_watchdog_dia_assoc_vtable { is _demo_watchdog_dia_assoc_vtable_downcast_impl; }
+
+template demo_watchdog_dia_assoc_to_reg_base is ddm_assoc_to_reg {
+  param dia = dev.demo_watchdog_dia;
+  shared independent method ddm_reg() -> (demo_watchdog_dia_reg_t) {
+    local demo_watchdog_dia_assoc_to_reg_base assoc = this;
+    return demo_watchdog_dia.handles._reg_item(dev.demo_watchdog_dia.spec(),
+        demo_watchdog_dia.handles.__mk(0),
+        assoc.first_reg_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+}
+in each demo_watchdog_dia_assoc_to_reg { is demo_watchdog_dia_assoc_to_reg_base; }
+template demo_watchdog_dia_assoc_to_field_base is ddm_assoc_to_field {
+  param dia = dev.demo_watchdog_dia;
+  shared independent method ddm_field() -> (demo_watchdog_dia_field_t) {
+    local demo_watchdog_dia_assoc_to_field_base assoc = this;
+    return demo_watchdog_dia.handles._field_item(dev.demo_watchdog_dia.spec(),
+        demo_watchdog_dia.handles.__mk(0),
+        assoc.first_field_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+}
+in each demo_watchdog_dia_assoc_to_field { is demo_watchdog_dia_assoc_to_field_base; }
+template demo_watchdog_dia_assoc_to_bank_base is ddm_assoc_to_bank {
+  param dia = dev.demo_watchdog_dia;
+  shared independent method ddm_bank() -> (demo_watchdog_dia_bank_t) {
+    local demo_watchdog_dia_assoc_to_bank_base assoc = this;
+    return demo_watchdog_dia.handles._bank_item(dev.demo_watchdog_dia.spec(),
+        demo_watchdog_dia.handles.__mk(0),
+        assoc.first_bank_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+  in each ddm_assoc_vtable { is _demo_watchdog_dia_assoc_vtable_downcast_impl; }
+
+  shared method little_endian_byte_order(demo_watchdog_dia_reg_t reg) -> (bool);
+
+  shared method validate_reg_write_impl(demo_watchdog_dia_reg_t reg,
+                                        uint64 curr_val, uint64 written_val,
+                                        uint64 enabled_bits, void *aux)
+                                    -> (uint64);
+  shared method validate_reg_read_impl(demo_watchdog_dia_reg_t reg, uint64 curr_val,
+                                       uint64 enabled_bits, void *aux)
+                                   -> (uint64);
+
+  shared method reg_write_impl(demo_watchdog_dia_reg_t reg, uint64 curr_val,
+                               uint64 written_val, uint64 enabled_bits,
+                               void *aux) -> (uint64);
+
+  shared method reg_read_impl(demo_watchdog_dia_reg_t reg, uint64 curr_val,
+                              uint64 enabled_bits, void *aux) -> (uint64);
+}
+in each demo_watchdog_dia_assoc_to_bank { is demo_watchdog_dia_assoc_to_bank_base; }
+template demo_watchdog_dia_assoc_to_field_group_base {
+  param first_field_group_index : uint32;
+  param dia = dev.demo_watchdog_dia;
+  shared independent method ddm_field_group() -> (demo_watchdog_dia_field_group_t) {
+    local demo_watchdog_dia_assoc_to_field_group_base assoc = this;
+    return demo_watchdog_dia.handles._field_group_item(dev.demo_watchdog_dia.spec(),
+        demo_watchdog_dia.handles.__mk(0),
+        assoc.first_field_group_index
+        + cast(&assoc, _traitref_t *)->id.encoded_index);
+  }
+}
+in each demo_watchdog_dia_assoc_to_field_group { is demo_watchdog_dia_assoc_to_field_group_base; }

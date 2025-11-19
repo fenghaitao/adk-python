@@ -1,0 +1,195 @@
+{
+  "format_version": "1.0",
+  "generator": "dmlc-ai-diagnostics",
+  "compilation_summary": {
+    "input_file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+    "dml_version": "1.4",
+    "total_diagnostics": 12,
+    "total_errors": 12,
+    "total_warnings": 0,
+    "error_categories": {
+      "semantic": 9,
+      "duplicate_definition": 2,
+      "undefined_symbol": 1
+    },
+    "success": false
+  },
+  "diagnostics": [
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EINVOVER",
+      "message": "invalid override of non-default declaration type",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 77,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:77:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "ENAMECOLL",
+      "message": "name collision on 'init'",
+      "category": "duplicate_definition",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 78,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:78:5"
+      },
+      "fix_suggestions": [
+        "Rename one of the conflicting definitions to use a unique name",
+        "Check if you intended to override a method instead of creating a duplicate",
+        "If overriding is intended, ensure the original definition is in a parent template"
+      ],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREGISZ",
+      "message": "illegal register size for 'registers.control'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 31,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:31:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREGISZ",
+      "message": "illegal register size for 'registers.counter'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 41,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:41:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREGISZ",
+      "message": "illegal register size for 'registers.refresh'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 66,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:66:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREGISZ",
+      "message": "illegal register size for 'registers.status'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 57,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:57:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREGISZ",
+      "message": "illegal register size for 'registers.timeout'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 49,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:49:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EINVOVER",
+      "message": "invalid override of non-default declaration type",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 84,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:84:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "ENAMECOLL",
+      "message": "name collision on 'init'",
+      "category": "duplicate_definition",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 85,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:85:5"
+      },
+      "fix_suggestions": [
+        "Rename one of the conflicting definitions to use a unique name",
+        "Check if you intended to override a method instead of creating a duplicate",
+        "If overriding is intended, ensure the original definition is in a parent template"
+      ],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EERRSTMT",
+      "message": "Need to instantiate one of the templates {simple,uint64,custom}_{time,cycle}_event",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/linux64/bin/dml/1.4/dml-builtins.dml",
+        "line": 3782,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/linux64/bin/dml/1.4/dml-builtins.dml:3782:9"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EREF",
+      "message": "reference to unknown object 'registers.control'",
+      "category": "undefined_symbol",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 104,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:104:18"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    },
+    {
+      "type": "error",
+      "severity": "error",
+      "code": "EIDENT",
+      "message": "unknown identifier: 'timeout_event'",
+      "category": "semantic",
+      "location": {
+        "file": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml",
+        "line": 141,
+        "location_string": "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/modules/demo_watchdog/demo_watchdog.dml:141:5"
+      },
+      "fix_suggestions": [],
+      "related_locations": []
+    }
+  ]
+}

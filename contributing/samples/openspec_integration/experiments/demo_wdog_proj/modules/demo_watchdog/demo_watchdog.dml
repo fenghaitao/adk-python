@@ -1,0 +1,150 @@
+/*
+  demo_watchdog.dml
+
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+device demo_watchdog;
+
+param classname = "demo-watchdog";
+param desc = "Demo Watchdog Timer Device";
+param documentation = "A simple watchdog timer device for demonstration purposes.";
+
+import "utility.dml";
+
+// Define the registers bank
+bank registers {
+    param register_size = 32;
+    
+    // Control Register at offset 0x00
+    register control @ 0x0 {
+        param init_val = 0x00000000;
+        param documentation = "Watchdog Control Register";
+        
+        field enable @ [0] "Enable bit for watchdog timer";
+        field reset_type @ [1] "Reset type: 0=system reset, 1=CPU reset";
+        field interrupt_enable @ [2] "Interrupt enable bit";
+    }
+    
+    // Counter Register at offset 0x4
+    register counter @ 0x4 {
+        param init_val = 0x0000FFFF;
+        param documentation = "Watchdog Counter Register";
+        
+        field count @ [15:0] "16-bit counter value";
+    }
+    
+    // Timeout Register at offset 0x8
+    register timeout @ 0x8 {
+        param init_val = 0x00001000;
+        param documentation = "Watchdog Timeout Register";
+        
+        field timeout_val @ [15:0] "16-bit timeout value";
+    }
+    
+    // Status Register at offset 0xC
+    register status @ 0xC {
+        param init_val = 0x00000000;
+        param documentation = "Watchdog Status Register";
+        
+        field timeout_status @ [0] "Timeout status flag";
+        field interrupt_status @ [1] "Interrupt status flag";
+    }
+    
+    // Refresh Register at offset 0x10
+    register refresh @ 0x10 {
+        param init_val = 0x00000000;
+        param documentation = "Watchdog Refresh Register";
+        
+        field refresh_cmd @ [0] "Write 1 to refresh watchdog";
+    }
+}
+
+// Internal state attributes
+attribute refresh_counter is (uint64_attr) {
+    param internal = true;
+    param type = "x";
+    param default_value = 0;
+    param documentation = "Internal counter for refresh operations";
+}
+
+attribute timeout_counter is (uint64_attr) {
+    param internal = true;
+    param type = "x";
+    param default_value = 0;
+    param documentation = "Internal counter for timeout tracking";
+}
+
+// Event to handle watchdog timeout
+event timeout_event is simple_cycle_event;
+
+// Methods
+method reset_watchdog() {
+    // Reset the refresh counter and reset timeout status
+    refresh_counter = 0;
+    timeout_counter = 0;
+    registers.status.timeout_status = 0;
+    registers.status.interrupt_status = 0;
+    registers.counter.count = registers.timeout.timeout_val;
+}
+
+method start_timeout_event() {
+    // Start the timeout event if watchdog is enabled
+    if (registers.control.enable) {
+        local uint64 timeout_val = registers.timeout.timeout_val;
+        // Schedule a timeout event after 'timeout_val' cycles
+        timeout_event.schedule_rel(timeout_val);
+    }
+}
+
+// Event handling
+method timeout_event_handler() {
+    if (registers.control.enable) {
+        // Set status flags
+        registers.status.timeout_status = 1;
+        if (registers.control.interrupt_enable) {
+            registers.status.interrupt_status = 1;
+            // In a real implementation, we would raise an interrupt here
+        }
+        
+        // Perform reset based on reset_type field
+        if (registers.control.reset_type == 0) {
+            // System reset
+            SIM_log_info(2, "Watchdog triggered system reset");
+            SIM_halt_on_reset();
+        } else {
+            // CPU reset
+            SIM_log_info(2, "Watchdog triggered CPU reset");
+            SIM_reset_processor(SIM_current_processor());
+        }
+    }
+}
+
+// Initialization method
+method init() {
+    // Initialize internal counters
+    refresh_counter = 0;
+    timeout_counter = 0;
+}
+
+method post_init() {
+    // Start the watchdog timeout event if enabled
+    start_timeout_event();
+}
+
+// Method called when watchdog is refreshed
+method refresh_watchdog() {
+    reset_watchdog();
+    start_timeout_event();
+}

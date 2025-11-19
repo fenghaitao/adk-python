@@ -1,0 +1,1970 @@
+/* INTEL CONFIDENTIAL */
+
+/*
+  © 2024 Intel Corporation
+
+  This software and the related documents are Intel copyrighted materials, and
+  your use of them is governed by the express license under which they were
+  provided to you ("License"). Unless the License provides otherwise, you may
+  not use, modify, copy, publish, distribute, disclose or transmit this software
+  or the related documents without Intel's prior written permission.
+
+  This software and the related documents are provided as is, with no express or
+  implied warranties, other than those that are expressly stated in the License.
+*/
+
+dml 1.4;
+
+provisional simics_util_vect;
+
+bitorder le;
+
+import "utility.dml";
+import "internal.dml";
+import "simics/util/help-macros.dml";
+
+extern void FATAL_ERROR_IF(bool, const char *, ...);
+extern void VADD(...);
+extern int VLEN(...);
+extern void VINIT(...);
+extern void VRESIZE(...);
+extern void *VVEC(...);
+
+// Association kinds
+// bitoffset+bitsize based
+param ASSOC_KIND_ARBITRARY = 0;
+// DDM-reg associated (typically by reg or field anchoring)
+param ASSOC_KIND_REG       = 1;
+
+typedef struct {
+    uint8  assoc_kind;
+    uint8  lsb;
+    uint8  bitsize;
+    uint8  lsb_diff;
+    uint32 reg;
+    uint64 offset;
+    ddm_assoc_vtable vtable;
+} assoc_t;
+
+typedef assoc_t vect assocs_t;
+typedef uint32 vect ddm_hits_t;
+
+// Always relative to a field or reg now
+// Maybe a member indicating which could be useful. I dunno.
+typedef struct {
+    uint32 assoc_indices[64];
+    uint64 assoc_kinds;
+    uint64 lsbs;
+    uint64 used;
+    uint64 mapped_write;
+    uint64 mapped_read;
+    uint32 bank_id;
+    uint8 lsb_diff_of_first;
+} rel_assocs_t;
+
+typedef struct {
+    const rel_assocs_t *rel_assocs;
+    const _ddm_bank_assocs_t *bank_assocs;
+    int lsb;
+} rel_assocs_iter_t;
+
+independent method shr_neg(uint64 a, int64 b) -> (uint64) {
+    return b >= 0 ? a >> b : a << -b;
+}
+independent method shl_neg(uint64 a, int64 b) -> (uint64) {
+    return b >= 0 ? a << b : a >> -b;
+}
+
+header %{
+#define _DDM_LOG_WARNING(fmt, ...) \
+    SIM_LOG_WARNING(SIM_get_object("sim"), 0, fmt, ##__VA_ARGS__)
+%}
+
+extern void _DDM_LOG_WARNING(const char *, ...);
+
+extern char *_DML_get_qname_alloc(_identity_t id, const _id_info_t *id_infos,
+                                  const char *dev_name);
+
+template ddm_dialect_base {
+    param dia = this;
+    param ddmdef_resource default undefined;
+
+    param spec_type_carrier;
+    param _new_spec;
+
+    param assoc_vtable_type_carrier;
+    param each_dia_bank_expr;
+
+    group handles is ddm_dialect_base_handles;
+
+    param bank_type_carrier;
+    param bank_template_carrier;
+    group bank is ddm_dialect_base_bank;
+
+    param reg_type_carrier;
+    group reg is ddm_dialect_base_reg;
+
+    param field_type_carrier;
+    group field is ddm_dialect_base_field;
+
+    method _get_bank_reg_state(typeof bank_type_carrier ddm_bank)
+        -> (attr_value_t) {
+        local int sz;
+        local uint32 nregs = dia.bank.regs_len(ddm_bank);
+
+        local typeof(reg_type_carrier) *regs =
+            cast(new uint32[nregs], typeof(reg_type_carrier) *);
+        local int ndirty = 0;
+        for (local int i = 0; i < nregs; i++) {
+            local typeof reg_type_carrier reg = dia.bank.regs_item(ddm_bank, i);
+            if (dia.reg.init_val(reg) != dia.reg.get_primitive_val(reg)) {
+                regs[ndirty] = reg;
+                ndirty++;
+            }
+        }
+        local attr_value_t ret = SIM_alloc_attr_list(ndirty);
+        for (local int i = 0; i < ndirty; i++) {
+            SIM_attr_list_set_item(
+                &ret, i, SIM_make_attr_list(
+                    2, SIM_make_attr_string_adopt(
+                        dia.reg.register_view_name(regs[i])),
+                    SIM_make_attr_uint64(dia.reg.get_primitive_val(regs[i]))));
+        }
+        delete regs;
+        return ret;
+    }
+
+    method _set_bank_reg_state(
+        typeof(bank_type_carrier) ddm_bank,
+        conf_object_t *bank_obj,
+        attr_value_t attr_val) throws {
+        local ht_str_table_t ht;
+        ht_init_str_table(&ht, false);
+        for (local int i = 0; i < SIM_attr_list_size(attr_val); i++) {
+            local attr_value_t pair = SIM_attr_list_item(attr_val, i);
+            ht_insert_str(
+                &ht,
+                SIM_attr_string(SIM_attr_list_item(pair, 0)),
+                cast(cast(SIM_attr_integer(
+                              SIM_attr_list_item(pair, 1)), uintptr_t), void *));
+        }
+        local uint32 nregs = dia.bank.regs_len(ddm_bank);
+        for (local int i = 0; i < nregs; i++) {
+            local typeof(reg_type_carrier) reg
+                = dia.bank.regs_item(ddm_bank, i);
+            local char *name = dia.reg.register_view_name(reg);
+            local ht_str_entry_t *entry = ht_entry_lookup_str(&ht, name);
+            local uint64 val;
+            if (entry == NULL) {
+                val = dia.reg.init_val(reg);
+            } else {
+                val = cast(entry->e.value, uintptr_t);
+                ht_remove_str(&ht, name);
+            }
+            dia.reg.set_primitive_val(reg, val);
+            delete name;
+        }
+        local bool ok = true;
+        for (local ht_str_iter_t it = ht_str_iter(&ht); !ht_str_at_end(it);
+             it = ht_str_next(it)) {
+            SIM_log_error(bank_obj, 0, "No register named %s",
+                          ht_iter_str_key(it));
+            ok = false;
+        }
+        ht_delete_str_table(&ht, false);
+        if (!ok)
+            throw;
+    }
+
+    group rel_assocs {
+        // Internal for the time being
+        independent method _narrow(const rel_assocs_t *rel_assocs,
+                                   uint8 lsb, uint8 bitsize)
+                              -> (rel_assocs_t) {
+            local uint64 mask = (1 << bitsize) - 1;
+            local rel_assocs_t new_assocs = {
+                .bank_id      = rel_assocs->bank_id,
+                .lsbs         = (rel_assocs->lsbs         >> lsb) & mask,
+                .used         = (rel_assocs->used         >> lsb) & mask,
+                .mapped_write = (rel_assocs->mapped_write >> lsb) & mask,
+                .mapped_read  = (rel_assocs->mapped_read  >> lsb) & mask,
+                .assoc_kinds  = (rel_assocs->assoc_kinds  >> lsb) & mask,
+                ...
+            };
+
+            local uint64 lsb_span = new_assocs.lsbs != 0
+                ? 64 - count_leading_zeros64(new_assocs.lsbs)
+                : 0;
+            memcpy(new_assocs.assoc_indices,
+                   &rel_assocs->assoc_indices[lsb],
+                   sizeoftype(uint32)*lsb_span);
+
+            new_assocs.lsbs[0] = new_assocs.used[0];
+            if (new_assocs.lsbs[0]) {
+                local uint64 subfirst = rel_assocs->lsbs[lsb:0];
+                assert subfirst != 0;
+                subfirst = 63 - count_leading_zeros64(subfirst);
+                new_assocs.assoc_indices[0]
+                    = rel_assocs->assoc_indices[subfirst];
+                new_assocs.assoc_kinds[0]
+                    = rel_assocs->assoc_kinds[subfirst];
+                new_assocs.lsb_diff_of_first = lsb - subfirst
+                                             + (subfirst == 0
+                                                ? rel_assocs->lsb_diff_of_first
+                                                : 0);
+            }
+
+            return new_assocs;
+        }
+
+        independent method count(const rel_assocs_t *assocs) -> (uint32) {
+            return bit_count64(assocs->lsbs);
+        }
+
+        group iter {
+            independent method make(const rel_assocs_t *assocs)
+                                -> (rel_assocs_iter_t) {
+                local rel_assocs_iter_t iter = {
+                    .rel_assocs = assocs, .lsb = 64, ... };
+
+                if (iter.rel_assocs->lsbs != 0) {
+                    iter.lsb = count_trailing_zeros64(iter.rel_assocs->lsbs);
+                }
+
+                try {
+                    local typeof(bank_template_carrier) b = dia.bank.get_assoc(
+                        dia.bank.__mk(assocs->bank_id));
+                    iter.bank_assocs = b._get_ddm_bank_assocs();
+                } catch {
+                    assert iter.lsb == 64;
+                }
+
+                return iter;
+            }
+            independent method end(rel_assocs_iter_t iter) -> (bool) {
+                return iter.lsb == 64;
+            }
+            independent method next(rel_assocs_iter_t iter)
+                            -> (rel_assocs_iter_t) {
+                assert iter.lsb != 64;
+                local uint64 next_lsbs = iter.rel_assocs->lsbs
+                                       & (~0 << (iter.lsb + 1));
+                iter.lsb = next_lsbs != 0
+                         ? count_trailing_zeros64(next_lsbs)
+                         : 64;
+                return iter;
+            }
+
+            // This may deserve some kind of memoization...?
+            independent method assoc(rel_assocs_iter_t iter) -> (assoc_t) {
+                assert iter.lsb != 64;
+
+                return (iter.rel_assocs->assoc_kinds[iter.lsb]
+                        == ASSOC_KIND_REG
+                        ? iter.bank_assocs->reg_assocs
+                        : iter.bank_assocs->arb_assocs
+                    )[iter.rel_assocs->assoc_indices[iter.lsb]];
+            }
+            independent method base_vtable(rel_assocs_iter_t iter)
+                            -> (ddm_assoc_vtable) {
+                return assoc(iter).vtable;
+            }
+            independent method vtable(rel_assocs_iter_t iter)
+                            -> (typeof(assoc_vtable_type_carrier)) {
+                local _traitref_t tref = base_vtable(
+                    iter)._ddm_assoc_vtable_downcast();
+                return *cast(&tref, typeof(assoc_vtable_type_carrier) *);
+            }
+
+            method get(rel_assocs_iter_t iter) -> (uint64) {
+                return get_sub(iter) << iter.lsb;
+            }
+
+            method get_sub(rel_assocs_iter_t iter) -> (uint64) {
+                assert iter.lsb != 64;
+                return (vtable(iter).assoc_get() & mask_vtable(iter))
+                    >> vtable_bitoffset(iter);
+            }
+
+            method set(rel_assocs_iter_t iter, uint64 val) {
+                set_sub(iter, val >> iter.lsb);
+            }
+
+            method set_sub(rel_assocs_iter_t iter, uint64 val) {
+                assert iter.lsb != 64;
+                local uint64 set_mask = mask_vtable(iter);
+                vtable(iter).assoc_set(
+                    (val << vtable_bitoffset(iter)) & set_mask,
+                    set_mask);
+            }
+
+            // The bitoffset from the subrange to the current assoc's vtable
+            // e.g. Bit 0 of the subrange `iter` is currently targeting
+            // will be bit `vtable_bitoffset(iter)` of the assoc's vtable
+            independent method vtable_bitoffset(rel_assocs_iter_t iter)
+                            -> (uint8) {
+                assert iter.lsb != 64;
+                return assoc(iter).lsb_diff
+                     + (iter.lsb == 0
+                        ? iter.rel_assocs->lsb_diff_of_first : 0);
+            }
+
+            // The bitrange of the vtable (expressed as (msb, lsb)) that
+            // corresponds to the subrange `iter` is currently targeting.
+            //    vtable_bitrange(iter)
+            // == (bitsize(iter) + vtable_bitoffset(iter) - 1,
+            //     vtable_bitoffset(iter))
+            independent method vtable_bitrange(rel_assocs_iter_t iter)
+                            -> (uint8, uint8) {
+                local uint8 bo = vtable_bitoffset(iter);
+                return (bitsize(iter) + bo - 1, bo);
+            }
+
+            /* Omitted due to t20. Their possible uses are subsumed by
+               msb_lsb() and vtable_with_bitrange()
+
+            // Convert a value relative to the assoc to a (masked) value
+            // relative to the subrange its targeting
+            independent method sub_from_assoc_val(rel_assocs_iter_t iter,
+                                                  uint64 val) -> (uint64) {
+                return (val & mask_vtable(iter)) >> assoc_bitoffset(iter);
+            }
+
+            // Convert a value relative to the subrange the current assoc is
+            // targeting to a (masked) value relative to the assoc
+            independent method sub_to_assoc_val(rel_assocs_iter_t iter,
+                                                uint64 val) -> (uint64) {
+                return (val << assoc_bitoffset(iter)) & mask_vtable(iter);
+            }
+
+            // Convert a value relative to the assoc to a (masked) value
+            // relative to the entire range of the rel_assocs_t
+            independent method from_assoc_val(rel_assocs_iter_t iter,
+                                              uint64 val) -> (uint64) {
+                return sub_from_assoc_val(iter, val) << iter.lsb;
+            }
+
+            independent method to_assoc_val(rel_assocs_iter_t iter,
+                                            uint64 val) -> (uint64) {
+                return sub_to_assoc_val(iter, val >> iter.lsb);
+            }
+            */
+
+            // Get a mask, relative to the assoc's vtable, for what bits
+            // corresponds to the subrange the assoc is targeting
+            //
+            // mask_vtable(iter) == (~0)[msb(iter):lsb(iter)]
+            //                      << vtable_bitoffset(iter)
+            independent method mask_vtable(rel_assocs_iter_t iter)
+                                       -> (uint64) {
+                return (mask(iter) >> iter.lsb) << vtable_bitoffset(iter);
+            }
+
+            // Get a mask relative to the entire range of the rel_assocs_t
+            // indicating the bits of the current subrange
+            independent method mask(rel_assocs_iter_t iter) -> (uint64) {
+                assert iter.lsb != 64;
+                local uint64 next_lsbs = iter.rel_assocs->lsbs
+                                       & (~0 << (iter.lsb + 1));
+                local uint64 tail_mask = (next_lsbs & -next_lsbs) - 1;
+                return iter.rel_assocs->used & tail_mask & (~0 << iter.lsb);
+            }
+
+            independent method lsb(rel_assocs_iter_t iter)
+                            -> (uint8) {
+                assert iter.lsb != 64;
+                return iter.lsb;
+            }
+
+            independent method bitsize(rel_assocs_iter_t iter)
+                            -> (uint8) {
+                return bit_count64(mask(iter));
+            }
+            independent method msb(rel_assocs_iter_t iter)
+                            -> (uint8) {
+                return bitsize(iter) - 1 + lsb(iter);
+            }
+            independent method mapped_write(rel_assocs_iter_t iter)
+                            -> (uint64) {
+                return mask(iter) & iter.rel_assocs->mapped_write;
+            }
+            independent method mapped_read(rel_assocs_iter_t iter)
+                            -> (uint64) {
+                return mask(iter) & iter.rel_assocs->mapped_read;
+            }
+            independent method mapped_write_sub(rel_assocs_iter_t iter)
+                            -> (uint64) {
+                return mapped_write(iter) >> iter.lsb;
+            }
+            independent method mapped_read_sub(rel_assocs_iter_t iter)
+                            -> (uint64) {
+                return mapped_read(iter) >> iter.lsb;
+            }
+
+            independent method msb_lsb(rel_assocs_iter_t iter)
+                                   -> (uint8, uint8) {
+                return (msb(iter), lsb(iter));
+            }
+
+            independent method vtable_with_bitrange(
+                rel_assocs_iter_t iter) -> (typeof(assoc_vtable_type_carrier),
+                                            uint8, uint8) {
+                local (uint8 v_msb, uint8 v_lsb) = vtable_bitrange(iter);
+                return (vtable(iter), v_msb, v_lsb);
+            }
+        }
+    }
+
+    shared independent method _make_assoc_to_field(uint32 pool_idx)
+                                               -> (assoc_t);
+    independent method _make_assoc_to_field(uint32 hdl) -> (assoc_t) {
+        local assoc_t assoc;
+
+        local typeof(field_type_carrier) field = dia.handles.field(hdl);
+        local typeof(reg_type_carrier) reg = dia.field.reg(field);
+        assoc.assoc_kind = ASSOC_KIND_REG;
+        assoc.reg = dia.reg.__id(reg);
+        assoc.bitsize = dia.field.bitsize(field);
+        local uint8 field_lsb = dia.field.lsb(field);
+        assoc.offset = dia.reg.offset(reg) + field_lsb/8;
+        assoc.lsb = field_lsb % 8;
+        return assoc;
+    }
+
+    shared independent method _make_assoc_to_reg(uint32 pool_idx)
+                                             -> (assoc_t);
+    independent method _make_assoc_to_reg(uint32 pool_idx) -> (assoc_t) {
+        local assoc_t assoc;
+        local typeof(reg_type_carrier) reg = handles.reg(pool_idx);
+
+        assoc.assoc_kind = ASSOC_KIND_REG;
+        assoc.reg = dia.reg.__id(reg);
+        assoc.offset = dia.reg.offset(reg);
+        assoc.bitsize = dia.reg.size(reg)*8;
+        // assoc.lsb = 0; // Redundant
+        return assoc;
+    }
+
+    #if (defined(ddmdef_resource)) {
+        independent startup memoized method spec()
+            -> (const typeof(spec_type_carrier) *) {
+            return dia._new_spec(ddmdef_resource(), ddmdef_resource_hash);
+        }
+    } #else {
+        independent method spec() -> (const typeof(spec_type_carrier) *) {
+            fatal_error(
+                dev.classname + ": Attempt to execute code of the DDM dialect "
+                + "'" + name + "' despite that the device class has no "
+                + "DDM binary for that dialect");
+            /*% COVERITY unreachable %*/
+            return NULL;
+        }
+    }
+
+    independent method _ddm_warn_bad_arb_assoc(
+        assoc_t *assoc, typeof(bank_type_carrier) ddm_bank) {
+        local typeof(bank_template_carrier) b;
+        try {
+            b = dia.bank.get_assoc(ddm_bank);
+        } catch assert false;
+
+        local char *bank_name = _DML_get_qname_alloc(
+            cast(&b, _traitref_t *)->id, _id_infos, dev.name);
+        local char *vtable_name = _DML_get_qname_alloc(
+            cast(&assoc->vtable, _traitref_t *)->id, _id_infos, dev.name);
+        local _identity_t bank_id = cast(&b, _traitref_t *)->id;
+        _DDM_LOG_WARNING(
+            "%s: Offset-associated DML register (or some other arbitrary "
+            + "association) at offset %#llx (starting bit=%u, bitsize=%u) in "
+            + "bank %s does not cover any register.\n"
+            + "You may want to investigate the definition of %s",
+            dev.classname, assoc->offset, assoc->lsb, assoc->bitsize,
+            bank_name, vtable_name);
+        MM_FREE(bank_name);
+        MM_FREE(vtable_name);
+    }
+
+    independent method init_reg_ht_for_bank_arb_assocs(
+        typeof(bank_type_carrier) ddm_bank, ht_int_table_t *reg_ht,
+        const assoc_t *assocs, uint32 num_assocs) {
+        local uint32 assoc_index = 0;
+        local uint32 ddm_index = 0;
+
+        local uint32 bank_len = dia.bank.regs_len(ddm_bank);
+
+        local uint64 max_inserted_end_offset = 0;
+        local uint64 reg_offset = 0;
+        while (assoc_index < num_assocs && ddm_index < bank_len) {
+            local assoc_t assoc = assocs[assoc_index];
+            local uint8 assoc_num_bytes =
+                (assoc.lsb + assoc.bitsize + 7) / 8;
+
+            // A small optimization to skip pointless binsearching.
+            // We do this because we expect there to occur patterns where a
+            // series of subsequent assocs correspond to a series of subsequent
+            // regs. Other than this just occurring naturally by
+            // virtue of two glued regs happening to be adjacent to one another
+            // (architects do tend to put the addresses of related registers
+            // close to one another!) there is also the case of register
+            // arrays.
+            if (assoc.offset > 7 && reg_offset < assoc.offset - 7) {
+                ddm_index = dia.bank.binsearch_ddm(
+                    ddm_bank, assoc.offset - 7, ddm_index);
+            }
+
+
+            for (; ddm_index < bank_len; ++ddm_index) {
+                local typeof(reg_type_carrier) reg =
+                    dia.bank.regs_item(ddm_bank, ddm_index);
+                reg_offset = dia.reg.offset(reg);
+                local uint64 reg_end_offset = reg_offset
+                                            + dia.reg.size(reg) - 1;
+                if (reg_offset >= assoc.offset + assoc_num_bytes) {
+                    if (ddm_index == 0
+                        || max_inserted_end_offset < assoc.offset) {
+                        _ddm_warn_bad_arb_assoc(&assoc, ddm_bank);
+                    }
+                    ++assoc_index;
+                    break;
+                }
+                if (reg_end_offset < assoc.offset) continue;
+
+                // 63:d bit indicates association kind
+                ht_insert_int(reg_ht, dia.reg.__id(reg),
+                              cast(cast(ASSOC_KIND_ARBITRARY << 63
+                                        | assoc_index + 1, uintptr_t),
+                                   void *));
+
+                // Sorting would make this check redundant were it not for
+                // overlapping regs
+                if (reg_end_offset > max_inserted_end_offset) {
+                    max_inserted_end_offset = reg_end_offset;
+                }
+            }
+        }
+        while (assoc_index < num_assocs) {
+            local assoc_t assoc = assocs[assoc_index++];
+            if (bank_len == 0 || max_inserted_end_offset < assoc.offset) {
+                _ddm_warn_bad_arb_assoc(&assoc, ddm_bank);
+            }
+        }
+    }
+
+    independent method init_reg_ht_for_bank_reg_assocs(
+        typeof(bank_type_carrier) ddm_bank, ht_int_table_t *reg_ht,
+        const assoc_t *assocs, uint32 num_assocs) {
+        for (local uint32 i = 0; i < num_assocs; ++i) {
+            local assoc_t assoc = assocs[i];
+            assert assoc.assoc_kind == ASSOC_KIND_REG;
+            local typeof(reg_type_carrier) reg = dia.reg.__mk(assoc.reg);
+            local uintptr_t existing_entry =
+                cast(ht_lookup_int(reg_ht, assoc.reg), uintptr_t);
+            if (existing_entry != 0
+                && existing_entry[63] == ASSOC_KIND_ARBITRARY) {
+                local assoc_t existing_assoc = assocs[existing_entry[62:0]
+                                                      - 1];
+                local uint64 existing_start = existing_assoc.offset;
+                local uint64 existing_end = existing_start
+                                          + (existing_assoc.lsb
+                                             + existing_assoc.bitsize + 7) / 8;
+                local uint64 new_start = assoc.offset;
+                local uint64 new_end = new_start
+                                     + (assoc.lsb + assoc.bitsize + 7) / 8;
+                assert existing_end <= new_start || new_end <= existing_start;
+            }
+            if (existing_entry == 0
+                || existing_entry[63] == ASSOC_KIND_ARBITRARY) {
+                ht_insert_int(reg_ht, assoc.reg,
+                              cast(cast(ASSOC_KIND_REG << 63 | i, uintptr_t),
+                                   void *));
+            }
+        }
+    }
+
+    #if (defined(ddmdef_resource)) {
+        independent startup memoized method reg_assoc_ht()
+            -> (const ht_int_table_t *) {
+            local ht_int_table_t *reg_ht = new ht_int_table_t;
+            ht_init_int_table(reg_ht);
+
+            foreach b in (each_dia_bank_expr) {
+                local (const assoc_t *arb_assocs, uint32 num_arb_assocs,
+                       const assoc_t *reg_assocs, uint32 num_reg_assocs)
+                    = b._sorted_assocs();
+
+                if (num_arb_assocs == 0 && num_reg_assocs == 0) continue;
+
+                local typeof(bank_type_carrier) ddm_bank = b.ddm_bank();
+                init_reg_ht_for_bank_arb_assocs(
+                    ddm_bank, reg_ht, arb_assocs, num_arb_assocs);
+                init_reg_ht_for_bank_reg_assocs(
+                    ddm_bank, reg_ht, reg_assocs, num_reg_assocs);
+            }
+            return reg_ht;
+        }
+    } #else {
+        independent method reg_assoc_ht() -> (const ht_int_table_t *) {
+            local const typeof(spec_type_carrier) *_spec = spec();
+            return NULL;
+        }
+    }
+}
+
+
+template ddm_dialect_base_handles {
+    param _reg_item;
+    independent method reg(uint32 i)
+                    -> (typeof(reg_type_carrier)) {
+        return _reg_item(dia.spec(), __mk(0), i);
+    }
+
+    param _field_item;
+    independent method field(uint32 i)
+                    -> (typeof(field_type_carrier)) {
+        return _field_item(dia.spec(), __mk(0), i);
+    }
+}
+
+typedef struct {
+    uint64 redirected_bits;
+    uint64 val_for_nonmapped_bits; // Only relevant for writes
+    rel_assocs_t assocs;
+} _ddm_dispatch_reg_assocs_t;
+
+template ddm_dialect_base_bank {
+    param dia = parent.dia;
+
+    param __id;
+
+    method base_write(typeof(bank_template_carrier) bank,
+                      uint64 offset, uint64 value, uint64 enabled_bytes,
+                      bool inquiry, void *aux) throws
+        default {
+        if (enabled_bytes == 0) return;
+
+        local typeof(bank_type_carrier) ddm_bank = bank.ddm_bank();
+
+        local uint64 size = _enabled_bytes_to_size(enabled_bytes);
+
+        local (ddm_hits_t ddm_regs, uint64 unmapped_bits) =
+            determine_hit_ddm_regs(ddm_bank, offset, size);
+        local uint32 num_ddm_regs = VLEN(ddm_regs);
+        unmapped_bits &= enabled_bytes;
+        enabled_bytes &= ~unmapped_bits;
+
+        if (unmapped_bits != 0) {
+            // TODO the way logging is done in unmapped_write/unmapped_set
+            // is weird
+            try {
+                if (inquiry) {
+                    bank.unmapped_set(offset, value & unmapped_bits,
+                                      unmapped_bits);
+                } else {
+                    bank.unmapped_write(offset, value & unmapped_bits,
+                                        unmapped_bits, aux);
+                }
+            } catch {
+                VFREE(ddm_regs);
+                throw;
+            }
+        }
+
+        if (num_ddm_regs == 0) {
+            VFREE(ddm_regs);
+            return;
+        }
+
+
+        local uint64 redirected_bits;
+        local _ddm_dispatch_reg_assocs_t *ddm_reg_assocs =
+            new _ddm_dispatch_reg_assocs_t[num_ddm_regs];
+
+        local const ht_int_table_t *reg_assoc_ht = dia.reg_assoc_ht();
+        local (const assoc_t *arb_assocs,
+               uint32 num_arb_assocs,
+               const assoc_t *reg_assocs,
+               uint32 num_reg_assocs) = bank._sorted_assocs();
+
+        // ddm validation, assoc determination, and write sweep
+        for (local uint32 i = 0; i < num_ddm_regs; ++i) {
+            local typeof(reg_type_carrier) reg = dia.reg.__mk(ddm_regs[i]);
+
+            assert bank.little_endian_byte_order(reg);
+
+            local uint64 reg_size = dia.reg.size(reg);
+            local uint64 reg_offset = dia.reg.offset(reg);
+
+            // We're assuming little-endian, thus lsb is end of first
+            // byte of both the access and the reg (and thus lsb_diff
+            // is derived only from the offset and not the size).
+            local int8 reg_lsb_diff = (reg_offset - offset) * 8;
+            local uint64 reg_mask;
+            reg_mask[reg_size*8 - 1 : 0] =
+                shr_neg(enabled_bytes, reg_lsb_diff);
+
+            local uint64 written_reg_val = shr_neg(value, reg_lsb_diff)
+                                         & reg_mask;
+
+            // TODO could be optimized
+            local uint64 curr_val = dia.reg.get(reg);
+
+            local uint64 permitted_bits =
+                inquiry ? reg_mask : bank.validate_reg_write_impl(
+                reg, curr_val, written_reg_val, reg_mask, aux)
+                & reg_mask;
+
+            if (permitted_bits == 0) continue;
+
+            local uint64 first_assoc_index = cast(
+                ht_lookup_int(reg_assoc_ht, dia.reg.__id(reg)), uintptr_t);
+
+            local uint64 mapped_redirected_bits = 0;
+            if (first_assoc_index != 0) {
+                ddm_reg_assocs[i].assocs.bank_id = dia.bank.__id(ddm_bank);
+                dia.reg._overrides(
+                    dia.spec(), arb_assocs, num_arb_assocs,
+                    reg_assocs, num_reg_assocs, ddm_bank, reg,
+                    first_assoc_index, &ddm_reg_assocs[i].assocs);
+
+                ddm_reg_assocs[i].redirected_bits =
+                    permitted_bits & ddm_reg_assocs[i].assocs.used;
+                mapped_redirected_bits = inquiry
+                                       ? ddm_reg_assocs[i].redirected_bits
+                                       : ddm_reg_assocs[i].assocs.mapped_write
+                                         & permitted_bits;
+            }
+
+            if (permitted_bits != mapped_redirected_bits) {
+                local uint64 prim_val =
+                    inquiry ? written_reg_val : bank.reg_write_impl(
+                        reg, curr_val, written_reg_val,
+                        permitted_bits & ~mapped_redirected_bits, aux);
+                dia.reg.set_primitive_val(reg, prim_val);
+                // TODO this makes me frown
+                if (first_assoc_index != 0) {
+                    ddm_reg_assocs[i].val_for_nonmapped_bits = prim_val;
+                }
+            }
+        }
+
+        // DML write sweep
+        // TODO: re. assoc determination; currently, there is nothing in place
+        // allowing a single arbitrary assoc to cover multiple overlapping
+        // regs. In a broadcast setting, that is worse than worthless:
+        // the assoc gets writes to the same bits multiple times, without it
+        // having any effective way to differentiate between which of the
+        // overlapping regs that write is regarding. That is never desirable,
+        // and could plausibly happen rather easily due to a mistake.
+        // **However**, an arbitrary assoc covering multiple overlapping regs
+        // does make sense in a **non-broadcast** setting, where only up to one
+        // of the overlapping regs can be active (their write validated) at
+        // Because then, the assoc will only receive a single write, and one
+        // can assume that the assoc will be able to leverage ambient state to
+        // figure out which of the regs it covers are currently in play.
+        //
+        // We should figure out what stance we want to take on this, but since
+        // it never makes sense to have an arb assoc on overlapping regs in a
+        // broadcast setting, we should detect and assert on that, which we
+        // don't right now.
+        for (local uint32 i = 0; i < num_ddm_regs; ++i) {
+            if (ddm_reg_assocs[i].redirected_bits == 0) continue;
+
+            local typeof(reg_type_carrier) reg = dia.reg.__mk(ddm_regs[i]);
+            local uint64 reg_prim_val = dia.reg.get_primitive_val(reg);
+
+            local uint64 reg_size = dia.reg.size(reg);
+            local uint64 reg_offset = dia.reg.offset(reg);
+
+            local int8 reg_lsb_diff = (reg_offset - offset) * 8;
+
+            local uint64 base_written_reg_val = shr_neg(value, reg_lsb_diff);
+
+            for (local rel_assocs_iter_t iter =
+                     dia.rel_assocs.iter.make(&ddm_reg_assocs[i].assocs);
+                 !dia.rel_assocs.iter.end(iter);
+                 iter = dia.rel_assocs.iter.next(iter)) {
+                local (uint8 msb,
+                       uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+                local uint64 mask =
+                    ddm_reg_assocs[i].redirected_bits[msb:lsb];
+                local uint64 mapped =
+                    ddm_reg_assocs[i].assocs.mapped_write[msb:lsb];
+                // By trying to bake in a "restrict mask" into rel_assocs_t,
+                // we'd be able to turn the need of the following check over
+                // all the loops into a constant-time operation by leveraging
+                // satisfied_thresholds_be.
+                // But is the complexity worth it? I doubt it.
+                if (mask == 0) continue;
+                local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+                local ddm_assoc_vtable vtable =
+                    dia.rel_assocs.iter.base_vtable(iter);
+                if (inquiry) {
+                    vtable.assoc_set(
+                        (base_written_reg_val[msb:lsb] & mask) << bo,
+                        mask << bo);
+                } else {
+                    vtable.assoc_set(
+                        ddm_reg_assocs[i].val_for_nonmapped_bits[msb:lsb] << bo,
+                        (mask & ~mapped) << bo);
+                    vtable.assoc_write(
+                        (base_written_reg_val[msb:lsb] & mask) << bo,
+                        (mask & mapped) << bo,
+                        aux);
+                }
+            }
+        }
+
+        delete ddm_reg_assocs;
+        VFREE(ddm_regs);
+    }
+
+    method base_read(typeof(bank_template_carrier) bank,
+                     uint64 offset, uint64 enabled_bytes, bool inquiry,
+                     void *aux)
+                 -> (uint64) throws default {
+        if (enabled_bytes == 0) return 0;
+
+        local typeof(bank_type_carrier) ddm_bank = bank.ddm_bank();
+
+        local uint64 ret_val = 0;
+
+        local uint64 size = _enabled_bytes_to_size(enabled_bytes);
+
+        local (ddm_hits_t ddm_regs, uint64 unmapped_bits) =
+            determine_hit_ddm_regs(ddm_bank, offset, size);
+        local uint32 num_ddm_regs = VLEN(ddm_regs);
+        unmapped_bits &= enabled_bytes;
+        enabled_bytes &= ~unmapped_bits;
+
+        if (unmapped_bits != 0) {
+            // TODO the way logging is done in unmapped_write/unmapped_set
+            // is weird
+            try {
+                if (inquiry) {
+                    ret_val = bank.unmapped_get(offset, unmapped_bits);
+                } else {
+                    ret_val = bank.unmapped_read(offset, unmapped_bits, aux);
+                }
+                ret_val &= unmapped_bits;
+            } catch {
+                VFREE(ddm_regs);
+                throw;
+            }
+        }
+
+        if (num_ddm_regs == 0) {
+            VFREE(ddm_regs);
+            return ret_val;
+        }
+
+        local uint64 redirected_bits;
+        local _ddm_dispatch_reg_assocs_t *ddm_reg_assocs =
+            new _ddm_dispatch_reg_assocs_t[num_ddm_regs];
+
+        local const ht_int_table_t *reg_assoc_ht = dia.reg_assoc_ht();
+        local (const assoc_t *arb_assocs,
+               uint32 num_arb_assocs,
+               const assoc_t *reg_assocs,
+               uint32 num_reg_assocs) = bank._sorted_assocs();
+
+        // ddm validation, assoc determination, and read sweep
+        // TODO: Unlike write, we **could** leverage an access-relative
+        // rel_assocs_t and satisfied_thresholds_be because, unlike write,
+        // broadcast over overlapping regs doesn't make sense in a read
+        // setting; at least not for the current cases we know about.
+        // We don't though for simplicity; it's nice to keep the implementation
+        // roughly symmetrical with write. If this becomes a performance
+        // bottleneck, we can reconsider.
+        // (That said read requires a lot of extra access-relative details that
+        // write doesn't. Tracking associations relative to the access wouldn't
+        // be THAT big of an extra step...)
+
+        // Case in point we need this to log error if there are overlapped bits
+        // that get validated by multiple registers
+        local uint64 access_permitted_bits = 0;
+        local bool validation_overlap = false;
+        // TODO man I dislike having to turn to vectors for this
+        local ddm_hits_t validated_regs;
+        VINIT(validated_regs);
+        for (local uint32 i = 0; i < num_ddm_regs; ++i) {
+            local typeof(reg_type_carrier) reg = dia.reg.__mk(ddm_regs[i]);
+
+            assert bank.little_endian_byte_order(reg);
+
+            local uint64 reg_size = dia.reg.size(reg);
+            local uint64 reg_offset = dia.reg.offset(reg);
+
+            // We're assuming little-endian, thus lsb is end of first
+            // byte of both the access and the reg (and thus lsb_diff
+            // is derived only from the offset and not the size).
+            local int8 reg_lsb_diff = (reg_offset - offset) * 8;
+            local uint64 reg_mask;
+            reg_mask[reg_size*8 - 1 : 0] =
+                shr_neg(enabled_bytes, reg_lsb_diff);
+
+            // TODO could be optimized
+            local uint64 curr_val = dia.reg.get(reg);
+
+            local uint64 permitted_bits = inquiry ? reg_mask
+                : bank.validate_reg_read_impl(reg, curr_val, reg_mask, aux)
+                  & reg_mask;
+
+            if (permitted_bits == 0) continue;
+            VADD(validated_regs, ddm_regs[i]);
+
+            local uint64 new_access_permitted_bits = shl_neg(
+                permitted_bits, reg_lsb_diff);
+
+            if ((access_permitted_bits & new_access_permitted_bits) != 0) {
+                validation_overlap = true;
+                // There are two possible fallback behaviours; either let the
+                // overlapping permitted bits be, which'd have the effect of
+                // OR:ing together the values of the overlapping registers;
+                // OR we pick only one of the registers to provide the value
+                // of the overlapping bits in an arbitrary manner.
+                //
+                // OR:ing together the values is only defensible when that is
+                // the *desired behaviour*; i.e. we *are* in a broadcast read
+                // setting, the semantics of which is to OR together the bits.
+                // In any other scenario the OR:ing just causes nonsensical
+                // noise which would likely break stuff in all kinds of strange
+                // ways.
+                // Ultimately, we don't want to support broadcast reads, at
+                // least not until we observe a case of it. We log an error
+                // about the overlap, after all!
+                // Thus, we go with the latter behaviour, by simply
+                // prioritizing any earlier overlapping bits over later ones.
+                permitted_bits &= ~shr_neg(access_permitted_bits,
+                                           reg_lsb_diff);
+            }
+
+            access_permitted_bits |= new_access_permitted_bits;
+
+            if (inquiry) {
+                // No need to call reg_read_impl, and assoc determination
+                // has happened as part of the earlier get() call
+                ret_val |= shl_neg(curr_val & permitted_bits, reg_lsb_diff);
+                continue;
+            }
+
+            local uint64 first_assoc_index = cast(
+                ht_lookup_int(reg_assoc_ht, dia.reg.__id(reg)),
+                uintptr_t);
+
+            local uint64 mapped_redirected_bits = 0;
+            if (first_assoc_index != 0) {
+                ddm_reg_assocs[i].assocs.bank_id = dia.bank.__id(ddm_bank);
+                dia.reg._overrides(
+                    dia.spec(), arb_assocs, num_arb_assocs,
+                    reg_assocs, num_reg_assocs,
+                    ddm_bank, reg,
+                    first_assoc_index, &ddm_reg_assocs[i].assocs);
+
+                ddm_reg_assocs[i].redirected_bits =
+                    permitted_bits & ddm_reg_assocs[i].assocs.used;
+                mapped_redirected_bits =
+                    permitted_bits & ddm_reg_assocs[i].assocs.mapped_read;
+            }
+
+            // HACK Here's an awkward conflict between the quo of "read is free
+            // to determine bits that fail to validate" and needing to
+            // accumulate bits of overlapping regs. This requires us to clear
+            // the bits of ret_val that are now permitted, and not write to any
+            // bits that have already been validated.
+            // TODO this is an EXTREMELY STRONG argument for Erik's stance that
+            // the former idea is just a bad one
+            ret_val &= ~new_access_permitted_bits;
+
+            if (reg_mask != mapped_redirected_bits) {
+                local uint64 reg_val = bank.reg_read_impl(
+                        reg, curr_val,
+                        permitted_bits & ~mapped_redirected_bits, aux)
+                    & reg_mask & ~mapped_redirected_bits;
+                ret_val |= shl_neg(reg_val, reg_lsb_diff)
+                         & (~access_permitted_bits
+                            | new_access_permitted_bits);
+            }
+        }
+
+        if (validation_overlap) {
+            // TODO ideally this'd log associated to the bank object, but
+            // that requires calling a method of it; to have such a method
+            // cheaply we need to make it a shared method of a template type;
+            // but we can't use ddm_assoc_to_bank since it's dialect-agnostic;
+            // thus we'd have to generate the logging method as part of the
+            // [dia]_assoc_to_bank_base template in the DML glue for the data
+            // model.
+            // And that's... just not worth it
+            local strbuf_t formatted_regs;
+            sb_init(&formatted_regs);
+            for (local uint32 i = 0; i < VLEN(validated_regs); ++i) {
+                local char *name = dia.reg.register_view_name(
+                    dia.reg.__mk(validated_regs[i]));
+
+                sb_addfmt(&formatted_regs, "%s%s", i != 0 ? ", " : "", name);
+                MM_FREE(name);
+            }
+            // Questionable if this is error or spec-viol. Latter is more
+            // likely on an inquiry access; former more likely on a regular
+            // one.
+            // ... Lllet's call it spec-viol.
+            log spec_viol: "%s: %d byte %sread access at offset %#x is given "
+                         + "bits from multiple registers that overlap.\n"
+                         + "Registers involved in the access: %s",
+                cast(bank, object)._qname(),
+                _enabled_bytes_to_size(enabled_bytes),
+                inquiry ? "inquiry " : "", offset, sb_str(&formatted_regs);
+            sb_free(&formatted_regs);
+        }
+        VFREE(validated_regs);
+
+        if (inquiry) {
+            VFREE(ddm_regs);
+            delete ddm_reg_assocs;
+            return ret_val;
+        }
+
+        // DML read sweep. Unneeded if inquiry
+        for (local uint32 i = 0; i < num_ddm_regs; ++i) {
+            if (ddm_reg_assocs[i].redirected_bits == 0) {
+                continue;
+            }
+
+            local typeof(reg_type_carrier) reg = dia.reg.__mk(ddm_regs[i]);
+
+            local uint64 reg_size = dia.reg.size(reg);
+            local uint64 reg_offset = dia.reg.offset(reg);
+
+            local int8 reg_lsb_diff = (reg_offset - offset) * 8;
+
+            for (local rel_assocs_iter_t iter =
+                     dia.rel_assocs.iter.make(&ddm_reg_assocs[i].assocs);
+                 !dia.rel_assocs.iter.end(iter);
+                 iter = dia.rel_assocs.iter.next(iter)) {
+                local (uint8 msb,
+                       uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+                local uint64 mask =
+                    ddm_reg_assocs[i].redirected_bits[msb:lsb];
+                if (mask == 0) continue;
+                // NOTE unlike the write case, we have no reason to invoke
+                // anything but assoc_read, as the earlier get() call already
+                // got us the non-mapped bits of every assoc.
+                // It would be natural to filter the mask through mapped_read
+                // *before* the above check (actually, it'd be natural to base
+                // .redirected_bits on .mapped_read rather than .used to begin
+                // with), but we still want to invoke assoc_read even if
+                // none of its mapped bits got redirected, just as long as
+                // *some* bit did (which'd result in an enabled_bits of 0 being
+                // passed to the call), just for the sake of allowing the assoc
+                // to execute any read side-effects
+                mask &= ddm_reg_assocs[i].assocs.mapped_read[msb:lsb];
+                local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+                local ddm_assoc_vtable vtable =
+                    dia.rel_assocs.iter.base_vtable(iter);
+                // TODO doublecheck the bitshift logic
+                local uint64 assoc_val = (vtable.assoc_read(mask << bo, aux)
+                                          >> bo)
+                                       & mask;
+                ret_val |= shl_neg(assoc_val, reg_lsb_diff + lsb);
+            }
+        }
+
+        VFREE(ddm_regs);
+        delete ddm_reg_assocs;
+        return ret_val;
+    }
+
+    // Find the index of the earliest register with the smallest offset
+    // greater than or equal to 'offset' (starting the search at 'start_at').
+    // If there is none, then the final index is returned.
+    //
+    // Intent of usage when wanting to find registers hit by an access at
+    // offset 'a' is call binsearch_ddm with offset Max('a' - 7, 0)
+    //
+    // NOTE: Before overlapping register support, binsearch_ddm instead found
+    // the register with greatest offset smaller than or equal to 'offset',
+    // and was intended to be passed 'a' directly as the sought offset.
+    // The reason for this is by virtue of sorting + lack of overlap, that
+    // register was guaranteed to be the earliest one that needed to be
+    // considered for if it was hit by the access.
+    // With overlapping registers, this is no longer the case.
+    independent method binsearch_ddm(typeof(bank_type_carrier) bank,
+                                     uint64 offset, uint32 start_at)
+                                 -> (uint32) {
+        local uint32 len = regs_len(bank);
+        local (uint32 first, uint32 last) = (start_at, len - 1);
+        while (first < last) {
+            // we pick a middle point such that first <= middle < last...
+            local uint32 middle = (first + last) / 2;
+            local uint64 reg_offset = dia.reg.offset(regs_item(bank, middle));
+            if (reg_offset < offset) {
+                // ... which guarantees first <= last here
+                first = middle + 1;
+            } else {
+                last = middle;
+            }
+        }
+
+        return first;
+    }
+
+    independent method determine_hit_ddm_regs(typeof(bank_type_carrier) bank,
+                                              uint64 offset, uint64 size)
+                                          -> (ddm_hits_t, uint64) {
+        local uint64 unmapped_bytes = (~0)[size*8-1:0];
+        local uint32 len = regs_len(bank);
+        local ddm_hits_t hits;
+        VINIT(hits);
+
+        if (len == 0) return (hits, unmapped_bytes);
+
+        local uint32 first = binsearch_ddm(bank,
+                                           offset > 7 ? offset - 7 : 0, 0);
+
+        for (local uint32 i = first; i < len; ++i) {
+            local typeof(reg_type_carrier) reg = regs_item(bank, i);
+            local uint64 reg_offset = dia.reg.offset(reg);
+            local uint8 reg_size = dia.reg.size(reg);
+            if (reg_offset >= offset + size) break;
+
+            if (offset < reg_offset + reg_size) {
+                VADD(hits, dia.reg.__id(reg));
+                local int8 lsb_diff = (reg_offset - offset) * 8;
+                unmapped_bytes[reg_size*8 + lsb_diff - 1
+                               : lsb_diff < 0 ? 0 : lsb_diff] = 0;
+            }
+        }
+
+        return (hits, unmapped_bytes);
+    }
+}
+
+
+
+template ddm_dialect_base_reg {
+    param __id;
+
+    session uint64 *_vals;
+    group _vals_alloc is (init, destroy) {
+        method init() {
+            if (_vals != NULL) return;
+            local uint32 num_regs = dia.reg.__count(dia.spec());
+            _vals = new uint64[num_regs];
+            for (local uint32 i = 0; i < num_regs; i++) {
+                _vals[i] = init_val(dia.reg.__mk(i));
+            }
+        }
+        method destroy() {
+            delete _vals;
+            _vals = NULL;
+        }
+    }
+
+    method get_primitive_val(typeof(reg_type_carrier) reg) -> (uint64) {
+        if (_vals == NULL) _vals_alloc.init();
+        return _vals[__id(reg)];
+    }
+
+    method set_primitive_val(typeof(reg_type_carrier) reg, uint64 val) {
+        if (_vals == NULL) _vals_alloc.init();
+        _vals[__id(reg)] = val;
+    }
+
+    method get(typeof(reg_type_carrier) reg) -> (uint64) {
+        local rel_assocs_t assocs = overrides(reg);
+        local uint64 val = get_primitive_val(reg);
+
+        for (local rel_assocs_iter_t iter = dia.rel_assocs.iter.make(&assocs);
+             !dia.rel_assocs.iter.end(iter);
+             iter = dia.rel_assocs.iter.next(iter)) {
+            local (uint8 msb, uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+            local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+            local uint64 assoc_val = dia.rel_assocs.iter.base_vtable(
+                iter).assoc_get();
+            val[msb:lsb] = assoc_val >> bo;
+        }
+
+        return val;
+    }
+
+    method set(typeof(reg_type_carrier) reg, uint64 val) {
+        local rel_assocs_t assocs = overrides(reg);
+
+        local uint64 prim_reg_val = get_primitive_val(reg);
+        prim_reg_val = (prim_reg_val & assocs.used) | (val & ~assocs.used);
+        set_primitive_val(reg, prim_reg_val);
+
+        for (local rel_assocs_iter_t iter = dia.rel_assocs.iter.make(&assocs);
+             !dia.rel_assocs.iter.end(iter);
+             iter = dia.rel_assocs.iter.next(iter)) {
+            local (uint8 msb, uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+            local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+            local uint64 assoc_mask = (~0)[msb:lsb]<<bo;
+            dia.rel_assocs.iter.base_vtable(iter).assoc_set(
+                val[msb:lsb]<<bo, assoc_mask);
+        }
+    }
+
+    independent method register_view_name(typeof(reg_type_carrier) reg)
+                    -> (char *) default {
+        return MM_STRDUP(name_(reg));
+    }
+
+    independent method register_view_desc(typeof(reg_type_carrier) reg)
+                    -> (char *) default {
+        return MM_STRDUP(desc_(reg));
+    }
+
+    independent method register_view_read_only(typeof(reg_type_carrier) reg)
+                                           -> (bool) default {
+        return false;
+    }
+
+
+    independent method _overrides_reg_assocs(
+        const typeof(spec_type_carrier) *spec,
+        const assoc_t *reg_assocs, uint32 num_reg_assocs, uint32 assoc_index,
+        typeof(bank_type_carrier) ddm_bank, typeof(reg_type_carrier) reg,
+        rel_assocs_t *rel_assocs) {
+        local uint64 reg_offset = dia.reg.offset(reg);
+        local uint8 reg_size = dia.reg.size(reg) * 8;
+        for (; assoc_index < num_reg_assocs; ++assoc_index) {
+            local assoc_t assoc = reg_assocs[assoc_index];
+            if (assoc.reg != dia.reg.__id(reg)) break;
+            if (assoc.offset >= reg_offset + reg_size) break;
+            local int8 lsb_diff = (assoc.offset - reg_offset) * 8
+                                + assoc.lsb;
+            // You can't have a reg-relative assoc that starts before the reg
+            // the reg or stretches beyond its end
+            assert lsb_diff >= 0 && lsb_diff + assoc.bitsize <= reg_size * 8;
+            local uint8 lsb = lsb_diff;
+            assert lsb < 64;
+
+            rel_assocs->lsbs[lsb] = 1;
+            rel_assocs->used[assoc.bitsize - 1 + lsb : lsb] = ~0;
+            // TODO mapped; interrogate this logic later
+            rel_assocs->mapped_write[assoc.bitsize - 1 + lsb : lsb] =
+                assoc.vtable.assoc_mapped_write_bits() >> assoc.lsb_diff;
+            rel_assocs->mapped_read[assoc.bitsize - 1 + lsb : lsb] =
+                assoc.vtable.assoc_mapped_read_bits() >> assoc.lsb_diff;
+            rel_assocs->assoc_kinds[lsb] = ASSOC_KIND_REG;
+            rel_assocs->assoc_indices[lsb] = assoc_index;
+        }
+    }
+
+    independent method _overrides(const typeof(spec_type_carrier) *spec,
+                                  const assoc_t *arb_assocs,
+                                  uint32 num_arb_assocs,
+                                  const assoc_t *reg_assocs,
+                                  uint32 num_reg_assocs,
+                                  typeof(bank_type_carrier) ddm_bank,
+                                  typeof(reg_type_carrier) reg,
+                                  uint64 first_assoc_index,
+                                  rel_assocs_t *rel_assocs) {
+        local uint64 reg_offset = dia.reg.offset(reg);
+        local uint8 reg_size = dia.reg.size(reg);
+
+        if (first_assoc_index[63] == ASSOC_KIND_REG) {
+            _overrides_reg_assocs(spec, reg_assocs,
+                                  num_reg_assocs,
+                                  first_assoc_index[62:0],
+                                  ddm_bank, reg, rel_assocs);
+            if (rel_assocs->used == (~0)[reg_size*8-1:0]
+                || num_arb_assocs == 0) {
+                return;
+            }
+
+            // Binsearch to find the first arb assoc that could possibly apply
+            local (uint32 first, uint32 last) = (0, num_arb_assocs - 1);
+            while (first < last) {
+                // we pick a middle point such that
+                // first < middle <= last...
+                local uint32 middle = (first + last + 1) / 2;
+                if (arb_assocs[middle].offset > reg_offset) {
+                    // ... which guarantees first <= last here
+                    last = middle - 1;
+                } else {
+                    first = middle;
+                }
+            }
+            first_assoc_index = first;
+
+            local assoc_t first_assoc = arb_assocs[first_assoc_index];
+            local uint64 first_assoc_end_offset = first_assoc.offset
+                + (first_assoc.lsb + first_assoc.bitsize - 1) / 8;
+            if (first_assoc_end_offset < reg_offset) {
+                return;
+            }
+        } else {
+            first_assoc_index = first_assoc_index[62:0] - 1;
+        }
+
+        for (local uint32 i = first_assoc_index; i < num_arb_assocs; ++i) {
+            local assoc_t assoc = arb_assocs[i];
+
+            if (assoc.offset >= reg_offset + reg_size) break;
+
+            local int8 lsb_diff = (assoc.offset - reg_offset) * 8
+                                + assoc.lsb;
+            assert lsb_diff > -assoc.bitsize;
+            local uint8 lsb = lsb_diff < 0 ? 0 : lsb_diff;
+            assert lsb < 64;
+
+            rel_assocs->lsbs[lsb] = 1;
+            rel_assocs->used[assoc.bitsize - 1 + lsb_diff : lsb] = ~0;
+            // TODO mapped; interrogate this logic later
+            local uint8 bo = assoc.lsb_diff + (lsb_diff < 0 ? -lsb_diff : 0);
+            rel_assocs->mapped_write[assoc.bitsize - 1 + lsb_diff : lsb] =
+                assoc.vtable.assoc_mapped_write_bits() >> bo;
+            rel_assocs->mapped_read[assoc.bitsize - 1 + lsb_diff : lsb] =
+                assoc.vtable.assoc_mapped_read_bits() >> bo;
+            rel_assocs->assoc_indices[lsb] = i;
+            if (lsb_diff < 0) {
+                rel_assocs->lsb_diff_of_first = -lsb_diff;
+            }
+        }
+
+        rel_assocs->used         &= (~0)[reg_size*8-1:0];
+        rel_assocs->mapped_write &= (~0)[reg_size*8-1:0];
+        rel_assocs->mapped_read  &= (~0)[reg_size*8-1:0];
+    }
+    independent method overrides(typeof(reg_type_carrier) reg)
+                             -> (rel_assocs_t) {
+        local typeof(bank_type_carrier) ddm_bank = dia.reg.bank(reg);
+        local typeof(bank_template_carrier) bank;
+        try {
+            bank = dia.bank.get_assoc(ddm_bank);
+        } catch assert false;
+
+        local rel_assocs_t assocs;
+
+        assocs.bank_id = dia.bank.__id(ddm_bank);
+
+        local const ht_int_table_t *reg_assoc_ht = dia.reg_assoc_ht();
+        local uint64 first_assoc_index = cast(ht_lookup_int(reg_assoc_ht,
+                                                            __id(reg)),
+                                              uintptr_t);
+        if (first_assoc_index == 0) {
+            return assocs;
+        }
+
+        local (const assoc_t *arb_assocs,
+               uint32 num_arb_assocs,
+               const assoc_t *reg_assocs,
+               uint32 num_reg_assocs) = bank._sorted_assocs();
+        _overrides(spec(), arb_assocs, num_arb_assocs, reg_assocs,
+                   num_reg_assocs, ddm_bank, reg, first_assoc_index, &assocs);
+        return assocs;
+    }
+}
+
+template ddm_dialect_base_field {
+    independent method mask_reg(typeof(field_type_carrier) field) -> (uint64) {
+        return ((1 << bitsize(field)) - 1) << lsb(field);
+    }
+
+    // Functionality subsumed by msb_lsb
+    // Actually these are useful for oneliners
+    independent method to_reg_val(typeof(field_type_carrier) field, uint64 val)
+                              -> (uint64) {
+        return (val & ((1 << bitsize(field)) - 1)) << lsb(field);
+    }
+
+    independent method from_reg_val(typeof(field_type_carrier) field,
+                                    uint64 val)
+                                -> (uint64) {
+        return (val >> lsb(field)) & ((1 << bitsize(field)) - 1);
+    }
+
+    independent method msb(typeof(field_type_carrier) field)
+                       -> (uint8) {
+        return lsb(field) + bitsize(field) - 1;
+    }
+
+    independent method msb_lsb(typeof(field_type_carrier) field)
+                           -> (uint8, uint8) {
+        return (msb(field), lsb(field));
+    }
+
+    independent method register_view_name(typeof(field_type_carrier) field)
+                    -> (char *) default {
+        return MM_STRDUP(name_(field));
+    }
+
+    independent method register_view_desc(typeof(field_type_carrier) field)
+                    -> (char *) default {
+        return MM_STRDUP(desc_(field));
+    }
+
+    method get(typeof(field_type_carrier) field) -> (uint64) {
+        local typeof(dia.reg_type_carrier) reg = dia.field.reg(field);
+        local uint8 lsb = dia.field.lsb(field);
+        local uint8 bitsize = dia.field.bitsize(field);
+
+        local rel_assocs_t assoc = overrides(field);
+        local uint64 val = dia.reg.get_primitive_val(reg)[lsb+bitsize-1:lsb];
+        for (local rel_assocs_iter_t iter = dia.rel_assocs.iter.make(&assoc);
+             !dia.rel_assocs.iter.end(iter);
+             iter = dia.rel_assocs.iter.next(iter)) {
+            local (uint8 msb, uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+            local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+            local uint64 assoc_val =
+                dia.rel_assocs.iter.base_vtable(iter).assoc_get();
+            val[msb:lsb] = assoc_val>>bo;
+        }
+        return val;
+    }
+
+    method set(typeof(field_type_carrier) field, uint64 val) {
+        local typeof(dia.reg_type_carrier) reg = dia.field.reg(field);
+        local (uint8 msb, uint8 lsb) = dia.field.msb_lsb(field);
+
+        local rel_assocs_t assoc = overrides(field);
+        local uint64 prim_reg_val = dia.reg.get_primitive_val(reg);
+        local uint64 prim_field_val = prim_reg_val[msb:lsb];
+        // update the bits not covered by assocs
+        prim_field_val = (prim_field_val & assoc.used) | (val & ~assoc.used);
+        prim_reg_val[msb:lsb] = prim_field_val;
+        dia.reg.set_primitive_val(reg, prim_reg_val);
+
+        for (local rel_assocs_iter_t iter = dia.rel_assocs.iter.make(&assoc);
+             !dia.rel_assocs.iter.end(iter);
+             iter = dia.rel_assocs.iter.next(iter)) {
+            local (uint8 msb, uint8 lsb) = dia.rel_assocs.iter.msb_lsb(iter);
+            local uint8 bo = dia.rel_assocs.iter.vtable_bitoffset(iter);
+            local uint64 assoc_mask = (~0)[msb:lsb]<<bo;
+            dia.rel_assocs.iter.base_vtable(iter).assoc_set(
+                val[msb:lsb]<<bo, assoc_mask);
+        }
+    }
+
+    independent method overrides(typeof(field_type_carrier) field)
+                             -> (rel_assocs_t) {
+        local typeof(reg_type_carrier) ddm_reg = dia.field.reg(field);
+        // TODO consider optimizing; reg overrides can need to process assocs
+        // which don't apply to the field. Then again, that's not a pattern
+        // we expect to happen very often.
+        local rel_assocs_t reg_assocs = dia.reg.overrides(ddm_reg);
+        return dia.rel_assocs._narrow(&reg_assocs, dia.field.lsb(field),
+                                      dia.field.bitsize(field));
+    }
+}
+
+
+// HACK: We don't want users to rely on this library providing qsort
+header %{
+    #define _SIMPLE_REGS_SORT qsort
+%}
+
+extern void _SIMPLE_REGS_SORT(void *base, size_t nmemb, size_t size,
+                              int (*compare)(const void *, const void *));
+
+independent method cmp_arb_assoc(const void *_a, const void *_b) -> (int) {
+    local (const assoc_t *a, const assoc_t *b) = (_a, _b);
+
+    return a->offset > b->offset ? 1
+         : a->offset == b->offset ? cast(a->lsb, int) - b->lsb
+         : -1;
+}
+
+independent method cmp_reg_assoc(const void *_a, const void *_b) -> (int) {
+    local (const assoc_t *a, const assoc_t *b) = (_a, _b);
+    // Reference is the primary key
+    return a->reg != b->reg ? a->reg > b->reg ? 1 : -1
+         // Otherwise sort by lowest bitoffset. This'll make field assocs of
+         // the same reg sorted by lowest lsb
+         : a->offset > b->offset ? 1
+         : a->offset == b->offset ? cast(a->lsb, int) - b->lsb
+         : -1;
+}
+
+typedef struct {
+    assocs_t arb_assocs;
+    assocs_t reg_assocs;
+} _ddm_bank_assocs_t;
+
+independent startup memoized method _ddm_assocs() -> (const ht_int_table_t *) {
+    local ht_int_table_t *assoc_ht = new ht_int_table_t;
+    ht_init_int_table(assoc_ht);
+    _traverse_ddm_assocs(assoc_ht, each ddm_assoc_desc in (dev));
+
+    // After having built the HT, sort the associations per bank and
+    // validate that there are no overlaps
+    for (local ht_int_iter_t iter = ht_int_iter(assoc_ht);
+         !ht_int_at_end(iter);
+         iter = ht_int_next(iter)) {
+        local _ddm_bank_assocs_t *bank_assocs = ht_iter_int_value(iter);
+        local uint32 arb_count = VLEN(bank_assocs->arb_assocs);
+        local assoc_t *arb_assocs = VVEC(bank_assocs->arb_assocs);
+        local uint32 reg_count = VLEN(bank_assocs->reg_assocs);
+        local assoc_t *reg_assocs = VVEC(bank_assocs->reg_assocs);
+        _SIMPLE_REGS_SORT(arb_assocs, arb_count, sizeoftype(assoc_t),
+                          &cmp_arb_assoc);
+        _SIMPLE_REGS_SORT(reg_assocs, reg_count, sizeoftype(assoc_t),
+                          &cmp_reg_assoc);
+        _validate_assocs_no_overlap(false, arb_assocs, arb_count);
+        _validate_assocs_no_overlap(true, reg_assocs, reg_count);
+        // Need also to check that arb and reg assocs don't overlap, but we do
+        // this during the per-bank reg HT construction
+    }
+    return assoc_ht;
+}
+
+extern uint64 _identity_to_key(_identity_t id);
+
+independent method _traverse_ddm_assocs(ht_int_table_t *bank_to_assocs_ht,
+                                        sequence(ddm_assoc_desc) descs) {
+    foreach assoc in (descs) {
+        try {
+            local assoc_t assoc_desc = assoc.get_assoc_desc();
+            local ddm_assoc_to_bank target_bank = assoc.target_bank();
+            local uint64 key = _identity_to_key(
+                cast(&target_bank, _traitref_t *)->id);
+
+            local _ddm_bank_assocs_t *bank_assocs = ht_lookup_int(
+                bank_to_assocs_ht, key);
+            if (bank_assocs == NULL) {
+                bank_assocs = new _ddm_bank_assocs_t;
+                VINIT(bank_assocs->arb_assocs);
+                VINIT(bank_assocs->reg_assocs);
+                ht_insert_int(bank_to_assocs_ht, key, bank_assocs);
+            }
+
+            if (assoc_desc.assoc_kind == ASSOC_KIND_REG) {
+                VADD(bank_assocs->reg_assocs, assoc_desc);
+            } else {
+                VADD(bank_assocs->arb_assocs, assoc_desc);
+            }
+        } catch;
+        _traverse_ddm_assocs(bank_to_assocs_ht, assoc.child_assoc_descs);
+    }
+}
+
+// should be fast enough not to be a concern re. startup times no matter
+// how many assocs there are
+independent method _validate_assocs_no_overlap(bool reg_assocs,
+                                               assoc_t *assocs, uint32 count) {
+    for (local uint32 i = 1; i < count; ++i) {
+        local assoc_t assoc = assocs[i - 1];
+        local uint64 end_msb = (assoc.lsb + assoc.bitsize - 1) % 8;
+        // offset + size - 1
+        local uint64 end_offset = assoc.offset
+                                + (assoc.lsb + assoc.bitsize - 1) / 8;
+        // can't have overlap if the associations concern different regs (duh)
+        assert (reg_assocs && assoc.reg != assocs[i].reg)
+            || end_offset < assocs[i].offset
+            || (end_offset == assocs[i].offset && end_msb < assocs[i].lsb);
+    }
+}
+
+
+template ddm_assoc_to_bank is bank {
+    param first_bank_index : uint32;
+
+    param _dia : ddm_dialect_base;
+    param _dia = cast(dia, ddm_dialect_base);
+    param dia;
+
+    #if (!overlapping) {
+        error "'overlapping' must not be set to false";
+    }
+
+    #if (!partial) {
+        error "'partial' must not be set to false";
+    }
+
+    in each (register) { is ddm_assoc_register; }
+    shared independent method _get_ddm_bank_assocs()
+                    -> (const _ddm_bank_assocs_t *) {
+        local ddm_assoc_to_bank ref = this;
+        local uint64 key = _identity_to_key(
+            cast(&ref, _traitref_t *)->id);
+        return ht_lookup_int(dev._ddm_assocs(), key);
+    }
+    // Used to be memoized, but _ddm_assocs exists now
+    shared independent method _sorted_assocs() -> (const assoc_t *, uint32,
+                                                   const assoc_t *, uint32) {
+        local const _ddm_bank_assocs_t *bank_assocs = _get_ddm_bank_assocs();
+
+        if (bank_assocs == NULL) { // No associations
+            return (NULL, 0, NULL, 0);
+        }
+        return (VVEC(bank_assocs->arb_assocs), VLEN(bank_assocs->arb_assocs),
+                VVEC(bank_assocs->reg_assocs), VLEN(bank_assocs->reg_assocs));
+    }
+
+    method write(uint64 offset, uint64 value, uint64 enabled_bytes,
+                 void *aux) throws default {
+         dia.bank.base_write(cast(this, typeof(dia.bank_template_carrier)),
+                             offset, value, enabled_bytes, false, aux);
+    }
+
+    method read(uint64 offset, uint64 enabled_bytes, void *aux)
+            -> (uint64) throws default {
+        return dia.bank.base_read(
+            cast(this, typeof(dia.bank_template_carrier)), offset,
+            enabled_bytes, false, aux);
+    }
+
+    method get(uint64 offset, uint64 size) -> (uint64) throws default {
+        return dia.bank.base_read(
+            cast(this, typeof(dia.bank_template_carrier)),
+            offset, (~0)[size*8-1:0], true, NULL);
+    }
+
+
+    method set(uint64 offset, uint64 size, uint64 value) default {
+        try {
+            dia.bank.base_write(
+                cast(this, typeof(dia.bank_template_carrier)),
+                offset, value, (~0)[size*8-1:0], true, NULL);
+        } catch {
+            // TODO currently we remain silent. This could be questionable.
+        }
+    }
+
+    shared method unmapped_set(uint64 offset, uint64 value, uint64 bits) throws
+        default {
+        log info, 4: "Unmapped inquiry write at 0x%llx", offset;
+        throw;
+    }
+
+    attribute ddm_regs {
+        param type = "[[si]*]";
+        method get() -> (attr_value_t) {
+            return dia._get_bank_reg_state(ddm_bank());
+        }
+        method set(attr_value_t val) throws {
+            dia._set_bank_reg_state(ddm_bank(), obj, val);
+        }
+    }
+
+    param _provide_register_view = false;
+    implement register_view {
+        method description() -> (const char *) {
+            // TODO: it would make sense to return NULL for no desc, but
+            // iface docs doesn't explicitly specify whether this is
+            // allowed.
+            return bank.shown_desc == NULL ? "" : bank.shown_desc;
+        }
+
+        method big_endian_bitorder() -> (bool) {
+            return bank.be_bitorder;
+        }
+
+        method number_of_registers() -> (uint32) {
+            return dia.bank.regs_len(ddm_bank());
+        }
+
+        method register_info(uint32 reg_idx) -> (attr_value_t) {
+            if (reg_idx >= dia.bank.regs_len(ddm_bank())) {
+                return SIM_make_attr_nil();
+            }
+            local typeof(dia.reg_type_carrier) reg = dia.bank.regs_item(
+                ddm_bank(), reg_idx);
+
+            local uint32 field_count = dia.reg.fields_len(reg);
+
+            local attr_value_t fields = SIM_alloc_attr_list(field_count);
+
+            for (local uint32 i = 0; i < field_count; ++i) {
+                local typeof(dia.field_type_carrier) f = dia.reg.fields_item(
+                    reg, i);
+                local uint32 lsb = dia.field.lsb(f);
+                local uint32 bitsize = dia.field.bitsize(f);
+
+                local attr_value_t elem = SIM_make_attr_list(
+                    4,
+                    SIM_make_attr_string_adopt(dia.field.register_view_name(f)),
+                    // TODO: maybe empty string should give a nil value?
+                    SIM_make_attr_string_adopt(dia.field.register_view_desc(f)),
+                    SIM_make_attr_uint64(lsb),
+                    SIM_make_attr_uint64(lsb + bitsize - 1));
+                SIM_attr_list_set_item(&fields, i, elem);
+            }
+
+            local attr_value_t ret;
+            ret = SIM_make_attr_list(
+                6,
+                SIM_make_attr_string_adopt(dia.reg.register_view_name(reg)),
+                // TODO: maybe empty string should give a nil value?
+                SIM_make_attr_string_adopt(dia.reg.register_view_desc(reg)),
+                SIM_make_attr_uint64(dia.reg.size(reg)),
+                SIM_make_attr_uint64(dia.reg.offset(reg)),
+                fields,
+                SIM_make_attr_boolean(
+                    byte_order == "big-endian" #? true #: false));
+
+            return ret;
+        }
+
+        method get_register_value(uint32 idx) -> (uint64) {
+            local typeof(dia.bank_type_carrier) b = ddm_bank();
+
+            if (idx >= dia.bank.regs_len(b)) {
+                return 0;
+            }
+
+            return dia.reg.get(dia.bank.regs_item(b, idx));
+        }
+
+        method set_register_value(uint32 idx, uint64 val) {
+            local typeof(dia.bank_type_carrier) b = ddm_bank();
+
+            if (idx >= dia.bank.regs_len(b)) {
+                return;
+            }
+
+            dia.reg.set(dia.bank.regs_item(b, idx), val);
+        }
+    }
+
+    implement register_view_read_only {
+        method is_read_only(uint32 idx) -> (bool) default {
+            local typeof(dia.bank_type_carrier) b = ddm_bank();
+            if (idx >= dia.bank.regs_len(b)) {
+                return false;
+            }
+
+            return dia.reg.register_view_read_only(dia.bank.regs_item(b, idx));
+        }
+    }
+
+    implement register_view_catalog {
+        method register_names() -> (attr_value_t) {
+            local typeof(dia.bank_type_carrier) b = ddm_bank();
+            local uint32 table_size = dia.bank.regs_len(b);
+            local attr_value_t ret = SIM_alloc_attr_list(table_size);
+            for (local uint32 i = 0; i < table_size; i++) {
+                local typeof(dia.reg_type_carrier) reg = dia.bank.regs_item(
+                    b, i);
+                SIM_attr_list_set_item(
+                    &ret, i, SIM_make_attr_string_adopt(
+                        dia.reg.register_view_name(reg)));
+            }
+            return ret;
+        }
+        method register_offsets() -> (attr_value_t) {
+            local typeof(dia.bank_type_carrier) b = ddm_bank();
+            local uint32 table_size = dia.bank.regs_len(b);
+            local attr_value_t ret = SIM_alloc_attr_list(table_size);
+            for (local uint32 i = 0; i < table_size; i++) {
+                local typeof(dia.reg_type_carrier) reg = dia.bank.regs_item(
+                    b, i);
+                SIM_attr_list_set_item(
+                    &ret, i, SIM_make_attr_uint64(dia.reg.offset(reg)));
+            }
+            return ret;
+        }
+    }
+}
+
+
+template ddm_assoc_vtable {
+    shared method assoc_read(uint64 enabled_bits, void *aux) -> (uint64);
+    shared method assoc_write(uint64 value, uint64 enabled_bits, void *aux);
+    shared method assoc_get() -> (uint64);
+    shared method assoc_set(uint64 value, uint64 enabled_bits);
+    shared independent method assoc_mapped_write_bits() -> (uint64) default {
+        return ~0;
+    }
+    shared independent method assoc_mapped_read_bits() -> (uint64) default {
+        return ~0;
+    }
+    shared independent method _ddm_assoc_vtable_downcast() -> (_traitref_t);
+}
+
+template ddm_assoc_desc {
+    param child_assoc_descs : sequence(ddm_assoc_desc);
+    param child_assoc_descs = each ddm_assoc_desc in (this);
+
+    // Precondition: get_assoc_desc() doesn't throw
+    shared independent method target_bank() -> (ddm_assoc_to_bank);
+    independent method target_bank() -> (ddm_assoc_to_bank) default {
+        return cast(bank, ddm_assoc_to_bank);
+
+    }
+
+    shared independent method get_assoc_desc() -> (assoc_t) throws;
+}
+
+template ddm_assoc_register is (register, ddm_assoc_desc, ddm_assoc_vtable) {
+    param _dia : ddm_dialect_base;
+    param _dia = cast(bank.dia, ddm_dialect_base);
+
+    shared independent method assoc_mapped_read_bits() -> (uint64) default {
+        if (offset != unmapped_offset) return ~0;
+        local uint64 mapped = 0;
+        foreach f in (_read_fields) {
+            local int lsb = f.lsb;
+            mapped[lsb + f.bitsize - 1 : lsb] = ~0;
+        }
+        return mapped;
+    }
+
+    shared independent method assoc_mapped_write_bits() -> (uint64) default {
+        if (offset != unmapped_offset) return ~0;
+        local uint64 mapped = 0;
+        foreach f in (_write_fields) {
+            local int lsb = f.lsb;
+            mapped[lsb + f.bitsize - 1 : lsb] = ~0;
+        }
+        return mapped;
+    }
+
+    shared independent method get_assoc_desc() -> (assoc_t) throws default {
+        if (this.offset == unmapped_offset) throw;
+        local uint64 size_mask = (1 << this.bitsize) - 1;
+        // An offset-associated register must be mapped entire
+        assert (assoc_mapped_read_bits() & assoc_mapped_write_bits()
+                & size_mask)
+            == size_mask;
+        return {
+            .assoc_kind = ASSOC_KIND_ARBITRARY,
+            .lsb = 0,
+            .bitsize = this.bitsize,
+            .lsb_diff = 0,
+            .offset = this.offset,
+            .vtable = cast(this, ddm_assoc_vtable),
+            ...
+        };
+    }
+
+    shared independent method get_true_offset() -> (uint64) {
+        try {
+            local assoc_t assoc = get_assoc_desc();
+            return assoc.offset;
+        } catch {
+            return unmapped_offset;
+        }
+    }
+
+    shared method assoc_read(uint64 enabled_bits, void *aux) -> (uint64)
+        default {
+        enabled_bits &= (1 << bitsize) - 1;
+        return read_register(enabled_bits, aux);
+    }
+
+    shared method assoc_write(uint64 value, uint64 enabled_bits, void *aux)
+        default {
+        enabled_bits &= (1 << bitsize) - 1;
+        // NOTE: we invoke write_register *even if* enabled_bits == 0, to
+        // allow for write side-effects
+        write_register(value, enabled_bits, aux);
+    }
+
+    shared method assoc_get() -> (uint64) default {
+        return get();
+    }
+
+    shared method assoc_set(uint64 val, uint64 enabled_bits) default {
+        enabled_bits &= (1 << bitsize) - 1;
+        if (enabled_bits == 0) return;
+        if (enabled_bits != (1 << bitsize) - 1)  {
+            val = (val & enabled_bits) | (assoc_get() & ~enabled_bits);
+        }
+        set(val);
+    }
+}
+
+template ddm_assoc_to_reg {
+    param first_reg_index: uint32;
+}
+
+template ddm_assoc_register_to_reg is (ddm_assoc_register, ddm_assoc_to_reg,
+                                       unmapped) {
+    shared independent method get_assoc_desc() -> (assoc_t) throws {
+        local ddm_assoc_register_to_reg ref = this;
+        local uint32 flat_index = cast(&ref, _traitref_t *)->id.encoded_index;
+        local assoc_t assoc = _dia._make_assoc_to_reg(
+            first_reg_index + flat_index);
+        assoc.vtable = cast(this, ddm_assoc_vtable);
+        return assoc;
+    }
+}
+
+template ddm_assoc_register_fully_mapped is (ddm_assoc_register) {
+    shared independent method assoc_mapped_read_bits() -> (uint64) {
+        return ~0;
+    }
+
+    shared independent method assoc_mapped_write_bits() -> (uint64) {
+        return ~0;
+    }
+}
+
+template ddm_assoc_register_to_field is (ddm_assoc_to_field,
+                                         ddm_assoc_register, unmapped) {
+    shared independent method get_assoc_desc() -> (assoc_t) throws {
+        local ddm_assoc_register_to_field ref = this;
+        local uint32 flat_index = cast(&ref, _traitref_t *)->id.encoded_index;
+        local assoc_t assoc = _dia._make_assoc_to_field(
+            first_field_index + flat_index);
+        assoc.vtable = cast(this, ddm_assoc_vtable);
+        return assoc;
+    }
+}
+
+template ddm_assoc_field_to_reg is (ddm_assoc_desc, ddm_assoc_to_reg, _lsb) {
+    param _ddm_assoc_register : ddm_assoc_register;
+    param _ddm_assoc_register = cast(_nongroup_parent, ddm_assoc_reg);
+
+    shared independent method get_assoc_desc() -> (assoc_t) throws {
+        try {
+            local assoc_t _ = _ddm_assoc_register.get_assoc_desc();
+            assert false;
+        } catch;
+
+        local ddm_assoc_field_to_reg ref = this;
+        local uint32 flat_index = cast(&ref, _traitref_t *)->id.encoded_index;
+        local assoc_t assoc = _ddm_assoc_register._dia
+                              ._make_assoc_to_reg(first_reg_index + flat_index);
+        assoc.vtable = cast(_ddm_assoc_register, ddm_assoc_vtable);
+        assoc.lsb_diff = lsb;
+        return assoc;
+    }
+}
+
+template ddm_assoc_to_field {
+    param first_field_index: uint32;
+}
+
+template ddm_assoc_field_to_field is (ddm_assoc_desc, ddm_assoc_to_field,
+                                      _lsb, _bitsize) {
+    param _ddm_assoc_register : ddm_assoc_register;
+    param _ddm_assoc_register = cast(_nongroup_parent, ddm_assoc_register);
+
+    shared independent method get_assoc_desc() -> (assoc_t) throws {
+        local bool parent_provides_assoc = true;
+        try {
+            local assoc_t _ = _ddm_assoc_register.get_assoc_desc();
+        } catch {
+            parent_provides_assoc = false;
+        }
+        if (parent_provides_assoc) throw;
+
+        local ddm_assoc_field_to_field ref = this;
+        local uint32 flat_index = cast(&ref, _traitref_t *)->id.encoded_index;
+        local assoc_t assoc = _ddm_assoc_register._dia
+                              ._make_assoc_to_field(first_field_index
+                                                    + flat_index);
+
+        // This check is only relevant if the parent register is unglued
+        if (assoc.bitsize != bitsize) {
+            local ddm_assoc_field_to_field ref = this;
+            local char *field_qname = _DML_get_qname_alloc(
+                cast(&ref, _traitref_t *)->id, _id_infos, dev.name);
+            _DDM_LOG_WARNING(
+                "%s: Anchored DML field %s is of incorrect bitsize."
+                + "DDM field bitsize: %d, DML field bitsize: %d",
+                dev.classname, field_qname, assoc.bitsize, bitsize);
+            MM_FREE(field_qname);
+            if (bitsize < assoc.bitsize) {
+                assoc.bitsize = bitsize;
+            }
+        }
+        assoc.vtable = cast(_ddm_assoc_register, ddm_assoc_vtable);
+        assoc.lsb_diff = lsb;
+        return assoc;
+    }
+}

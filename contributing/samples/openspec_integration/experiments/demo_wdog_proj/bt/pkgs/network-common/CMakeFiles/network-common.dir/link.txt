@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnetwork-common.a "CMakeFiles/network-common.dir/ip-addr.c.o" "CMakeFiles/network-common.dir/net-utils.c.o"
+/usr/bin/ranlib libnetwork-common.a

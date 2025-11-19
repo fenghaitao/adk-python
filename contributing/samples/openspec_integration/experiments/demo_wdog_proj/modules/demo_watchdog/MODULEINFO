@@ -1,0 +1,26 @@
+# desc: DEMO_WATCHDOG Device using DDM from IP-XACT
+# type: Other
+# ip-owner: Intel
+# keywords: IP-XACT, DDM
+# docs: None
+# NDA: Public
+# comment: Device generated from IP-XACT specification using DDM library
+
+Group: demo_watchdog
+Require-tokens: public
+Make: demo_watchdog
+  $(HOST)/lib/demo_watchdog$(SO)
+  $(HOST)/lib/demo_watchdog.xml
+
+Group: demo_watchdog/shared/src
+Require-tokens: public
+  @ddm-lib/shared/src
+  src/devices/demo_watchdog/Makefile
+  src/devices/demo_watchdog/MODULEDEPS
+  src/devices/demo_watchdog/parse_ipxact.py
+  src/devices/demo_watchdog/model_spec.py
+  src/devices/demo_watchdog/demo_watchdog.xml
+  src/devices/demo_watchdog/demo_watchdog-dia.dml
+  src/devices/demo_watchdog/demo_watchdog.dml
+  src/devices/demo_watchdog/test/SUITEINFO
+  src/devices/demo_watchdog/test/s-basic.py

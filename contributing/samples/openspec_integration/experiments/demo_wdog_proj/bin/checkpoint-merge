@@ -1,0 +1,14 @@
+#!/bin/bash
+# this file will be overwritten by the project setup script
+SIMICS_BASE_PACKAGE="/nfs/pdx/home/yongzhuo/.simics-mcp-server/simics-install/simics-7.57.0"
+export SIMICS_BASE_PACKAGE
+export SIMICS_PYTHON_PACKAGE="/nfs/pdx/home/yongzhuo/.simics-mcp-server/simics-install/simics-7.57.0/scripts/../../simics-python-7.13.0/linux64/bin/../.."
+if [ -z "${SIMICS_PYTHON}" ]; then
+    _DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+    export SIMICS_PYTHON=""
+fi
+if [ -f "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/.package-list" ]; then
+    exec "/nfs/pdx/home/yongzhuo/.simics-mcp-server/simics-install/simics-7.57.0/bin/checkpoint-merge" --package-list "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj/.package-list" --project "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj" "$@"
+else
+    exec "/nfs/pdx/home/yongzhuo/.simics-mcp-server/simics-install/simics-7.57.0/bin/checkpoint-merge" --project "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/q3_openspec/demo_wdog_proj" "$@"
+fi
