@@ -69,9 +69,9 @@ OPTIONS:
                       - github_copilot/grok-code-fast-1
     --port PORT       MCP server port (default: 8051)
                       Useful for WSL2 when default port has issues
-    --ddm_xml FILE    Register definition XML file with absolute path
+    --ddm_xml FILE    Register definition XML file (will be copied to project directory)
                       Specifies the DDM XML file for hardware register definitions
-    --spec FILE       Hardware specification file with absolute path
+    --spec FILE       Hardware specification file (will be copied to project directory)
                       Specifies the hardware specification document
     --device NAME     Simics model device name to generate from DDM XML and spec
                       This will be the name of the DML device module to create
@@ -140,6 +140,31 @@ for arg in "$@"; do
         exit 0
     fi
 done
+
+# Function to check if MCP server is running
+check_mcp_server() {
+    local port="${1:-8051}"
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0  # Server is running
+    else
+        return 1  # Server is not running
+    fi
+}
+
+# Track whether MCP servers were started
+MCP_SERVERS_STARTED=false
+
+# Function to cleanup on script exit
+cleanup() {
+    if [ "$MCP_SERVERS_STARTED" = true ]; then
+        echo ""
+        echo -e "${YELLOW}🛑 Cleaning up MCP servers...${NC}"
+        "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/stop_mcp_servers.sh"
+    fi
+}
+
+# Set up trap to cleanup on script exit
+trap cleanup EXIT
 
 # Function to check if OpenSpec CLI is available
 check_openspec_cli() {
@@ -283,6 +308,33 @@ PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
 MODEL="${MODEL:-iflow/qwen3-coder-plus}"
 MCP_PORT="${MCP_PORT:-8051}"
 
+# Set default values for DDM XML, spec file, and device name (relative to script location)
+DEFAULT_DDM_XML="$SCRIPT_DIR/wdt.xml"
+DEFAULT_SPEC_FILE="$SCRIPT_DIR/wdt.md"
+DEFAULT_DEVICE_NAME="wdt"
+
+# Validate DEVICE_NAME if provided
+if [ -n "$DEVICE_NAME" ] && ! [[ "$DEVICE_NAME" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo -e "${RED}Error: Invalid device name '$DEVICE_NAME'. Only alphanumeric, underscore, and hyphen characters allowed.${NC}"
+    exit 1
+fi
+
+# Use defaults if not specified and files exist
+if [ -z "$DDM_XML" ] && [ -f "$DEFAULT_DDM_XML" ]; then
+    DDM_XML="$DEFAULT_DDM_XML"
+    echo -e "${BLUE}Using default DDM XML: $DDM_XML${NC}"
+fi
+
+if [ -z "$SPEC_FILE" ] && [ -f "$DEFAULT_SPEC_FILE" ]; then
+    SPEC_FILE="$DEFAULT_SPEC_FILE"
+    echo -e "${BLUE}Using default spec file: $SPEC_FILE${NC}"
+fi
+
+if [ -z "$DEVICE_NAME" ]; then
+    DEVICE_NAME="$DEFAULT_DEVICE_NAME"
+    echo -e "${BLUE}Using default device name: $DEVICE_NAME${NC}"
+fi
+
 # Validate port number
 if ! [[ "$MCP_PORT" =~ ^[0-9]+$ ]] || [ "$MCP_PORT" -lt 1024 ] || [ "$MCP_PORT" -gt 65535 ]; then
     echo "Error: Invalid port number '$MCP_PORT'. Must be between 1024 and 65535."
@@ -330,13 +382,34 @@ fi
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
 fi
+
+# Start MCP servers after all argument validation is complete
+echo ""
+echo -e "${BLUE}🚀 Starting MCP servers on port $MCP_PORT...${NC}"
+if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh" "$MCP_PORT"; then
+    echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
+    
+    # Quick verification
+    if check_mcp_server "$MCP_PORT"; then
+        echo -e "${GREEN}✅ MCP server confirmed running on port $MCP_PORT${NC}"
+    else
+        echo -e "${RED}❌ MCP server not responding on port $MCP_PORT${NC}"
+        exit 1
+    fi
+
+    MCP_SERVERS_STARTED=true
+else
+    echo -e "${RED}❌ Failed to start MCP servers${NC}"
+    echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
+    exit 1
+fi
 echo ""
 
 # Check for OpenSpec CLI
-echo -e "${BLUE}🔍 Checking for OpenSpec CLI...${NC}"
+echo -e "${BLUE}Checking for OpenSpec CLI...${NC}"
 OPENSPEC_TYPE=$(check_openspec_cli)
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ OpenSpec CLI not found${NC}"
+    echo -e "${RED}OpenSpec CLI not found${NC}"
     echo ""
     echo "Please install OpenSpec using one of these methods:"
     echo ""
@@ -351,10 +424,10 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ "$OPENSPEC_TYPE" = "TypeScript" ]; then
-    echo -e "${GREEN}✅ Using OpenSpec TypeScript (npm)${NC}"
+    echo -e "${GREEN}Using OpenSpec TypeScript (npm)${NC}"
     OPENSPEC_CMD="openspec"
 else
-    echo -e "${GREEN}✅ Using OpenSpec Python port${NC}"
+    echo -e "${GREEN}Using OpenSpec Python port${NC}"
     OPENSPEC_CMD="$SCRIPT_DIR/OpenSpec/python_port/.venv/bin/openspec"
 fi
 echo ""
@@ -367,7 +440,7 @@ if [ "$RESUME_SESSION" = true ]; then
         echo "Cannot resume without existing project directory"
         exit 1
     fi
-    echo -e "${BLUE}🔄 Resume mode: Using existing project directory: $PROJECT_NAME${NC}"
+    echo -e "${BLUE}Resume mode: Using existing project directory: $PROJECT_NAME${NC}"
     
     # Check if session file exists
     if [ ! -f "$PROJECT_NAME/adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
@@ -375,24 +448,24 @@ if [ "$RESUME_SESSION" = true ]; then
         echo "Cannot resume without existing session file"
         exit 1
     fi
-    echo -e "${GREEN}✅ Found existing session file${NC}"
+    echo -e "${GREEN}Found existing session file${NC}"
 else
     # Normal mode - initialize new project
     # Remove existing project directory if it exists
     if [ -d "$PROJECT_NAME" ]; then
-        echo -e "${YELLOW}⚠️  Removing existing project directory: $PROJECT_NAME${NC}"
+        echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
         rm -rf "$PROJECT_NAME"
     fi
 
-    echo -e "${BLUE}🚀 Initializing OpenSpec project...${NC}"
+    echo -e "${BLUE}Initializing OpenSpec project...${NC}"
     $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
 
     if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ Failed to initialize OpenSpec project${NC}"
+        echo -e "${RED}Failed to initialize OpenSpec project${NC}"
         exit 1
     fi
 
-    echo -e "${GREEN}✅ OpenSpec project initialized successfully${NC}"
+    echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
 fi
 
 echo ""
@@ -400,8 +473,6 @@ echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
 
 # Handle DDM_XML and SPEC_FILE - copy to project if not already there
-DDM_XML_PROJECT_PATH=""
-SPEC_FILE_PROJECT_PATH=""
 
 if [ -n "$DDM_XML" ]; then
     # Check if DDM_XML file exists
@@ -411,19 +482,18 @@ if [ -n "$DDM_XML" ]; then
     fi
     
     DDM_XML_BASENAME=$(basename "$DDM_XML")
-    DDM_XML_PROJECT_PATH="$PROJECT_NAME/$DDM_XML_BASENAME"
     
     # Check if file is already in project directory
     if [ -f "$DDM_XML_BASENAME" ]; then
-        echo -e "${GREEN}✅ DDM XML already in project: $DDM_XML_BASENAME${NC}"
+        echo -e "${GREEN}DDM XML already in project: $DDM_XML_BASENAME${NC}"
     else
-        echo -e "${BLUE}📋 Copying DDM XML to project: $DDM_XML_BASENAME${NC}"
+        echo -e "${BLUE}Copying DDM XML to project: $DDM_XML_BASENAME${NC}"
         cp "$DDM_XML" "$DDM_XML_BASENAME"
         if [ $? -ne 0 ]; then
             echo -e "${RED}Error: Failed to copy DDM XML file${NC}"
             exit 1
         fi
-        echo -e "${GREEN}✅ DDM XML copied successfully${NC}"
+        echo -e "${GREEN}DDM XML copied successfully${NC}"
     fi
     
     # Update DDM_XML to point to the project-relative path
@@ -438,19 +508,18 @@ if [ -n "$SPEC_FILE" ]; then
     fi
     
     SPEC_FILE_BASENAME=$(basename "$SPEC_FILE")
-    SPEC_FILE_PROJECT_PATH="$PROJECT_NAME/$SPEC_FILE_BASENAME"
     
     # Check if file is already in project directory
     if [ -f "$SPEC_FILE_BASENAME" ]; then
-        echo -e "${GREEN}✅ Spec file already in project: $SPEC_FILE_BASENAME${NC}"
+        echo -e "${GREEN}Spec file already in project: $SPEC_FILE_BASENAME${NC}"
     else
-        echo -e "${BLUE}📋 Copying Spec file to project: $SPEC_FILE_BASENAME${NC}"
+        echo -e "${BLUE}Copying Spec file to project: $SPEC_FILE_BASENAME${NC}"
         cp "$SPEC_FILE" "$SPEC_FILE_BASENAME"
         if [ $? -ne 0 ]; then
             echo -e "${RED}Error: Failed to copy Spec file${NC}"
             exit 1
         fi
-        echo -e "${GREEN}✅ Spec file copied successfully${NC}"
+        echo -e "${GREEN}Spec file copied successfully${NC}"
     fi
     
     # Update SPEC_FILE to point to the project-relative path
@@ -459,7 +528,7 @@ fi
 
 # Set up Simics project if DDM_XML or SPEC_FILE is provided
 if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ]; then
-    echo -e "${BLUE}🔧 Setting up Simics project...${NC}"
+    echo -e "${BLUE}Setting up Simics project...${NC}"
     
     # Create a Python script to call the MCP server
     SETUP_SCRIPT=$(mktemp)
@@ -507,9 +576,9 @@ PYTHON_EOF
 
     # Run the setup script
     if python3 "$SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
-        echo -e "${GREEN}✅ Simics project setup completed${NC}"
+        echo -e "${GREEN}Simics project setup completed${NC}"
     else
-        echo -e "${YELLOW}⚠️  Warning: Simics project setup failed or not available${NC}"
+        echo -e "${YELLOW}Warning: Simics project setup failed or not available${NC}"
         echo "Continuing without Simics project setup..."
     fi
     
@@ -519,7 +588,7 @@ fi
 
 # Set up device skeleton if DEVICE_NAME is provided
 if [ -n "$DEVICE_NAME" ]; then
-    echo -e "${BLUE}🔧 Setting up DML device skeleton...${NC}"
+    echo -e "${BLUE}Setting up DML device skeleton...${NC}"
     
     # Create a Python script to call the MCP server
     DEVICE_SETUP_SCRIPT=$(mktemp)
@@ -572,9 +641,9 @@ PYTHON_EOF
 
     # Run the device setup script
     if python3 "$DEVICE_SETUP_SCRIPT" "$SPEC_KIT_INTEGRATION_DIR" 2>&1; then
-        echo -e "${GREEN}✅ DML device skeleton '$DEVICE_NAME' created successfully${NC}"
+        echo -e "${GREEN}DML device skeleton '$DEVICE_NAME' created successfully${NC}"
     else
-        echo -e "${YELLOW}⚠️  Warning: DML device skeleton setup failed or not available${NC}"
+        echo -e "${YELLOW}Warning: DML device skeleton setup failed or not available${NC}"
         echo "Continuing without device skeleton..."
     fi
     
@@ -584,9 +653,9 @@ fi
 
 # copy the ddm_xml file to {PROJECT_NAME}/modules/{DEVICE_NAME} if it was provided
 if [ -n "$DDM_XML" ] && [ -n "$DEVICE_NAME" ]; then
-    echo -e "${BLUE}📦 Copying DDM XML file...${NC}"
-    mkdir -p "$PROJECT_NAME/modules/$DEVICE_NAME"
-    cp "$DDM_XML" "$PROJECT_NAME/modules/$DEVICE_NAME/"
+    echo -e "${BLUE}Copying DDM XML file...${NC}"
+    mkdir -p "modules/$DEVICE_NAME"
+    cp "$DDM_XML" "modules/$DEVICE_NAME/"
 fi
 
 # TODO: call the ddm script to generatre the DDM skeleton
@@ -637,16 +706,16 @@ fi
 # Generate human-readable session dump if session was saved
 if [ "$SAVE_SESSION" = true ] && [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
     echo ""
-    echo -e "${GREEN}✅ Session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json${NC}"
+    echo -e "${GREEN}Session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json${NC}"
     
     # Generate human-readable session dump
     if [ -f "$SCRIPT_DIR/view_session.py" ]; then
         echo "📄 Generating human-readable session dump..."
         python3 "$SCRIPT_DIR/view_session.py" "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" > "adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt"
         if [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt" ]; then
-            echo -e "${GREEN}✅ Human-readable session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt${NC}"
+            echo -e "${GREEN}Human-readable session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt${NC}"
         else
-            echo -e "${YELLOW}⚠️  Failed to generate human-readable session dump${NC}"
+            echo -e "${YELLOW}Failed to generate human-readable session dump${NC}"
         fi
     fi
     
