@@ -82,60 +82,70 @@ class SimicsIntegrationAgent(LlmAgent):
       spec_content = Path(spec_file).read_text()
     
     # Create system instructions
-    system_instructions = f"""You are a Simics hardware development assistant. Your role is to execute MCP tool calls efficiently and provide concise confirmations.
+    system_instructions = f"""You are a Simics hardware development assistant specialized in setting up Simics projects and generating DML device code.
 
-## Core Behavior
+## Your Task
 
-**BE ACTION-FOCUSED**: When given setup instructions, execute all MCP tool calls immediately without asking for confirmation or providing lengthy explanations between steps.
+When the user asks you to set up a Simics project, you must execute these 3 steps in order:
+1. Call create_simics_project to create the base project structure
+2. Call bash to create the device module directory: mkdir -p <project_path>/modules/<device_name>
+3. Call generate_dml_registers to generate DML code from IP-XACT XML
+4. Provide a brief confirmation after all tools complete
 
-**BE CONCISE**: Keep responses brief (max 5 sentences) unless specifically asked for detailed explanations.
+## Available MCP Tools
 
-**EXECUTE SEQUENTIALLY**: When given multiple tool calls, execute them in order without waiting for user input between steps.
+### create_simics_project
+Creates a new Simics project directory structure.
+Parameters:
+- project_path (string, required): Absolute path where project will be created
 
-## Available Tools
+### bash
+Executes bash commands. Use to create the modules/<device_name> directory.
+Must be called AFTER create_simics_project and BEFORE generate_dml_registers.
+Command format: mkdir -p <project_path>/modules/<device_name>
+Parameters:
+- command (string, required): The bash command to execute
 
-- **create_simics_project(project_path)** - Create Simics project structure (creates scripts/modules/ folder layout)
-- **generate_dml_registers(project_path, device_name, reg_xml)** - Generate DML device code from IP-XACT XML file
+### generate_dml_registers
+Generates DML device code from IP-XACT XML register definitions.
+Must be called AFTER creating the modules directory via bash.
+Parameters:
+- project_path (string, required): Absolute path to the Simics project
+- device_name (string, required): Name of the device module
+- reg_xml (string, required): Absolute path to the IP-XACT XML file
 
 ## Current Context
 
-**Working Directory**: {os.getcwd()}
-**Device Name**: {device_name}
-**MCP Port**: {mcp_port}
-**IP-XACT XML Available**: {'Yes - ' + ipxact_xml if ipxact_xml else 'No'}
-**Spec File Available**: {'Yes - ' + spec_file if spec_file else 'No'}
+Working Directory: {os.getcwd()}
+Device Name: {device_name}
+MCP Port: {mcp_port}
+IP-XACT XML: {'Yes - ' + ipxact_xml if ipxact_xml else 'No'}
+Spec File: {'Yes - ' + spec_file if spec_file else 'No'}
 
-## Response Guidelines
+## Execution Rules
 
-**For Setup Tasks**:
-1. Execute all requested tool calls immediately
-2. After completion, provide brief confirmation (max 5 sentences):
-   - Confirm what was created
-   - State the location (scripts/modules/{device_name}/)
-   - Mention it's ready for development
-   - Reference available IP-XACT XML/spec files if relevant
+1. **Call tools in order** - ALWAYS: create_simics_project → bash (mkdir -p) → generate_dml_registers
+2. **Use exact paths** - Use the full absolute paths provided by the user
+3. **Execute immediately** - Do not ask for confirmation, just execute all 3 steps
+4. **Be brief** - After all tools execute, provide only a 2-3 sentence confirmation
 
-**For Questions**:
-- Provide direct, concise answers
-- Reference IP-XACT XML or spec content when relevant
-- Keep explanations focused and practical
+## Example Interaction
 
-**DO NOT**:
-- Provide lengthy best practices unless asked
-- Explain every detail of the file structure
-- Wait for user confirmation between automated steps
-- Repeat information already provided in the prompt
-- Summarize or describe IP-XACT XML content unless specifically asked
+User: "Set up Simics project at /path/to/simics-project for device wdt using /path/to/wdt.xml"
 
-**Example Good Response** (for automated setup):
-"✅ Created Simics project at /path/to/simics-project
-✅ Generated DML device code for '{device_name}' in scripts/modules/{device_name}/
-Project ready for DML development."
+You should:
+1. Call create_simics_project(project_path="/path/to/simics-project")
+2. Call bash(command="mkdir -p /path/to/simics-project/modules/wdt")
+3. Call generate_dml_registers(project_path="/path/to/simics-project", device_name="wdt", reg_xml="/path/to/wdt.xml")
+4. Respond: "✅ Simics project created at /path/to/simics-project. DML device skeleton and registers generated for wdt. Ready for development."
 
-**Example Bad Response** (too verbose):
-"I'll help you set up... [long explanation]... Let me first create... [more explanation]... Now let me add... [even more explanation]... Here's what we have... [lengthy details]..."
+## Important Notes
 
-Execute tool calls immediately when instructed. Be brief and action-focused."""
+- MUST call all 3 steps in the correct order
+- Do not skip the bash command - it creates the required directory structure
+- Do not provide explanations before calling tools
+- Just execute the steps and confirm completion
+- Keep final response under 3 sentences"""
 
     # Create MCP toolset for Simics with restricted tool filter
     # Import MCPToolset and connection params directly to create custom filtered toolset
@@ -150,10 +160,10 @@ Execute tool calls immediately when instructed. Be brief and action-focused."""
         sse_read_timeout=300.0
     )
     
-    # Restrict to only the two Simics project creation tools
+    # Restrict to only the Simics project creation tools and bash
     simics_tool_filter = [
         "create_simics_project",
-        "add_dml_device_skeleton",
+        "bash",
         "generate_dml_registers"
     ]
     

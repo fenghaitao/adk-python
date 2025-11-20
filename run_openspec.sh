@@ -726,8 +726,8 @@ EOF
         # Get absolute path for IPXACT XML file
         IPXACT_XML_ABSOLUTE="$(pwd)/$IPXACT_XML"
         
-        # Prepare initial setup prompt for Simics
-        SIMICS_SETUP_PROMPT="Execute these MCP tool calls immediately: create_simics_project(project_path=\"$SIMICS_PROJECT_PATH\") then generate_dml_registers(project_path=\"$SIMICS_PROJECT_PATH\", device_name=\"$DEVICE_NAME\", reg_xml=\"$IPXACT_XML_ABSOLUTE\"). After completion, provide a brief 3-sentence confirmation stating: project created at $SIMICS_PROJECT_PATH, DML registers generated for $DEVICE_NAME from IPXACT XML, and project ready for DML development. Be concise."
+        # Prepare initial setup prompt for Simics - simple and direct
+        SIMICS_SETUP_PROMPT="Set up Simics project at $SIMICS_PROJECT_PATH for device $DEVICE_NAME using $IPXACT_XML_ABSOLUTE"
 
         echo ""
         echo -e "${BLUE}📋 Setting up Simics project structure for device: $DEVICE_NAME${NC}"
