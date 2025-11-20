@@ -553,13 +553,6 @@ if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     fi
 fi
 
-# copy the ddm_xml file to {PROJECT_NAME}/modules/{DEVICE_NAME} if it was provided
-if [ -n "$DDM_XML" ] && [ -n "$DEVICE_NAME" ]; then
-    echo -e "${BLUE}Copying DDM XML file...${NC}"
-    mkdir -p "modules/$DEVICE_NAME"
-    cp "$DDM_XML" "modules/$DEVICE_NAME/"
-fi
-
 # TODO: call the ddm script to generatre the DDM skeleton
 
 # TODO: change the agent prompt to "generate registers side effects for ddm device"
