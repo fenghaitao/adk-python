@@ -50,7 +50,7 @@ class SimicsIntegrationAgent(LlmAgent):
   - Manages DDM XML and hardware specifications
   
   Environment variables used:
-  - DDM_XML: Path to DDM XML file
+  - IPXACT_XML: Path to IP-XACT XML file
   - SPEC_FILE: Path to specification file  
   - DEVICE_NAME: Name of the device to create
   - MCP_PORT: Port for Simics MCP server (default: 8051)
@@ -66,15 +66,15 @@ class SimicsIntegrationAgent(LlmAgent):
     agent_name = kwargs.pop("name", "simics_integration_agent")
     agent_model = kwargs.pop("model", get_simics_model())
     # Get environment variables
-    ddm_xml = os.getenv('DDM_XML')
+    ipxact_xml = os.getenv('IPXACT_XML')
     spec_file = os.getenv('SPEC_FILE') 
     device_name = os.getenv('DEVICE_NAME', 'wdt')
     mcp_port = int(os.getenv('MCP_PORT', '8051'))
     
-    # Read DDM XML content if available
-    ddm_content = ""
-    if ddm_xml and Path(ddm_xml).exists():
-      ddm_content = Path(ddm_xml).read_text()
+    # Read IP-XACT XML content if available
+    ipxact_content = ""
+    if ipxact_xml and Path(ipxact_xml).exists():
+      ipxact_content = Path(ipxact_xml).read_text()
     
     # Read spec file content if available  
     spec_content = ""
@@ -102,13 +102,13 @@ class SimicsIntegrationAgent(LlmAgent):
 **Working Directory**: {os.getcwd()}
 **Device Name**: {device_name}
 **MCP Port**: {mcp_port}
-**DDM XML Available**: {'Yes' if ddm_xml else 'No'}
+**IP-XACT XML Available**: {'Yes' if ipxact_xml else 'No'}
 **Spec File Available**: {'Yes' if spec_file else 'No'}
 
 ## Available Content
 
-{"### DDM XML Content:" if ddm_content else ""}
-{ddm_content[:2000] + "..." if len(ddm_content) > 2000 else ddm_content}
+{"### IP-XACT XML Content:" if ipxact_content else ""}
+{ipxact_content[:2000] + "..." if len(ipxact_content) > 2000 else ipxact_content}
 
 {"### Specification Content:" if spec_content else ""}
 {spec_content[:2000] + "..." if len(spec_content) > 2000 else spec_content}

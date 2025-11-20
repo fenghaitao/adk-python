@@ -11,9 +11,9 @@
 # Options:
 #   --model MODEL       Choose chat model (default: iflow/qwen3-coder-plus)
 #   --port PORT         MCP server port (default: 8051)
-#   --ddm_xml FILE      Register definition XML file with absolute path
+#   --ipxact_xml FILE      Register definition XML file with absolute path
 #   --spec FILE         Hardware specification file with absolute path
-#   --device NAME       Simics model device name to generate from DDM XML and spec
+#   --device NAME       Simics model device name to generate from IP-XACT XML and spec
 #   --save-session      Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
 #   --no-save-session   Disable session saving
 #   --resume            Resume from existing session file
@@ -70,11 +70,11 @@ OPTIONS:
                       - github_copilot/grok-code-fast-1
     --port PORT       MCP server port (default: 8051)
                       Useful for WSL2 when default port has issues
-    --ddm_xml FILE    Register definition XML file (will be copied to project directory)
-                      Specifies the DDM XML file for hardware register definitions
+    --ipxact_xml FILE    Register definition XML file (will be copied to project directory)
+                      Specifies the IP-XACT XML file for hardware register definitions
     --spec FILE       Hardware specification file (will be copied to project directory)
                       Specifies the hardware specification document
-    --device NAME     Simics model device name to generate from DDM XML and spec
+    --device NAME     Simics model device name to generate from IP-XACT XML and spec
                       This will be the name of the DML device module to create
     --save-session    Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
                       Allows resuming work later with --resume
@@ -100,11 +100,11 @@ EXAMPLES:
     # Create project with custom prompt
     ./run_openspec.sh myapi "Create a user authentication feature"
 
-    # With DDM XML and spec files
-    ./run_openspec.sh myproject --ddm_xml /path/to/registers.xml --spec /path/to/spec.md
+    # With IP-XACT XML and spec files
+    ./run_openspec.sh myproject --ipxact_xml /path/to/registers.xml --spec /path/to/spec.md
 
-    # With DDM XML, spec files, and device name
-    ./run_openspec.sh myproject --ddm_xml /path/to/registers.xml --spec /path/to/spec.md --device my_device
+    # With IP-XACT XML, spec files, and device name
+    ./run_openspec.sh myproject --ipxact_xml /path/to/registers.xml --spec /path/to/spec.md --device my_device
 
     # Create project (session saving is automatic by default)
     ./run_openspec.sh myapi "Create REST API"
@@ -222,7 +222,7 @@ PROJECT_NAME=""
 INITIAL_PROMPT=""
 MODEL=""
 MCP_PORT=""
-DDM_XML=""
+IPXACT_XML=""
 SPEC_FILE=""
 DEVICE_NAME=""
 SAVE_SESSION=true
@@ -254,12 +254,12 @@ while [[ $# -gt 0 ]]; do
             MCP_PORT="$2"
             shift 2
             ;;
-        --ddm_xml)
+        --ipxact_xml)
             if [ -z "$2" ]; then
-                echo "Error: --ddm_xml requires a file path"
+                echo "Error: --ipxact_xml requires a file path"
                 exit 1
             fi
-            DDM_XML="$2"
+            IPXACT_XML="$2"
             shift 2
             ;;
         --spec)
@@ -314,8 +314,8 @@ PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
 MODEL="${MODEL:-iflow/qwen3-coder-plus}"
 MCP_PORT="${MCP_PORT:-8051}"
 
-# Set default values for DDM XML, spec file, and device name (relative to script location)
-DEFAULT_DDM_XML="$SCRIPT_DIR/wdt.xml"
+# Set default values for IP-XACT XML, spec file, and device name (relative to script location)
+DEFAULT_IPXACT_XML="$SCRIPT_DIR/wdt.xml"
 DEFAULT_SPEC_FILE="$SCRIPT_DIR/wdt.md"
 DEFAULT_DEVICE_NAME="wdt"
 
@@ -326,9 +326,9 @@ if [ -n "$DEVICE_NAME" ] && ! [[ "$DEVICE_NAME" =~ ^[A-Za-z0-9_-]+$ ]]; then
 fi
 
 # Use defaults if not specified and files exist
-if [ -z "$DDM_XML" ] && [ -f "$DEFAULT_DDM_XML" ]; then
-    DDM_XML="$DEFAULT_DDM_XML"
-    echo -e "${BLUE}Using default DDM XML: $DDM_XML${NC}"
+if [ -z "$IPXACT_XML" ] && [ -f "$DEFAULT_IPXACT_XML" ]; then
+    IPXACT_XML="$DEFAULT_IPXACT_XML"
+    echo -e "${BLUE}Using default IP-XACT XML: $IPXACT_XML${NC}"
 fi
 
 if [ -z "$SPEC_FILE" ] && [ -f "$DEFAULT_SPEC_FILE" ]; then
@@ -356,9 +356,9 @@ fi
 export OPENSPEC_MODEL="$MODEL"
 export MCP_PORT="$MCP_PORT"
 
-# Export DDM_XML and SPEC_FILE if provided
-if [ -n "$DDM_XML" ]; then
-    export DDM_XML="$DDM_XML"
+# Export IPXACT_XML and SPEC_FILE if provided
+if [ -n "$IPXACT_XML" ]; then
+    export IPXACT_XML="$IPXACT_XML"
 fi
 if [ -n "$SPEC_FILE" ]; then
     export SPEC_FILE="$SPEC_FILE"
@@ -370,8 +370,8 @@ fi
 echo "Project name: $PROJECT_NAME"
 echo "Model: $MODEL"
 echo "MCP Port: $MCP_PORT"
-if [ -n "$DDM_XML" ]; then
-    echo "DDM XML: $DDM_XML"
+if [ -n "$IPXACT_XML" ]; then
+    echo "IP-XACT XML: $IPXACT_XML"
 fi
 if [ -n "$SPEC_FILE" ]; then
     echo "Spec File: $SPEC_FILE"
@@ -478,32 +478,32 @@ echo ""
 echo "Entering project directory: $PROJECT_NAME"
 cd "$PROJECT_NAME"
 
-# Handle DDM_XML and SPEC_FILE - copy to project if not already there
+# Handle IPXACT_XML and SPEC_FILE - copy to project if not already there
 
-if [ -n "$DDM_XML" ]; then
-    # Check if DDM_XML file exists
-    if [ ! -f "$DDM_XML" ]; then
-        echo -e "${RED}Error: DDM XML file not found: $DDM_XML${NC}"
+if [ -n "$IPXACT_XML" ]; then
+    # Check if IPXACT_XML file exists
+    if [ ! -f "$IPXACT_XML" ]; then
+        echo -e "${RED}Error: IP-XACT XML file not found: $IPXACT_XML${NC}"
         exit 1
     fi
     
-    DDM_XML_BASENAME=$(basename "$DDM_XML")
+    IPXACT_XML_BASENAME=$(basename "$IPXACT_XML")
     
     # Check if file is already in project directory
-    if [ -f "$DDM_XML_BASENAME" ]; then
-        echo -e "${GREEN}DDM XML already in project: $DDM_XML_BASENAME${NC}"
+    if [ -f "$IPXACT_XML_BASENAME" ]; then
+        echo -e "${GREEN}IP-XACT XML already in project: $IPXACT_XML_BASENAME${NC}"
     else
-        echo -e "${BLUE}Copying DDM XML to project: $DDM_XML_BASENAME${NC}"
-        cp "$DDM_XML" "$DDM_XML_BASENAME"
+        echo -e "${BLUE}Copying IP-XACT XML to project: $IPXACT_XML_BASENAME${NC}"
+        cp "$IPXACT_XML" "$IPXACT_XML_BASENAME"
         if [ $? -ne 0 ]; then
-            echo -e "${RED}Error: Failed to copy DDM XML file${NC}"
+            echo -e "${RED}Error: Failed to copy IP-XACT XML file${NC}"
             exit 1
         fi
-        echo -e "${GREEN}DDM XML copied successfully${NC}"
+        echo -e "${GREEN}IP-XACT XML copied successfully${NC}"
     fi
     
-    # Update DDM_XML to point to the project-relative path
-    export DDM_XML="$DDM_XML_BASENAME"
+    # Update IPXACT_XML to point to the project-relative path
+    export IPXACT_XML="$IPXACT_XML_BASENAME"
 fi
 
 if [ -n "$SPEC_FILE" ]; then
@@ -535,8 +535,8 @@ fi
 # Define Simics agent directory for potential use
 SIMICS_AGENT_DIR="$SCRIPT_DIR/contributing/samples/simics_integration"
 
-# Create Simics agent configuration if DDM_XML, SPEC_FILE, or DEVICE_NAME is provided
-if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+# Create Simics agent configuration if IPXACT_XML, SPEC_FILE, or DEVICE_NAME is provided
+if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     echo -e "${BLUE}🔧 Configuring Simics integration for hardware development...${NC}"
     
     if [ -d "$SIMICS_AGENT_DIR" ]; then
@@ -545,7 +545,7 @@ if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
         echo "   You can ask it to:"
         echo "   • 'Create a new Simics project for my device'"
         echo "   • 'Add a DML skeleton for the $DEVICE_NAME device'"
-        echo "   • 'Help me implement hardware registers from DDM XML'"
+        echo "   • 'Help me implement hardware registers from IP-XACT XML'"
         echo ""
     else
         echo -e "${YELLOW}⚠️  Simics integration agent not found at $SIMICS_AGENT_DIR${NC}"
@@ -554,7 +554,7 @@ if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
 fi
 
 # Run Specify agent first if hardware development is detected (generates wdt.xml)
-if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     echo ""
     echo -e "${BLUE}==========================================="
     echo "PHASE 1: SPECIFY - Creating specification"
@@ -609,11 +609,11 @@ EOF
         # Check if IP-XACT XML was generated
         if [ -f "${DEVICE_NAME}.xml" ]; then
             echo -e "${GREEN}✅ IP-XACT XML generated: ${DEVICE_NAME}.xml${NC}"
-            # Update DDM_XML to point to the generated file
-            export DDM_XML="${DEVICE_NAME}.xml"
+            # Update IPXACT_XML to point to the generated file
+            export IPXACT_XML="${DEVICE_NAME}.xml"
         else
             echo -e "${YELLOW}⚠️  IP-XACT XML not found: ${DEVICE_NAME}.xml${NC}"
-            echo "   Continuing with existing DDM_XML if available..."
+            echo "   Continuing with existing IPXACT_XML if available..."
         fi
     else
         echo ""
@@ -641,7 +641,7 @@ from agent import root_agent
 EOF
 
 # Run Simics setup agent second if hardware development is detected
-if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     if [ -d "$SIMICS_AGENT_DIR" ]; then
         echo ""
         echo -e "${BLUE}==========================================="
