@@ -622,7 +622,7 @@ EOF
     SPEC_FILE_ABS="$(pwd)/$(basename "$SPEC_FILE")"
     
     # Use the exact same prompt format as run_spec_kit_phased.sh
-    SPECIFY_PROMPT="Read the Simics WDT specification from ${SIMICS_SPEC_ABS} and the hardware specifications from ${SPEC_FILE_ABS} to create a comprehensive Simics ${DEVICE_NAME} device implementation."
+    SPECIFY_PROMPT="/specify Read the Simics WDT specification from ${SIMICS_SPEC_ABS} and the hardware specifications from ${SPEC_FILE_ABS} to create a comprehensive Simics ${DEVICE_NAME} device implementation."
     
     echo -e "${BLUE}Running SpecifyAgent to generate IP-XACT XML...${NC}"
     echo "   Prompt: $SPECIFY_PROMPT"
