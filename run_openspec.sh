@@ -597,20 +597,7 @@ EOF
         SIMICS_PROJECT_PATH="$(pwd)/simics-project"
         
         # Prepare initial setup prompt for Simics
-        SIMICS_SETUP_PROMPT="I need to set up a Simics hardware development project integrated with this OpenSpec project. Please:
-
-1. Create a simics-project/ directory in the current working directory
-2. Use the create_simics_project tool with project path: $SIMICS_PROJECT_PATH
-3. Use the add_dml_device_skeleton tool with project path: $SIMICS_PROJECT_PATH and device name: $DEVICE_NAME
-4. After setup is complete, explain:
-   - The created file structure
-   - How the Simics project integrates with the existing OpenSpec workflow
-   - Next steps for DML device development based on the available DDM XML and specification content
-   - Best practices for hardware modeling in this integrated environment
-
-Please proceed with the automated setup now.
-
-exit"
+        SIMICS_SETUP_PROMPT="Execute these MCP tool calls immediately: create_simics_project(project_path=\"$SIMICS_PROJECT_PATH\") then add_dml_device_skeleton(project_path=\"$SIMICS_PROJECT_PATH\", device_name=\"$DEVICE_NAME\"). After completion, provide a brief 3-sentence confirmation stating: project created at $SIMICS_PROJECT_PATH, device skeleton created for $DEVICE_NAME, and project ready for DML development. Be concise."
 
         echo ""
         echo -e "${BLUE}📋 Setting up Simics project structure for device: $DEVICE_NAME${NC}"
@@ -637,8 +624,9 @@ exit"
             fi
             
             # Run Simics setup with the setup prompt and exit command
+            # Use printf to send the entire prompt as a single message, then exit
             echo -e "${BLUE}Executing Simics setup agent...${NC}"
-            if { echo "$SIMICS_SETUP_PROMPT"; echo "exit"; } | $SIMICS_SETUP_CMD 2>&1; then
+            if printf "%s\nexit\n" "$SIMICS_SETUP_PROMPT" | $SIMICS_SETUP_CMD 2>&1; then
                 echo ""
                 echo -e "${GREEN}✅ Simics setup agent completed${NC}"
                 
