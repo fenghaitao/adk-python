@@ -14,7 +14,8 @@
 #   --ddm_xml FILE      Register definition XML file with absolute path
 #   --spec FILE         Hardware specification file with absolute path
 #   --device NAME       Simics model device name to generate from DDM XML and spec
-#   --save-session      Save session to PROJECT_NAME_openspec.session.json
+#   --save-session      Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
+#   --no-save-session   Disable session saving
 #   --resume            Resume from existing session file
 #   --help, -h          Show help message
 #
@@ -75,8 +76,9 @@ OPTIONS:
                       Specifies the hardware specification document
     --device NAME     Simics model device name to generate from DDM XML and spec
                       This will be the name of the DML device module to create
-    --save-session    Save session to PROJECT_NAME_openspec.session.json
+    --save-session    Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
                       Allows resuming work later with --resume
+    --no-save-session Disable session saving (sessions are saved by default)
     --resume          Resume from existing session file
                       Requires PROJECT_NAME_openspec.session.json to exist
     --interactive     Skip default prompt and start in pure interactive mode
@@ -104,14 +106,14 @@ EXAMPLES:
     # With DDM XML, spec files, and device name
     ./run_openspec.sh myproject --ddm_xml /path/to/registers.xml --spec /path/to/spec.md --device my_device
 
-    # Save session for later resuming
-    ./run_openspec.sh myapi "Create REST API" --save-session
+    # Create project (session saving is automatic by default)
+    ./run_openspec.sh myapi "Create REST API"
 
-    # Interactive mode with session saving
-    ./run_openspec.sh myapi --interactive --save-session
+    # Interactive mode (session saving is automatic)
+    ./run_openspec.sh myapi --interactive
 
-    # Use specific model and save session
-    ./run_openspec.sh myapi --model iflow/qwen3-coder-plus --save-session
+    # Disable session saving if needed
+    ./run_openspec.sh myapi --no-save-session
 
     # Use custom port (useful for WSL2)
     ./run_openspec.sh myapi --port 8052
@@ -223,7 +225,7 @@ MCP_PORT=""
 DDM_XML=""
 SPEC_FILE=""
 DEVICE_NAME=""
-SAVE_SESSION=false
+SAVE_SESSION=true
 RESUME_SESSION=false
 NO_PROMPT=false
 FORCE_PYTHON=false
@@ -278,6 +280,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --save-session)
             SAVE_SESSION=true
+            shift
+            ;;
+        --no-save-session)
+            SAVE_SESSION=false
             shift
             ;;
         --resume)
@@ -626,11 +632,33 @@ exit"
             echo "   Running Simics setup..."
             echo ""
             
+            # Build Simics setup command with session options
+            SIMICS_SETUP_CMD="$ADK_VENV/bin/adk run adk_simics_setup_agent"
+            
+            if [ "$SAVE_SESSION" = true ]; then
+                SIMICS_SETUP_CMD="$SIMICS_SETUP_CMD --save_session --session_id ${PROJECT_NAME}_simics_setup"
+                echo "   Simics setup session will be saved as: adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json"
+            fi
+            
             # Run Simics setup with the setup prompt and exit command
             echo -e "${BLUE}Executing Simics setup agent...${NC}"
-            if { echo "$SIMICS_SETUP_PROMPT"; echo "exit"; } | $ADK_VENV/bin/adk run adk_simics_setup_agent 2>&1; then
+            if { echo "$SIMICS_SETUP_PROMPT"; echo "exit"; } | $SIMICS_SETUP_CMD 2>&1; then
                 echo ""
                 echo -e "${GREEN}✅ Simics setup agent completed${NC}"
+                
+                # Generate human-readable session dump if session was saved
+                if [ "$SAVE_SESSION" = true ] && [ -f "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json" ]; then
+                    echo -e "${GREEN}Simics setup session saved: adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json${NC}"
+                    
+                    # Generate human-readable session dump
+                    if [ -f "$SCRIPT_DIR/view_session.py" ]; then
+                        echo "📄 Generating human-readable Simics setup session dump..."
+                        python3 "$SCRIPT_DIR/view_session.py" "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json" > "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt"
+                        if [ -f "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt" ]; then
+                            echo -e "${GREEN}Human-readable Simics setup session saved: adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt${NC}"
+                        fi
+                    fi
+                fi
             else
                 echo ""
                 echo -e "${YELLOW}⚠️  Simics setup agent completed with warnings${NC}"
