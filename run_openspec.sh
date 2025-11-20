@@ -31,6 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Set up paths relative to script location
 ADK_VENV="$SCRIPT_DIR/.venv"
+SPEC_KIT_DIR="$SCRIPT_DIR/spec-kit"
 OPENSPEC_INTEGRATION_DIR="$SCRIPT_DIR/contributing/samples/openspec_integration"
 SPEC_KIT_INTEGRATION_DIR="$SCRIPT_DIR/contributing/samples/spec_kit_integration"
 
@@ -463,15 +464,37 @@ else
         rm -rf "$PROJECT_NAME"
     fi
 
-    echo -e "${BLUE}Initializing OpenSpec project...${NC}"
-    $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
+    # Check if hardware development is detected (need spec-kit initialization)
+    if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+        echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
+        
+        # Check if spec-kit virtual environment exists
+        if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
+            echo -e "${RED}Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv${NC}"
+            echo "Please run: cd $SPEC_KIT_DIR && python -m venv .venv && source .venv/bin/activate && pip install -e ."
+            exit 1
+        fi
+        
+        # Initialize spec-kit project (provides .adk/commands/specify.md and other spec-kit structure)
+        "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
+        
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to initialize Spec-Kit project${NC}"
+            exit 1
+        fi
+        
+        echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
+    else
+        echo -e "${BLUE}Initializing OpenSpec project...${NC}"
+        $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
 
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to initialize OpenSpec project${NC}"
-        exit 1
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to initialize OpenSpec project${NC}"
+            exit 1
+        fi
+
+        echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
     fi
-
-    echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
 fi
 
 echo ""
