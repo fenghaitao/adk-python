@@ -600,12 +600,15 @@ sys.path.insert(0, '$SIMICS_AGENT_DIR')
 from agent import root_agent
 EOF
 
+        # Get absolute path for simics-project in current directory
+        SIMICS_PROJECT_PATH="$(pwd)/simics-project"
+        
         # Prepare initial setup prompt for Simics
         SIMICS_SETUP_PROMPT="I need to set up a Simics hardware development project integrated with this OpenSpec project. Please:
 
 1. Create a simics-project/ directory in the current working directory
-2. Use the create_simics_project tool with project path: ./simics-project
-3. Use the add_dml_device_skeleton tool with project path: ./simics-project and device name: $DEVICE_NAME
+2. Use the create_simics_project tool with project path: $SIMICS_PROJECT_PATH
+3. Use the add_dml_device_skeleton tool with project path: $SIMICS_PROJECT_PATH and device name: $DEVICE_NAME
 4. After setup is complete, explain:
    - The created file structure
    - How the Simics project integrates with the existing OpenSpec workflow
