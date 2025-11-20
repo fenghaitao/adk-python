@@ -397,13 +397,13 @@ if [ -n "$INITIAL_PROMPT" ]; then
 fi
 
 # Start MCP servers after all argument validation is complete
-# Guard with NO_MCP_SERVER environment variable (default: false to not skip)
-NO_MCP_SERVER="${NO_MCP_SERVER:-false}"
+# Guard with BUILTIN_MCP_SERVER environment variable (default: yes to not skip)
+BUILTIN_MCP_SERVER="${BUILTIN_MCP_SERVER:-yes}"
 
-if [ "$NO_MCP_SERVER" = "true" ]; then
+if [ "$BUILTIN_MCP_SERVER" = "no" ]; then
     echo ""
-    echo -e "${YELLOW}⚠️  Skipping MCP server startup (NO_MCP_SERVER=true)${NC}"
-    echo "   To enable MCP servers, set: export NO_MCP_SERVER=false"
+    echo -e "${YELLOW}⚠️  Skipping MCP server startup (BUILTIN_MCP_SERVER=no)${NC}"
+    echo "   To enable MCP servers, set: export BUILTIN_MCP_SERVER=yes"
     echo ""
 else
     echo ""
