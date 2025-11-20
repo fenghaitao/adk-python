@@ -94,24 +94,16 @@ class SimicsIntegrationAgent(LlmAgent):
 
 ## Available Tools
 
-- **create_simics_project(project_path)** - Create Simics project structure
-- **add_dml_device_skeleton(project_path, device_name)** - Create DML device files
+- **create_simics_project(project_path)** - Create Simics project structure (creates scripts/modules/ folder layout)
+- **generate_dml_registers(project_path, device_name, reg_xml)** - Generate DML device code from IP-XACT XML file
 
 ## Current Context
 
 **Working Directory**: {os.getcwd()}
 **Device Name**: {device_name}
 **MCP Port**: {mcp_port}
-**IP-XACT XML Available**: {'Yes' if ipxact_xml else 'No'}
-**Spec File Available**: {'Yes' if spec_file else 'No'}
-
-## Available Content
-
-{"### IP-XACT XML Content:" if ipxact_content else ""}
-{ipxact_content[:2000] + "..." if len(ipxact_content) > 2000 else ipxact_content}
-
-{"### Specification Content:" if spec_content else ""}
-{spec_content[:2000] + "..." if len(spec_content) > 2000 else spec_content}
+**IP-XACT XML Available**: {'Yes - ' + ipxact_xml if ipxact_xml else 'No'}
+**Spec File Available**: {'Yes - ' + spec_file if spec_file else 'No'}
 
 ## Response Guidelines
 
@@ -119,13 +111,13 @@ class SimicsIntegrationAgent(LlmAgent):
 1. Execute all requested tool calls immediately
 2. After completion, provide brief confirmation (max 5 sentences):
    - Confirm what was created
-   - State the location
+   - State the location (scripts/modules/{device_name}/)
    - Mention it's ready for development
-   - Reference available DDM XML/spec files if relevant
+   - Reference available IP-XACT XML/spec files if relevant
 
 **For Questions**:
 - Provide direct, concise answers
-- Reference DDM XML or spec content when relevant
+- Reference IP-XACT XML or spec content when relevant
 - Keep explanations focused and practical
 
 **DO NOT**:
@@ -133,11 +125,12 @@ class SimicsIntegrationAgent(LlmAgent):
 - Explain every detail of the file structure
 - Wait for user confirmation between automated steps
 - Repeat information already provided in the prompt
+- Summarize or describe IP-XACT XML content unless specifically asked
 
 **Example Good Response** (for automated setup):
 "✅ Created Simics project at /path/to/simics-project
-✅ Added DML device skeleton for 'wdt'
-Project ready for DML development. DDM XML and spec files available for reference."
+✅ Generated DML device code for '{device_name}' in scripts/modules/{device_name}/
+Project ready for DML development."
 
 **Example Bad Response** (too verbose):
 "I'll help you set up... [long explanation]... Let me first create... [more explanation]... Now let me add... [even more explanation]... Here's what we have... [lengthy details]..."
@@ -160,7 +153,8 @@ Execute tool calls immediately when instructed. Be brief and action-focused."""
     # Restrict to only the two Simics project creation tools
     simics_tool_filter = [
         "create_simics_project",
-        "add_dml_device_skeleton"
+        "add_dml_device_skeleton",
+        "generate_dml_registers"
     ]
     
     simics_toolset = MCPToolset(

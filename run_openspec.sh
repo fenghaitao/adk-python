@@ -397,26 +397,36 @@ if [ -n "$INITIAL_PROMPT" ]; then
 fi
 
 # Start MCP servers after all argument validation is complete
-echo ""
-echo -e "${BLUE}🚀 Starting MCP servers on port $MCP_PORT...${NC}"
-if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh" "$MCP_PORT"; then
-    echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
-    
-    # Quick verification
-    if check_mcp_server "$MCP_PORT"; then
-        echo -e "${GREEN}✅ MCP server confirmed running on port $MCP_PORT${NC}"
+# Guard with NO_MCP_SERVER environment variable (default: false to not skip)
+NO_MCP_SERVER="${NO_MCP_SERVER:-false}"
+
+if [ "$NO_MCP_SERVER" = "true" ]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  Skipping MCP server startup (NO_MCP_SERVER=true)${NC}"
+    echo "   To enable MCP servers, set: export NO_MCP_SERVER=false"
+    echo ""
+else
+    echo ""
+    echo -e "${BLUE}🚀 Starting MCP servers on port $MCP_PORT...${NC}"
+    if "$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server/start_mcp_servers.sh" "$MCP_PORT"; then
+        echo -e "${GREEN}🎉 MCP servers started successfully!${NC}"
+        
+        # Quick verification
+        if check_mcp_server "$MCP_PORT"; then
+            echo -e "${GREEN}✅ MCP server confirmed running on port $MCP_PORT${NC}"
+        else
+            echo -e "${RED}❌ MCP server not responding on port $MCP_PORT${NC}"
+            exit 1
+        fi
+
+        MCP_SERVERS_STARTED=true
     else
-        echo -e "${RED}❌ MCP server not responding on port $MCP_PORT${NC}"
+        echo -e "${RED}❌ Failed to start MCP servers${NC}"
+        echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
         exit 1
     fi
-
-    MCP_SERVERS_STARTED=true
-else
-    echo -e "${RED}❌ Failed to start MCP servers${NC}"
-    echo -e "${RED}Script execution stopped. Please check MCP server configuration.${NC}"
-    exit 1
+    echo ""
 fi
-echo ""
 
 # Check for OpenSpec CLI
 echo -e "${BLUE}Checking for OpenSpec CLI...${NC}"
@@ -713,13 +723,17 @@ EOF
         # Get absolute path for simics-project in current directory
         SIMICS_PROJECT_PATH="$(pwd)/simics-project"
         
+        # Get absolute path for IPXACT XML file
+        IPXACT_XML_ABSOLUTE="$(pwd)/$IPXACT_XML"
+        
         # Prepare initial setup prompt for Simics
-        SIMICS_SETUP_PROMPT="Execute these MCP tool calls immediately: create_simics_project(project_path=\"$SIMICS_PROJECT_PATH\") then add_dml_device_skeleton(project_path=\"$SIMICS_PROJECT_PATH\", device_name=\"$DEVICE_NAME\"). After completion, provide a brief 3-sentence confirmation stating: project created at $SIMICS_PROJECT_PATH, device skeleton created for $DEVICE_NAME, and project ready for DML development. Be concise."
+        SIMICS_SETUP_PROMPT="Execute these MCP tool calls immediately: create_simics_project(project_path=\"$SIMICS_PROJECT_PATH\") then generate_dml_registers(project_path=\"$SIMICS_PROJECT_PATH\", device_name=\"$DEVICE_NAME\", reg_xml=\"$IPXACT_XML_ABSOLUTE\"). After completion, provide a brief 3-sentence confirmation stating: project created at $SIMICS_PROJECT_PATH, DML registers generated for $DEVICE_NAME from IPXACT XML, and project ready for DML development. Be concise."
 
         echo ""
         echo -e "${BLUE}📋 Setting up Simics project structure for device: $DEVICE_NAME${NC}"
-        echo "   This will create the simics-project/ directory and DML device skeleton..."
+        echo "   This will create the simics-project/ directory and generate DML registers from IPXACT XML..."
         echo "   Working directory: $(pwd)"
+        echo "   IPXACT XML: $IPXACT_XML_ABSOLUTE"
         echo "   Simics agent path: $SIMICS_AGENT_DIR"
         echo ""
         
