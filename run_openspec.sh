@@ -553,9 +553,75 @@ if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     fi
 fi
 
-# TODO: call the ddm script to generatre the DDM skeleton
+# Run Specify agent first if hardware development is detected (generates wdt.xml)
+if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+    echo ""
+    echo -e "${BLUE}==========================================="
+    echo "PHASE 1: SPECIFY - Creating specification"
+    echo "===========================================${NC}"
+    
+    # Create specify agent directory
+    mkdir -p "adk_specify_agent"
+    cat > "adk_specify_agent/agent.py" << EOF
+import sys
+import os
+sys.path.insert(0, '$SPEC_KIT_INTEGRATION_DIR')
+from specify_agent import specify_agent as root_agent
+EOF
 
-# TODO: change the agent prompt to "generate registers side effects for ddm device"
+    # Prepare specify prompt based on available files
+    if [ -n "$SPEC_FILE" ]; then
+        SPECIFY_PROMPT="Read the hardware specification from $SPEC_FILE and create a comprehensive device specification with IP-XACT register description. Generate the IP-XACT XML file as ${DEVICE_NAME}.xml in the current directory."
+    else
+        SPECIFY_PROMPT="Create a comprehensive device specification for $DEVICE_NAME with IP-XACT register description. Generate the IP-XACT XML file as ${DEVICE_NAME}.xml in the current directory."
+    fi
+    
+    echo -e "${BLUE}Running SpecifyAgent to generate IP-XACT XML...${NC}"
+    echo "   Prompt: $SPECIFY_PROMPT"
+    
+    # Build Specify command with session options
+    SPECIFY_CMD="$ADK_VENV/bin/adk run adk_specify_agent"
+    
+    if [ "$SAVE_SESSION" = true ]; then
+        SPECIFY_CMD="$SPECIFY_CMD --save_session --session_id ${PROJECT_NAME}_specify"
+        echo "   Specify session will be saved as: adk_specify_agent/${PROJECT_NAME}_specify.session.json"
+    fi
+    
+    # Run Specify agent
+    if printf "%s\nexit\n" "$SPECIFY_PROMPT" | $SPECIFY_CMD 2>&1; then
+        echo ""
+        echo -e "${GREEN}✅ Specify agent completed${NC}"
+        
+        # Generate human-readable session dump if session was saved
+        if [ "$SAVE_SESSION" = true ] && [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.json" ]; then
+            echo -e "${GREEN}Specify session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.json${NC}"
+            
+            # Generate human-readable session dump
+            if [ -f "$SCRIPT_DIR/view_session.py" ]; then
+                echo "📄 Generating human-readable Specify session dump..."
+                python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
+                if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
+                    echo -e "${GREEN}Human-readable Specify session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt${NC}"
+                fi
+            fi
+        fi
+        
+        # Check if IP-XACT XML was generated
+        if [ -f "${DEVICE_NAME}.xml" ]; then
+            echo -e "${GREEN}✅ IP-XACT XML generated: ${DEVICE_NAME}.xml${NC}"
+            # Update DDM_XML to point to the generated file
+            export DDM_XML="${DEVICE_NAME}.xml"
+        else
+            echo -e "${YELLOW}⚠️  IP-XACT XML not found: ${DEVICE_NAME}.xml${NC}"
+            echo "   Continuing with existing DDM_XML if available..."
+        fi
+    else
+        echo ""
+        echo -e "${YELLOW}⚠️  Specify agent completed with warnings${NC}"
+    fi
+    
+    echo ""
+fi
 
 # Create agent directory for session management
 mkdir -p "adk_openspec_agent"
@@ -574,10 +640,13 @@ sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
 from agent import root_agent
 EOF
 
-# Run Simics setup agent first if hardware development is detected
+# Run Simics setup agent second if hardware development is detected
 if [ -n "$DDM_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     if [ -d "$SIMICS_AGENT_DIR" ]; then
-        echo -e "${BLUE}🔧 Running Simics project setup first...${NC}"
+        echo ""
+        echo -e "${BLUE}==========================================="
+        echo "PHASE 2: SIMICS SETUP - Creating project structure"
+        echo "===========================================${NC}"
         
         # Create temporary Simics setup agent
         mkdir -p "adk_simics_setup_agent"
@@ -661,11 +730,13 @@ EOF
         # Keep the Simics setup agent for potential reuse or debugging
         
         echo ""
-        echo -e "${BLUE}🎯 Now launching main agent for interactive development...${NC}"
-        echo ""
     fi
 fi
 
+echo ""
+echo -e "${BLUE}==========================================="
+echo "PHASE 3: OPENSPEC - Interactive development"
+echo "===========================================${NC}"
 echo "Running ADK with OpenSpec integration..."
 echo ""
 
