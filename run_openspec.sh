@@ -594,6 +594,16 @@ if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
         exit 1
     fi
     
+    # Copy simics-wdt-spec.md template to project directory
+    SIMICS_SPEC_TEMPLATE="$SCRIPT_DIR/simics-wdt-spec.md"
+    if [ -f "$SIMICS_SPEC_TEMPLATE" ]; then
+        cp "$SIMICS_SPEC_TEMPLATE" "simics-wdt-spec.md"
+        echo -e "${GREEN}✅ Copied simics-wdt-spec.md template to project${NC}"
+    else
+        echo -e "${YELLOW}⚠️  simics-wdt-spec.md template not found at $SIMICS_SPEC_TEMPLATE${NC}"
+        echo "   Continuing without template..."
+    fi
+    
     # Create specify agent directory
     mkdir -p "adk_specify_agent"
     cat > "adk_specify_agent/agent.py" << EOF
@@ -604,9 +614,12 @@ from specify_agent import specify_agent as root_agent
 EOF
 
     # Prepare specify prompt using the same format as run_spec_kit_phased.sh
-    # Use absolute path for SPEC_FILE to ensure it's accessible
+    # Get absolute paths for both specification files
+    SIMICS_SPEC_ABS="$(pwd)/simics-wdt-spec.md"
     SPEC_FILE_ABS="$(cd "$(dirname "$SPEC_FILE")" && pwd)/$(basename "$SPEC_FILE")"
-    SPECIFY_PROMPT="Read the Simics device specification from ${SPEC_FILE_ABS} to create a comprehensive Simics ${DEVICE_NAME} device implementation with IP-XACT register description."
+    
+    # Use the exact same prompt format as run_spec_kit_phased.sh
+    SPECIFY_PROMPT="Read the Simics WDT specification from ${SIMICS_SPEC_ABS} and the hardware specifications from ${SPEC_FILE_ABS} to create a comprehensive Simics ${DEVICE_NAME} device implementation."
     
     echo -e "${BLUE}Running SpecifyAgent to generate IP-XACT XML...${NC}"
     echo "   Prompt: $SPECIFY_PROMPT"
