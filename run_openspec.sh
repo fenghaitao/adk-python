@@ -479,10 +479,12 @@ fi
 echo ""
 
 # Initialize OpenSpec project
-# Remove existing project directory if it exists (unless skipping specify)
+# Remove existing project directory if it exists (unless skipping specify or in interactive mode)
 if [ -d "$PROJECT_NAME" ]; then
     if [ "$SKIP_SPECIFY" = true ]; then
         echo -e "${BLUE}Keeping existing project directory: $PROJECT_NAME (--skip-specify enabled)${NC}"
+    elif [ "$NO_PROMPT" = true ]; then
+        echo -e "${BLUE}Keeping existing project directory: $PROJECT_NAME (interactive mode)${NC}"
     else
         echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
         rm -rf "$PROJECT_NAME"
