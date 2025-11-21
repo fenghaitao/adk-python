@@ -498,24 +498,24 @@ if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
         echo -e "${BLUE}Using existing project directory (--skip-specify enabled)${NC}"
     else
         echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
-            
-            # Check if spec-kit virtual environment exists
-            if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
-                echo -e "${RED}Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv${NC}"
-                echo "Please run: cd $SPEC_KIT_DIR && python -m venv .venv && source .venv/bin/activate && pip install -e ."
-                exit 1
-            fi
-            
-            # Initialize spec-kit project (provides .adk/commands/specify.md and other spec-kit structure)
-            "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
-            
-            if [ $? -ne 0 ]; then
-                echo -e "${RED}Failed to initialize Spec-Kit project${NC}"
-                exit 1
-            fi
-            
-            echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
+        
+        # Check if spec-kit virtual environment exists
+        if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
+            echo -e "${RED}Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv${NC}"
+            echo "Please run: cd $SPEC_KIT_DIR && python -m venv .venv && source .venv/bin/activate && pip install -e ."
+            exit 1
         fi
+        
+        # Initialize spec-kit project (provides .adk/commands/specify.md and other spec-kit structure)
+        "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
+        
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Failed to initialize Spec-Kit project${NC}"
+            exit 1
+        fi
+        
+        echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
+    fi
 fi
 
 # Always initialize OpenSpec project (unless directory exists and we're skipping specify)
