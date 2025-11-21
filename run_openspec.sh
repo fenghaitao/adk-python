@@ -919,9 +919,10 @@ else
     # Run ADK with openspec integration
     if [ -n "$INITIAL_PROMPT" ]; then
         echo "Starting with initial prompt..."
-        # Send prompt as single message, then exit command
-        # Use echo -e to preserve formatting, then send exit on separate line
-        { echo "$INITIAL_PROMPT"; echo "exit"; } | $ADK_CMD
+        # Convert newlines to literal \n so entire prompt is sent as single line
+        # The LLM will still interpret \n as line breaks in the prompt
+        SINGLE_LINE_PROMPT=$(echo "$INITIAL_PROMPT" | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+        printf "%s\nexit\n" "$SINGLE_LINE_PROMPT" | $ADK_CMD
     else
         echo "Starting interactive mode..."
         $ADK_CMD
