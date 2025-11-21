@@ -854,12 +854,68 @@ EOF
                 echo -e "${GREEN}✅ simics-project/ directory created successfully${NC}"
                 echo "   Contents: $(ls -la simics-project/ 2>/dev/null || echo 'Directory empty or inaccessible')"
 
+                # Create .gitignore if it doesn't exist
+                if [ ! -f ".gitignore" ]; then
+                    echo ""
+                    echo -e "${BLUE}📝 Creating .gitignore file...${NC}"
+                    cat > ".gitignore" << 'GITIGNORE_EOF'
+# Build artifacts
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+
+# Dependency files
+*.dep
+*.dmldep
+*.d
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node modules
+node_modules/
+
+# Simics temporary files
+*.simics-log
+*.simics-checkpoint
+simics-workspace/
+
+# Build directories
+build/
+dist/
+*.egg-info/
+GITIGNORE_EOF
+                    echo -e "${GREEN}✅ .gitignore created${NC}"
+                else
+                    echo -e "${BLUE}ℹ️  .gitignore already exists${NC}"
+                fi
+
                 # Commit the generated Simics project files to git
                 echo ""
                 echo -e "${BLUE}📝 Committing Simics project files to git...${NC}"
 
-                # Add all files in simics-project
-                git add simics-project/ 2>/dev/null || true
+                # Add all files in simics-project and .gitignore
+                git add simics-project/ .gitignore 2>/dev/null || true
 
                 # Create a descriptive commit message
                 COMMIT_MSG="feat(simics): Generate Simics project for ${DEVICE_NAME} device
