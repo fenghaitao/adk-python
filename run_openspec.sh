@@ -755,6 +755,8 @@ mkdir -p "adk_openspec_agent"
 
 # Always use the standard OpenSpec agent for the main interactive session
 echo -e "${BLUE}📋 Using OpenSpec integration agent for main interactive session${NC}"
+# Get parent directory of SPEC_KIT_INTEGRATION_DIR for spec_kit_integration imports
+SAMPLES_DIR=$(dirname "$SPEC_KIT_INTEGRATION_DIR")
 cat > "adk_openspec_agent/agent.py" << EOF
 import sys
 import os
@@ -762,8 +764,8 @@ import os
 # Add OpenSpec integration directory to path (must be first for relative imports to work)
 sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
 
-# Add parent directory to path for spec_kit_integration imports
-sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
+# Add samples directory to path for spec_kit_integration imports
+sys.path.insert(0, '$SAMPLES_DIR')
 
 # Import the OpenSpec agent directly
 from agent import root_agent
