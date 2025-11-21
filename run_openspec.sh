@@ -759,11 +759,13 @@ cat > "adk_openspec_agent/agent.py" << EOF
 import sys
 import os
 
+# Add OpenSpec integration directory to path (must be first for relative imports to work)
+sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
+
 # Add parent directory to path for spec_kit_integration imports
 sys.path.insert(0, os.path.dirname('$SPEC_KIT_INTEGRATION_DIR'))
 
 # Import the OpenSpec agent directly
-sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
 from agent import root_agent
 EOF
 
