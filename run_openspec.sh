@@ -895,7 +895,8 @@ else
     # Run ADK with openspec integration
     if [ -n "$INITIAL_PROMPT" ]; then
         echo "Starting with initial prompt..."
-        echo "$INITIAL_PROMPT" | $ADK_CMD
+        # Use printf with exit to ensure session is saved (same pattern as Specify and Simics agents)
+        printf "%s\nexit\n" "$INITIAL_PROMPT" | $ADK_CMD
     else
         echo "Starting interactive mode..."
         $ADK_CMD
