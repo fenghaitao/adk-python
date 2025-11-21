@@ -518,18 +518,11 @@ if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     fi
 fi
 
-# Always initialize OpenSpec project (unless directory exists and we're skipping specify)
-if [ ! -d "$PROJECT_NAME" ] || [ "$SKIP_SPECIFY" = false ]; then
+# Always initialize OpenSpec project (unless directory exists in interactive mode or skip-specify)
+if [ ! -d "$PROJECT_NAME" ]; then
+    # Directory doesn't exist, create new project
     echo -e "${BLUE}Initializing OpenSpec project...${NC}"
-    
-    # Use current directory if project was already initialized by specify, otherwise create new project
-    if [ -d "$PROJECT_NAME" ]; then
-        cd "$PROJECT_NAME"
-        $OPENSPEC_CMD init . --tools none
-        cd ..
-    else
-        $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
-    fi
+    $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
 
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to initialize OpenSpec project${NC}"
@@ -537,6 +530,23 @@ if [ ! -d "$PROJECT_NAME" ] || [ "$SKIP_SPECIFY" = false ]; then
     fi
 
     echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+elif [ "$NO_PROMPT" = false ] && [ "$SKIP_SPECIFY" = false ]; then
+    # Directory exists, but not in interactive mode and not skipping specify
+    # Initialize in existing directory (e.g., after spec-kit init)
+    echo -e "${BLUE}Initializing OpenSpec in existing project directory...${NC}"
+    cd "$PROJECT_NAME"
+    $OPENSPEC_CMD init . --tools none
+    cd ..
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to initialize OpenSpec project${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+else
+    # Directory exists and we're in interactive mode or skipping specify
+    echo -e "${BLUE}Using existing project directory: $PROJECT_NAME${NC}"
 fi
 
 echo ""
