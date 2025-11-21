@@ -493,9 +493,9 @@ fi
 
 # Check if hardware development is detected (need spec-kit initialization)
 if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
-    # Skip initialization if directory exists and we're skipping specify
-    if [ -d "$PROJECT_NAME" ] && [ "$SKIP_SPECIFY" = true ]; then
-        echo -e "${BLUE}Using existing project directory (--skip-specify enabled)${NC}"
+    # Skip initialization if directory exists and we're skipping specify or in interactive mode
+    if [ -d "$PROJECT_NAME" ] && { [ "$SKIP_SPECIFY" = true ] || [ "$NO_PROMPT" = true ]; }; then
+        echo -e "${BLUE}Using existing project directory (skipping spec-kit initialization)${NC}"
     else
         echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
         
