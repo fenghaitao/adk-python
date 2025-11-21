@@ -17,6 +17,8 @@
 #   --save-session      Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
 #   --no-save-session   Disable session saving
 #   --resume            Resume from existing session file
+#   --skip-specify      Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
+#   --skip-openspec     Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
 #   --help, -h          Show help message
 #
 # This script initializes an OpenSpec project and runs the ADK agent with
@@ -88,6 +90,10 @@ OPTIONS:
     --no-save-session Disable session saving (sessions are saved by default)
     --resume          Resume from existing session file
                       Requires PROJECT_NAME_openspec.session.json to exist
+    --skip-specify    Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
+                      Saves ~5 minutes when you already have the XML file
+    --skip-openspec   Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
+                      Useful for automated workflows that only need project setup
     --interactive     Skip default prompt and start in pure interactive mode
     --force-python    Force use of Python port instead of TypeScript CLI
     --help, -h        Show this help message and exit
@@ -112,6 +118,12 @@ EXAMPLES:
 
     # Hardware development with existing IP-XACT XML and spec file
     ./run_openspec.sh myproject --ipxact_xml /path/to/registers.xml --spec $SIMICS_SPEC_TEMPLATE_NAME --device wdt
+
+    # Skip Specify phase when you already have IP-XACT XML (saves ~5 minutes)
+    ./run_openspec.sh myproject --ipxact_xml wdt.xml --spec wdt.md --device wdt --skip-specify
+
+    # Only run Specify and Simics setup, skip interactive OpenSpec agent
+    ./run_openspec.sh myproject --spec wdt.md --device wdt --skip-openspec
 
     # Create project (session saving is automatic by default)
     ./run_openspec.sh myapi "Create REST API"
@@ -236,6 +248,8 @@ SAVE_SESSION=true
 RESUME_SESSION=false
 NO_PROMPT=false
 FORCE_PYTHON=false
+SKIP_SPECIFY=false
+SKIP_OPENSPEC=false
 
 # Process all arguments
 while [[ $# -gt 0 ]]; do
@@ -295,6 +309,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --resume)
             RESUME_SESSION=true
+            shift
+            ;;
+        --skip-specify)
+            SKIP_SPECIFY=true
+            shift
+            ;;
+        --skip-openspec)
+            SKIP_OPENSPEC=true
             shift
             ;;
         --interactive)
@@ -392,6 +414,12 @@ fi
 if [ "$RESUME_SESSION" = true ]; then
     echo "Resume mode: ENABLED"
 fi
+if [ "$SKIP_SPECIFY" = true ]; then
+    echo "Skip Specify: ENABLED (will skip PHASE 1)"
+fi
+if [ "$SKIP_OPENSPEC" = true ]; then
+    echo "Skip OpenSpec: ENABLED (will skip PHASE 3)"
+fi
 if [ -n "$INITIAL_PROMPT" ]; then
     echo "Initial prompt: $INITIAL_PROMPT"
 fi
@@ -474,32 +502,41 @@ if [ "$RESUME_SESSION" = true ]; then
     echo -e "${GREEN}Found existing session file${NC}"
 else
     # Normal mode - initialize new project
-    # Remove existing project directory if it exists
+    # Remove existing project directory if it exists (unless skipping specify)
     if [ -d "$PROJECT_NAME" ]; then
-        echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
-        rm -rf "$PROJECT_NAME"
+        if [ "$SKIP_SPECIFY" = true ]; then
+            echo -e "${BLUE}Keeping existing project directory: $PROJECT_NAME (--skip-specify enabled)${NC}"
+        else
+            echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
+            rm -rf "$PROJECT_NAME"
+        fi
     fi
 
     # Check if hardware development is detected (need spec-kit initialization)
     if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
-        echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
-        
-        # Check if spec-kit virtual environment exists
-        if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
-            echo -e "${RED}Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv${NC}"
-            echo "Please run: cd $SPEC_KIT_DIR && python -m venv .venv && source .venv/bin/activate && pip install -e ."
-            exit 1
+        # Skip initialization if directory exists and we're skipping specify
+        if [ -d "$PROJECT_NAME" ] && [ "$SKIP_SPECIFY" = true ]; then
+            echo -e "${BLUE}Using existing project directory (--skip-specify enabled)${NC}"
+        else
+            echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
+            
+            # Check if spec-kit virtual environment exists
+            if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
+                echo -e "${RED}Error: spec-kit virtual environment not found at $SPEC_KIT_DIR/.venv${NC}"
+                echo "Please run: cd $SPEC_KIT_DIR && python -m venv .venv && source .venv/bin/activate && pip install -e ."
+                exit 1
+            fi
+            
+            # Initialize spec-kit project (provides .adk/commands/specify.md and other spec-kit structure)
+            "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
+            
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Failed to initialize Spec-Kit project${NC}"
+                exit 1
+            fi
+            
+            echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
         fi
-        
-        # Initialize spec-kit project (provides .adk/commands/specify.md and other spec-kit structure)
-        "$SPEC_KIT_DIR/.venv/bin/specify" init "$PROJECT_NAME" --ai adk --script sh
-        
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to initialize Spec-Kit project${NC}"
-            exit 1
-        fi
-        
-        echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
     else
         echo -e "${BLUE}Initializing OpenSpec project...${NC}"
         $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
@@ -593,7 +630,7 @@ if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
 fi
 
 # Run Specify agent first if hardware development is detected (generates wdt.xml)
-if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+if [ "$SKIP_SPECIFY" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
     echo ""
     echo -e "${BLUE}==========================================="
     echo "PHASE 1: SPECIFY - Creating specification"
@@ -793,41 +830,61 @@ EOF
         
         echo ""
     fi
+elif [ "$SKIP_SPECIFY" = true ]; then
+    echo ""
+    echo -e "${YELLOW}==========================================="
+    echo "PHASE 1: SPECIFY - SKIPPED"
+    echo "===========================================${NC}"
+    echo "Skipping Specify agent phase as requested (--skip-specify)"
+    if [ -n "$IPXACT_XML" ]; then
+        echo "Make sure your IP-XACT XML file exists: $IPXACT_XML"
+    fi
+    echo ""
 fi
 
-echo ""
-echo -e "${BLUE}==========================================="
-echo "PHASE 3: OPENSPEC - Interactive development"
-echo "===========================================${NC}"
-echo "Running ADK with OpenSpec integration..."
-echo ""
-
-# Build ADK command with session options
-ADK_CMD="$ADK_VENV/bin/adk run adk_openspec_agent"
-
-if [ "$SAVE_SESSION" = true ]; then
-    ADK_CMD="$ADK_CMD --save_session --session_id ${PROJECT_NAME}_openspec"
-    echo "Session will be saved as: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
-fi
-
-if [ "$RESUME_SESSION" = true ]; then
-    ADK_CMD="$ADK_CMD --resume adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
-    echo "Resuming from: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
-fi
-
-echo ""
-
-# Run ADK with openspec integration
-if [ -n "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ]; then
-    echo "Starting with initial prompt..."
-    echo "$INITIAL_PROMPT" | $ADK_CMD
+if [ "$SKIP_OPENSPEC" = true ]; then
+    echo ""
+    echo -e "${YELLOW}==========================================="
+    echo "PHASE 3: OPENSPEC - SKIPPED"
+    echo "===========================================${NC}"
+    echo "Skipping OpenSpec agent phase as requested (--skip-openspec)"
+    echo "Project setup complete. You can now work with the generated files."
+    echo ""
 else
-    echo "Starting interactive mode..."
-    $ADK_CMD
+    echo ""
+    echo -e "${BLUE}==========================================="
+    echo "PHASE 3: OPENSPEC - Interactive development"
+    echo "===========================================${NC}"
+    echo "Running ADK with OpenSpec integration..."
+    echo ""
+
+    # Build ADK command with session options
+    ADK_CMD="$ADK_VENV/bin/adk run adk_openspec_agent"
+
+    if [ "$SAVE_SESSION" = true ]; then
+        ADK_CMD="$ADK_CMD --save_session --session_id ${PROJECT_NAME}_openspec"
+        echo "Session will be saved as: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
+    fi
+
+    if [ "$RESUME_SESSION" = true ]; then
+        ADK_CMD="$ADK_CMD --resume adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
+        echo "Resuming from: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
+    fi
+
+    echo ""
+
+    # Run ADK with openspec integration
+    if [ -n "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ]; then
+        echo "Starting with initial prompt..."
+        echo "$INITIAL_PROMPT" | $ADK_CMD
+    else
+        echo "Starting interactive mode..."
+        $ADK_CMD
+    fi
 fi
 
-# Generate human-readable session dump if session was saved
-if [ "$SAVE_SESSION" = true ] && [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
+# Generate human-readable session dump if session was saved and OpenSpec wasn't skipped
+if [ "$SKIP_OPENSPEC" = false ] && [ "$SAVE_SESSION" = true ] && [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
     echo ""
     echo -e "${GREEN}Session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json${NC}"
     
