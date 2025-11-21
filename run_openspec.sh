@@ -490,13 +490,14 @@ if [ -d "$PROJECT_NAME" ]; then
         rm -rf "$PROJECT_NAME"
     fi
 fi
+
 # Check if hardware development is detected (need spec-kit initialization)
-    if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
-        # Skip initialization if directory exists and we're skipping specify
-        if [ -d "$PROJECT_NAME" ] && [ "$SKIP_SPECIFY" = true ]; then
-            echo -e "${BLUE}Using existing project directory (--skip-specify enabled)${NC}"
-        else
-            echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
+if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+    # Skip initialization if directory exists and we're skipping specify
+    if [ -d "$PROJECT_NAME" ] && [ "$SKIP_SPECIFY" = true ]; then
+        echo -e "${BLUE}Using existing project directory (--skip-specify enabled)${NC}"
+    else
+        echo -e "${BLUE}Hardware development detected - initializing with Spec-Kit...${NC}"
             
             # Check if spec-kit virtual environment exists
             if [ ! -d "$SPEC_KIT_DIR/.venv" ]; then
@@ -515,28 +516,28 @@ fi
             
             echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
         fi
-    fi
+fi
+
+# Always initialize OpenSpec project (unless directory exists and we're skipping specify)
+if [ ! -d "$PROJECT_NAME" ] || [ "$SKIP_SPECIFY" = false ]; then
+    echo -e "${BLUE}Initializing OpenSpec project...${NC}"
     
-    # Always initialize OpenSpec project (unless directory exists and we're skipping specify)
-    if [ ! -d "$PROJECT_NAME" ] || [ "$SKIP_SPECIFY" = false ]; then
-        echo -e "${BLUE}Initializing OpenSpec project...${NC}"
-        
-        # Use current directory if project was already initialized by specify, otherwise create new project
-        if [ -d "$PROJECT_NAME" ]; then
-            cd "$PROJECT_NAME"
-            $OPENSPEC_CMD init . --tools none
-            cd ..
-        else
-            $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
-        fi
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Failed to initialize OpenSpec project${NC}"
-            exit 1
-        fi
-
-        echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+    # Use current directory if project was already initialized by specify, otherwise create new project
+    if [ -d "$PROJECT_NAME" ]; then
+        cd "$PROJECT_NAME"
+        $OPENSPEC_CMD init . --tools none
+        cd ..
+    else
+        $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
     fi
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to initialize OpenSpec project${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+fi
 
 echo ""
 echo "Entering project directory: $PROJECT_NAME"
