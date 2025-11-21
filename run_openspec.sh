@@ -4,7 +4,6 @@
 # Usage: ./run_openspec.sh [PROJECT_NAME] [INITIAL_PROMPT] [OPTIONS]
 # Example: ./run_openspec.sh myproject "Create a REST API for user management"
 # Example: ./run_openspec.sh myproject --model iflow/qwen3-coder-plus --save-session
-# Example: ./run_openspec.sh myproject --resume --port 8052
 # If no project name is provided, defaults to 'adk_openspec_project'
 # If no prompt is provided, starts interactive mode
 #
@@ -16,7 +15,6 @@
 #   --device NAME       Simics model device name to generate from IP-XACT XML and spec
 #   --save-session      Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
 #   --no-save-session   Disable session saving
-#   --resume            Resume from existing session file
 #   --skip-specify      Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
 #   --skip-simics-setup Skip the Simics setup phase (PHASE 2) - useful when simics-project already exists
 #   --skip-openspec     Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
@@ -87,10 +85,7 @@ OPTIONS:
                       This will be the name of the DML device module to create
                       Required when --spec is provided
     --save-session    Save session to PROJECT_NAME_openspec.session.json (DEFAULT)
-                      Allows resuming work later with --resume
     --no-save-session Disable session saving (sessions are saved by default)
-    --resume          Resume from existing session file
-                      Requires PROJECT_NAME_openspec.session.json to exist
     --skip-specify      Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
                         Saves ~5 minutes when you already have the XML file
     --skip-simics-setup Skip the Simics setup phase (PHASE 2) - useful when simics-project already exists
@@ -142,12 +137,6 @@ EXAMPLES:
 
     # Use custom port (useful for WSL2)
     ./run_openspec.sh myapi --port 8052
-
-    # Resume from saved session
-    ./run_openspec.sh myapi --resume
-
-    # Resume with different model and custom port
-    ./run_openspec.sh myapi --resume --model github_copilot/claude-sonnet-4 --port 8052
 
     # Show help
     ./run_openspec.sh --help
@@ -251,7 +240,6 @@ IPXACT_XML=""
 SPEC_FILE=""
 DEVICE_NAME=""
 SAVE_SESSION=true
-RESUME_SESSION=false
 NO_PROMPT=false
 FORCE_PYTHON=false
 SKIP_SPECIFY=false
@@ -312,10 +300,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-save-session)
             SAVE_SESSION=false
-            shift
-            ;;
-        --resume)
-            RESUME_SESSION=true
             shift
             ;;
         --skip-specify)
@@ -387,8 +371,8 @@ if ! [[ "$MCP_PORT" =~ ^[0-9]+$ ]] || [ "$MCP_PORT" -lt 1024 ] || [ "$MCP_PORT" 
     exit 1
 fi
 
-# Set default prompt if not provided and not in resume mode and not explicitly skipped
-if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ] && [ "$NO_PROMPT" = false ]; then
+# Set default prompt if not provided and not explicitly skipped
+if [ -z "$INITIAL_PROMPT" ] && [ "$NO_PROMPT" = false ]; then
     INITIAL_PROMPT="Please read this project first, then read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
 fi
 
@@ -421,9 +405,6 @@ if [ -n "$DEVICE_NAME" ]; then
 fi
 if [ "$SAVE_SESSION" = true ]; then
     echo "Session saving: ENABLED"
-fi
-if [ "$RESUME_SESSION" = true ]; then
-    echo "Resume mode: ENABLED"
 fi
 if [ "$SKIP_SPECIFY" = true ]; then
     echo "Skip Specify: ENABLED (will skip PHASE 1)"
@@ -497,36 +478,17 @@ else
 fi
 echo ""
 
-# Initialize OpenSpec project or enter existing project
-if [ "$RESUME_SESSION" = true ]; then
-    # Resume mode - check if project directory exists
-    if [ ! -d "$PROJECT_NAME" ]; then
-        echo -e "${RED}Error: Project directory '$PROJECT_NAME' not found for resume${NC}"
-        echo "Cannot resume without existing project directory"
-        exit 1
+# Initialize OpenSpec project
+# Remove existing project directory if it exists (unless skipping specify)
+if [ -d "$PROJECT_NAME" ]; then
+    if [ "$SKIP_SPECIFY" = true ]; then
+        echo -e "${BLUE}Keeping existing project directory: $PROJECT_NAME (--skip-specify enabled)${NC}"
+    else
+        echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
+        rm -rf "$PROJECT_NAME"
     fi
-    echo -e "${BLUE}Resume mode: Using existing project directory: $PROJECT_NAME${NC}"
-    
-    # Check if session file exists
-    if [ ! -f "$PROJECT_NAME/adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
-        echo -e "${RED}Error: Session file not found: $PROJECT_NAME/adk_openspec_agent/${PROJECT_NAME}_openspec.session.json${NC}"
-        echo "Cannot resume without existing session file"
-        exit 1
-    fi
-    echo -e "${GREEN}Found existing session file${NC}"
-else
-    # Normal mode - initialize new project
-    # Remove existing project directory if it exists (unless skipping specify)
-    if [ -d "$PROJECT_NAME" ]; then
-        if [ "$SKIP_SPECIFY" = true ]; then
-            echo -e "${BLUE}Keeping existing project directory: $PROJECT_NAME (--skip-specify enabled)${NC}"
-        else
-            echo -e "${YELLOW}Removing existing project directory: $PROJECT_NAME${NC}"
-            rm -rf "$PROJECT_NAME"
-        fi
-    fi
-
-    # Check if hardware development is detected (need spec-kit initialization)
+fi
+# Check if hardware development is detected (need spec-kit initialization)
     if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
         # Skip initialization if directory exists and we're skipping specify
         if [ -d "$PROJECT_NAME" ] && [ "$SKIP_SPECIFY" = true ]; then
@@ -573,7 +535,6 @@ else
 
         echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
     fi
-fi
 
 echo ""
 echo "Entering project directory: $PROJECT_NAME"
@@ -905,15 +866,10 @@ else
         echo "Session will be saved as: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
     fi
 
-    if [ "$RESUME_SESSION" = true ]; then
-        ADK_CMD="$ADK_CMD --resume adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
-        echo "Resuming from: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
-    fi
-
     echo ""
 
     # Run ADK with openspec integration
-    if [ -n "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ]; then
+    if [ -n "$INITIAL_PROMPT" ]; then
         echo "Starting with initial prompt..."
         echo "$INITIAL_PROMPT" | $ADK_CMD
     else
@@ -937,11 +893,4 @@ if [ "$SKIP_OPENSPEC" = false ] && [ "$SAVE_SESSION" = true ] && [ -f "adk_opens
             echo -e "${YELLOW}Failed to generate human-readable session dump${NC}"
         fi
     fi
-    
-    echo ""
-    echo "To resume this session later:"
-    echo "  ./run_openspec.sh $PROJECT_NAME --resume"
-    echo ""
-    echo "To resume with a different model:"
-    echo "  ./run_openspec.sh $PROJECT_NAME --resume --model $MODEL"
 fi
