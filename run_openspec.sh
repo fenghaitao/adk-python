@@ -18,6 +18,7 @@
 #   --no-save-session   Disable session saving
 #   --resume            Resume from existing session file
 #   --skip-specify      Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
+#   --skip-simics-setup Skip the Simics setup phase (PHASE 2) - useful when simics-project already exists
 #   --skip-openspec     Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
 #   --help, -h          Show help message
 #
@@ -90,9 +91,11 @@ OPTIONS:
     --no-save-session Disable session saving (sessions are saved by default)
     --resume          Resume from existing session file
                       Requires PROJECT_NAME_openspec.session.json to exist
-    --skip-specify    Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
-                      Saves ~5 minutes when you already have the XML file
-    --skip-openspec   Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
+    --skip-specify      Skip the Specify agent phase (PHASE 1) - useful when IP-XACT XML already exists
+                        Saves ~5 minutes when you already have the XML file
+    --skip-simics-setup Skip the Simics setup phase (PHASE 2) - useful when simics-project already exists
+                        Saves time when you already have the Simics project structure
+    --skip-openspec     Skip the OpenSpec agent phase (PHASE 3) - only run Specify and Simics setup
                       Useful for automated workflows that only need project setup
     --interactive     Skip default prompt and start in pure interactive mode
     --force-python    Force use of Python port instead of TypeScript CLI
@@ -121,6 +124,9 @@ EXAMPLES:
 
     # Skip Specify phase when you already have IP-XACT XML (saves ~5 minutes)
     ./run_openspec.sh myproject --ipxact_xml wdt.xml --spec wdt.md --device wdt --skip-specify
+
+    # Skip Simics setup phase when simics-project already exists
+    ./run_openspec.sh myproject --ipxact_xml wdt.xml --spec wdt.md --device wdt --skip-simics-setup
 
     # Only run Specify and Simics setup, skip interactive OpenSpec agent
     ./run_openspec.sh myproject --spec wdt.md --device wdt --skip-openspec
@@ -249,6 +255,7 @@ RESUME_SESSION=false
 NO_PROMPT=false
 FORCE_PYTHON=false
 SKIP_SPECIFY=false
+SKIP_SIMICS_SETUP=false
 SKIP_OPENSPEC=false
 
 # Process all arguments
@@ -313,6 +320,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-specify)
             SKIP_SPECIFY=true
+            shift
+            ;;
+        --skip-simics-setup)
+            SKIP_SIMICS_SETUP=true
             shift
             ;;
         --skip-openspec)
@@ -416,6 +427,9 @@ if [ "$RESUME_SESSION" = true ]; then
 fi
 if [ "$SKIP_SPECIFY" = true ]; then
     echo "Skip Specify: ENABLED (will skip PHASE 1)"
+fi
+if [ "$SKIP_SIMICS_SETUP" = true ]; then
+    echo "Skip Simics Setup: ENABLED (will skip PHASE 2)"
 fi
 if [ "$SKIP_OPENSPEC" = true ]; then
     echo "Skip OpenSpec: ENABLED (will skip PHASE 3)"
@@ -537,9 +551,20 @@ else
             
             echo -e "${GREEN}Spec-Kit project initialized successfully${NC}"
         fi
-    else
+    fi
+    
+    # Always initialize OpenSpec project (unless directory exists and we're skipping specify)
+    if [ ! -d "$PROJECT_NAME" ] || [ "$SKIP_SPECIFY" = false ]; then
         echo -e "${BLUE}Initializing OpenSpec project...${NC}"
-        $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
+        
+        # Use current directory if project was already initialized by specify, otherwise create new project
+        if [ -d "$PROJECT_NAME" ]; then
+            cd "$PROJECT_NAME"
+            $OPENSPEC_CMD init . --tools none
+            cd ..
+        else
+            $OPENSPEC_CMD init "$PROJECT_NAME" --tools none
+        fi
 
         if [ $? -ne 0 ]; then
             echo -e "${RED}Failed to initialize OpenSpec project${NC}"
@@ -736,7 +761,7 @@ from agent import root_agent
 EOF
 
 # Run Simics setup agent second if hardware development is detected
-if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
+if [ "$SKIP_SIMICS_SETUP" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
     if [ -d "$SIMICS_AGENT_DIR" ]; then
         echo ""
         echo -e "${BLUE}==========================================="
@@ -830,7 +855,21 @@ EOF
         
         echo ""
     fi
-elif [ "$SKIP_SPECIFY" = true ]; then
+elif [ "$SKIP_SIMICS_SETUP" = true ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
+    echo ""
+    echo -e "${YELLOW}==========================================="
+    echo "PHASE 2: SIMICS SETUP - SKIPPED"
+    echo "===========================================${NC}"
+    echo "Skipping Simics setup phase as requested (--skip-simics-setup)"
+    if [ -d "simics-project" ]; then
+        echo "Using existing simics-project/ directory"
+    else
+        echo "⚠️  Warning: simics-project/ directory does not exist"
+    fi
+    echo ""
+fi
+
+if [ "$SKIP_SPECIFY" = true ]; then
     echo ""
     echo -e "${YELLOW}==========================================="
     echo "PHASE 1: SPECIFY - SKIPPED"
