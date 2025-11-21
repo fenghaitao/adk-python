@@ -61,6 +61,8 @@ DESCRIPTION:
 POSITIONAL ARGUMENTS:
     PROJECT_NAME      Name of the project (default: 'adk_openspec_project')
     INITIAL_PROMPT    Initial prompt for the agent (optional)
+                      Can be a text string or a file path (e.g., openspec-prompts/1.md)
+                      If the value is a readable file, its contents will be used as the prompt
                       Default: "Please read this project first, then read openspec/project.md
                       and help me fill it out with details about my project, tech stack,
                       and conventions"
@@ -110,6 +112,12 @@ EXAMPLES:
 
     # Create project with custom prompt
     ./run_openspec.sh myapi "Create a user authentication feature"
+
+    # Use prompt from file
+    ./run_openspec.sh myapi openspec-prompts/1.md
+
+    # Run OpenSpec agent only with prompt from file (skip other phases)
+    ./run_openspec.sh myproject openspec-prompts/1.md --skip-specify --skip-simics-setup
 
     # Hardware development with spec file (generates IP-XACT XML automatically)
     ./run_openspec.sh myproject --spec $SIMICS_SPEC_TEMPLATE_NAME --device wdt
@@ -374,6 +382,17 @@ fi
 # Set default prompt if not provided and not explicitly skipped
 if [ -z "$INITIAL_PROMPT" ] && [ "$NO_PROMPT" = false ]; then
     INITIAL_PROMPT="Please read this project first, then read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
+fi
+
+# If INITIAL_PROMPT is a file path, read its contents
+if [ -n "$INITIAL_PROMPT" ] && [ -f "$INITIAL_PROMPT" ]; then
+    echo -e "${BLUE}Reading prompt from file: $INITIAL_PROMPT${NC}"
+    INITIAL_PROMPT=$(cat "$INITIAL_PROMPT")
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to read prompt file${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Prompt loaded from file successfully${NC}"
 fi
 
 # Export model and port as environment variables
