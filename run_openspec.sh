@@ -628,8 +628,19 @@ if [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; then
     fi
 fi
 
+# Show message if interactive mode is skipping all phases
+if [ "$NO_PROMPT" = true ]; then
+    echo ""
+    echo -e "${BLUE}==========================================="
+    echo "INTERACTIVE MODE - Skipping all phases"
+    echo "===========================================${NC}"
+    echo "All automated phases (Specify, Simics Setup, OpenSpec init) will be skipped."
+    echo "Going directly to interactive agent session..."
+    echo ""
+fi
+
 # Run Specify agent first if hardware development is detected (generates wdt.xml)
-if [ "$SKIP_SPECIFY" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
+if [ "$NO_PROMPT" = false ] && [ "$SKIP_SPECIFY" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
     echo ""
     echo -e "${BLUE}==========================================="
     echo "PHASE 1: SPECIFY - Creating specification"
@@ -735,7 +746,7 @@ from agent import root_agent
 EOF
 
 # Run Simics setup agent second if hardware development is detected
-if [ "$SKIP_SIMICS_SETUP" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
+if [ "$NO_PROMPT" = false ] && [ "$SKIP_SIMICS_SETUP" = false ] && { [ -n "$IPXACT_XML" ] || [ -n "$SPEC_FILE" ] || [ -n "$DEVICE_NAME" ]; }; then
     if [ -d "$SIMICS_AGENT_DIR" ]; then
         echo ""
         echo -e "${BLUE}==========================================="
