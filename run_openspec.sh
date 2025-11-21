@@ -761,14 +761,11 @@ cat > "adk_openspec_agent/agent.py" << EOF
 import sys
 import os
 
-# Add OpenSpec integration directory to path (must be first for relative imports to work)
-sys.path.insert(0, '$OPENSPEC_INTEGRATION_DIR')
-
-# Add samples directory to path for spec_kit_integration imports
+# Add samples directory to path first for package imports
 sys.path.insert(0, '$SAMPLES_DIR')
 
-# Import the OpenSpec agent directly
-from agent import root_agent
+# Import the OpenSpec agent as a package module (enables relative imports)
+from openspec_integration.agent import root_agent
 EOF
 
 # Run Simics setup agent second if hardware development is detected
