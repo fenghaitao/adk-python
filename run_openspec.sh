@@ -364,12 +364,12 @@ if [ -z "$INITIAL_PROMPT" ] && [ "$RESUME_SESSION" = false ] && [ "$NO_PROMPT" =
         INITIAL_PROMPT="${INITIAL_PROMPT}
 
 After completing project.md, we have a Simics hardware development project with these artifacts:
-- Device specification: .specify/specs/001-${DEVICE_NAME}/spec.md
+- Device specification: specs/001-${DEVICE_NAME}/spec.md
 - IP-XACT register description: ${DEVICE_NAME}.xml  
 - Simics project: simics-project/ with DML device skeleton for ${DEVICE_NAME}
 
 Next steps after project.md:
-1. Read .specify/specs/001-${DEVICE_NAME}/spec.md to understand requirements
+1. Read specs/001-${DEVICE_NAME}/spec.md to understand requirements
 2. Read ${DEVICE_NAME}.xml to understand the register map
 3. Implement DML device using Simics MCP tools (check_with_dmlc, build_simics_project, run_simics_test)
 4. Implement register behaviors based on spec
