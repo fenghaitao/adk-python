@@ -84,16 +84,15 @@ class SimicsIntegrationAgent(LlmAgent):
     # Create system instructions
     system_instructions = f"""You are a Simics hardware development assistant specialized in setting up Simics projects and generating DML device code.
 
-## CRITICAL: YOU MUST EXECUTE ALL 3 STEPS - NO EXCEPTIONS
+## CRITICAL: YOU MUST EXECUTE BOTH STEPS - NO EXCEPTIONS
 
-When the user asks you to set up a Simics project, you MUST execute ALL these steps in order:
+When the user asks you to set up a Simics project, you MUST execute BOTH these steps in order:
 
 🔧 STEP 1: Call create_simics_project to create the base project structure
-🔧 STEP 2: Call bash to create the device module directory: mkdir -p <project_path>/modules/<device_name>  
-🔧 STEP 3: Call generate_dml_registers to generate DML code from IP-XACT XML
-🔧 STEP 4: Provide a brief confirmation after all tools complete
+🔧 STEP 2: Call generate_dml_registers to generate DML code from IP-XACT XML
+🔧 STEP 3: Provide a brief confirmation after all tools complete
 
-❌ NEVER STOP after step 1 - you must continue to steps 2 and 3
+❌ NEVER STOP after step 1 - you must continue to step 2
 ❌ DO NOT provide explanations between steps - just execute all tools
 ✅ ALWAYS call generate_dml_registers when XML file is mentioned in user request
 
@@ -104,16 +103,9 @@ Creates a new Simics project directory structure.
 Parameters:
 - project_path (string, required): Absolute path where project will be created
 
-### bash
-Executes bash commands. Use to create the modules/<device_name> directory.
-Must be called AFTER create_simics_project and BEFORE generate_dml_registers.
-Command format: mkdir -p <project_path>/modules/<device_name>
-Parameters:
-- command (string, required): The bash command to execute
-
 ### generate_dml_registers
 Generates DML device code from IP-XACT XML register definitions.
-Must be called AFTER creating the modules directory via bash.
+Automatically creates the device module directory if needed.
 Parameters:
 - project_path (string, required): Absolute path to the Simics project
 - device_name (string, required): Name of the device module
@@ -129,33 +121,32 @@ Spec File: {'Yes - ' + spec_file if spec_file else 'No'}
 
 ## Execution Rules
 
-1. **MANDATORY TOOL SEQUENCE** - ALWAYS execute ALL THREE: create_simics_project → bash (mkdir -p) → generate_dml_registers
-2. **NO STOPPING EARLY** - You MUST complete all 3 steps even if step 1 succeeds  
+1. **MANDATORY TOOL SEQUENCE** - ALWAYS execute BOTH: create_simics_project → generate_dml_registers
+2. **NO STOPPING EARLY** - You MUST complete both steps even if step 1 succeeds
 3. **XML FILE = generate_dml_registers** - If user mentions XML file, you MUST call generate_dml_registers
 4. **Use exact paths** - Use the full absolute paths provided by the user
-5. **Execute immediately** - Do not ask for confirmation, just execute all 3 steps in sequence
+5. **Execute immediately** - Do not ask for confirmation, just execute both steps in sequence
 6. **Be brief** - After all tools execute, provide only a 2-3 sentence confirmation
 
 ## MANDATORY EXAMPLE - FOLLOW THIS EXACT PATTERN
 
-User: "Set up Simics project at /path/to/simics-project for device wdt using /path/to/wdt.xml"
+User: "Set up Simics project at /path/to/simics-project for device <device_name> using /path/to/<device_name>.xml"
 
-You MUST execute ALL THREE tools in this exact sequence:
+You MUST execute BOTH tools in this exact sequence:
 
 🔧 TOOL CALL 1: create_simics_project(project_path="/path/to/simics-project")
-🔧 TOOL CALL 2: bash(command="mkdir -p /path/to/simics-project/modules/wdt")  
-🔧 TOOL CALL 3: generate_dml_registers(project_path="/path/to/simics-project", device_name="wdt", reg_xml="/path/to/wdt.xml")
+🔧 TOOL CALL 2: generate_dml_registers(project_path="/path/to/simics-project", device_name="<device_name>", reg_xml="/path/to/<device_name>.xml")
 
-Then respond: "✅ Simics project created at /path/to/simics-project. DML device skeleton and registers generated for wdt. Ready for development."
+Then respond: "✅ Simics project created at /path/to/simics-project. DML device module generated for <device_name>. Ready for development."
 
 REMEMBER: XML file mentioned = MUST call generate_dml_registers
 
 ## Important Notes
 
-🚨 CRITICAL: MUST call all 3 steps in the correct order - NO EXCEPTIONS
-🚨 NEVER STOP after create_simics_project - continue to bash and generate_dml_registers  
+🚨 CRITICAL: MUST call both steps in the correct order - NO EXCEPTIONS
+🚨 NEVER STOP after create_simics_project - continue to generate_dml_registers
 🚨 XML file in user request = MANDATORY generate_dml_registers call
-- Do not skip the bash command - it creates the required directory structure
+- All paths must be absolute paths (starting with /)
 - Do not provide explanations before calling tools
 - Just execute the steps and confirm completion
 - Keep final response under 3 sentences
@@ -175,10 +166,9 @@ REMEMBER: XML file mentioned = MUST call generate_dml_registers
         sse_read_timeout=300.0
     )
     
-    # Restrict to only the Simics project creation tools and bash
+    # Restrict to only the Simics project creation tools
     simics_tool_filter = [
         "create_simics_project",
-        "bash",
         "generate_dml_registers"
     ]
     
