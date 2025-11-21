@@ -387,12 +387,15 @@ fi
 # If INITIAL_PROMPT is a file path, read its contents
 if [ -n "$INITIAL_PROMPT" ] && [ -f "$INITIAL_PROMPT" ]; then
     echo -e "${BLUE}Reading prompt from file: $INITIAL_PROMPT${NC}"
-    INITIAL_PROMPT=$(cat "$INITIAL_PROMPT")
+    # Use quotes to preserve newlines and whitespace
+    INITIAL_PROMPT="$(cat "$INITIAL_PROMPT")"
     if [ $? -ne 0 ]; then
         echo -e "${RED}Error: Failed to read prompt file${NC}"
         exit 1
     fi
     echo -e "${GREEN}Prompt loaded from file successfully${NC}"
+    echo -e "${BLUE}Prompt preview (first 200 chars):${NC}"
+    echo "${INITIAL_PROMPT:0:200}..."
 fi
 
 # Export model and port as environment variables
