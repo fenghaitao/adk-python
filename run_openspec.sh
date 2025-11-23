@@ -904,6 +904,7 @@ simics-workspace/
 build/
 dist/
 *.egg-info/
+linux64/
 GITIGNORE_EOF
                     echo -e "${GREEN}✅ .gitignore created${NC}"
                 else
