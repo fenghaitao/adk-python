@@ -900,6 +900,12 @@ node_modules/
 *.simics-checkpoint
 simics-workspace/
 
+# Temporary build and crash traces
+bt/
+
+# Temporary files
+*.tmp
+
 # Build directories
 build/
 dist/
