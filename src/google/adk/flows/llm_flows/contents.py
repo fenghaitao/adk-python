@@ -39,7 +39,7 @@ from .functions import REQUEST_EUC_FUNCTION_CALL_NAME
 _CONTEXT_MAX_TOKENS = 128000  # Maximum tokens before condensation
 _CONTEXT_KEEP_SYSTEM_MESSAGES = 2  # Always preserve first N system messages
 _CONTEXT_KEEP_RECENT_TURNS = 6  # Always preserve last N user-assistant pairs
-_CONTEXT_SUMMARIZATION_MODEL = "gemini-2.0-flash"  # Model for summarization
+_CONTEXT_SUMMARIZATION_MODEL = "github_copilot/gpt-5-mini"  # Model for summarization
 _CONTEXT_ENABLE_CONDENSATION = True  # Enable/disable context condensation
 _CONTEXT_SUMMARY_PROMPT = {"simple": """You are maintaining a context-aware summary for an ongoing conversation.
 Analyze the conversation history and create a comprehensive summary that preserves:
