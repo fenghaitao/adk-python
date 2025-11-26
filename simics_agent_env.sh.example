@@ -1,0 +1,14 @@
+source ./.venv/bin/activate
+
+export LITELLM_BASE_URL="http://model-service.aihub.intel.com"
+export LITELLM_API_KEY=""
+export LITELLM_MODEL="litellm_proxy/Claude Sonnet 4"
+export MCP_PORT=8051
+
+export CONTEXT_ENABLE_CONDENSATION="true"
+export CONTEXT_MAX_TOKENS=90000
+export CONTEXT_KEEP_SYSTEM_MESSAGES=3
+export CONTEXT_KEEP_RECENT_TURNS=3
+export CONTEXT_SUMMARIZATION_MODEL="litellm_proxy/Claude Sonnet 4"
+export CONTEXT_SUMMARY_PROMPT_TYPE="vscode"
+export CONTEXT_DEBUG_SUMMARY="true"

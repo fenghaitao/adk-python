@@ -373,29 +373,37 @@ async def _summarize_events_with_llm(events: List[Event], summarization_model: s
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"CONVERSATION HISTORY:\n{conversation_str}"}
     ]
-
     if summarization_model.startswith("github_copilot/"):
-        response = await acompletion(
-            model=summarization_model,
-            messages=messages,
-            extra_headers={
-                "editor-version": "vscode/1.85.1",
-                "Copilot-Integration-Id": "vscode-chat"
-            }
-          )
+      response = await acompletion(
+        model=summarization_model,
+        messages=messages,
+        extra_headers={
+          "editor-version": "vscode/1.85.1",
+          "Copilot-Integration-Id": "vscode-chat"
+        }
+      )
     elif summarization_model.startswith("iflow/"):
-        summarization_model = summarization_model.replace("iflow/", "dashscope/")
-        response = await acompletion(
-            model=summarization_model,
-            messages=messages,
-            api_base="https://apis.iflow.cn/v1/",
-            api_key=os.getenv("IFLOW_API_KEY")
-          )
+      summarization_model = summarization_model.replace("iflow/", "dashscope/")
+      response = await acompletion(
+        model=summarization_model,
+        messages=messages,
+        api_base="https://apis.iflow.cn/v1/",
+        api_key=os.getenv("IFLOW_API_KEY")
+      )
+    elif summarization_model.startswith("litellm_proxy/"):
+      api_base = os.getenv("LITELLM_BASE_URL")
+      api_key = os.getenv("LITELLM_API_KEY")
+      response = await acompletion(
+        model=summarization_model,
+        messages=messages,
+        api_base=api_base,
+        api_key=api_key
+      )
     else:
-        response = await acompletion(
-            model=summarization_model,
-            messages=messages
-          )
+      response = await acompletion(
+        model=summarization_model,
+        messages=messages
+      )
 
     if response and response.choices and response.choices[0].message.content:
       summary = response.choices[0].message.content.strip()
