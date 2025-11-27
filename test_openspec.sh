@@ -21,11 +21,18 @@ end_time=$(date +%s)
 elapsed=$((end_time - start_time))
 echo "Stage 0 completed in $elapsed seconds" | tee -a "$proj_dir.0.log"
 
-# copy prompt templates to the project folder
-mkdir $proj_dir/openspec-prompts
-cp $ADK_ROOT/openspec-prompts/*.md $proj_dir/openspec-prompts/
-# change all the <device_name> in the prompt templates to match the project folder
-sed -i "s/<device_name>/$device_name/g" $proj_dir/openspec-prompts/*.md
+# enter the simics-project and make the device target to generate the *-glue.dml file
+echo "=== Generating ${device_name}-glue.dml ===" | tee -a "$proj_dir.0.log"
+cd "$proj_dir/simics-project" && gmake "$device_name" 2>&1 | tee -a "$proj_dir.0.log"
+cd - > /dev/null
+
+# Copy prompt templates to the project folder
+echo "=== Preparing prompt templates ===" | tee -a "$proj_dir.0.log"
+mkdir -p "$proj_dir/openspec-prompts"
+cp "$ADK_ROOT/openspec-prompts/"*.md "$proj_dir/openspec-prompts/"
+# Customize prompts: replace <device_name> placeholder with actual device name
+sed -i "s/<device_name>/$device_name/g" "$proj_dir/openspec-prompts/"*.md
+echo "✓ Prompt templates customized for device: $device_name" | tee -a "$proj_dir.0.log"
 
 echo "=== Stage 1: Implementation (Prompt 1) ===" | tee "$proj_dir.1.log"
 start_time=$(date +%s)
