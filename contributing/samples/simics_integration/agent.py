@@ -36,7 +36,7 @@ def get_simics_model():
     Environment Variables:
       SIMICS_MODEL: Override the default model selection
     """
-    return os.environ.get("SIMICS_MODEL", "iflow/qwen3-coder-plus")
+    return os.environ.get("SIMICS_MODEL", "github_copilot/gpt-5-mini")
 
 
 class SimicsIntegrationAgent(LlmAgent):

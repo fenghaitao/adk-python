@@ -34,6 +34,8 @@ cp "$ADK_ROOT/openspec-prompts/"*.md "$proj_dir/openspec-prompts/"
 sed -i "s/<device_name>/$device_name/g" "$proj_dir/openspec-prompts/"*.md
 echo "✓ Prompt templates customized for device: $device_name" | tee -a "$proj_dir.0.log"
 
+# exit
+
 echo "=== Stage 1: Implementation (Prompt 1) ===" | tee "$proj_dir.1.log"
 start_time=$(date +%s)
 "$ADK_ROOT/run_openspec.sh" "$proj_dir" \

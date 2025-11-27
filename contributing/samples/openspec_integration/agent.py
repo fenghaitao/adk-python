@@ -119,7 +119,7 @@ def get_openspec_model():
     Environment Variables:
       OPENSPEC_MODEL: Override the default model selection
     """
-    return os.environ.get("OPENSPEC_MODEL", "iflow/qwen3-coder-plus")
+    return os.environ.get("OPENSPEC_MODEL", "github-copilot/gpt-5-mini")
 
 
 class OpenSpecAgent(LlmAgent):
