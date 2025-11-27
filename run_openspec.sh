@@ -25,6 +25,7 @@
 # Python port for initialization.
 #
 # Session files are saved in: adk_openspec_agent/PROJECT_NAME_openspec.session.json
+# When using prompt file: adk_openspec_agent/PROJECT_NAME_PROMPTNAME_openspec.session.json
 # Human-readable dumps: adk_openspec_agent/PROJECT_NAME_openspec.session.txt
 
 # Get the directory where this script is located
@@ -102,6 +103,8 @@ OUTPUT FILES:
     When --save-session is used:
     - adk_openspec_agent/PROJECT_NAME_openspec.session.json (raw session data)
     - adk_openspec_agent/PROJECT_NAME_openspec.session.txt (human-readable dump)
+    - When using prompt from file: adk_openspec_agent/PROJECT_NAME_PROMPTNAME_openspec.session.json
+      (e.g., myproject_1_openspec.session.json for openspec-prompts/1.md)
 
 EXAMPLES:
     # Basic usage with default project name (uses default prompt)
@@ -385,8 +388,12 @@ if [ -z "$INITIAL_PROMPT" ] && [ "$NO_PROMPT" = false ]; then
 fi
 
 # If INITIAL_PROMPT is a file path, read its contents
+PROMPT_FILE_NAME=""
 if [ -n "$INITIAL_PROMPT" ] && [ -f "$INITIAL_PROMPT" ]; then
+    # Extract the filename from the path
+    PROMPT_FILE_NAME=$(basename "$INITIAL_PROMPT")
     echo -e "${BLUE}Reading prompt from file: $INITIAL_PROMPT${NC}"
+    echo -e "${BLUE}Prompt file name: $PROMPT_FILE_NAME${NC}"
     # Use quotes to preserve newlines and whitespace
     INITIAL_PROMPT="$(cat "$INITIAL_PROMPT")"
     if [ $? -ne 0 ]; then
@@ -998,8 +1005,16 @@ else
     ADK_CMD="$ADK_VENV/bin/adk run adk_openspec_agent"
 
     if [ "$SAVE_SESSION" = true ]; then
-        ADK_CMD="$ADK_CMD --save_session --session_id ${PROJECT_NAME}_openspec"
-        echo "Session will be saved as: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json"
+        # Include prompt filename in session ID if available
+        if [ -n "$PROMPT_FILE_NAME" ]; then
+            # Remove file extension from prompt filename for session ID
+            PROMPT_BASE=$(echo "$PROMPT_FILE_NAME" | sed 's/\.[^.]*$//')
+            SESSION_ID="${PROJECT_NAME}_${PROMPT_BASE}_openspec"
+        else
+            SESSION_ID="${PROJECT_NAME}_openspec"
+        fi
+        ADK_CMD="$ADK_CMD --save_session --session_id $SESSION_ID"
+        echo "Session will be saved as: adk_openspec_agent/${SESSION_ID}.session.json"
     fi
 
     echo ""
@@ -1049,16 +1064,16 @@ else
 fi
 
 # Generate human-readable session dump if session was saved and OpenSpec wasn't skipped
-if [ "$SKIP_OPENSPEC" = false ] && [ "$SAVE_SESSION" = true ] && [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" ]; then
+if [ "$SKIP_OPENSPEC" = false ] && [ "$SAVE_SESSION" = true ] && [ -f "adk_openspec_agent/${SESSION_ID}.session.json" ]; then
     echo ""
-    echo -e "${GREEN}Session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.json${NC}"
+    echo -e "${GREEN}Session saved: adk_openspec_agent/${SESSION_ID}.session.json${NC}"
     
     # Generate human-readable session dump
     if [ -f "$SCRIPT_DIR/view_session.py" ]; then
         echo "📄 Generating human-readable session dump..."
-        python3 "$SCRIPT_DIR/view_session.py" "adk_openspec_agent/${PROJECT_NAME}_openspec.session.json" > "adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt"
-        if [ -f "adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt" ]; then
-            echo -e "${GREEN}Human-readable session saved: adk_openspec_agent/${PROJECT_NAME}_openspec.session.txt${NC}"
+        python3 "$SCRIPT_DIR/view_session.py" "adk_openspec_agent/${SESSION_ID}.session.json" > "adk_openspec_agent/${SESSION_ID}.session.txt"
+        if [ -f "adk_openspec_agent/${SESSION_ID}.session.txt" ]; then
+            echo -e "${GREEN}Human-readable session saved: adk_openspec_agent/${SESSION_ID}.session.txt${NC}"
         else
             echo -e "${YELLOW}Failed to generate human-readable session dump${NC}"
         fi
