@@ -5,6 +5,10 @@ ADK_ROOT="${ADK_ROOT:-$HOME/wp5/ai_agents/adk-openspec}"
 proj_dir=$1
 device_name=wdog
 mcp_server_port=$2
+model="${3:-github_copilot/gpt-5-mini}"
+
+# Set the model for Spec-Kit (Specify agent) to match OpenSpec model
+export SPEC_KIT_MODEL="$model"
 
 if [ -z "$mcp_server_port" ]; then
     mcp_server_port=8051
@@ -13,9 +17,11 @@ fi
 rm -rf "$proj_dir"
 
 echo "=== Stage 0: Initial Setup ===" | tee "$proj_dir.0.log"
+echo "Using model: $model" | tee -a "$proj_dir.0.log"
 start_time=$(date +%s)
 "$ADK_ROOT/run_openspec.sh" "$proj_dir" \
 --device "$device_name" \
+--model "$model" \
 --port "$mcp_server_port" 2>&1 | tee -a "$proj_dir.0.log"
 end_time=$(date +%s)
 elapsed=$((end_time - start_time))
@@ -41,6 +47,7 @@ start_time=$(date +%s)
 "$ADK_ROOT/run_openspec.sh" "$proj_dir" \
 "$proj_dir/openspec-prompts/1.md" \
 --device "$device_name" \
+--model "$model" \
 --skip-specify \
 --skip-simics-setup \
 --port "$mcp_server_port" 2>&1 | tee -a "$proj_dir.1.log"
@@ -55,6 +62,7 @@ start_time=$(date +%s)
 "$ADK_ROOT/run_openspec.sh" "$proj_dir" \
 "$proj_dir/openspec-prompts/2.md" \
 --device "$device_name" \
+--model "$model" \
 --skip-specify \
 --skip-simics-setup \
 --port "$mcp_server_port" 2>&1 | tee -a "$proj_dir.2.log"
@@ -69,6 +77,7 @@ start_time=$(date +%s)
 "$ADK_ROOT/run_openspec.sh" "$proj_dir" \
 "$proj_dir/openspec-prompts/3.md" \
 --device "$device_name" \
+--model "$model" \
 --skip-specify \
 --skip-simics-setup \
 --port "$mcp_server_port" 2>&1 | tee -a "$proj_dir.3.log"

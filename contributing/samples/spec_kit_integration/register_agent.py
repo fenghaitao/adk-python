@@ -36,7 +36,7 @@ except ImportError:
 
 def get_spec_kit_model():
     """Get Spec-Kit model from environment or use default."""
-    return os.environ.get("SPEC_KIT_MODEL", "iflow/Qwen3-Coder")
+    return os.environ.get("SPEC_KIT_MODEL", "github_copilot/gpt-5-mini")
 
 
 class RegisterAgent(LlmAgent):
