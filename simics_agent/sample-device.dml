@@ -194,13 +194,13 @@ event timer_event is (simple_cycle_event) {
 method init() {
     // YOU SHOULD ONLY SET THE RESET STATE OF REGISTERS HERE !!
     // setting initial / reset state of the device, like register's initial / reset values
-
+    freq_mhz.val = 125; // setting attribute value
     // Assigning register's value
     regs.counter.val = 0x0;
     regs.r.field1.val = 0x1;
 }
 
 method post_init() {
-    // config the attribute value
-    freq_mhz.val = 125;
+    // called when the device is created, after any attributes have been initialized.
+    // Usually establish connections to other devices, or to set up data structures that depend on configured attribute values.
 }
