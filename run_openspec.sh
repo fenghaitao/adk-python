@@ -343,7 +343,7 @@ done
 
 # Set defaults
 PROJECT_NAME="${PROJECT_NAME:-adk_openspec_project}"
-MODEL="${MODEL:-iflow/qwen3-coder-plus}"
+MODEL="${MODEL:-github_copilot/gpt-5-mini}"
 MCP_PORT="${MCP_PORT:-8051}"
 
 # Set default values for IP-XACT XML, spec file, and device name (relative to script location)
