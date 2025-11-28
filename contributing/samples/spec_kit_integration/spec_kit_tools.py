@@ -277,6 +277,122 @@ class SpecKitWriteTool(BaseTool):
             return {"error": f"Error writing file: {str(e)}"}
 
 
+class SpecKitFileReplaceTool(BaseTool):
+    """Tool for replacing exact strings in files with context validation."""
+
+    def __init__(self):
+        super().__init__(
+            name="replace_string_in_file",
+            description="Replace an exact string in a file with a new string. Use this for precise edits like marking tasks complete or updating specific text. Requires exact match with context.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        try:
+            from google.genai import types
+            return types.FunctionDeclaration(
+                name="replace_string_in_file",
+                description="Replace an exact string in a file with a new string. Use this for precise edits like marking tasks complete or updating specific text. Requires exact match with context.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "file_path": types.Schema(
+                            type=types.Type.STRING,
+                            description="Absolute path to the file to edit"
+                        ),
+                        "old_string": types.Schema(
+                            type=types.Type.STRING,
+                            description="Exact string to find and replace. Include 3-5 lines of context before/after to make match unique."
+                        ),
+                        "new_string": types.Schema(
+                            type=types.Type.STRING,
+                            description="String to replace old_string with"
+                        ),
+                        "expected_replacements": types.Schema(
+                            type=types.Type.INTEGER,
+                            description="Number of expected replacements (default: 1). Tool will error if actual count differs."
+                        )
+                    },
+                    required=["file_path", "old_string", "new_string"]
+                )
+            )
+        except ImportError:
+            return None
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        file_path = args.get("file_path")
+        old_string = args.get("old_string")
+        new_string = args.get("new_string")
+        expected_replacements = args.get("expected_replacements", 1)
+
+        if not file_path or old_string is None or new_string is None:
+            return {"error": "file_path, old_string, and new_string are required"}
+
+        # Validate file exists
+        file_path_obj = Path(file_path)
+        if not file_path_obj.exists():
+            return {"error": f"File not found: {file_path}"}
+
+        if not file_path_obj.is_file():
+            return {"error": f"Path is not a file: {file_path}"}
+
+        # Read file content
+        try:
+            with open(file_path_obj, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            return {"error": f"File is not a valid UTF-8 text file: {file_path}"}
+        except Exception as e:
+            return {"error": f"Error reading file: {str(e)}"}
+
+        # Check if old_string exists
+        if old_string not in content:
+            return {
+                "error": f"String not found in file.\nLooking for: {repr(old_string[:200])}\nFile: {file_path}"
+            }
+
+        # Count occurrences
+        occurrences = content.count(old_string)
+
+        # Validate expected replacements
+        if expected_replacements == 1 and occurrences > 1:
+            return {
+                "error": f"Found {occurrences} occurrences of the string, but expected only 1.\n"
+                        f"String: {repr(old_string[:200])}\n"
+                        f"File: {file_path}\n"
+                        f"Tip: Include more context (3-5 lines before/after) to make the match unique."
+            }
+
+        if expected_replacements > 0 and occurrences != expected_replacements:
+            return {
+                "error": f"Found {occurrences} occurrences, but expected {expected_replacements}.\n"
+                        f"String: {repr(old_string[:200])}\n"
+                        f"File: {file_path}"
+            }
+
+        # Perform replacement
+        new_content = content.replace(old_string, new_string, expected_replacements)
+
+        # Write back to file
+        try:
+            with open(file_path_obj, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+        except Exception as e:
+            return {"error": f"Error writing file: {str(e)}"}
+
+        # Success response
+        return {
+            "success": True,
+            "file_path": file_path,
+            "replacements": occurrences,
+            "old_string_preview": old_string[:100] + ('...' if len(old_string) > 100 else ''),
+            "new_string_preview": new_string[:100] + ('...' if len(new_string) > 100 else ''),
+            "message": f"Successfully replaced {occurrences} occurrence(s) in {file_path}"
+        }
+
+
 class SpecKitBashTool(BaseTool):
     """Tool for executing bash commands in Spec-Kit workflows."""
 
@@ -365,6 +481,7 @@ class SpecKitToolset(BaseToolset):
         self.tools = [
             SpecKitReadTool(),
             SpecKitWriteTool(),
+            SpecKitFileReplaceTool(),
             SpecKitBashTool()
         ]
 
@@ -375,7 +492,7 @@ class SpecKitToolset(BaseToolset):
 
 def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
     """Create a MCP toolset that connects to the simics-mcp-server with content truncation.
-    
+
     Args:
         port: MCP server port. If not provided, reads from MCP_PORT environment variable
               or defaults to 8051.
@@ -383,7 +500,7 @@ def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
     # Get port from parameter, environment variable, or default
     if port is None:
         port = int(os.environ.get('MCP_PORT', '8051'))
-    
+
     print(f"Creating Simics MCP toolset connecting to port {port}...")
     connection_params = SseConnectionParams(
         url=f"http://127.0.0.1:{port}/sse",
