@@ -41,6 +41,9 @@ _CONTEXT_KEEP_SYSTEM_MESSAGES = 2  # Always preserve first N system messages
 _CONTEXT_KEEP_RECENT_TURNS = 6  # Always preserve last N user-assistant pairs
 _CONTEXT_SUMMARIZATION_MODEL = "github_copilot/gpt-5-mini"  # Model for summarization
 _CONTEXT_ENABLE_CONDENSATION = True  # Enable/disable context condensation
+_CONTEXT_HARD_LIMIT_TOKENS = 120000  # Hard limit - must fit after condensation (leave 8K for response)
+_CONTEXT_MAX_RECENT_EVENTS = 50  # Maximum number of recent events to keep after last function call
+_CONTEXT_MAX_TOOL_OUTPUT_TOKENS = 2000  # Maximum tokens per tool output (truncate larger ones)
 _CONTEXT_SUMMARY_PROMPT = {"simple": """You are maintaining a context-aware summary for an ongoing conversation.
 Analyze the conversation history and create a comprehensive summary that preserves:
 
@@ -264,20 +267,61 @@ def _identify_conversation_turns(events: List[Event]) -> Dict[str, List[int]]:
   }
 
 
-def _extract_text_from_content(content: Any) -> str:
+def _truncate_tool_output(text: str, max_tokens: int = _CONTEXT_MAX_TOOL_OUTPUT_TOKENS) -> str:
+  """Truncate long tool outputs while preserving key information.
+  
+  Strategy: Keep first and last portions, insert truncation marker in middle.
+  This preserves error messages (often at end) and context (at beginning).
+  """
+  try:
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = encoding.encode(text)
+    
+    if len(tokens) <= max_tokens:
+      return text
+    
+    # Keep first 60% and last 40% of allowed tokens
+    first_tokens = int(max_tokens * 0.6)
+    last_tokens = int(max_tokens * 0.4)
+    
+    first_text = encoding.decode(tokens[:first_tokens])
+    last_text = encoding.decode(tokens[-last_tokens:])
+    
+    truncated_count = len(tokens) - max_tokens
+    return f"{first_text}\n\n[... {truncated_count} tokens truncated ...]\n\n{last_text}"
+  except:
+    # Fallback: simple character-based truncation
+    if len(text) <= max_tokens * 4:  # ~4 chars per token
+      return text
+    
+    max_chars = max_tokens * 4
+    first_chars = int(max_chars * 0.6)
+    last_chars = int(max_chars * 0.4)
+    
+    return f"{text[:first_chars]}\n\n[... content truncated ...]\n\n{text[-last_chars:]}"
+
+
+def _extract_text_from_content(content: Any, truncate_tools: bool = False) -> str:
   """Extract text from content object, including function calls and responses.
 
   This function extracts all meaningful text content including:
   - Regular text parts
   - Function call information (name and arguments)
   - Function response information (name and results)
+  
+  Args:
+    content: Content object to extract text from
+    truncate_tools: If True, truncate large tool outputs to avoid context overflow
   """
   if hasattr(content, 'parts') and content.parts:
     texts = []
     for part in content.parts:
       # Extract regular text
       if hasattr(part, 'text') and part.text:
-        texts.append(part.text)
+        text = part.text
+        if truncate_tools:
+          text = _truncate_tool_output(text)
+        texts.append(text)
 
       # Extract function call information
       if hasattr(part, 'function_call') and part.function_call:
@@ -302,20 +346,29 @@ def _extract_text_from_content(content: Any) -> str:
           try:
             result_str = json.dumps(func_result, indent=0)
             # Limit length to avoid overwhelming the summary
-            if len(result_str) > 200:
+            if truncate_tools:
+              result_str = _truncate_tool_output(result_str)
+            elif len(result_str) > 200:
               result_str = result_str[:200] + "..."
             texts.append(f"[Function Response: {func_name} returned {result_str}]")
           except:
-            result_preview = str(func_result)[:200]
-            if len(str(func_result)) > 200:
-              result_preview += "..."
+            result_preview = str(func_result)
+            if truncate_tools:
+              result_preview = _truncate_tool_output(result_preview)
+            else:
+              result_preview = result_preview[:200]
+              if len(str(func_result)) > 200:
+                result_preview += "..."
             texts.append(f"[Function Response: {func_name} returned {result_preview}]")
         else:
           texts.append(f"[Function Response: {func_name}]")
 
     return ' '.join(texts)
   elif hasattr(content, 'text') and content.text:
-    return content.text
+    text = content.text
+    if truncate_tools:
+      text = _truncate_tool_output(text)
+    return text
   return str(content)
 
 
@@ -347,7 +400,7 @@ async def _summarize_events_with_llm(events: List[Event], summarization_model: s
 
   Args:
     events: List of events to summarize
-    summarization_model: Model to use for summarization (e.g., "gemini-2.0-flash", "gpt-4", etc.)
+    summarization_model: Model to use for summarization (default: "github_copilot/gpt-5-mini")
 
   Returns:
     Summary text generated by the LLM, or fallback summary if LLM fails
@@ -451,24 +504,28 @@ async def _condense_session_context(
     invocation_id: str = "context_manager"
 ) -> List[Event]:
   """
-  Condense session context by summarizing events up to the last function call.
+  Condense session context with guaranteed token limit enforcement.
 
-  Strategy: Find the last function call in the event history, summarize everything
-  before it, and keep everything from the function call onwards (including the
-  function call, its response, and subsequent conversation).
+  Multi-pass strategy:
+  1. Truncate large tool outputs in recent events
+  2. Summarize old events before last function call
+  3. Keep limited recent events with truncated outputs
+  4. If still over limit, recursively condense more aggressively
 
   Args:
     events: List of session events to potentially condense
     invocation_id: ID for the condensation operation
 
   Returns:
-    Condensed list of events with summary injected
+    Condensed list of events guaranteed to be under hard limit
   """
   # Check environment variables with fallback to global defaults
   enable_condensation = os.environ.get('CONTEXT_ENABLE_CONDENSATION', str(_CONTEXT_ENABLE_CONDENSATION)).lower() in ('true', '1', 'yes')
   max_tokens = int(os.environ.get('CONTEXT_MAX_TOKENS', _CONTEXT_MAX_TOKENS))
+  hard_limit = int(os.environ.get('CONTEXT_HARD_LIMIT_TOKENS', _CONTEXT_HARD_LIMIT_TOKENS))
   keep_system_messages = int(os.environ.get('CONTEXT_KEEP_SYSTEM_MESSAGES', _CONTEXT_KEEP_SYSTEM_MESSAGES))
   keep_recent_turns = int(os.environ.get('CONTEXT_KEEP_RECENT_TURNS', _CONTEXT_KEEP_RECENT_TURNS))
+  max_recent_events = int(os.environ.get('CONTEXT_MAX_RECENT_EVENTS', _CONTEXT_MAX_RECENT_EVENTS))
   summarization_model = os.environ.get('CONTEXT_SUMMARIZATION_MODEL', _CONTEXT_SUMMARIZATION_MODEL)
 
   if not enable_condensation:
@@ -484,114 +541,154 @@ async def _condense_session_context(
   if current_tokens <= max_tokens:
     return events
 
-  print(f"🔄 Context condensation triggered. Current tokens: {current_tokens}, Max: {max_tokens}")
+  print(f"🔄 Context condensation triggered. Current tokens: {current_tokens}, Max: {max_tokens}, Hard limit: {hard_limit}")
 
-  # Find the last function call index
+  # STEP 1: Truncate large tool outputs in recent events to reduce immediate bloat
+  # This is critical for autonomous agents with massive test logs
+  truncated_events = []
+  for event in events:
+    if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
+      # Create new truncated parts
+      new_parts = []
+      for part in event.content.parts:
+        if hasattr(part, 'function_response') and part.function_response:
+          # Truncate function response content
+          func_resp = part.function_response
+          if hasattr(func_resp, 'response') and func_resp.response:
+            try:
+              result_str = json.dumps(func_resp.response, indent=0)
+              if len(result_str) > _CONTEXT_MAX_TOOL_OUTPUT_TOKENS * 4:  # ~4 chars per token
+                # Truncate the response
+                truncated_result = _truncate_tool_output(result_str, _CONTEXT_MAX_TOOL_OUTPUT_TOKENS)
+                # Create new part with truncated response
+                new_response = {"output": truncated_result}
+                new_part = types.Part.from_function_response(
+                    name=func_resp.name,
+                    response=new_response
+                )
+                new_parts.append(new_part)
+                continue
+            except:
+              pass
+        new_parts.append(part)
+      
+      # Create new content with truncated parts if changes were made
+      if len(new_parts) != len(event.content.parts) or any(
+          new_parts[i] != event.content.parts[i] for i in range(len(new_parts))):
+        new_content = types.Content(
+            role=event.content.role,
+            parts=new_parts
+        )
+        truncated_events.append(Event(
+            invocation_id=event.invocation_id,
+            author=event.author,
+            content=new_content
+        ))
+      else:
+        truncated_events.append(event)
+    else:
+      truncated_events.append(event)
+  
+  # Work with truncated events from now on
+  events = truncated_events
+  
+  # STEP 2: Find the last function call index
   last_func_call_idx = _find_last_function_call_index(events)
-
+  
+  # STEP 3: Determine what to keep and what to summarize
+  indices = _identify_conversation_turns(events)
+  system_to_keep = indices['system'][:keep_system_messages]
+  
   if last_func_call_idx <= 0:
-    # No function calls found or function call is at the beginning
-    # Fall back to keeping recent turns
-    indices = _identify_conversation_turns(events)
-    keep_indices = set()
-
-    # Keep system messages
-    system_to_keep = indices['system'][:keep_system_messages]
-    keep_indices.update(system_to_keep)
-
-    # Keep recent conversation turns
+    # No function calls - use turn-based strategy
     recent_user_msgs = indices['user'][-keep_recent_turns:]
     recent_assistant_msgs = indices['assistant'][-keep_recent_turns:]
-    keep_indices.update(recent_user_msgs)
-    keep_indices.update(recent_assistant_msgs)
-
-    # Summarize everything else
-    all_indices = set(range(len(events)))
-    summarize_indices = sorted(all_indices - keep_indices)
-
-    if not summarize_indices:
-      return events
-
-    events_to_summarize = [events[i] for i in summarize_indices]
-    summary_text = await _summarize_events_with_llm(events_to_summarize, summarization_model)
-
-    # Reconstruct events
-    new_events = []
-    for i in sorted(system_to_keep):
-      new_events.append(events[i])
-
-    # Add summary
-    summary_content = types.Content(
-        role='user',
-        parts=[types.Part.from_text(
-            text=f"[CONTEXT SUMMARY - {len(summarize_indices)} events condensed]\n{summary_text}"
-        )]
-    )
-    new_events.append(Event(
-        invocation_id=invocation_id,
-        author='context_manager',
-        content=summary_content,
-    ))
-
-    # Add kept recent events
-    recent_indices = sorted(set(recent_user_msgs + recent_assistant_msgs))
-    for i in recent_indices:
-      new_events.append(events[i])
-
+    keep_indices = set(system_to_keep) | set(recent_user_msgs) | set(recent_assistant_msgs)
   else:
-    # Strategy: Summarize everything before the last function call
-    # Keep everything from the function call onwards (function call context is critical)
-
-    # Identify system messages to preserve
-    indices = _identify_conversation_turns(events)
-    system_to_keep = indices['system'][:keep_system_messages]
-
-    # Determine what to summarize: everything before last function call, except system messages
-    summarize_indices = []
-    for i in range(last_func_call_idx):
-      if i not in system_to_keep:
-        summarize_indices.append(i)
-
+    # Have function calls - keep limited recent events after last function call
+    # CRITICAL FIX: Don't keep ALL events after function call, limit to max_recent_events
+    recent_start_idx = max(last_func_call_idx, len(events) - max_recent_events)
+    recent_event_indices = list(range(recent_start_idx, len(events)))
+    keep_indices = set(system_to_keep) | set(recent_event_indices)
+  
+  # STEP 3.5: Ensure function call/response pairs are kept together
+  # If we keep a function response, we must keep its corresponding function call
+  function_call_map = {}  # Maps function response ID to function call event index
+  for i, event in enumerate(events):
+    if event.get_function_calls():
+      for func_call in event.get_function_calls():
+        if func_call.id:
+          function_call_map[func_call.id] = i
+  
+  # Check kept events for function responses and ensure their calls are kept
+  for i in list(keep_indices):
+    if i < len(events) and events[i].get_function_responses():
+      for func_response in events[i].get_function_responses():
+        if func_response.id and func_response.id in function_call_map:
+          call_idx = function_call_map[func_response.id]
+          if call_idx not in keep_indices:
+            keep_indices.add(call_idx)
+            print(f"🔗 Keeping function call event {call_idx} for response in event {i}")
+  
+  # STEP 4: Summarize events not being kept
+  all_indices = set(range(len(events)))
+  summarize_indices = sorted(all_indices - keep_indices)
+  
+  if not summarize_indices:
+    # Nothing to summarize but still over limit - must be kept events are too large
+    # Fall back to even more aggressive truncation
+    print(f"⚠️  Cannot summarize further, kept events exceed limit")
+    # Keep only the absolute minimum: system messages + last N events
+    emergency_keep = min(20, len(events) // 2)  # Keep at most 20 or half of events
+    keep_indices = set(system_to_keep) | set(range(len(events) - emergency_keep, len(events)))
+    summarize_indices = sorted(set(range(len(events))) - keep_indices)
+    
     if not summarize_indices:
-      print(f"⚠️  Nothing to summarize before function call index {last_func_call_idx}")
-      return events
-
-    # Summarize events before the last function call
-    events_to_summarize = [events[i] for i in summarize_indices]
-    summary_text = await _summarize_events_with_llm(events_to_summarize, summarization_model)
-
-    # Reconstruct the events list
-    new_events = []
-
-    # 1. Add kept system events
-    for i in sorted(system_to_keep):
-      new_events.append(events[i])
-
-    # 2. Add summary as a user event
-    summary_content = types.Content(
-        role='user',
-        parts=[types.Part.from_text(
-            text=f"[CONTEXT SUMMARY - {len(summarize_indices)} events condensed up to function call]\n{summary_text}"
-        )]
-    )
-    new_events.append(Event(
-        invocation_id=invocation_id,
-        author='context_manager',
-        content=summary_content,
-    ))
-
-    # 3. Add all events from the last function call onwards (keep function call context)
-    for i in range(last_func_call_idx, len(events)):
-      new_events.append(events[i])
-
-  # Log the condensation
-  new_tokens = 0
-  for event in new_events:
-    if hasattr(event, 'content') and event.content:
-      new_tokens += _estimate_tokens([event.content])
-
-  print(f"✅ Context condensed: {current_tokens} → {new_tokens} tokens")
-
+      # Still nothing to summarize - just keep recent events within hard limit
+      print(f"⚠️  Emergency truncation: keeping only last {emergency_keep} events")
+      return events[-emergency_keep:]
+  
+  # STEP 5: Create summary of old events
+  events_to_summarize = [events[i] for i in summarize_indices]
+  summary_text = await _summarize_events_with_llm(events_to_summarize, summarization_model)
+  
+  # STEP 6: Reconstruct event list
+  new_events = []
+  
+  # Add system messages
+  for i in sorted(system_to_keep):
+    new_events.append(events[i])
+  
+  # Add summary
+  summary_content = types.Content(
+      role='user',
+      parts=[types.Part.from_text(
+          text=f"[CONTEXT SUMMARY - {len(summarize_indices)} events condensed]\n{summary_text}"
+      )]
+  )
+  new_events.append(Event(
+      invocation_id=invocation_id,
+      author='context_manager',
+      content=summary_content,
+  ))
+  
+  # Add kept recent events (already truncated)
+  kept_recent_indices = sorted(keep_indices - set(system_to_keep))
+  for i in kept_recent_indices:
+    new_events.append(events[i])
+  
+  # STEP 7: Verify we're under hard limit, recursively condense if needed
+  new_tokens = sum(_estimate_tokens([e.content]) for e in new_events if hasattr(e, 'content') and e.content)
+  
+  print(f"✅ Context condensed: {current_tokens} → {new_tokens} tokens (hard limit: {hard_limit})")
+  
+  if new_tokens > hard_limit:
+    print(f"⚠️  Still over hard limit ({new_tokens} > {hard_limit}), recursive condensation...")
+    # Reduce max_recent_events for next pass and recursively condense
+    os.environ['CONTEXT_MAX_RECENT_EVENTS'] = str(max(10, max_recent_events // 2))
+    os.environ['CONTEXT_KEEP_RECENT_TURNS'] = str(max(2, keep_recent_turns // 2))
+    return await _condense_session_context(new_events, invocation_id)
+  
   return new_events
 
 
@@ -655,7 +752,9 @@ def _rearrange_events_for_async_function_responses_in_history(
     if function_responses:
       for function_response in function_responses:
         function_call_id = function_response.id
-        function_call_id_to_response_events_index[function_call_id] = i
+        # Skip function responses with None IDs
+        if function_call_id is not None:
+          function_call_id_to_response_events_index[function_call_id] = i
 
   result_events: list[Event] = []
   for event in events:
@@ -716,7 +815,14 @@ def _rearrange_events_for_latest_function_response(
 
   function_responses_ids = set()
   for function_response in function_responses:
-    function_responses_ids.add(function_response.id)
+    # Skip function responses without IDs (they may be malformed or from condensation)
+    if function_response.id is not None:
+      function_responses_ids.add(function_response.id)
+  
+  # If no valid function response IDs found, return events as-is
+  if not function_responses_ids:
+    print(f"⚠️  Warning: Function responses found but no valid IDs. Skipping rearrangement.")
+    return events
 
   function_calls = events[-2].get_function_calls()
 
@@ -975,7 +1081,9 @@ def _merge_function_response_events(
   for idx, part in enumerate(parts_in_merged_event):
     if part.function_response:
       function_call_id: str = part.function_response.id  # type: ignore
-      part_indices_in_merged_event[function_call_id] = idx
+      # Skip function responses with None IDs
+      if function_call_id is not None:
+        part_indices_in_merged_event[function_call_id] = idx
 
   for event in function_response_events[1:]:
     if not event.content.parts:
@@ -984,7 +1092,8 @@ def _merge_function_response_events(
     for part in event.content.parts:
       if part.function_response:
         function_call_id: str = part.function_response.id  # type: ignore
-        if function_call_id in part_indices_in_merged_event:
+        # Skip function responses with None IDs
+        if function_call_id is not None and function_call_id in part_indices_in_merged_event:
           parts_in_merged_event[
               part_indices_in_merged_event[function_call_id]
           ] = part

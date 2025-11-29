@@ -148,7 +148,14 @@ class SpecKitWriteTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="write_file",
-            description="Write content to a file. Use this to create or update files in the project.",
+            description=(
+                "Write content to a file. BEHAVIOR: "
+                "If file exists and overwrite=False (default), content will be APPENDED to the file. "
+                "If overwrite=True, the ENTIRE file will be REPLACED. "
+                "Use append mode (overwrite=False) to ADD new code. "
+                "Use overwrite mode only when you want to REPLACE the complete file content. "
+                "⚠️ WARNING: overwrite=True will DELETE all existing content!"
+            ),
         )
 
     def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
@@ -157,7 +164,14 @@ class SpecKitWriteTool(BaseTool):
             from google.genai import types
             return types.FunctionDeclaration(
                 name="write_file",
-                description="Write content to a file. Use this to create or update files in the project.",
+                description=(
+                    "Write content to a file. BEHAVIOR: "
+                    "If file exists and overwrite=False (default), content will be APPENDED to the file. "
+                    "If overwrite=True, the ENTIRE file will be REPLACED with the provided content. "
+                    "Use append mode (overwrite=False) to ADD new code. "
+                    "Use overwrite mode only when you want to REPLACE the complete file. "
+                    "⚠️ WARNING: overwrite=True will DELETE all existing content!"
+                ),
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
@@ -167,11 +181,15 @@ class SpecKitWriteTool(BaseTool):
                         ),
                         "content": types.Schema(
                             type=types.Type.STRING,
-                            description="Content to write to the file"
+                            description="Content to write. In append mode (overwrite=False), this is added to the end. In overwrite mode (overwrite=True), this REPLACES all existing content."
                         ),
                         "overwrite": types.Schema(
                             type=types.Type.BOOLEAN,
-                            description="Whether to overwrite if file exists (default: False)"
+                            description=(
+                                "False (default): APPEND content to end of file if it exists. "
+                                "True: REPLACE entire file content (⚠️ DELETES existing content). "
+                                "Only use True when you have the COMPLETE file content to write."
+                            )
                         )
                     },
                     required=["file_path", "content"]
@@ -191,16 +209,70 @@ class SpecKitWriteTool(BaseTool):
             return {"error": "file_path is required"}
 
         try:
-            # Check if file exists and overwrite is False
-            if os.path.exists(file_path) and not overwrite:
-                return {"error": f"File already exists: {file_path}. Set overwrite=True to overwrite."}
-
+            file_exists = os.path.exists(file_path)
+            
+            # Get original file size for validation
+            original_size = 0
+            if file_exists:
+                original_size = os.path.getsize(file_path)
+            
             # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            return {"success": True, "file_path": file_path, "bytes_written": len(content)}
+            dir_path = os.path.dirname(file_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            
+            # IMPROVED LOGIC: If file exists and overwrite=False, APPEND instead of error
+            if file_exists and not overwrite:
+                # APPEND mode - add content to end of file
+                with open(file_path, "a", encoding="utf-8") as f:
+                    f.write(content)
+                new_size = os.path.getsize(file_path)
+                return {
+                    "success": True, 
+                    "file_path": file_path, 
+                    "mode": "append",
+                    "bytes_written": len(content),
+                    "original_size": original_size,
+                    "new_size": new_size
+                }
+            else:
+                # OVERWRITE mode - replace entire file
+                # Add safety check: warn if file is being significantly reduced
+                new_content_size = len(content.encode('utf-8'))
+                
+                if file_exists and original_size > 0:
+                    size_reduction_pct = ((original_size - new_content_size) / original_size) * 100
+                    
+                    # Create backup if file is shrinking by more than 50%
+                    if size_reduction_pct > 50:
+                        from datetime import datetime
+                        backup_path = f"{file_path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        import shutil
+                        shutil.copy2(file_path, backup_path)
+                        
+                        warning_msg = (
+                            f"⚠️ WARNING: File size reduction detected!\n"
+                            f"  Original: {original_size} bytes\n"
+                            f"  New: {new_content_size} bytes\n"
+                            f"  Reduction: {size_reduction_pct:.1f}%\n"
+                            f"  Backup saved: {backup_path}\n"
+                            f"  This may be unintentional code deletion!"
+                        )
+                        print(warning_msg)
+                
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                
+                new_size = os.path.getsize(file_path)
+                return {
+                    "success": True, 
+                    "file_path": file_path,
+                    "mode": "overwrite" if file_exists else "create",
+                    "bytes_written": new_content_size,
+                    "original_size": original_size if file_exists else 0,
+                    "new_size": new_size,
+                    "backup_created": file_exists and original_size > 0 and ((original_size - new_content_size) / original_size * 100) > 50
+                }
         except Exception as e:
             return {"error": f"Error writing file: {str(e)}"}
 

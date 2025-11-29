@@ -101,7 +101,7 @@ echo "Stage 2 completed in $elapsed seconds" | tee -a "$proj_dir.2.log"
 echo "=== Stage 3: Test Implementation (Prompt 3) ===" | tee "$proj_dir.3.log"
 STAGE3_CMD="$ADK_ROOT/run_openspec.sh $proj_dir $proj_dir/openspec-prompts/3.md --device $device_name --model $model --skip-specify --skip-simics-setup --port $mcp_server_port"
 echo "Command: $STAGE3_CMD" | tee -a "$proj_dir.3.log"
-exit
+# exit
 start_time=$(date +%s)
 $STAGE3_CMD 2>&1 | tee -a "$proj_dir.3.log"
 end_time=$(date +%s)
