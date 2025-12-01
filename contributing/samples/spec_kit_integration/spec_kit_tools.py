@@ -472,6 +472,149 @@ class SpecKitBashTool(BaseTool):
             return {"error": f"Error executing command: {str(e)}"}
 
 
+class SpecKitApplyGitDiffTool(BaseTool):
+    """Tool for applying a git diff from JSON format."""
+
+    def __init__(self):
+        super().__init__(
+            name="apply_git_diff",
+            description="Apply a git diff patch from JSON format containing file changes.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        try:
+            from google.genai import types
+            return types.FunctionDeclaration(
+                name="apply_git_diff",
+                description="Apply a git diff patch from JSON format containing file changes.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "diff_json": types.Schema(
+                            type=types.Type.STRING,
+                            description="JSON string containing the diff with format: {\"files\": [{\"path\": \"file/path\", \"diff\": \"diff content\"}]}"
+                        ),
+                        "working_directory": types.Schema(
+                            type=types.Type.STRING,
+                            description="Directory to apply the diff in (default: '.')"
+                        ),
+                        "dry_run": types.Schema(
+                            type=types.Type.BOOLEAN,
+                            description="If true, only check if the patch would apply cleanly without actually applying it (default: False)"
+                        )
+                    },
+                    required=["diff_json"]
+                )
+            )
+        except ImportError:
+            return None
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        diff_json_str = args.get("diff_json")
+        working_directory = args.get("working_directory", ".")
+        dry_run = args.get("dry_run", False)
+
+        if not diff_json_str:
+            return {"error": "diff_json is required"}
+
+        try:
+            # Parse JSON
+            diff_data = json.loads(diff_json_str)
+            
+            if not isinstance(diff_data, dict) or "files" not in diff_data:
+                return {"error": "Invalid JSON format. Expected: {\"files\": [{\"path\": \"...\", \"diff\": \"...\"}]}"}
+            
+            files = diff_data["files"]
+            if not isinstance(files, list):
+                return {"error": "Invalid JSON format. 'files' must be a list"}
+            
+            # Process each file
+            results = []
+            errors = []
+            
+            for file_entry in files:
+                if not isinstance(file_entry, dict):
+                    errors.append({"error": "Invalid file entry format", "entry": file_entry})
+                    continue
+                
+                file_path = file_entry.get("path")
+                diff_content = file_entry.get("diff")
+                
+                if not file_path or not diff_content:
+                    errors.append({"error": "Missing 'path' or 'diff' in file entry", "entry": file_entry})
+                    continue
+                
+                # Create a temporary patch file
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.patch', delete=False) as patch_file:
+                    patch_file.write(diff_content)
+                    patch_file_path = patch_file.name
+                
+                try:
+                    # Apply the patch using git apply
+                    cmd_parts = ["git", "apply"]
+                    
+                    if dry_run:
+                        cmd_parts.append("--check")
+                    
+                    cmd_parts.append(patch_file_path)
+                    
+                    result = subprocess.run(
+                        cmd_parts,
+                        cwd=working_directory,
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                    
+                    if result.returncode == 0:
+                        results.append({
+                            "file": file_path,
+                            "status": "success" if not dry_run else "would_apply",
+                            "message": "Patch applied successfully" if not dry_run else "Patch would apply cleanly"
+                        })
+                    else:
+                        errors.append({
+                            "file": file_path,
+                            "status": "failed",
+                            "error": result.stderr,
+                            "stdout": result.stdout
+                        })
+                
+                finally:
+                    # Clean up temporary patch file
+                    try:
+                        os.unlink(patch_file_path)
+                    except:
+                        pass
+            
+            # Return results
+            response = {
+                "success": len(errors) == 0,
+                "dry_run": dry_run,
+                "working_directory": working_directory,
+                "files_processed": len(files),
+                "files_succeeded": len(results),
+                "files_failed": len(errors),
+                "results": results
+            }
+            
+            if errors:
+                response["errors"] = errors
+            
+            return response
+            
+        except json.JSONDecodeError as e:
+            return {"error": f"Invalid JSON format: {str(e)}"}
+        except subprocess.TimeoutExpired:
+            return {"error": "Command timed out after 30 seconds"}
+        except Exception as e:
+            return {"error": f"Error applying diff: {str(e)}"}
+
+
 class SpecKitToolset(BaseToolset):
     """Toolset for spec-kit commands using basic file and bash tools."""
 
@@ -482,7 +625,8 @@ class SpecKitToolset(BaseToolset):
             SpecKitReadTool(),
             SpecKitWriteTool(),
             SpecKitFileReplaceTool(),
-            SpecKitBashTool()
+            SpecKitBashTool(),
+            SpecKitApplyGitDiffTool()
         ]
 
     async def get_tools(self, readonly_context=None):
