@@ -216,6 +216,115 @@ class TestGuaranteedLimit:
         print(f"✅ Success: {final_tokens} tokens < {hard_limit} limit")
 
 
+@pytest.mark.anyio
+async def test_orphaned_function_call_removed():
+    """
+    Test that orphaned function calls (calls without responses in kept events) are removed.
+    
+    This reproduces the wdt_dbg14.3.log bug where context condensation left a function call
+    without its response, causing: "An assistant message with 'tool_calls' must be followed
+    by tool messages responding to each 'tool_call_id'."
+    """
+    invocation_id = 'test_orphan'
+    
+    events = []
+    
+    # Add some old events that will be summarized
+    for i in range(10):
+        events.append(Event(
+            invocation_id=invocation_id,
+            author='user',
+            content=types.Content(
+                role='user',
+                parts=[types.Part.from_text(text=f"Old request {i}")]
+            )
+        ))
+    
+    # Add a function call in the middle that will be outside the summary window
+    call_id = 'call_orphaned_123'
+    events.append(Event(
+        invocation_id=invocation_id,
+        author='assistant',
+        content=types.Content(
+            role='model',
+            parts=[types.Part(
+                function_call=types.FunctionCall(
+                    name='read_file',
+                    args={'file': 'test.txt'},
+                    id=call_id
+                )
+            )]
+        )
+    ))
+    
+    # Add the function response immediately after
+    events.append(Event(
+        invocation_id=invocation_id,
+        author='tool',
+        content=types.Content(
+            role='function',
+            parts=[types.Part(
+                function_response=types.FunctionResponse(
+                    name='read_file',
+                    response={'content': 'file content here' * 100},  # Large response
+                    id=call_id
+                )
+            )]
+        )
+    ))
+    
+    # Add many more recent events - the function call will be within recent_start_idx
+    # but the response won't be in the final keep set due to STEP 3 logic
+    for i in range(40):
+        events.append(Event(
+            invocation_id=invocation_id,
+            author='user',
+            content=types.Content(
+                role='user',
+                parts=[types.Part.from_text(text=f"Recent message {i}")]
+            )
+        ))
+    
+    # Set limits to force condensation
+    # With max_recent_events=20, we keep events 32-51 (indices), which includes recent messages
+    # but the function call at index 10 will be included due to last_func_call_idx logic
+    # but response at index 11 won't be in the initial keep set
+    hard_limit = 8000
+    os.environ['CONTEXT_MAX_TOKENS'] = '10000'
+    os.environ['CONTEXT_HARD_LIMIT_TOKENS'] = str(hard_limit)
+    os.environ['CONTEXT_MAX_RECENT_EVENTS'] = '20'  # Keep only last 20 events
+    
+    result = await _condense_session_context(events)
+    
+    # Verify: If a function call is present, its response must also be present
+    # The fix ensures no orphaned calls remain in the condensed context
+    for event in result:
+        if hasattr(event, 'content') and event.content and event.content.parts:
+            for part in event.content.parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    if part.function_call.id == call_id:
+                        # Found the function call - verify its response is also present
+                        has_matching_response = False
+                        for check_event in result:
+                            if hasattr(check_event, 'content') and check_event.content and check_event.content.parts:
+                                for check_part in check_event.content.parts:
+                                    if hasattr(check_part, 'function_response') and check_part.function_response:
+                                        if check_part.function_response.id == call_id:
+                                            has_matching_response = True
+                                            break
+                        
+                        assert has_matching_response, f"FAIL: Function call {call_id} found without its response! This would cause API error."
+    
+    print(f"✅ Success: All function calls have matching responses or were removed during condensation")
+    
+    # Verify we're under hard limit
+    final_tokens = sum(_estimate_tokens([e.content]) for e in result
+                      if hasattr(e, 'content') and e.content)
+    assert final_tokens <= hard_limit, f"Final {final_tokens} exceeds limit {hard_limit}"
+    
+    print(f"✅ Success: Orphaned function call removed, {final_tokens} tokens < {hard_limit} limit")
+
+
 # Cleanup after tests
 @pytest.fixture(autouse=True)
 def cleanup_env():

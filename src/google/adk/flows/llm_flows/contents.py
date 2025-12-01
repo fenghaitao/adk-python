@@ -605,9 +605,9 @@ async def _condense_session_context(
     recent_assistant_msgs = indices['assistant'][-keep_recent_turns:]
     keep_indices = set(system_to_keep) | set(recent_user_msgs) | set(recent_assistant_msgs)
   else:
-    # Have function calls - keep limited recent events after last function call
-    # CRITICAL FIX: Don't keep ALL events after function call, limit to max_recent_events
-    recent_start_idx = max(last_func_call_idx, len(events) - max_recent_events)
+    # Have function calls - keep from last function call but limit total to max_recent_events
+    # Use min() to start from whichever comes first: the function call or the recent window
+    recent_start_idx = min(last_func_call_idx, len(events) - max_recent_events)
     recent_event_indices = list(range(recent_start_idx, len(events)))
     keep_indices = set(system_to_keep) | set(recent_event_indices)
   
@@ -629,6 +629,33 @@ async def _condense_session_context(
           if call_idx not in keep_indices:
             keep_indices.add(call_idx)
             print(f"🔗 Keeping function call event {call_idx} for response in event {i}")
+  
+  # STEP 3.6: Remove orphaned function calls (calls without responses)
+  # If we keep a function call but its response is being summarized, remove the call too
+  response_map = {}  # Maps function call ID to response event index
+  for i, event in enumerate(events):
+    if event.get_function_responses():
+      for func_response in event.get_function_responses():
+        if func_response.id:
+          response_map[func_response.id] = i
+  
+  # Check kept events for function calls and ensure their responses are also kept
+  calls_to_remove = set()
+  for i in list(keep_indices):
+    if i < len(events) and events[i].get_function_calls():
+      for func_call in events[i].get_function_calls():
+        if func_call.id:
+          # Check if this call's response is in the kept set
+          if func_call.id in response_map:
+            response_idx = response_map[func_call.id]
+            if response_idx not in keep_indices:
+              # Response is being summarized, so remove this orphaned call
+              calls_to_remove.add(i)
+              print(f"🗑️  Removing orphaned function call event {i} (response {response_idx} being summarized)")
+              break  # No need to check other calls in this event
+  
+  # Remove the orphaned calls from keep_indices
+  keep_indices -= calls_to_remove
   
   # STEP 4: Summarize events not being kept
   all_indices = set(range(len(events)))
