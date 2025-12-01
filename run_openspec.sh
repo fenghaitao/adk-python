@@ -903,6 +903,7 @@ ENV/
 node_modules/
 
 # Simics temporary files
+*.modcache
 *.simics-log
 *.simics-checkpoint
 simics-workspace/

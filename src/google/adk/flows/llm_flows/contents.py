@@ -501,7 +501,8 @@ def _find_last_function_call_index(events: List[Event]) -> int:
 
 async def _condense_session_context(
     events: List[Event],
-    invocation_id: str = "context_manager"
+    invocation_id: str = "context_manager",
+    recursion_depth: int = 0
 ) -> List[Event]:
   """
   Condense session context with guaranteed token limit enforcement.
@@ -515,10 +516,30 @@ async def _condense_session_context(
   Args:
     events: List of session events to potentially condense
     invocation_id: ID for the condensation operation
+    recursion_depth: Current recursion depth (prevents infinite recursion)
 
   Returns:
     Condensed list of events guaranteed to be under hard limit
   """
+  # Prevent infinite recursion
+  MAX_RECURSION_DEPTH = 5
+  if recursion_depth >= MAX_RECURSION_DEPTH:
+    print(f"⚠️  Maximum recursion depth ({MAX_RECURSION_DEPTH}) reached, forcing hard truncation")
+    # Keep only last few events that fit under hard limit
+    hard_limit = int(os.environ.get('CONTEXT_HARD_LIMIT_TOKENS', _CONTEXT_HARD_LIMIT_TOKENS))
+    final_events = []
+    running_tokens = 0
+    for event in reversed(events):
+      if hasattr(event, 'content') and event.content:
+        event_tokens = _estimate_tokens([event.content])
+        if running_tokens + event_tokens < hard_limit:
+          final_events.insert(0, event)
+          running_tokens += event_tokens
+        else:
+          break
+    print(f"✅ Emergency truncation: kept {len(final_events)} events with {running_tokens} tokens")
+    return final_events
+  
   # Check environment variables with fallback to global defaults
   enable_condensation = os.environ.get('CONTEXT_ENABLE_CONDENSATION', str(_CONTEXT_ENABLE_CONDENSATION)).lower() in ('true', '1', 'yes')
   max_tokens = int(os.environ.get('CONTEXT_MAX_TOKENS', _CONTEXT_MAX_TOKENS))
@@ -657,6 +678,31 @@ async def _condense_session_context(
   # Remove the orphaned calls from keep_indices
   keep_indices -= calls_to_remove
   
+  # STEP 3.7: Remove orphaned function responses (responses without calls)
+  # If we keep a function response but its call is being summarized, remove the response too
+  # This prevents "tool_call_id did not have response messages" API errors
+  responses_to_remove = set()
+  for i in list(keep_indices):
+    if i < len(events) and events[i].get_function_responses():
+      for func_response in events[i].get_function_responses():
+        if func_response.id:
+          # Check if this response's call is in the kept set
+          if func_response.id in function_call_map:
+            call_idx = function_call_map[func_response.id]
+            if call_idx not in keep_indices:
+              # Call is being summarized, so remove this orphaned response
+              responses_to_remove.add(i)
+              print(f"🗑️  Removing orphaned function response event {i} (call {call_idx} being summarized)")
+              break  # No need to check other responses in this event
+          else:
+            # Response has no matching call at all - also orphaned, remove it
+            responses_to_remove.add(i)
+            print(f"🗑️  Removing orphaned function response event {i} (no matching call found)")
+            break
+  
+  # Remove the orphaned responses from keep_indices
+  keep_indices -= responses_to_remove
+  
   # STEP 4: Summarize events not being kept
   all_indices = set(range(len(events)))
   summarize_indices = sorted(all_indices - keep_indices)
@@ -710,11 +756,33 @@ async def _condense_session_context(
   print(f"✅ Context condensed: {current_tokens} → {new_tokens} tokens (hard limit: {hard_limit})")
   
   if new_tokens > hard_limit:
-    print(f"⚠️  Still over hard limit ({new_tokens} > {hard_limit}), recursive condensation...")
+    # Check if we made progress (token count decreased by at least 10%)
+    if new_tokens >= current_tokens * 0.9:
+      print(f"⚠️  Condensation made insufficient progress ({current_tokens} → {new_tokens})")
+      print(f"⚠️  Forcing hard truncation to fit under {hard_limit} tokens")
+      # Last resort: aggressively truncate to fit
+      # Keep only system messages and last few events
+      final_events = []
+      # Add system messages
+      for i in system_to_keep:
+        final_events.append(events[i])
+      # Add only last few events until we're under limit
+      recent_indices = sorted(keep_indices - set(system_to_keep), reverse=True)
+      running_tokens = sum(_estimate_tokens([e.content]) for e in final_events if hasattr(e, 'content') and e.content)
+      for i in recent_indices:
+        event_tokens = _estimate_tokens([events[i].content]) if hasattr(events[i], 'content') and events[i].content else 0
+        if running_tokens + event_tokens < hard_limit:
+          final_events.insert(len([e for e in final_events if e.author == 'system']), events[i])
+          running_tokens += event_tokens
+        else:
+          break
+      return final_events
+    
+    print(f"⚠️  Still over hard limit ({new_tokens} > {hard_limit}), recursive condensation (depth {recursion_depth + 1})...")
     # Reduce max_recent_events for next pass and recursively condense
     os.environ['CONTEXT_MAX_RECENT_EVENTS'] = str(max(10, max_recent_events // 2))
     os.environ['CONTEXT_KEEP_RECENT_TURNS'] = str(max(2, keep_recent_turns // 2))
-    return await _condense_session_context(new_events, invocation_id)
+    return await _condense_session_context(new_events, invocation_id, recursion_depth + 1)
   
   return new_events
 
