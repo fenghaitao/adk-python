@@ -325,7 +325,7 @@ class SpecKitFileReplaceTool(BaseTool):
         file_path = args.get("file_path")
         old_string = args.get("old_string")
         new_string = args.get("new_string")
-        expected_replacements = args.get("expected_replacements", 1)
+        expected_replacements = args.get("expected_replacements")  # None means replace all
 
         if not file_path or old_string is None or new_string is None:
             return {"error": "file_path, old_string, and new_string are required"}
@@ -356,24 +356,22 @@ class SpecKitFileReplaceTool(BaseTool):
         # Count occurrences
         occurrences = content.count(old_string)
 
-        # Validate expected replacements
-        if expected_replacements == 1 and occurrences > 1:
-            return {
-                "error": f"Found {occurrences} occurrences of the string, but expected only 1.\n"
-                        f"String: {repr(old_string[:200])}\n"
-                        f"File: {file_path}\n"
-                        f"Tip: Include more context (3-5 lines before/after) to make the match unique."
-            }
-
-        if expected_replacements > 0 and occurrences != expected_replacements:
-            return {
-                "error": f"Found {occurrences} occurrences, but expected {expected_replacements}.\n"
-                        f"String: {repr(old_string[:200])}\n"
-                        f"File: {file_path}"
-            }
+        # Validate expected replacements only if specified
+        if expected_replacements is not None:
+            if occurrences != expected_replacements::
+                return {
+                    "error": f"Found {occurrences} occurrences, but expected {expected_replacements}.\n"
+                            f"String: {repr(old_string[:200])}\n"
+                            f"File: {file_path}\n"
+                            f"Tip: Include more context (3-5 lines before/after) to make the match unique."
+                }
 
         # Perform replacement
-        new_content = content.replace(old_string, new_string, expected_replacements)
+        # If expected_replacements is None, replace all occurrences (don't pass count parameter)
+        if expected_replacements is None:
+            new_content = content.replace(old_string, new_string)
+        else:
+            new_content = content.replace(old_string, new_string, expected_replacements)
 
         # Write back to file
         try:
