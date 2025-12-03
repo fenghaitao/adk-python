@@ -159,10 +159,15 @@ complete OpenSpec workflow from proposal creation through archiving:
    - Run `openspec list` to check active changes
    - Read relevant specs in `specs/[capability]/spec.md`
    - Read `openspec/project.md` for project conventions
+   - **CRITICAL FOR SIMICS**: Check if `.specify/memory/constitution.md` exists and read it
+   - **IF SIMICS PROJECT**: Read `.specify/memory/DML_Device_Development_Best_Practices.md`
 
 2. **Create a change proposal** in `openspec/changes/<change-id>/`:
    - Write `proposal.md` (Why, What changes, Impact)
+   - **IF SIMICS PROJECT**: Add "Constraints and guarantees" section referencing constitution
    - Write `tasks.md` (detailed implementation checklist)
+   - **IF SIMICS PROJECT**: Include constitution compliance verification tasks
+   - **FOR SIMICS PROJECTS**: Include references to technical rules and best practices
    - Create spec deltas if needed in `specs/<capability>/spec.md` (NOT `specs/spec.md`!)
    - **CRITICAL**: Delta specs MUST be in `changes/<change-id>/specs/<capability>/spec.md` format
    - Run `openspec validate <change-id> --strict` and fix issues
@@ -203,6 +208,136 @@ Complete all phases autonomously from proposal creation through archiving.
 
 Even if the user doesn't mention "proposal" or "OpenSpec workflow", you must still follow 
 the complete workflow.
+
+## Simics Hardware Device Modeling Projects
+
+**DETECTION**: When you detect a Simics project (presence of `simics-project/` directory, `.dml` files, `.specify/memory/constitution.md`, or hardware-related keywords), apply Simics-specific workflows:
+
+### Pre-Proposal Phase: Read Project Constitution
+
+**MANDATORY** - Before creating any proposals or tasks for Simics projects:
+
+1. **Read Project Constitution**: `.specify/memory/constitution.md`
+   - Core principles (Device-First, Test-First, Specification-Driven)
+   - **Technical Implementation Rules** section:
+     - File system organization (editable vs. protected files)
+     - Import statement requirements (NEVER remove!)
+     - Timer implementation patterns (event-based with timestamps)
+     - Python test structure (`s-<feature>.py` pattern)
+     - Forbidden actions checklist
+     - Compliance checklist
+
+2. **Read Best Practices** (if exists): `.specify/memory/DML_Device_Development_Best_Practices.md`
+   - Detailed timer device implementation examples
+   - Python test file code samples
+   - DML coding patterns
+
+### Simics Project Detection
+
+Automatically detect Simics projects by checking for ANY of:
+- File exists: `.specify/memory/constitution.md`
+- Directory exists: `simics-project/modules/*/`
+- Files exist: `*.dml`, `*-registers.dml`, `*-dia.dml`, `*-glue.dml`
+- Keywords in user prompt: "DML", "Simics", "device model", "register", "watchdog"
+
+**When detected**: Automatically read constitution BEFORE creating any proposals.
+
+### Creating Proposals for Simics Devices
+
+When creating `proposal.md` for Simics projects, **MUST include**:
+
+```markdown
+## Why
+[Explanation of what needs to be implemented and why]
+
+## What changes
+- Implements [feature] in simics-project/modules/<device_name>/<device_name>.dml
+- Adds unit tests in simics-project/modules/<device_name>/test/
+- Follows DML best practices and project constitution
+
+## Scope
+- Modified: simics-project/modules/<device_name>/<device_name>.dml
+- Added: simics-project/modules/<device_name>/test/s-<feature>.py
+
+## Constraints and guarantees
+- All import statements are preserved (per constitution technical rules)
+- No modifications to auto-generated files (<device_name>-registers.dml, <device_name>-dia.dml, <device_name>-glue.dml)
+- Timer implementation uses event objects with timestamps (not saved uint32 counters)
+- No changes to build files, config, or IP-XACT XML
+- Tests follow s-<feature>.py pattern with clock queue configuration
+
+## References
+- Device spec: specs/<git_branch_name>/spec.md
+- Project constitution: .specify/memory/constitution.md
+- Best practices: .specify/memory/DML_Device_Development_Best_Practices.md
+```
+
+### Creating Tasks for Simics Devices
+
+When creating `tasks.md` for Simics projects, **MUST include**:
+
+```markdown
+## 1. Preparation
+- [ ] Read project constitution: .specify/memory/constitution.md
+- [ ] Review device spec: specs/<git_branch_name>/spec.md
+- [ ] Review best practices: .specify/memory/DML_Device_Development_Best_Practices.md
+
+## 2. Implementation
+- [ ] Verify all import statements are intact in <device_name>.dml
+- [ ] Implement [register/feature] behavior using event objects for timers
+  - [ ] Use SIM_time() for elapsed time (not saved uint32 variables)
+  - [ ] Follow patterns from constitution technical rules
+- [ ] Add Python tests following s-<feature>.py pattern
+  - [ ] Configure clock queue: device.queue = conf.sim.queue
+  - [ ] Add clear assertions with expected vs actual values
+
+## 3. Validation
+- [ ] Build device: cd simics-project && make <device_name>
+- [ ] Run test suite: simics-project/modules/<device_name>/test/
+- [ ] Verify constitution compliance checklist
+- [ ] Mark tasks done and archive change
+```
+
+### Error Prevention for Simics Projects
+
+**BEFORE editing any files**, verify against constitution:
+
+1. **Check file editing permissions** (from constitution):
+   - ✅ `<device_name>.dml` - OK to edit
+   - ✅ `test/*.py` - OK to edit
+   - ❌ `<device_name>-registers.dml` - PROTECTED (auto-generated)
+   - ❌ `<device_name>-dia.dml` - PROTECTED (auto-generated)
+   - ❌ `<device_name>-glue.dml` - PROTECTED (auto-generated)
+   - ❌ `Makefile`, `*.xml` - PROTECTED (build system)
+
+2. **Verify import statements** (from constitution):
+   ```dml
+   import "<device_name>-glue.dml"; // NEVER remove
+   import "<device_name>-dia.dml";  // NEVER remove
+   import "simics/devs/signal.dml"; // NEVER remove
+   ```
+   or
+   ```dml
+   import "<device_name>-registers.dml"; // NEVER remove
+   import "simics/devs/signal.dml";      // NEVER remove
+   ```
+
+3. **Use correct patterns** (from constitution):
+   - Timers: ✅ `event` + `SIM_time()`, ❌ `saved uint32`
+   - Tests: ✅ `s-<feature>.py` + clock queue, ❌ multiple tests per file
+
+### Constitution Compliance Verification
+
+After implementation, verify against constitution compliance checklist:
+- [ ] All import statements present and intact
+- [ ] Only permitted files modified
+- [ ] No auto-generated files edited
+- [ ] Timer uses event objects with timestamps
+- [ ] No saved uint32 for counter/timer state
+- [ ] Tests follow s-<feature>.py pattern
+- [ ] Tests configure clock queue
+- [ ] Device builds successfully
+- [ ] All tests pass
 
 ## OpenSpec Overview
 

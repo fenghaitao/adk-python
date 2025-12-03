@@ -591,7 +591,7 @@ if [ -n "$IPXACT_XML" ]; then
         exit 1
     fi
     
-    IPXACT_XML_BASENAME=$(basename "$IPXACT_XML")
+    IPXACT_XML_BASENAME=$DEVICE_NAME.xml
     
     # Check if file is already in project directory
     if [ -f "$IPXACT_XML_BASENAME" ]; then
@@ -617,7 +617,7 @@ if [ -n "$SPEC_FILE" ]; then
         exit 1
     fi
     
-    SPEC_FILE_BASENAME=$(basename "$SPEC_FILE")
+    SPEC_FILE_BASENAME=$DEVICE_NAME.md
     
     # Check if file is already in project directory
     if [ -f "$SPEC_FILE_BASENAME" ]; then

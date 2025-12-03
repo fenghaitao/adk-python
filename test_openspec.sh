@@ -77,7 +77,7 @@ echo "Prompt templates customized for branch=$git_branch_name, device=$device_na
 # exit
 
 echo "=== Stage 1: Implementation (Prompt 1) ===" | tee "$proj_dir.1.log"
-STAGE1_CMD="$ADK_ROOT/run_openspec.sh $proj_dir $proj_dir/openspec-prompts/1.fixed.md --device $device_name --model $model --skip-specify --skip-simics-setup --port $mcp_server_port"
+STAGE1_CMD="$ADK_ROOT/run_openspec.sh $proj_dir $proj_dir/openspec-prompts/1.SIMPLE.md --device $device_name --model $model --skip-specify --skip-simics-setup --port $mcp_server_port"
 echo "Command: $STAGE1_CMD" | tee -a "$proj_dir.1.log"
 start_time=$(date +%s)
 $STAGE1_CMD 2>&1 | tee -a "$proj_dir.1.log"
