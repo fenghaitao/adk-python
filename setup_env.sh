@@ -90,7 +90,7 @@ setup_submodule_env() {
                 # Install main package (lightweight, depends on sub-packages being available)
                 uv pip install -e .
             else
-                uv pip install -e .
+                uv pip install --torch-backend cpu -e .
             fi
             
             if [ $? -eq 0 ]; then
