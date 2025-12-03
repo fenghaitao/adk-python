@@ -358,7 +358,7 @@ class SpecKitFileReplaceTool(BaseTool):
 
         # Validate expected replacements only if specified
         if expected_replacements is not None:
-            if occurrences != expected_replacements::
+            if occurrences != expected_replacements:
                 return {
                     "error": f"Found {occurrences} occurrences, but expected {expected_replacements}.\n"
                             f"String: {repr(old_string[:200])}\n"
