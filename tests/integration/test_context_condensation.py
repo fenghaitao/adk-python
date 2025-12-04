@@ -217,6 +217,133 @@ class TestGuaranteedLimit:
 
 
 @pytest.mark.anyio
+async def test_recursive_condensation_with_summary_events():
+    """
+    Test that recursive condensation properly handles summary events.
+    
+    This reproduces the production bug where summary events from the first
+    condensation pass interfere with the second pass, causing function call/response
+    pairing errors.
+    """
+    invocation_id = 'test_recursive_summary'
+    
+    # Create a massive context that will force recursive condensation
+    events = []
+    
+    # Add system message
+    events.append(Event(
+        invocation_id=invocation_id,
+        author='system',
+        content=types.Content(
+            role='system',
+            parts=[types.Part.from_text(text="System instructions")]
+        )
+    ))
+    
+    # Add many events with large content
+    for i in range(200):
+        events.append(Event(
+            invocation_id=invocation_id,
+            author='user' if i % 2 == 0 else 'assistant',
+            content=types.Content(
+                role='user' if i % 2 == 0 else 'model',
+                parts=[types.Part.from_text(text=f"Message {i}: " + "x" * 3000)]
+            )
+        ))
+    
+    # Add a function call near the end
+    call_id = 'call_recursive_test_123'
+    events.append(Event(
+        invocation_id=invocation_id,
+        author='assistant',
+        content=types.Content(
+            role='model',
+            parts=[types.Part(
+                function_call=types.FunctionCall(
+                    name='test_tool',
+                    args={'param': 'value'},
+                    id=call_id
+                )
+            )]
+        )
+    ))
+    
+    # Add the response
+    events.append(Event(
+        invocation_id=invocation_id,
+        author='tool',
+        content=types.Content(
+            role='function',
+            parts=[types.Part(
+                function_response=types.FunctionResponse(
+                    name='test_tool',
+                    response={'result': 'success' * 1000},  # Large response
+                    id=call_id
+                )
+            )]
+        )
+    ))
+    
+    # Add more events after
+    for i in range(200, 250):
+        events.append(Event(
+            invocation_id=invocation_id,
+            author='user',
+            content=types.Content(
+                role='user',
+                parts=[types.Part.from_text(text=f"Later message {i}: " + "x" * 2000)]
+            )
+        ))
+    
+    # Set very aggressive limits to force recursive condensation
+    hard_limit = 15000
+    os.environ['CONTEXT_MAX_TOKENS'] = '20000'
+    os.environ['CONTEXT_HARD_LIMIT_TOKENS'] = str(hard_limit)
+    os.environ['CONTEXT_MAX_RECENT_EVENTS'] = '30'
+    os.environ['CONTEXT_ENABLE_CONDENSATION'] = 'true'
+    
+    result = await _condense_session_context(events)
+    
+    # Verify: No summary events in the result (they should be filtered out in recursive passes)
+    summary_event_count = sum(1 for e in result if e.author == 'context_manager')
+    # We expect exactly 1 summary event from the final condensation
+    assert summary_event_count <= 1, f"Expected <= 1 summary event, got {summary_event_count}"
+    
+    # Verify: No orphaned function calls or responses
+    call_ids_present = set()
+    response_ids_present = set()
+    
+    for event in result:
+        if hasattr(event, 'content') and event.content and event.content.parts:
+            for part in event.content.parts:
+                if hasattr(part, 'function_call') and part.function_call and part.function_call.id:
+                    call_ids_present.add(part.function_call.id)
+                if hasattr(part, 'function_response') and part.function_response and part.function_response.id:
+                    response_ids_present.add(part.function_response.id)
+    
+    # Every response must have its call, every call must have its response
+    orphaned_responses = response_ids_present - call_ids_present
+    orphaned_calls = call_ids_present - response_ids_present
+    
+    if orphaned_responses:
+        pytest.fail(f"FAIL: Orphaned function responses: {orphaned_responses}")
+    if orphaned_calls:
+        pytest.fail(f"FAIL: Orphaned function calls: {orphaned_calls}")
+    
+    print(f"✅ Success: Recursive condensation handled summary events correctly")
+    print(f"   Summary events: {summary_event_count}")
+    print(f"   Function calls: {call_ids_present}")
+    print(f"   Function responses: {response_ids_present}")
+    
+    # Verify we're under hard limit
+    final_tokens = sum(_estimate_tokens([e.content]) for e in result
+                      if hasattr(e, 'content') and e.content)
+    assert final_tokens <= hard_limit, f"Final {final_tokens} exceeds limit {hard_limit}"
+    
+    print(f"✅ Success: Recursive condensation with summary events: {final_tokens} tokens < {hard_limit} limit")
+
+
+@pytest.mark.anyio
 async def test_orphaned_function_response_removed():
     """
     Test that context condensation doesn't create scenarios where responses exist without calls.
