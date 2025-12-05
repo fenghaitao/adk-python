@@ -391,6 +391,261 @@ class SpecKitFileReplaceTool(BaseTool):
         }
 
 
+class SpecKitListDirectoryTool(BaseTool):
+    """Tool for listing files and directories."""
+
+    def __init__(self):
+        super().__init__(
+            name="list_directory",
+            description="List files and directories in a given path. Returns file names, types, sizes, and modification times.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        try:
+            from google.genai import types
+            return types.FunctionDeclaration(
+                name="list_directory",
+                description="List files and directories in a given path. Returns file names, types, sizes, and modification times.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "directory_path": types.Schema(
+                            type=types.Type.STRING,
+                            description="Path to the directory to list (default: '.')"
+                        ),
+                        "recursive": types.Schema(
+                            type=types.Type.BOOLEAN,
+                            description="If true, list subdirectories recursively (default: False)"
+                        ),
+                        "max_depth": types.Schema(
+                            type=types.Type.INTEGER,
+                            description="Maximum depth for recursive listing (default: 3)"
+                        ),
+                        "include_hidden": types.Schema(
+                            type=types.Type.BOOLEAN,
+                            description="If true, include hidden files/directories (default: False)"
+                        )
+                    },
+                    required=[]
+                )
+            )
+        except ImportError:
+            return None
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        directory_path = args.get("directory_path", ".")
+        recursive = args.get("recursive", False)
+        max_depth = args.get("max_depth", 3)
+        include_hidden = args.get("include_hidden", False)
+
+        try:
+            dir_path = Path(directory_path)
+            if not dir_path.exists():
+                return {"error": f"Directory not found: {directory_path}"}
+            
+            if not dir_path.is_dir():
+                return {"error": f"Path is not a directory: {directory_path}"}
+
+            entries = []
+            
+            def should_include(path: Path) -> bool:
+                """Check if path should be included based on hidden file setting."""
+                if include_hidden:
+                    return True
+                return not any(part.startswith('.') for part in path.parts)
+            
+            def list_entries(path: Path, current_depth: int = 0):
+                """Recursively list directory entries."""
+                if current_depth > max_depth:
+                    return
+                
+                try:
+                    for entry in sorted(path.iterdir()):
+                        if not should_include(entry):
+                            continue
+                        
+                        try:
+                            stat = entry.stat()
+                            entry_info = {
+                                "name": entry.name,
+                                "path": str(entry.relative_to(dir_path)),
+                                "type": "directory" if entry.is_dir() else "file",
+                                "size": stat.st_size if entry.is_file() else 0,
+                                "modified": stat.st_mtime,
+                                "depth": current_depth
+                            }
+                            entries.append(entry_info)
+                            
+                            if recursive and entry.is_dir():
+                                list_entries(entry, current_depth + 1)
+                        except (PermissionError, OSError) as e:
+                            entries.append({
+                                "name": entry.name,
+                                "path": str(entry.relative_to(dir_path)),
+                                "type": "unknown",
+                                "error": f"Permission denied or error: {str(e)}"
+                            })
+                except PermissionError:
+                    return {"error": f"Permission denied: {path}"}
+            
+            list_entries(dir_path)
+            
+            return {
+                "success": True,
+                "directory": str(directory_path),
+                "total_entries": len(entries),
+                "entries": entries,
+                "recursive": recursive,
+                "max_depth": max_depth if recursive else 0
+            }
+            
+        except Exception as e:
+            return {"error": f"Error listing directory: {str(e)}"}
+
+
+class SpecKitSearchTool(BaseTool):
+    """Tool for searching text patterns in files."""
+
+    def __init__(self):
+        super().__init__(
+            name="search_files",
+            description="Search for text patterns in files using regex. Returns matching lines with context.",
+        )
+
+    def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+        """Get function declaration for the LLM."""
+        try:
+            from google.genai import types
+            return types.FunctionDeclaration(
+                name="search_files",
+                description="Search for text patterns in files using regex. Returns matching lines with context.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "pattern": types.Schema(
+                            type=types.Type.STRING,
+                            description="Text pattern or regex to search for"
+                        ),
+                        "directory": types.Schema(
+                            type=types.Type.STRING,
+                            description="Directory to search in (default: '.')"
+                        ),
+                        "file_pattern": types.Schema(
+                            type=types.Type.STRING,
+                            description="File pattern to match (e.g., '*.py', '*.md'). Default: '*' (all files)"
+                        ),
+                        "case_sensitive": types.Schema(
+                            type=types.Type.BOOLEAN,
+                            description="If true, search is case-sensitive (default: False)"
+                        ),
+                        "max_results": types.Schema(
+                            type=types.Type.INTEGER,
+                            description="Maximum number of results to return (default: 100)"
+                        ),
+                        "context_lines": types.Schema(
+                            type=types.Type.INTEGER,
+                            description="Number of context lines before/after match (default: 2)"
+                        )
+                    },
+                    required=["pattern"]
+                )
+            )
+        except ImportError:
+            return None
+
+    async def run_async(
+        self, *, args: Dict[str, Any], tool_context: ToolContext
+    ) -> Any:
+        pattern = args.get("pattern")
+        directory = args.get("directory", ".")
+        file_pattern = args.get("file_pattern", "*")
+        case_sensitive = args.get("case_sensitive", False)
+        max_results = args.get("max_results", 100)
+        context_lines = args.get("context_lines", 2)
+
+        if not pattern:
+            return {"error": "pattern is required"}
+
+        try:
+            import re
+            import fnmatch
+            
+            dir_path = Path(directory)
+            if not dir_path.exists():
+                return {"error": f"Directory not found: {directory}"}
+            
+            # Compile regex pattern
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                regex = re.compile(pattern, flags)
+            except re.error as e:
+                return {"error": f"Invalid regex pattern: {str(e)}"}
+            
+            matches = []
+            files_searched = 0
+            
+            # Search through files
+            for file_path in dir_path.rglob(file_pattern):
+                if not file_path.is_file():
+                    continue
+                
+                # Skip hidden files and common ignore patterns
+                if any(part.startswith('.') for part in file_path.parts):
+                    continue
+                
+                files_searched += 1
+                
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+                    
+                    for line_num, line in enumerate(lines, start=1):
+                        if regex.search(line):
+                            # Get context lines
+                            start_line = max(0, line_num - context_lines - 1)
+                            end_line = min(len(lines), line_num + context_lines)
+                            context = lines[start_line:end_line]
+                            
+                            matches.append({
+                                "file": str(file_path.relative_to(dir_path)),
+                                "line_number": line_num,
+                                "line": line.rstrip('\n'),
+                                "context": [l.rstrip('\n') for l in context],
+                                "context_start_line": start_line + 1
+                            })
+                            
+                            if len(matches) >= max_results:
+                                break
+                
+                except (UnicodeDecodeError, PermissionError):
+                    # Skip binary files and files we can't read
+                    continue
+                except Exception:
+                    # Skip files that cause other errors
+                    continue
+                
+                if len(matches) >= max_results:
+                    break
+            
+            return {
+                "success": True,
+                "pattern": pattern,
+                "directory": str(directory),
+                "file_pattern": file_pattern,
+                "case_sensitive": case_sensitive,
+                "files_searched": files_searched,
+                "total_matches": len(matches),
+                "matches": matches,
+                "truncated": len(matches) >= max_results
+            }
+            
+        except Exception as e:
+            return {"error": f"Error searching files: {str(e)}"}
+
+
 class SpecKitBashTool(BaseTool):
     """Tool for executing bash commands in Spec-Kit workflows."""
 
@@ -623,6 +878,8 @@ class SpecKitToolset(BaseToolset):
             SpecKitReadTool(),
             SpecKitWriteTool(),
             SpecKitFileReplaceTool(),
+            SpecKitListDirectoryTool(),
+            SpecKitSearchTool(),
             SpecKitBashTool(),
             SpecKitApplyGitDiffTool()
         ]
