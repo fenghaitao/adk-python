@@ -639,7 +639,8 @@ When creating `tasks.md` for Simics projects, **MUST include**:
 ## 2. Tests (TDD - Create before implementation)
 - [ ] Add Python test: simics-project/modules/<device_name>/test/s-<feature>.py
   - **MUST read `.specify/memory/DML_Device_Development_Best_Practices.md` for test patterns**
-  - Required imports: `import simics`, `import stest`, `import dev_util`
+  - Required imports: `import simics`, `import stest`, `import dev_util`, `import cli`
+  - **CRITICAL FIRST LINE**: `cli.run_command('sim->deprecations_as_errors = FALSE')` (prevents dev_util.Dev deprecation warnings from failing tests)
   - Create device: `device = simics.SIM_create_object('<device_name>', 'dev0')`
   - Create clock: `clk = simics.SIM_create_object('clock', 'clk', freq_mhz=1)`
   - Assign queue: `device.queue = clk`

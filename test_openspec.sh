@@ -127,7 +127,7 @@ run_stage2() {
     local mcp_server_port="$4"
     
     echo "=== Stage 2: Error Fixing (Prompt 2) ===" | tee "$proj_dir.2.log"
-    STAGE2_CMD="$ADK_ROOT/run_openspec.sh $proj_dir $proj_dir/openspec-prompts/2.md --device $device_name --model $model --skip-specify --skip-simics-setup --port $mcp_server_port"
+    STAGE2_CMD="$ADK_ROOT/run_openspec.sh $proj_dir $proj_dir/openspec-prompts/2.SIMPLE.md --device $device_name --model $model --skip-specify --skip-simics-setup --port $mcp_server_port"
     echo "Command: $STAGE2_CMD" | tee -a "$proj_dir.2.log"
     start_time=$(date +%s)
     $STAGE2_CMD 2>&1 | tee -a "$proj_dir.2.log"
