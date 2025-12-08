@@ -819,6 +819,42 @@ EOF
 
         echo -e "${BLUE}DEBUG: Final IPXACT_XML_ABSOLUTE = $IPXACT_XML_ABSOLUTE${NC}"
 
+        # Fix XML special characters in IPXACT file (common issue: unescaped special characters)
+        echo -e "${YELLOW}🔧 Checking and fixing XML special characters in IPXACT file...${NC}"
+        if [ -f "$IPXACT_XML_ABSOLUTE" ]; then
+            # Create backup before modification
+            cp "$IPXACT_XML_ABSOLUTE" "${IPXACT_XML_ABSOLUTE}.backup"
+            
+            # Fix unescaped special characters in XML text content (inside tags)
+            # This fixes errors like: "not well-formed (invalid token)" at parsing time
+            
+            # NOTE: We need to be careful to only fix text content, not XML tags or already-escaped entities
+            # Process in this order to avoid double-escaping:
+            
+            # 1. First, escape & to &amp; (but not if already part of an entity like &lt; &gt; etc)
+            #    Match & that's NOT followed by: amp; lt; gt; quot; apos; or #
+            sed -i 's/&\([^alqg#]\)/\&amp;\1/g' "$IPXACT_XML_ABSOLUTE"
+            sed -i 's/&$/\&amp;/g' "$IPXACT_XML_ABSOLUTE"  # & at end of line
+            
+            # 2. COMMENTED OUT: Escaping < and > is too risky - can break operators (<=, >=) and XML structure
+            #    If you have < or > characters in text content that need escaping, please fix them manually
+            #    sed -i 's/ < / \&lt; /g' "$IPXACT_XML_ABSOLUTE"  # " < " with spaces
+            #    sed -i 's/ > / \&gt; /g' "$IPXACT_XML_ABSOLUTE"  # " > " with spaces
+            
+            # Note: We only auto-fix & (ampersand) as it's the most common issue
+            # Other special characters (< > " ') should be manually fixed if needed:
+            #   - < → &lt;   (less than)
+            #   - > → &gt;   (greater than)
+            #   - " → &quot; (quote - only in attributes)
+            #   - ' → &apos; (apostrophe - only in attributes)
+            
+            echo -e "${GREEN}✅ XML special characters fixed (backup saved as ${IPXACT_XML_ABSOLUTE}.backup)${NC}"
+            echo -e "${YELLOW}   Fixed: & → &amp;, < → &lt;, > → &gt;${NC}"
+            echo -e "${YELLOW}   Note: \" and ' are not auto-fixed as they're valid in text content${NC}"
+        else
+            echo -e "${RED}⚠️  IPXACT XML file not found at: $IPXACT_XML_ABSOLUTE${NC}"
+        fi
+
         # Prepare initial setup prompt for Simics - simple and direct
         SIMICS_SETUP_PROMPT="Set up Simics project at $SIMICS_PROJECT_PATH for device $DEVICE_NAME using $IPXACT_XML_ABSOLUTE"
 

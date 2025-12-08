@@ -324,33 +324,10 @@ complete OpenSpec workflow from proposal creation through FULL implementation an
      - Archive with "## Known Issues" section documenting failures
      - Follow-up changes (002-*, 003-*) can fix remaining issues
 
-     **CRITICAL - Timer/Counter Implementation (Simics Event-Driven Model)**:
-
-     ✅ REQUIRED - Event-based single timeout pattern:
-     ```
-     event timer_event is (simple_time_event) {
-         method arm(double timeout_seconds) {
-             if (posted()) remove();
-             post(timeout_seconds);  // ONE event only!
-         }
-     }
-
-     saved double timer_start_simtime = 0.0;
-
-     method start_timer(uint64 timeout_cycles) {
-         timer_start_simtime = SIM_time(dev.obj);
-         timer_event.arm(cycles_to_simtime(timeout_cycles));
-     }
-     ```
-
-     **Why this matters**:
-     - Periodic ticks = cycle-accurate simulation (WRONG for event-driven Simics)
-     - Counter of 0xFFFFFFFF with periodic ticks = 4.3 BILLION events!
-     - Event-based = ONE event per timeout (correct event-driven model)
-
-     **For complete timer implementation details**, see:
-     → `.specify/memory/DML_Device_Development_Best_Practices.md` Section: "Timer Device"
-     → `.specify/memory/constitution.md` Section: "Timer Device Implementation Pattern"
+     **CRITICAL - Timer/Counter Implementation**:
+     - Use event-driven model (NOT cycle-accurate counter decrements)
+     - See `.specify/memory/DML_Device_Development_Best_Practices.md` Section: "Timing-Related Feature Modeling Best Practices"
+     - See `.specify/memory/constitution.md` for mandatory implementation patterns
 
    - Commit incremental progress (including task marking commits)
    - **Build and test** to verify implementation works
@@ -580,10 +557,10 @@ the complete workflow WITHOUT stopping.
      - Forbidden actions checklist
      - Compliance checklist
 
-2. **Read Best Practices** (if exists): `.specify/memory/DML_Device_Development_Best_Practices.md`
-   - Detailed timer device implementation examples
-   - Python test file code samples
-   - DML coding patterns
+2. **Read Best Practices**: `.specify/memory/DML_Device_Development_Best_Practices.md` and `.specify/memory/Simics_Model_Test_Best_Practices.md`
+   - DML coding patterns and timer implementation
+   - Python test file structure and examples
+   - Register access and signal mocking patterns
 
 ### Simics Project Detection
 
@@ -638,14 +615,12 @@ When creating `tasks.md` for Simics projects, **MUST include**:
 
 ## 2. Tests (TDD - Create before implementation)
 - [ ] Add Python test: simics-project/modules/<device_name>/test/s-<feature>.py
-  - **MUST read `.specify/memory/DML_Device_Development_Best_Practices.md` for test patterns**
-  - Required imports: `import simics`, `import stest`, `import dev_util`, `import cli`
-  - **CRITICAL FIRST LINE**: `cli.run_command('sim->deprecations_as_errors = FALSE')` (prevents dev_util.Dev deprecation warnings from failing tests)
-  - Create device: `device = simics.SIM_create_object('<device_name>', 'dev0')`
-  - Create clock: `clk = simics.SIM_create_object('clock', 'clk', freq_mhz=1)`
-  - Assign queue: `device.queue = clk`
-  - Access registers: `bank = dev_util.bank_regs(device.bank.<BankName>)`
-  - See best practices doc for: clock configuration, register access, time advancement, signal mocking
+  - **MUST read `.specify/memory/Simics_Model_Test_Best_Practices.md` for complete test patterns**
+  - Required imports and test structure: See best practices Section "Core Testing Concepts & Patterns"
+  - Clock configuration: See best practices Section 1 "Configuration and Simulation Control"
+  - Register access patterns: See best practices Section 2 "Register Access"
+  - Fake objects (mocking): See best practices Section 3 "Environment Simulation (Fakes & Interfaces)"
+  - Time advancement and events: See best practices Section 5 "Events and Timing"
   - **MARK THIS TASK DONE (- [x]) IMMEDIATELY AFTER CREATING THE FILE**
 
 ## 3. Implementation
@@ -708,14 +683,9 @@ When creating `tasks.md` for Simics projects, **MUST include**:
    ```
 
 3. **Use correct patterns** (from constitution and best practices):
-   - Timers: ✅ `event` + `SIM_time()`, ❌ `saved uint32`
-   - Tests: ✅ `s-<feature>.py` + proper imports, ❌ pytest-style fixtures
-   - **Complete test examples**: See `.specify/memory/DML_Device_Development_Best_Practices.md`
-     - Clock queue configuration (Section: Testing Best Practices)
-     - Register access patterns (bank vs attribute methods)
-     - Time advancement and event handling
-     - Signal interface mocking for `connect` blocks
-     - Common test errors and solutions
+   - **Timers**: See `.specify/memory/DML_Device_Development_Best_Practices.md` Section "Timing-Related Feature Modeling Best Practices"
+   - **Tests**: See `.specify/memory/Simics_Model_Test_Best_Practices.md` for complete test structure and patterns
+   - **Fake Objects**: See `.specify/memory/Simics_Model_Test_Best_Practices.md` Section 3 for mocking signal interfaces
 
 ### Constitution Compliance Verification
 
