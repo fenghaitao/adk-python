@@ -46,7 +46,61 @@ A good Simics model implements the what and not the how of device functionality,
 
 This document summarizes best practices for modeling timing-related features in Simics DML, based on analysis of the DML reference manual and real device implementations in the Simics packages.
 
-#### 1. Core Timing Mechanisms in DML
+#### 1. Anti-Patterns to AVOID (For LLM Code Generation)
+
+**❌ CRITICAL Anti-Pattern 1: Clock Signal Modeling & Cycle-Accurate Updates (MOST COMMON MISTAKE)**
+
+**NEVER model clock signals or update counters every cycle in Simics DML.**
+
+```dml
+// ❌ FORBIDDEN - Clock signal modeling:
+port timer_clk {
+    implement signal {
+        method signal_raise() {
+            timer_counter--;  // ❌ CATASTROPHIC! Called MILLIONS of times/second
+        }
+    }
+}
+
+// ❌ FORBIDDEN - Cycle-accurate updates:
+event timer_tick is simple_cycle_event {
+    method event() {
+        timer_counter.val++;
+        this.post(1);  // ❌ WRONG! Updates every cycle
+    }
+}
+```
+
+**WHY This is CATASTROPHIC:**
+1. **Performance**: 100-1000x slower - methods called MILLIONS of times per second
+2. **Wrong Paradigm**: Simics = Transaction-Level Modeling (TLM), NOT Register-Transfer Level (RTL)
+3. **Software Visibility**: Software NEVER sees clock edges - only register values
+4. **Breaks Lazy Evaluation**: Forces expensive cycle-by-cycle updates instead of on-demand calculation
+
+**✅ CORRECT Alternative - Lazy Evaluation Pattern:**
+```dml
+saved cycles_t start_time;
+saved uint64 start_value;
+
+register COUNTER {
+    method read_register() -> (uint64) {
+        local cycles_t now = SIM_cycle_count(dev.obj);
+        local cycles_t elapsed = now - start_time;
+        return start_value - cast(elapsed, uint64);  // Calculate on-demand, not every cycle
+    }
+}
+```
+
+**Detection Rules - If you see ANY of these patterns, it's WRONG:**
+- `port` implementing `signal` interface for clock/timing purposes
+- Timer/timing counter decrements or increments inside `signal_raise()` or `signal_lower()` methods
+- `event` posting to itself every cycle (e.g., `this.post(1)`)
+- Any cycle-by-cycle timer state updates in event handlers
+- Timer register value updates triggered by clock edges
+
+---
+
+#### 2. Core Timing Mechanisms in DML
 
 - The `after` Statement
 
@@ -115,7 +169,7 @@ method update_event() {
 }
 ```
 
-#### 2. Timer Counter Modeling Patterns
+#### 3. Timer Counter Modeling Patterns
 
 - Lazy Counter Evaluation (Recommended)
 
@@ -191,7 +245,7 @@ register main_cnt {
 }
 ```
 
-#### 3. Countdown Timer / Watchdog Pattern
+#### 4. Countdown Timer / Watchdog Pattern
 
 - Basic Countdown Timer
 
@@ -276,7 +330,7 @@ method restart_watchdog() {
 }
 ```
 
-#### 4. Timestamp Counter (TSC) Pattern
+#### 5. Timestamp Counter (TSC) Pattern
 
 For modeling CPU timestamp counters that return different values at different simulation times:
 
@@ -325,7 +379,7 @@ register tsc {
 }
 ```
 
-#### 5. Periodic Timer Pattern
+#### 6. Periodic Timer Pattern
 
 For timers that fire at regular intervals:
 
@@ -357,7 +411,7 @@ method stop_periodic_timer() {
 }
 ```
 
-#### 6. Comparator Match Pattern
+#### 7. Comparator Match Pattern
 
 For timers that trigger when counter matches a reference value:
 
@@ -406,7 +460,7 @@ method next_match_tick() -> (uint64) {
 }
 ```
 
-#### 7. Best Practices Summary
+#### 8. Best Practices Summary
 
 - DO:
 
@@ -445,7 +499,7 @@ register counter {
 }
 ```
 
-#### 8. Common Timing Constants
+#### 9. Common Timing Constants
 
 ```dml
 // Common clock periods
@@ -472,7 +526,7 @@ method seconds_to_cycles(double seconds) -> (cycles_t) {
 }
 ```
 
-#### 9. Quick Reference Card
+#### 10. Quick Reference Card
 
 | Task | Method |
 |------|--------|
@@ -487,44 +541,6 @@ method seconds_to_cycles(double seconds) -> (cycles_t) {
 | Remove posted event | `event.remove()` |
 | Check if event posted | `event.posted()` |
 | Get time to next event | `event.next()` |
-
-#### 10. Anti-Patterns to AVOID (For LLM Code Generation)
-
-- ❌ Anti-Pattern 1: Clock Signal Modeling
-```dml
-// WRONG - Do NOT model clock signals!
-connect clk {
-    interface signal;
-}
-method clock_edge() {
-    counter++;  // WRONG!
-}
-```
-
-**Correct approach:** Use `SIM_cycle_count()` or `after` statements.
-
-- ❌ Anti-Pattern 2: Cycle-Accurate Counter Updates
-```dml
-// WRONG - Do NOT update counters every cycle!
-event tick is simple_cycle_event {
-    method event() {
-        counter.val++;
-        this.post(1);  // Post for next cycle - WRONG!
-    }
-}
-```
-
-**Correct approach:** Lazy evaluation - calculate on read.
-
-- ❌ Anti-Pattern 3: RTL-Style Sequential Logic
-```dml
-// WRONG - This is NOT Verilog!
-session uint1 q;
-session uint1 d;
-method on_clock() {
-    q = d;  // Flip-flop modeling - WRONG!
-}
-```
 
 ---
 

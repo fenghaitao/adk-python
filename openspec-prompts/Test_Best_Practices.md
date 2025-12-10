@@ -354,7 +354,7 @@ stest.expect_equal(elapsed, 1001, "Time did not advance")
 stest.expect_equal(pic.raised, int_number + 1, "Interrupt not raised")
 stest.expect_equal(regs.timer_value.read(), 0, "Timer value should be 0 after expiry")
 ```
-or
+or with function wrapper (**CRITICAL - must call the function!**):
 
 ```python
 import simics
@@ -379,8 +379,36 @@ def test_feature():
     More test content ...
     '''
 
+# ❌ CRITICAL: NEVER define test_feature() or run() without calling it!
+# Test code inside a function will NEVER execute unless you call the function.
+
 if __name__ == "__main__":
-    test_feature()
+    test_feature()  # ✅ REQUIRED: Actually execute the test
+```
+
+**Anti-Pattern: Defining but Not Calling Test Function**
+
+```python
+# ❌ WRONG - Test will NEVER run (silent failure):
+def test_feature():
+    device = simics.SIM_object_by_name('test_dev', 0)
+    regs = dev_util.bank_regs(device.bank.regs)
+    stest.expect_equal(regs.control.read(), 0x1, "Test")
+    # File ends here - test_feature() is NEVER called!
+
+# ✅ CORRECT - Test executes:
+def test_feature():
+    device = simics.SIM_object_by_name('test_dev', 0)
+    regs = dev_util.bank_regs(device.bank.regs)
+    stest.expect_equal(regs.control.read(), 0x1, "Test")
+
+test_feature()  # ✅ Actually execute the test!
+
+# ✅ ALSO CORRECT - Direct code (no function wrapper):
+device = simics.SIM_object_by_name('test_dev', 0)
+regs = dev_util.bank_regs(device.bank.regs)
+stest.expect_equal(regs.control.read(), 0x1, "Test")
+# Executes immediately when file is imported
 ```
 
 ## Best Practices Checklist

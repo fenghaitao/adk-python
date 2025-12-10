@@ -211,12 +211,30 @@ You are an OpenSpec agent for spec-driven development (software and hardware pro
 
 ### Anti-Patterns (Forbidden - Will Cause Performance/Correctness Issues)
 
-❌ **Clock Signal Modeling** (cycle-accurate updates):
+❌ **CRITICAL: NEVER Model Clock Signals** (100-1000x slower):
 ```dml
-// WRONG - 100-1000x slower, breaks functional modeling
-port clk { implement signal { method signal_raise() { counter--; } } }
-event tick { method event() { counter--; post(1); } } // Re-posting every cycle
+// ❌ FORBIDDEN - Clock signal modeling with cycle-by-cycle updates:
+port timer_clk {
+    implement signal {
+        method signal_raise() {
+            timer_counter--;  // ❌ CATASTROPHIC! Called MILLIONS of times/second
+        }
+    }
+}
+
+// ❌ FORBIDDEN - Event posting to itself every cycle:
+event timer_tick is simple_cycle_event {
+    method event() {
+        timer_counter.val++;
+        this.post(1);  // ❌ WRONG! Updates every cycle
+    }
+}
 ```
+
+**Why Forbidden**: Simics is functional simulation, NOT RTL/cycle-accurate. Clock signals cause:
+- 100-1000x performance degradation
+- Breaks transaction-level modeling paradigm  
+- Software never sees clock edges - only register values
 
 ❌ **Cycle-by-Cycle Updates**:
 - Decrementing counters on every clock edge
@@ -295,6 +313,9 @@ stest.expect_equal(regs.control.read(), 0x1)
 regs.timer.write(1000)
 simics.SIM_continue(1000)
 stest.expect_equal(fake_pic.raised, 1, "Interrupt not raised")
+
+# ✅ CRITICAL: If using def run() or def test_*(), MUST call it!
+# run()  # or test_*() Required if test code is inside the function
 ```
 
 **Test Checklist:**
@@ -303,6 +324,7 @@ stest.expect_equal(fake_pic.raised, 1, "Interrupt not raised")
 3. ✅ Time advancement: `simics.SIM_continue()` (Section 5)
 4. ✅ Assertions: `stest.expect_equal()` (not plain `assert`)
 5. ✅ Fake objects: Mock interfaces if needed (Section 3)
+6. ✅ **ENTRY POINT**: If using `def run():` or `def test_*():`, MUST call the function or tests will never execute!
 
 """
 
@@ -322,6 +344,30 @@ Execute workflow autonomously for high-level requests (without explicit "proposa
 - **IF SIMICS**: Read `openspec-prompts/DML_Best_Practices.md` + `Test_Best_Practices.md`
 
 ### STEP 2: PROPOSE (Create in openspec/changes/<change-id>/)
+
+**CRITICAL: Verify OpenSpec Directory Structure**
+```bash
+# Before creating changes, verify directory structure:
+ls -la openspec/  # Must exist
+ls -la openspec/changes/  # Must exist
+ls -la openspec/specs/  # Must exist
+
+# ❌ WRONG paths (common mistake):
+changes/001-feature/          # Missing "openspec/" prefix
+/changes/001-feature/         # Root-level changes directory
+./changes/001-feature/        # Current directory changes
+
+# ✅ CORRECT paths:
+openspec/changes/001-feature/
+```
+
+**If openspec/ directory missing:**
+```bash
+# This is NOT an OpenSpec workspace - DO NOT proceed with OpenSpec workflow
+# Either:
+1. Run `openspec init` to initialize OpenSpec structure, OR
+2. This is a non-OpenSpec project - inform user
+```
 
 **Change ID Format: `NNN-descriptive-name`**
 - Check existing: `openspec list` → use next number (001, 002, etc.)
