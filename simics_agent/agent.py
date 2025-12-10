@@ -19,6 +19,7 @@ from google.adk.agents.llm_agent import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams
+from google.adk.tools import agent_tool
 
 try:
     from spec_kit_tools import create_spec_kit_toolset
@@ -26,6 +27,10 @@ except ImportError:
     # Fallback if direct import fails, though sys.path should handle it
     sys.path.append(str(spec_kit_integration_dir))
     from spec_kit_tools import create_spec_kit_toolset
+
+# Import and add simicsDocAgent
+sys.path.append(str(current_dir.parent / "simics_doc_agents"))
+from simics_doc_agents.agent import root_agent as simicsDocAgent
 
 def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
     """Create a MCP toolset that connects to the simics-mcp-server with content truncation.
@@ -57,6 +62,7 @@ def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
         "create_simics_project",
         "add_dml_device_skeleton",
         "build_simics_project",
+        "setup_project",
         # "run_simics_test",
 
         # RAG query tool for documentation and source code search
@@ -139,6 +145,9 @@ try:
     tools.append(create_simics_mcp_toolset())
 except Exception as e:
     print(f"Warning: Simics MCP toolset not available: {e}")
+
+tools.append(agent_tool.AgentTool(agent=simicsDocAgent))
+
 
 # Initialize Agent
 root_agent = SimicsAgent(
