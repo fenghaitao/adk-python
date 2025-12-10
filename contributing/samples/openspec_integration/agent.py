@@ -319,10 +319,15 @@ Execute workflow autonomously for high-level requests (without explicit "proposa
 
 ### STEP 2: PROPOSE (Create in openspec/changes/<change-id>/)
 
-**Change ID Rules:**
-- First change in NEW project: Use `001`
-- Check existing with `openspec list`, increment from what EXISTS
-- Example: Empty list → use `001` (NOT 002/003)
+**Change ID Format: `NNN-descriptive-name`**
+- Check existing: `openspec list` → use next number (001, 002, etc.)
+- Add kebab-case description from user request/feature (3-5 words max)
+- Focus on WHAT, not HOW
+- Examples:
+  - "implement timer" → `001-timer-implementation`
+  - "fix test issues" → `002-test-robustness`
+  - "add validation" → `003-input-validation`
+- Archives to: `YYYY-MM-DD-NNN-description/` for easy identification
 
 **proposal.md Template:**
 ```markdown
@@ -350,18 +355,19 @@ Execute workflow autonomously for high-level requests (without explicit "proposa
 **tasks.md Structure** (see Step 3 for details)
 
 **Spec Deltas** (if applicable):
-- Path: `changes/<id>/specs/<capability>/spec.md` (NOT `changes/<id>/specs/spec.md`!)
+- Path: `changes/<NNN-description>/specs/<capability>/spec.md`
+- NOT: `changes/<NNN-description>/specs/spec.md` (missing capability folder!)
 - Format: `## ADDED/MODIFIED/REMOVED Requirements`
 - Each needs: `### Requirement:` + `#### Scenario:` + SHALL/MUST
 
 **Validation:**
 ```
-openspec validate <change-id> --strict
+openspec validate <NNN-description> --strict
 Fix errors before proceeding
 ```
 
 **Common Fixes:**
-- "must have at least one delta" → Verify path `changes/<id>/specs/<capability>/spec.md`
+- "must have at least one delta" → Verify path `changes/<NNN-description>/specs/<capability>/spec.md`
 - "invalid format" → Add `#### Scenario:` with SHALL/MUST
 - "missing target spec" → Create `specs/<capability>/spec.md` in root
 
@@ -420,7 +426,7 @@ Fix errors before proceeding
 
 ## 5. Archive
 - [ ] Verify all tasks [x]
-- [ ] openspec archive <change-id> --yes
+- [ ] openspec archive <NNN-description> --yes
 ```
 
 **Workflow with Test Failures:**
@@ -439,7 +445,7 @@ Fix errors before proceeding
 
 **A: All tests pass**
 ```
-→ openspec archive <id> --yes
+→ openspec archive <NNN-description> --yes
 → Commit
 → DONE ✅
 ```
@@ -453,7 +459,7 @@ Fix errors before proceeding
   - Root cause: <diagnosis>
   - Fix in follow-up
 → Commit with message "Document known failures"
-→ openspec archive <id> --yes
+→ openspec archive <NNN-description> --yes
 → DONE ✅
 ```
 
@@ -467,7 +473,7 @@ Fix errors before proceeding
 **Error Recovery (Autonomous):**
 ```
 "must have at least one delta"
-  → Fix path: changes/<id>/specs/<capability>/spec.md
+  → Fix path: changes/<NNN-description>/specs/<capability>/spec.md
 
 "invalid spec format"
   → Add #### Scenario: with SHALL/MUST
@@ -480,7 +486,7 @@ Fix errors before proceeding
 
 "requirements lacked SHALL/MUST"
   → Edit openspec/specs/<capability>/spec.md, add SHALL/MUST
-  → Retry: openspec archive <id> --yes
+  → Retry: openspec archive <NNN-description> --yes
   → DO NOT ask permission - fix autonomously!
 ```
 
@@ -488,7 +494,7 @@ Fix errors before proceeding
 - ✅ Archive is MANDATORY (not optional)
 - ✅ Archive with known issues (document in proposal.md)
 - ✅ Fix errors autonomously (iterate until success)
-- ✅ Verify moved to openspec/changes/archive/
+- ✅ Verify moved to openspec/changes/archive/YYYY-MM-DD-NNN-description/
 - ❌ DO NOT ask permission mid-workflow
 - ❌ DO NOT skip archive
 - ❌ DO NOT wait for perfection
@@ -502,10 +508,10 @@ Fix errors before proceeding
 ✅ IMPLEMENTATION COMPLETE
 
 Summary:
-- Change <id> archived
+- Change <NNN-description> archived
 - All tests passing: [list]
 - Device builds clean
-- Location: openspec/changes/archive/<id>/
+- Location: openspec/changes/archive/YYYY-MM-DD-NNN-description/
 
 Next: Implementation ready, no additional changes needed
 ```
@@ -515,7 +521,7 @@ Next: Implementation ready, no additional changes needed
 ⚠️ IMPLEMENTATION COMPLETE WITH KNOWN ISSUES
 
 Summary:
-- Change <id> archived with known issues
+- Change <NNN-description> archived with known issues
 - Tests passing: [list]
 - Tests failing: [list]
 - Issues documented: proposal.md
@@ -548,8 +554,8 @@ Examples:
 ## 🛠️ ERROR RECOVERY & CLEANUP
 
 **File Location Errors:**
-1. Delete incorrect files: `rm openspec/changes/<id>/specs/spec.md`
-2. Create in correct location: `openspec/changes/<id>/specs/<capability>/spec.md`
+1. Delete incorrect files: `rm openspec/changes/<NNN-description>/specs/spec.md`
+2. Create in correct location: `openspec/changes/<NNN-description>/specs/<capability>/spec.md`
 3. Re-validate structure
 4. Never leave orphaned files
 
@@ -559,6 +565,7 @@ Examples:
 - ❌ Stopping after archive fails → ✅ Fix error, retry
 - ❌ Stopping after creating tests → ✅ Continue to full DML implementation
 - ❌ Asking approval mid-workflow → ✅ Complete all phases autonomously
+- ❌ Using numeric-only IDs (001, 002) → ✅ Use descriptive names (001-feature-name)
 
 
 **DO NOT stop for approval** unless user explicitly requests review.
@@ -590,7 +597,7 @@ Auto-detect Simics projects by checking for:
 
 ## References
 - Spec (GENERATED, PRIMARY): specs/<git-branch>/spec.md
-  Use ls -1 specs/ to find directory (e.g., 001-feature-name)
+  Use ls -1 specs/ to find directory (format: NNN-description, e.g., 001-initial-spec)
 - Spec (ORIGINAL, SUPPLEMENTARY): <device-name>.md (if exists)
 - DML best practices: openspec-prompts/DML_Best_Practices.md
 - Test best practices: openspec-prompts/Test_Best_Practices.md
@@ -653,11 +660,14 @@ openspec/
 ├── specs/                        # Current specifications (source of truth)
 │   └── <capability>/spec.md
 ├── changes/                      # Active change proposals
-│   └── <change-id>/
+│   └── <NNN-description>/        # e.g., 001-timer-implementation
 │       ├── proposal.md           # Why & what changes
 │       ├── tasks.md              # Implementation checklist
 │       └── specs/                # Spec deltas
 │           └── <capability>/spec.md
+└── changes/archive/              # Completed changes
+    └── YYYY-MM-DD-NNN-description/  # e.g., 2025-12-10-001-timer-implementation
+```
 └── changes/archive/              # Completed changes
 ```
 
@@ -697,7 +707,7 @@ openspec archive <change> --yes  # Archive change (non-interactive)
 ### Best Practices
 1. Read AGENTS.md first (project context)
 2. Use spec deltas (ADDED/MODIFIED/REMOVED) for clarity
-3. Validate before implementation: `openspec validate <id> --strict`
+3. Validate before implementation: `openspec validate <NNN-description> --strict`
 4. Follow workflow strictly: proposal → review → implement → archive
 5. Reference requirements in tasks
 6. Keep specs focused on WHAT/WHY (not HOW)
