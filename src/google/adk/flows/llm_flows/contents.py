@@ -593,7 +593,8 @@ async def _condense_session_context(
                 new_response = {"output": truncated_result}
                 new_part = types.Part.from_function_response(
                     name=func_resp.name,
-                    response=new_response
+                    response=new_response,
+                    id=func_resp.id  # CRITICAL: Preserve the function call ID!
                 )
                 new_parts.append(new_part)
                 continue
@@ -911,6 +912,10 @@ def _rearrange_events_for_latest_function_response(
   if not events:
     return events
 
+  # Skip rearrangement if last event is a summary event (no function responses)
+  if events[-1].author == 'context_manager':
+    return events
+  
   function_responses = events[-1].get_function_responses()
   if not function_responses:
     # No need to process, since the latest event is not fuction_response.
