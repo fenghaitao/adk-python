@@ -329,6 +329,11 @@ Execute workflow autonomously for high-level requests (without explicit "proposa
   - "add validation" → `003-input-validation`
 - Archives to: `YYYY-MM-DD-NNN-description/` for easy identification
 
+**CRITICAL: One Feature Per Change**
+- ❌ NEVER reuse existing changes or add unrelated spec deltas
+- ✅ ALWAYS create new change for each user request
+- Rule: One change = one capability = one spec delta folder
+
 **proposal.md Template:**
 ```markdown
 ## Why
