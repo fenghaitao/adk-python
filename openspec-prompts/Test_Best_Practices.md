@@ -54,9 +54,10 @@ def create_test_config():
     clk = simics.pre_conf_object('clk', 'clock')
     mem = simics.pre_conf_object('mem', 'memory-space')
     mem.map = []
-    # map dev.bank.regs to memory space [0x1000, 0x2000]
+    # Map bank to memory space [0x1000, 0x2000]
+    # Bank name 'regs' comes from DML: "bank regs { ... }" (use actual name from your DML)
     mem.map += [0x1000, #base address
-                dev.bank.regs, # object
+                dev.bank.regs, # Use exact bank name from DML file
                 0, # function
                 0, # offset
                 0x1000]
@@ -87,13 +88,45 @@ stest.expect_equal(elapsed, 1000, "Time did not advance correctly")
 
 Testing register access is the most common task. Use `dev_util` helpers for convenience.
 
+#### **CRITICAL: Finding Bank Names from DML**
+
+**ALWAYS read the DML file to find the exact bank name.** Bank names in DML map directly to Python attributes:
+
+```dml
+// In <device>.dml:
+bank regs {          // ← Bank name is "regs" (could be any name like reg_if, regbank, etc.)
+    register CONTROL { ... }
+    register STATUS { ... }
+}
+```
+
+```python
+# In test.py - use the EXACT bank name from DML:
+regs = dev_util.bank_regs(conf.dev.bank.regs)  # ✅ Correct: matches DML "bank regs"
+```
+
+**Anti-Pattern: DO NOT scan/discover banks dynamically**
+
+```python
+# ❌ WRONG - Never write defensive discovery code:
+for name in ['reg_if', 'regif', 'regs', 'bank']:  # ❌ Unnecessary complexity
+    try:
+        obj = getattr(dev, name)
+        regs = dev_util.bank_regs(obj)
+        break
+    except: pass
+
+# ✅ CORRECT - Read DML, use exact bank name:
+regs = dev_util.bank_regs(conf.dev.bank.<bank_name>)  # Replace <bank_name> with actual name from DML
+```
+
 #### Using `bank_regs` (Recommended)
 
 The `bank_regs` utility creates a proxy for easy read/write access to registers and fields.
 
 ```python
-# Create proxy
-regs = dev_util.bank_regs(conf.dev.bank.regs)
+# Example: If DML defines "bank regs { ... }" (or any other name)
+regs = dev_util.bank_regs(conf.dev.bank.regs)  # Use exact bank name from DML
 
 # Full register access
 regs.control.write(0xdeadbeef)
@@ -104,14 +137,19 @@ regs.status.write(dev_util.READ, enable=1, mode=3)
 stest.expect_equal(regs.status.field.enable.read(), 1)
 ```
 
+**Workflow:**
+1. Read `<device>.dml`, find `bank <bank_name> { ... }`
+2. Use `dev_util.bank_regs(conf.device.bank.<bank_name>)` with exact bank name from step 1
+3. Never guess or scan - the bank name is always explicit in DML
+
 #### Using `Register_LE/BE` (Specific Layouts)
 
 Use `Register_LE` (Little Endian) or `Register_BE` (Big Endian) when you need to test specific offsets or endianness behavior explicitly.
 
 ```python
-# Define register at specific offset
+# Example: If DML defines "bank regs { register control @ 0x00 ... }"
 control = dev_util.Register_LE(
-    conf.dev.bank.regs, 0x00, size=4,
+    conf.dev.bank.regs, 0x00, size=4,  # Use exact bank name from DML
     bitfield=dev_util.Bitfield_LE({'enable': 31, 'mode': (30, 28)})
 )
 
@@ -289,19 +327,21 @@ from common import create_config
 
 # 1. Setup
 (dut, pic) = create_config()
+# 2. Get bank proxy - ALWAYS read DML first to find bank name
+# Example: If DML defines "bank regs { ... }", use exact name:
 regs = dev_util.bank_regs(dut.bank.regs)
 
-# 2. Test Register Access
+# 3. Test Register Access
 regs.load.write(0x5)
 stest.expect_equal(regs.timer_value.read(), 0x5, "TimeValue register mismatch while loading new timer configuration")
 regs.control.write(0x1)
 stest.expect_equal(regs.control.read(), 0x1, "Control register mismatch")
 
-# 3. Test Side Effects
+# 4. Test Side Effects
 regs.trigger_irq.write(1)
 stest.expect_equal(pic.raised, 1, "Interrupt not raised")
 
-# 4. Test Timing
+# 5. Test Timing
 int_number = pic.raised
 regs.load.write(1000) # re-configure timer
 regs.control.write(0x1)  # Start timer
@@ -325,9 +365,11 @@ from common import create_config
 def test_feature():
     # 1. Setup
     (dut, pic) = create_config()
+    
+    # 2. Get bank proxy - read DML to find exact bank name (e.g., "bank regs")
     regs = dev_util.bank_regs(dut.bank.regs)
 
-    # 2. Test Register Access
+    # 3. Test Register Access
     regs.load.write(0x5)
     stest.expect_equal(regs.timer_value.read(), 0x5, "TimeValue register mismatch while loading new timer configuration")
     regs.control.write(0x1)
@@ -359,11 +401,13 @@ if __name__ == "__main__":
 - **Documentation**: Explain what each test covers.
 
 ### 4. **Essential Testing Practices**:
+- **ALWAYS read the DML file first** to find exact bank names (e.g., `bank regs` → use `dev.bank.regs`)
+- **NEVER scan/discover banks dynamically** - bank names are explicit in DML, not runtime discoveries
 - **Clock configuration is mandatory** for time-based devices in unit tests
 - Create and assign clocks **before** posting any time events
 - Test time-dependent behavior explicitly with `SIM_continue()`
 - **Use Fake Objects (Section 3)** to mock signal interfaces when DML uses `connect` blocks
-- Use `dev_util.bank_regs()` for clean register access
+- Use `dev_util.bank_regs()` for clean register access with exact bank name from DML
 - Follow the `s-<feature>.py` naming convention
 
 ### 5. **Quick Troubleshooting Checklist**:
