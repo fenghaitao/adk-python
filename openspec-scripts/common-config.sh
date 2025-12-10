@@ -10,3 +10,4 @@ export CONTEXT_SUMMARY_PROMPT_TYPE="vscode"
 export ADK_ROOT=~/adk-python
 export BUILTIN_MCP_SERVER=no
 export IFLOW_API_KEY="sk-fddb7adb2d7eb413b4da655e16be70f7"
+export TMPDIR=~/tmp
