@@ -41,75 +41,6 @@ try:
 except ImportError:
     from openspec_tools import create_openspec_toolset
 
-
-def detect_hardware_project(text: str) -> bool:
-    """Detect if the project involves hardware device modeling.
-
-    This function analyzes text (such as feature descriptions or project context)
-    to determine if it involves hardware device modeling that would benefit from
-    Simics MCP tools.
-
-    Args:
-      text: Feature description or project context to analyze
-
-    Returns:
-      bool: True if hardware device modeling is detected, False otherwise
-
-    Detection Strategy:
-      Uses keyword matching across multiple categories:
-      - Hardware terms (processor, CPU, GPU, FPGA, microcontroller, embedded)
-      - Simulation terms (simulation, modeling, hardware validation, device model)
-      - Architecture terms (x86, ARM, RISC-V, MIPS, SPARC)
-      - Hardware components (PCI, USB, memory controller, peripheral, watchdog timer)
-      - Development terms (firmware, BIOS, bootloader, DML, register map)
-
-    Note:
-      This is a conservative heuristic that prefers false positives. If hardware
-      keywords are detected but the project is actually software-focused, the
-      developer can simply ignore the Simics-specific suggestions.
-    """
-    hardware_keywords = [
-        # Hardware terms
-        "processor",
-        "cpu",
-        "gpu",
-        "fpga",
-        "microcontroller",
-        "embedded",
-        # Simulation terms
-        "simulation",
-        "modeling",
-        "hardware validation",
-        "device model",
-        # Architecture terms
-        "x86",
-        "arm",
-        "risc-v",
-        "mips",
-        "sparc",
-        # Hardware components
-        "pci",
-        "usb",
-        "memory controller",
-        "peripheral",
-        "watchdog timer",
-        "network controller",
-        "storage device",
-        "interrupt controller",
-        # Development terms
-        "firmware",
-        "bios",
-        "bootloader",
-        "dml",
-        "register map",
-        "hardware interface",
-        "device driver",
-    ]
-
-    text_lower = text.lower()
-    return any(keyword in text_lower for keyword in hardware_keywords)
-
-
 def get_openspec_model():
     """Get OpenSpec model from environment or use default.
 
@@ -371,11 +302,89 @@ openspec/changes/001-feature/
 
 **tasks.md Structure** (see Step 3 for details)
 
-**Spec Deltas** (if applicable):
-- Path: `changes/<NNN-description>/specs/<capability>/spec.md`
-- NOT: `changes/<NNN-description>/specs/spec.md` (missing capability folder!)
-- Format: `## ADDED/MODIFIED/REMOVED Requirements`
-- Each needs: `### Requirement:` + `#### Scenario:` + SHALL/MUST
+**❌ CRITICAL: Spec Deltas Are MANDATORY (Not Optional)**
+
+**Every OpenSpec change MUST have spec deltas.** Do NOT skip this step.
+
+**Why Required:**
+1. `openspec archive` merges deltas from `changes/NNN/specs/` → `openspec/specs/`
+2. Without deltas, `openspec/specs/` remains empty (broken workflow)
+3. Specs document WHAT was implemented (requirements traceability)
+4. Future changes reference the source-of-truth specs in `openspec/specs/`
+
+**Spec Delta Creation (MANDATORY):**
+
+```bash
+# 1. Identify capability from user request
+# Example: "implement timer device" → capability = "timer-device"
+# Example: "add interrupt support" → capability = "interrupt-support"
+# Use kebab-case, descriptive of the feature being added
+
+# 2. Create spec delta directory (REQUIRED):
+mkdir -p openspec/changes/NNN-description/specs/<capability>/
+
+# 3. Create spec.md with requirements (REQUIRED):
+# Pattern: changes/<NNN-description>/specs/<capability>/spec.md
+# NOT: changes/<NNN-description>/specs/spec.md (missing capability folder!)
+```
+
+**Spec Delta Format:**
+```markdown
+## ADDED Requirements
+
+### Requirement: [Feature Name]
+#### Scenario: [When/Context]
+The device SHALL [requirement with SHALL/MUST keyword]
+
+### Requirement: [Another Feature]
+#### Scenario: [When/Context]
+The implementation MUST [requirement with SHALL/MUST keyword]
+
+## MODIFIED Requirements
+[Use if changing existing requirements]
+
+## REMOVED Requirements
+[Use if deprecating features]
+```
+
+**Examples:**
+
+**For Implementation Changes (New Feature):**
+```markdown
+## ADDED Requirements
+
+### Requirement: Device Register Interface
+#### Scenario: Software configures device through memory-mapped registers
+The device SHALL implement all registers defined in the hardware specification
+with correct reset values, access permissions, and side effects.
+
+### Requirement: Interrupt Generation
+#### Scenario: Device signals completion or error conditions
+The device SHALL raise appropriate interrupt signals when specific conditions
+are met as defined in the hardware specification.
+
+### Requirement: State Persistence
+#### Scenario: System checkpoints or restores device state
+The device SHALL maintain all architectural state in checkpointable attributes
+to support simulation save/restore operations.
+```
+
+**For Fix/Bug Changes (reference existing specs):**
+```markdown
+## MODIFIED Requirements
+
+### Requirement: Configuration Interface (from <device>.md section X.Y)
+#### Scenario: Tests or software configure device correctly
+The implementation SHALL follow the configuration patterns defined in
+openspec/Test_Best_Practices.md to ensure correct initialization and operation.
+```
+
+**Validation Before Proceeding:**
+```bash
+# BEFORE marking Propose task [x], verify spec deltas exist:
+find openspec/changes/NNN-description/specs/ -name "spec.md" | wc -l
+# MUST return >= 1, otherwise STOP and create spec deltas!
+```
 
 **Validation:**
 ```
@@ -416,6 +425,35 @@ Fix errors before proceeding
 **Mark [x] after creating file with REAL content**
 
 ## 3. Implementation
+
+**❌ PRE-IMPLEMENTATION VALIDATION: Verify Spec Deltas Exist**
+
+**BEFORE writing ANY DML/test code, run this check:**
+
+```bash
+# Navigate to change directory
+cd openspec/changes/NNN-description/
+
+# Check for spec deltas (MANDATORY)
+SPEC_DELTA_COUNT=$(find specs/ -name "spec.md" 2>/dev/null | wc -l)
+
+if [ "$SPEC_DELTA_COUNT" -eq 0 ]; then
+    echo "❌ CRITICAL ERROR: No spec deltas found!"
+    echo "→ STOP implementation immediately"
+    echo "→ Go back to STEP 2: Create spec deltas first"
+    echo "→ Path: openspec/changes/NNN-description/specs/<capability>/spec.md"
+    exit 1
+fi
+
+echo "✅ Spec deltas verified: $SPEC_DELTA_COUNT file(s)"
+find specs/ -name "spec.md"
+```
+
+**If check fails: DO NOT proceed with implementation. Create spec deltas first.**
+
+**Implementation Tasks:**
+
+- [ ] **PRE-CHECK: Verify spec deltas exist (run above command)**
 - [ ] Verify imports intact
 - [ ] Implement [feature] with event-based timing
   - [ ] Lazy evaluation (NOT cycle-accurate)
@@ -538,6 +576,59 @@ which openspec  # Check if command exists
 openspec list   # Verify it works
 ```
 
+**❌ PRE-ARCHIVE VALIDATION: Verify Spec Deltas (MANDATORY)**
+
+**BEFORE running `openspec archive`, run this critical check:**
+
+```bash
+# Navigate to change directory
+cd openspec/changes/NNN-description/
+
+# 1. Verify spec deltas exist (CRITICAL)
+echo "=== Pre-Archive Validation: Checking Spec Deltas ==="
+
+if [ ! -d "specs" ]; then
+    echo "❌ CRITICAL ERROR: No specs/ directory in change!"
+    echo "→ Cannot archive without spec deltas"
+    echo "→ Spec deltas are MANDATORY for OpenSpec workflow"
+    echo "→ Go back to STEP 2: Create spec deltas"
+    echo "→ Path: openspec/changes/NNN-description/specs/<capability>/spec.md"
+    exit 1
+fi
+
+SPEC_FILES=$(find specs/ -name "spec.md" 2>/dev/null | wc -l)
+if [ "$SPEC_FILES" -eq 0 ]; then
+    echo "❌ CRITICAL ERROR: No spec.md files found in specs/!"
+    echo "→ Cannot archive without spec deltas"
+    echo "→ Create: openspec/changes/NNN-description/specs/<capability>/spec.md"
+    exit 1
+fi
+
+echo "✅ Spec deltas verified: $SPEC_FILES file(s)"
+
+# 2. List spec delta paths
+echo "=== Spec Delta Files Found ==="
+find specs/ -name "spec.md"
+
+# 3. Preview what will be merged
+echo "=== Spec Delta Preview ==="
+for spec in specs/*/spec.md; do
+    capability=$(basename $(dirname "$spec"))
+    echo "Capability: $capability"
+    echo "Preview (first 20 lines):"
+    head -20 "$spec"
+    echo ""
+done
+
+echo "✅ Pre-archive validation passed - proceeding to archive"
+```
+
+**If validation fails:** 
+- DO NOT run `openspec archive`
+- Go back to STEP 2
+- Create spec deltas in `openspec/changes/NNN-description/specs/<capability>/spec.md`
+- Then return to STEP 4 and retry validation
+
 **Decision Tree:**
 
 **A: All tests pass**
@@ -611,6 +702,65 @@ openspec list   # Verify it works
 - Moves change from `openspec/changes/<NNN-description>/` to `openspec/changes/archive/YYYY-MM-DD-NNN-description/`
 - Merges spec deltas from `changes/<NNN-description>/specs/<capability>/spec.md` into `openspec/specs/<capability>/spec.md`
 - Updates source-of-truth specs (this is WHY archiving is mandatory)
+
+**❌ POST-ARCHIVE VERIFICATION: Verify Specs Were Merged (MANDATORY)**
+
+**IMMEDIATELY after `openspec archive` completes, run this verification:**
+
+```bash
+# 1. Verify change moved to archive
+echo "=== Post-Archive Verification ==="
+
+if [ -d "openspec/changes/NNN-description" ]; then
+    echo "❌ ERROR: Change still in active openspec/changes/"
+    echo "→ Archive may have failed - check errors"
+    exit 1
+fi
+
+if [ ! -d "openspec/changes/archive/"*"-NNN-"* ]; then
+    echo "❌ ERROR: Change not found in openspec/changes/archive/"
+    echo "→ Archive failed - check command output"
+    exit 1
+fi
+
+echo "✅ Change moved to archive successfully"
+
+# 2. Verify openspec/specs/ was populated (CRITICAL!)
+echo "=== Checking openspec/specs/ Population (CRITICAL) ==="
+
+SPEC_COUNT=$(find openspec/specs/ -mindepth 2 -name "spec.md" 2>/dev/null | wc -l)
+
+if [ "$SPEC_COUNT" -eq 0 ]; then
+    echo "❌ CRITICAL ERROR: openspec/specs/ is EMPTY!"
+    echo "→ Archive command did NOT merge spec deltas"
+    echo "→ This means the OpenSpec workflow is BROKEN"
+    echo "→ Root cause: Spec deltas were missing from change"
+    echo "→ FIX: Go back to STEP 2, create spec deltas, re-archive"
+    exit 1
+fi
+
+echo "✅ Specs merged successfully: $SPEC_COUNT capability spec(s)"
+echo "=== Capability Specs in openspec/specs/ ==="
+ls -1 openspec/specs/
+
+# 3. Verify each capability has spec.md
+for capability_dir in openspec/specs/*/; do
+    if [ ! -f "$capability_dir/spec.md" ]; then
+        echo "⚠️  WARNING: $capability_dir missing spec.md"
+    else
+        echo "✅ $(basename $capability_dir)/spec.md exists"
+    fi
+done
+
+echo "=== Archive Verification Complete ==="
+```
+
+**If post-archive verification fails:**
+- DO NOT proceed to STEP 5 (Report)
+- Investigate why specs were not merged
+- Most common cause: No spec deltas existed in change before archive
+- Fix: Create spec deltas, commit, re-archive
+- Re-run verification until it passes
 
 ### STEP 5: REPORT (Mandatory User Feedback)
 
