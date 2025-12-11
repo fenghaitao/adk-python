@@ -4,6 +4,71 @@
 
 This document provides comprehensive best practices for writing Python-based tests for Simics device models. Testing is a critical part of device model development in Simics Model Builder, helping ensure correctness, catch regressions early, and maintain code quality throughout the development lifecycle.
 
+## ❌ CRITICAL: Test File Location Requirements
+
+### ✅ CORRECT Test Location
+
+**ALL test files MUST be created in the Simics project test directory:**
+
+```
+simics-project/                    # ✅ Correct: hyphen (Simics project)
+└── modules/<device>/test/
+    ├── SUITEINFO
+    ├── README
+    ├── common.py                  # ✅ Shared configuration
+    ├── s-<feature1>.py            # ✅ Individual test files
+    ├── s-<feature2>.py
+    └── CMakeLists.txt
+```
+
+### ❌ FORBIDDEN Test Locations
+
+**NEVER create these directory structures:**
+
+```
+simics_project/                    # ❌ FORBIDDEN: underscore (Python package)
+simics_project/modules/
+simics_project/__init__.py         # ❌ NO Python package markers
+simics_project/modules/<device>/test/  # ❌ WRONG location!
+
+test/                              # ❌ FORBIDDEN: project root
+<device>_test/                     # ❌ FORBIDDEN: standalone test dir
+```
+
+### Why This Matters
+
+1. **Simics Test Execution Model**: Tests run within Simics runtime environment
+2. **Official Method**: `./bin/test-runner` is the standard way to run test suites
+3. **Real Simics Imports**: Tests import actual Simics APIs (simics, dev_util, stest)
+4. **Build Integration**: CMakeLists.txt in test/ directory integrates with Simics build
+5. **Correct Location Critical**: Tests must be in `simics-project/modules/<device>/test/` for test-runner to find them
+
+### Running Tests
+
+```bash
+# ✅ RECOMMENDED: Run via Simics test-runner (official method)
+cd simics-project
+./bin/test-runner --suite modules/<device>/test
+
+# ✅ ALSO OK: Run as standalone test (for quick testing)
+cd simics-project
+./simics -no-gui -no-win -batch-mode modules/<device>/test/s-test.py
+```
+
+### Validation After Test Creation
+
+```bash
+# Verify tests in correct location
+ls -1 simics-project/modules/*/test/s-*.py | wc -l  # Should be > 0
+
+# Check no forbidden directories exist
+if [ -d simics_project ]; then
+    echo "❌ ERROR: Forbidden simics_project/ directory found!"
+    echo "Tests must be in simics-project/ not simics_project/"
+    exit 1
+fi
+```
+
 ## Structure of a Simics Device Model Test
 
 ### Test Suite Organization

@@ -424,6 +424,42 @@ Fix errors before proceeding
 
 **Mark [x] after creating file with REAL content**
 
+**❌ CRITICAL: Test File Location - FORBIDDEN Pattern**
+
+```bash
+# ✅ CORRECT: Tests MUST be in simics-project/ (with hyphen)
+simics-project/modules/<device>/test/s-<feature>.py
+simics-project/modules/<device>/test/common.py
+
+# ❌ FORBIDDEN: NEVER create simics_project/ (with underscore)
+simics_project/                    # ❌ DO NOT CREATE THIS!
+simics_project/modules/            # ❌ NO parallel structure!
+simics_project/__init__.py         # ❌ NO Python packages!
+
+# ❌ FORBIDDEN: Do NOT create test shims or standalone execution
+simics.py (as test shim)           # ❌ Tests use REAL Simics runtime
+dev_util.py (as fake)              # ❌ Use actual Simics dev_util
+stest.py (as fake)                 # ❌ Use actual Simics stest
+```
+
+**Why:** Tests run via Simics test-runner, NOT as standalone Python scripts.
+
+**Validation Check:**
+```bash
+# After creating tests, verify correct location
+if [ -d simics_project ]; then
+    echo "❌ FORBIDDEN: simics_project/ directory detected!"
+    echo "Delete it and create tests in simics-project/ instead"
+    exit 1
+fi
+
+# Verify tests exist in correct location
+ls -1 simics-project/modules/*/test/s-*.py || {
+    echo "❌ No tests found in correct location!"
+    exit 1
+}
+```
+
 ## 3. Implementation
 
 **❌ PRE-IMPLEMENTATION VALIDATION: Verify Spec Deltas Exist**
@@ -533,6 +569,28 @@ grep -c "\.post(" modules/<device>/<device>.dml
 → Add missing component (lazy eval OR event mechanism)
 
 ## 4. Validation
+
+**❌ PRE-VALIDATION CHECK: Test Location**
+
+```bash
+# Verify tests are in CORRECT location (with hyphen)
+TEST_COUNT=$(ls -1 simics-project/modules/*/test/s-*.py 2>/dev/null | wc -l)
+if [ "$TEST_COUNT" -eq 0 ]; then
+    echo "❌ ERROR: No tests found in simics-project/modules/*/test/"
+    exit 1
+fi
+
+# Verify FORBIDDEN location does NOT exist (with underscore)
+if [ -d simics_project ]; then
+    echo "❌ CRITICAL ERROR: Forbidden simics_project/ directory exists!"
+    echo "Tests must be in simics-project/ not simics_project/"
+    echo "Delete simics_project/ and recreate tests in correct location"
+    exit 1
+fi
+
+echo "✅ Test location validated: $TEST_COUNT test file(s) in correct location"
+```
+
 - [ ] Build: cd simics-project && make <device>
 - [ ] Test: ./bin/test-runner --suite modules/<device>/test
 
