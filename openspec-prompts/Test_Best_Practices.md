@@ -77,6 +77,59 @@ def create_test_config():
     return (conf.dev, conf.clk, conf.mem)
 ```
 
+**❌ CRITICAL: create_config() MUST Return conf_object, NOT pre_conf_object**
+
+A common mistake is returning pre-configuration objects from `create_config()`. Pre-conf objects are **ONLY** for configuration setup and **CANNOT** be used in test scripts.
+
+```python
+# ❌ WRONG - Returning pre_conf_object (unusable in tests):
+def create_config():
+    dev = simics.pre_conf_object('dut1', 'dut_class')
+    clk = simics.pre_conf_object('clk', 'clock')
+    clk.freq_mhz = 1
+    dev.queue = clk
+    simics.SIM_add_configuration([dev, clk], None)
+    
+    return (dev, clk)  # ❌ WRONG! Returning pre_conf_object
+
+# Later in test:
+(dut, clk) = create_config()
+regs = dev_util.bank_regs(dut.bank.regs)  # ❌ FAILS! dut is pre_conf_object, not conf_object
+
+# ✅ CORRECT - Returning conf_object via conf.<device_name>:
+def create_config():
+    dev = simics.pre_conf_object('dut1', 'dut_class')
+    clk = simics.pre_conf_object('clk', 'clock')
+    clk.freq_mhz = 1
+    dev.queue = clk
+    simics.SIM_add_configuration([dev, clk], None)
+    
+    return (conf.dut1, conf.clk)  # ✅ CORRECT! Returning conf_object
+
+# Later in test:
+(dut, clk) = create_config()
+regs = dev_util.bank_regs(dut.bank.regs)  # ✅ WORKS! dut is conf_object
+```
+
+**Why This Matters:**
+- `simics.pre_conf_object()` returns a **pre-configuration object** used ONLY for setup
+- After `SIM_add_configuration()`, the actual **configuration object** is available via `conf.<object_name>`
+- Pre-conf objects have limited API and cannot be used for register access, simulation control, etc.
+- **ALWAYS return `conf.<object_name>`**, not the pre-conf object variable
+
+**Pattern: Return conf_object, not pre_conf_object**
+```python
+def create_config():
+    # Step 1: Create pre-conf objects with names
+    dev = simics.pre_conf_object('device_name', 'class')  # Note the name 'device_name'
+    
+    # Step 2: Configure and instantiate
+    simics.SIM_add_configuration([dev], None)
+    
+    # Step 3: Return conf_object using the name from step 1
+    return conf.device_name  # ✅ Use conf.<name>, NOT the pre-conf variable 'dev'
+```
+
 **❌ CRITICAL: Clock freq_mhz MUST Be Set Before SIM_add_configuration()**
 
 ```python
@@ -195,6 +248,52 @@ stest.expect_equal(regs.status.field.enable.read(), 1)
 1. Read `<device>.dml`, find `bank <bank_name> { ... }`
 2. Use `dev_util.bank_regs(conf.device.bank.<bank_name>)` with exact bank name from step 1
 3. Never guess or scan - the bank name is always explicit in DML
+
+**❌ CRITICAL Anti-Pattern: Direct Register Access via device.bank.<bank_name>**
+
+**NEVER access registers directly via `device.bank.<bank_name>.<register_name>`!**
+**ALWAYS use `dev_util.bank_regs(device.bank.<bank_name>).<register_name>`!**
+
+```python
+# ❌ WRONG - Direct access to registers (missing dev_util.bank_regs wrapper):
+def run():
+    (dut, pic) = create_config()
+    
+    # ❌ WRONG! Direct access without dev_util.bank_regs()
+    wdt = dut.bank.wdt_regs
+    wdt.WDOGLOAD.write(0x10)  # ❌ FAILS! No write() method on bank object
+
+# ✅ CORRECT - Use dev_util.bank_regs() wrapper:
+def run():
+    (dut, pic) = create_config()
+    
+    # ✅ CORRECT! Wrap with dev_util.bank_regs()
+    wdt = dev_util.bank_regs(dut.bank.wdt_regs)
+    wdt.WDOGLOAD.write(0x10)  # ✅ WORKS! bank_regs() provides read/write API
+```
+
+**Why This Matters:**
+- `device.bank.<bank_name>` is a **raw Simics bank object** without convenient read/write methods
+- `dev_util.bank_regs()` creates a **proxy wrapper** with easy `.read()` and `.write()` methods
+- Direct bank access requires low-level Simics APIs and is error-prone
+- **ALWAYS wrap with `dev_util.bank_regs()` for register testing**
+
+**Pattern: ALWAYS use dev_util.bank_regs() wrapper**
+```python
+# Step 1: Get device from create_config()
+(dut, pic) = create_config()
+
+# Step 2: ALWAYS wrap bank with dev_util.bank_regs()
+regs = dev_util.bank_regs(dut.bank.<bank_name>)  # ✅ Required wrapper
+
+# Step 3: Now use convenient register API
+regs.CONTROL.write(0x1)
+value = regs.STATUS.read()
+```
+
+**Detection Rule:**
+- ❌ Flag any code like: `var = device.bank.<name>` followed by `var.<register>.write()`
+- ✅ Require pattern: `var = dev_util.bank_regs(device.bank.<name>)` then `var.<register>.write()`
 
 #### Using `Register_LE/BE` (Specific Layouts)
 
@@ -445,21 +544,21 @@ if __name__ == "__main__":
 ```python
 # ❌ WRONG - Test will NEVER run (silent failure):
 def test_feature():
-    device = simics.SIM_object_by_name('test_dev', 0)
+    device = simics.SIM_object_by_name('dut1', 0)
     regs = dev_util.bank_regs(device.bank.regs)
     stest.expect_equal(regs.control.read(), 0x1, "Test")
     # File ends here - test_feature() is NEVER called!
 
 # ✅ CORRECT - Test executes:
 def test_feature():
-    device = simics.SIM_object_by_name('test_dev', 0)
+    device = simics.SIM_object_by_name('dut1', 0)
     regs = dev_util.bank_regs(device.bank.regs)
     stest.expect_equal(regs.control.read(), 0x1, "Test")
 
 test_feature()  # ✅ Actually execute the test!
 
 # ✅ ALSO CORRECT - Direct code (no function wrapper):
-device = simics.SIM_object_by_name('test_dev', 0)
+device = simics.SIM_object_by_name('dut1', 0)
 regs = dev_util.bank_regs(device.bank.regs)
 stest.expect_equal(regs.control.read(), 0x1, "Test")
 # Executes immediately when file is imported
