@@ -383,6 +383,98 @@ method restart_watchdog() {
 }
 ```
 
+**❌ CRITICAL: Timer/Counter/Watchdog Devices MUST Have Event Mechanisms**
+
+**Common Mistake:** Implementing lazy evaluation (counter calculation) but forgetting the event mechanism for timeout/expiry actions.
+
+```dml
+// ❌ INCOMPLETE - Has lazy evaluation but NO event mechanism:
+register WDOGVALUE {
+    method read_register() -> (uint64) {
+        // ✅ Good: Lazy evaluation calculates current counter value
+        local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
+        return initial_value - cast(elapsed, uint32);
+    }
+}
+
+// ❌ PROBLEM: No event to trigger interrupt/reset when counter reaches zero!
+// The counter decrements on reads, but nothing HAPPENS when it expires.
+```
+
+**Required Components for Timer/Counter/Watchdog:**
+
+**1. Lazy Evaluation** (calculate current value on-demand):
+```dml
+register COUNTER {
+    method read_register() -> (uint64) {
+        if (!enabled) return saved_value;
+        local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
+        local uint64 current = saved_value - (elapsed / step_value);
+        return current;
+    }
+}
+```
+
+**2. Event Mechanism** (trigger actions when counter expires):
+```dml
+// ✅ REQUIRED: Event to handle expiry/timeout
+event timeout_event is simple_cycle_event {
+    method event() {
+        // Execute timeout actions
+        raw_int = true;             // Set interrupt flag
+        update_outputs();           // Drive interrupt signal
+        
+        // Handle auto-reload if needed
+        if (auto_reload_enabled) {
+            counter = reload_value;
+            start_time = SIM_cycle_count(dev.obj);
+            schedule_next_timeout();  // Re-post event
+        }
+    }
+}
+
+// Schedule event when counter is started/reloaded
+method schedule_next_timeout() {
+    if (timeout_event.posted())
+        timeout_event.remove();
+    
+    if (enabled && counter > 0) {
+        local cycles_t cycles_to_zero = counter * step_value;
+        timeout_event.post(cycles_to_zero);
+    }
+}
+```
+
+**3. Wire Them Together:**
+```dml
+register CONTROL {
+    method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+        default(value, enabled_bytes, aux);
+        
+        if (enable_bit.val) {
+            counter = reload_value;
+            start_time = SIM_cycle_count(dev.obj);
+            schedule_next_timeout();  // ✅ Post event when enabled
+        } else {
+            if (timeout_event.posted())
+                timeout_event.remove();  // Cancel event when disabled
+        }
+    }
+}
+```
+
+**Detection Checklist:**
+- ❌ **INCOMPLETE:** Has lazy counter evaluation but no `event` object → Timer never triggers actions
+- ❌ **INCOMPLETE:** Has `event` object but never calls `.post()` → Event never fires
+- ❌ **INCOMPLETE:** Has `.post()` but no logic in `event()` method → No actions on timeout
+- ✅ **COMPLETE:** Has lazy evaluation + event object + `.post()` scheduling + timeout actions
+
+**Why Both Are Required:**
+1. **Lazy evaluation** = Efficient calculation of current counter value (avoids cycle-by-cycle updates)
+2. **Event mechanism** = Triggers interrupts/resets/actions when counter expires (functional behavior)
+
+**Without events:** The counter decrements correctly but nothing happens when it reaches zero - no interrupt, no reset, no functional behavior!
+
 #### 5. Timestamp Counter (TSC) Pattern
 
 For modeling CPU timestamp counters that return different values at different simulation times:

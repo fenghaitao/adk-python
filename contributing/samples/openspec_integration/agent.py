@@ -465,6 +465,73 @@ Fix errors before proceeding
 
 **Mark [x] after writing ACTUAL code (not TODOs)**
 
+**❌ CRITICAL: Timer/Counter/Watchdog Validation Checklist**
+
+**BEFORE marking Implementation [x], verify BOTH components exist:**
+
+1. **Lazy Evaluation (Counter Calculation):**
+   ```
+   grep -n "SIM_cycle_count\|SIM_time" <device>.dml
+   → Should find calculations in register read methods
+   ```
+
+2. **Event Mechanism (Timeout Actions):**
+   ```
+   grep -n "event.*is.*event\|after.*cycles:\|after.*s:" <device>.dml
+   → Should find event declarations AND .post() calls
+   ```
+
+**❌ INCOMPLETE PATTERNS (DO NOT mark [x]):**
+```dml
+// ❌ Has lazy evaluation but NO event mechanism:
+register COUNTER {
+    method read_register() -> (uint64) {
+        return initial - (SIM_cycle_count(dev.obj) - start);  // ✅ Lazy calc
+    }
+}
+// ❌ PROBLEM: No event to trigger interrupt/reset when counter expires!
+```
+
+**✅ COMPLETE PATTERNS (CAN mark [x]):**
+```dml
+// ✅ Has BOTH lazy evaluation AND event mechanism:
+register COUNTER {
+    method read_register() -> (uint64) {
+        return initial - (SIM_cycle_count(dev.obj) - start);  // ✅ Lazy calc
+    }
+}
+
+event timeout_event is simple_cycle_event {  // ✅ Event exists
+    method event() {
+        raw_int = true;           // ✅ Timeout actions
+        update_outputs();
+    }
+}
+
+method schedule_timeout() {
+    if (enabled) {
+        timeout_event.post(cycles_to_zero);  // ✅ Event posted
+    }
+}
+```
+
+**Detection Commands:**
+```bash
+# Check for lazy evaluation:
+grep -c "SIM_cycle_count\|SIM_time" modules/<device>/<device>.dml
+
+# Check for event mechanism:
+grep -c "event.*is.*event" modules/<device>/<device>.dml
+grep -c "\.post(" modules/<device>/<device>.dml
+
+# BOTH counts must be > 0 for timer/counter/watchdog devices!
+```
+
+**If implementing timer/counter/watchdog and either grep returns 0:**
+→ Implementation is INCOMPLETE
+→ DO NOT mark Implementation [x]
+→ Add missing component (lazy eval OR event mechanism)
+
 ## 4. Validation
 - [ ] Build: cd simics-project && make <device>
 - [ ] Test: ./bin/test-runner --suite modules/<device>/test
