@@ -137,38 +137,12 @@ class OpenSpecAgent(LlmAgent):
       description: Brief description of agent capabilities
     """
 
-    def _detect_simics_project(self) -> bool:
-        """Detect if current workspace is a Simics/hardware project.
-        
-        Returns:
-            bool: True if Simics project detected, False otherwise
-        """
-        from pathlib import Path
-        import os
-        
-        # Check for Simics-specific files in workspace
-        workspace_indicators = [
-            "openspec-prompts/DML_Best_Practices.md",
-            "simics-project/modules/",
-        ]
-        
-        # Try to find workspace root
-        current_dir = Path.cwd()
-        for indicator in workspace_indicators:
-            if (current_dir / indicator).exists():
-                return True
-        
-        return False
-
     def __init__(self, **kwargs):
         """Initialize the OpenSpec agent with tools and instructions.
 
         Args:
           **kwargs: Additional arguments passed to LlmAgent constructor
         """
-        # Detect if this is a Simics/hardware project by checking for DML best practices
-        simics_project_detected = self._detect_simics_project()
-        
         instruction = """
 You are an OpenSpec agent for spec-driven development (software and hardware projects).
 
@@ -195,12 +169,6 @@ You are an OpenSpec agent for spec-driven development (software and hardware pro
 4. ✅ **ALWAYS archive** even with known issues (document in proposal.md)
 5. ✅ **ALWAYS fix** archive errors autonomously (SHALL/MUST keywords, deltas, commits, etc.)
 6. ✅ **ALWAYS provide** final status report with specific next steps
-
-"""
-        
-        # Inject Simics-specific anti-patterns if hardware project detected
-        if simics_project_detected:
-            instruction += """
 
 ## 🔧 SIMICS PROJECT REQUIREMENTS (Hardware Device Modeling)
 
@@ -272,12 +240,6 @@ register dynamic_value {
 - Use events for delays, not cycle-by-cycle updates
 
 **Rationale**: Simics = functional simulation (not RTL). Software sees register values, not clock edges.
-
-"""
-
-        # Add implementation validation rules for Simics projects
-        if simics_project_detected:
-            instruction += """
 
 ## 📋 IMPLEMENTATION & TEST VERIFICATION
 
