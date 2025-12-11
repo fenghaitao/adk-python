@@ -731,7 +731,7 @@ Examples:
 ### Project Detection
 Auto-detect Simics projects by checking for:
 - Directory: `simics-project/modules/*/`
-- Files: `*.dml`, `*-registers.dml`, `*-dia.dml`
+- Files: `*.dml`, `*-registers.dml`
 - Keywords: "DML", "Simics", "device model", "register", "watchdog timer"
 
 **When detected**: Auto-read best practices BEFORE creating proposals.
@@ -742,7 +742,7 @@ Auto-detect Simics projects by checking for:
 ```markdown
 ## Constraints and guarantees
 - Preserve all import statements
-- No auto-generated file edits (<device>-registers.dml, -dia.dml, -glue.dml)
+- No auto-generated file edits (<device>-registers.dml)
 - Event-based timing (lazy evaluation, NOT cycle-accurate)
 - No build/config/XML changes
 - Tests follow s-<feature>.py pattern with proper imports
@@ -761,14 +761,13 @@ Auto-detect Simics projects by checking for:
 - `test/*.py` (test files)
 
 ❌ **Forbidden (auto-generated):**
-- `<device>-registers.dml`, `-dia.dml`, `-glue.dml`
+- `<device>-registers.dml`
 - `Makefile`, `*.xml`
 
 ### Import Preservation (Critical)
 ```dml
 // NEVER remove these imports:
-import "<device>-glue.dml";       // or "<device>-registers.dml"
-import "<device>-dia.dml";        // (depending on project structure)
+import "<device>-registers.dml";
 import "simics/devs/signal.dml";
 ```
 
