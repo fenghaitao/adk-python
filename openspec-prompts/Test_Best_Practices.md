@@ -48,6 +48,11 @@ import conf
 import dev_util
 import stest
 
+# ⚠️ WORKAROUND: Disable spec-viol log failures (if needed)
+# Some Simics internal spec violations may not relate to your device logic
+# Temporarily untrap them to focus on actual test failures
+stest.untrap_log('spec-viol')  # Optional: Use only if spec-viol logs block testing
+
 def create_test_config():
     # 1. Create pre-conf objects
     dev = simics.pre_conf_object('dev', 'my_device')
@@ -62,14 +67,47 @@ def create_test_config():
                 0, # offset
                 0x1000]
     
-    # 2. Configure attributes
-    clk.freq_mhz = 1000
+    # 2. Configure attributes BEFORE SIM_add_configuration
+    clk.freq_mhz = 10  # ⚠️ CRITICAL: MUST set freq_mhz BEFORE SIM_add_configuration!
     dev.queue = conf.clk  # REQUIRED: Set queue for time-dependent objects
     
     # 3. Add configuration
     simics.SIM_add_configuration([dev, clk, mem], None)
     
     return (conf.dev, conf.clk, conf.mem)
+```
+
+**❌ CRITICAL: Clock freq_mhz MUST Be Set Before SIM_add_configuration()**
+
+```python
+# ❌ WRONG - Setting freq_mhz AFTER object creation:
+clk = simics.pre_conf_object('clk', 'clock')
+simics.SIM_add_configuration([dev, clk], None)  # ❌ freq_mhz not set yet!
+conf.clk.freq_mhz = 10  # ❌ TOO LATE! Object already instantiated
+
+# ✅ CORRECT - Setting freq_mhz BEFORE object creation:
+clk = simics.pre_conf_object('clk', 'clock')
+clk.freq_mhz = 10  # ✅ Set on pre-conf object BEFORE SIM_add_configuration
+simics.SIM_add_configuration([dev, clk], None)  # ✅ Now freq_mhz is configured
+```
+
+**Why This Matters:**
+- `freq_mhz` is a **required attribute** for clock objects
+- Must be set on the pre-conf object (before `SIM_add_configuration`)
+- Setting it after instantiation causes errors or undefined behavior
+- All time-dependent devices rely on correct clock frequency
+
+**Pattern: All required attributes BEFORE SIM_add_configuration**
+```python
+# Create pre-conf objects
+obj = simics.pre_conf_object('name', 'class')
+
+# Configure ALL required attributes
+obj.required_attr1 = value1
+obj.required_attr2 = value2
+
+# THEN instantiate
+simics.SIM_add_configuration([obj], None)
 ```
 
 #### Running the Simulation
@@ -104,6 +142,22 @@ bank regs {          // ← Bank name is "regs" (could be any name like reg_if, 
 # In test.py - use the EXACT bank name from DML:
 regs = dev_util.bank_regs(conf.dev.bank.regs)  # ✅ Correct: matches DML "bank regs"
 ```
+
+**❌ CRITICAL Anti-Pattern: Missing `.bank.` in dev_util.bank_regs()**
+
+**ALWAYS use `device.bank.<bank_name>`, NOT `device.<bank_name>` directly!**
+
+```python
+# ❌ WRONG - Missing .bank. namespace:
+regs = dev_util.bank_regs(dut.regs)  # ❌ WRONG! Missing .bank.
+
+# ✅ CORRECT - Include .bank. namespace:
+regs = dev_util.bank_regs(dut.bank.regs)  # ✅ Correct! device.bank.<bank_name>
+```
+
+**Pattern: `device.bank.<bank_name>` is ALWAYS required**
+- DML: `bank regs { ... }` → Python: `device.bank.regs`
+- DML: `bank reg_if { ... }` → Python: `device.bank.reg_if`
 
 **Anti-Pattern: DO NOT scan/discover banks dynamically**
 

@@ -98,6 +98,59 @@ register COUNTER {
 - Any cycle-by-cycle timer state updates in event handlers
 - Timer register value updates triggered by clock edges
 
+**❌ CRITICAL Anti-Pattern 2: Calling SIM_cycle_count/SIM_time in init() or post_init()**
+
+**NEVER call SIM_cycle_count() or SIM_time() in device initialization methods.**
+
+```dml
+// ❌ FORBIDDEN - Timing APIs in init():
+method init() {
+    reload_value = 0xffffffff;
+    start_cycle = SIM_cycle_count(dev.obj);  // ❌ WRONG! Queue not ready yet
+    enabled = 0;
+}
+
+// ❌ FORBIDDEN - Timing APIs in post_init():
+method post_init() {
+    start_time = SIM_time(dev.obj);  // ❌ WRONG! Queue dependency not satisfied
+}
+```
+
+**WHY This FAILS:**
+1. **Queue Dependency**: `SIM_cycle_count()` and `SIM_time()` require a valid queue object
+2. **Initialization Order**: Queue is assigned AFTER device object creation, not during `init()`
+3. **Runtime Error**: Causes crashes or undefined behavior when queue is not yet configured
+
+**✅ CORRECT Alternative - Initialize on First Use:**
+```dml
+saved cycles_t start_cycle = 0;  // Default value
+saved bool first_use = true;
+
+method start_timer() {
+    if (first_use) {
+        start_cycle = SIM_cycle_count(dev.obj);  // ✅ CORRECT! Called at runtime
+        first_use = false;
+    }
+    // Continue timer logic
+}
+
+register CONTROL {
+    method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+        default(value, enabled_bytes, aux);
+        if (enable_bit.val) {
+            start_cycle = SIM_cycle_count(dev.obj);  // ✅ CORRECT! Queue is ready
+        }
+    }
+}
+```
+
+**Detection Rules - If you see ANY of these patterns in init()/post_init(), it's WRONG:**
+- `SIM_cycle_count(dev.obj)` in `method init()` or `method post_init()`
+- `SIM_time(dev.obj)` in `method init()` or `method post_init()`
+- Any timing API that depends on queue in initialization methods
+
+**Correct Pattern**: Initialize timing state on first register access or when timer is enabled, NOT in init().
+
 ---
 
 #### 2. Core Timing Mechanisms in DML
