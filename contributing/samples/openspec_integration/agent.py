@@ -496,11 +496,26 @@ Fix errors before proceeding
 
 ### STEP 4: ARCHIVE (Auto-Fix Errors)
 
+**⚠️ CRITICAL: ALWAYS RUN `openspec archive` COMMAND - DO NOT SKIP THIS STEP**
+
+The `openspec archive` command:
+1. Moves change from `openspec/changes/<NNN>/` to `openspec/changes/archive/YYYY-MM-DD-<NNN>/`
+2. **Merges spec deltas into `openspec/specs/<capability>/spec.md`** (creates source-of-truth specs)
+3. Without archiving, `openspec/specs/` remains EMPTY (specs never get updated)
+
+**Test CLI availability FIRST if uncertain:**
+```bash
+which openspec  # Check if command exists
+openspec list   # Verify it works
+```
+
 **Decision Tree:**
 
 **A: All tests pass**
 ```
 → openspec archive <NNN-description> --yes
+→ Verify: ls openspec/changes/archive/ (should show YYYY-MM-DD-<NNN>-description/)
+→ Verify: ls openspec/specs/ (should show capability folders with spec.md)
 → Commit
 → DONE ✅
 ```
@@ -515,6 +530,8 @@ Fix errors before proceeding
   - Fix in follow-up
 → Commit with message "Document known failures"
 → openspec archive <NNN-description> --yes
+→ Verify: ls openspec/changes/archive/ (should show YYYY-MM-DD-<NNN>-description/)
+→ Verify: ls openspec/specs/ (should show capability folders with spec.md)
 → DONE ✅
 ```
 
@@ -547,15 +564,24 @@ Fix errors before proceeding
 
 **Execution Rules:**
 - ✅ Archive is MANDATORY (not optional)
+- ✅ ALWAYS RUN `openspec archive <NNN-description> --yes` command (DO NOT assume CLI unavailable)
 - ✅ Archive with known issues (document in proposal.md)
 - ✅ Fix errors autonomously (iterate until success)
 - ✅ Verify moved to openspec/changes/archive/YYYY-MM-DD-NNN-description/
+- ✅ After archive, verify specs updated: `ls -la openspec/specs/` should show capability folders
+- ❌ DO NOT assume openspec CLI is unavailable - ALWAYS TRY IT
+- ❌ DO NOT say "environment lacks openspec CLI" - TEST IT FIRST with `which openspec` or `openspec list`
 - ❌ DO NOT ask permission mid-workflow (no "would you...", "should I...", "do you want..." questions)
 - ❌ DO NOT skip archive
 - ❌ DO NOT wait for perfection
 - ❌ DO NOT provide "suggested prompts" or "choose option A/B" - JUST COMPLETE THE WORK
 
 **Why archive with issues:** OpenSpec is iterative; follow-up changes fix incrementally.
+
+**Archive Effect:**
+- Moves change from `openspec/changes/<NNN-description>/` to `openspec/changes/archive/YYYY-MM-DD-NNN-description/`
+- Merges spec deltas from `changes/<NNN-description>/specs/<capability>/spec.md` into `openspec/specs/<capability>/spec.md`
+- Updates source-of-truth specs (this is WHY archiving is mandatory)
 
 ### STEP 5: REPORT (Mandatory User Feedback)
 
@@ -623,7 +649,9 @@ Examples:
 - ❌ Stopping after creating tests → ✅ Continue to full DML implementation
 - ❌ Asking approval mid-workflow → ✅ Complete all phases autonomously
 - ❌ Using numeric-only IDs (001, 002) → ✅ Use descriptive names (001-feature-name)
-
+- ❌ **CRITICAL: Assuming "no openspec CLI"** → ✅ ALWAYS TRY: `openspec archive <NNN> --yes` (test first if unsure)
+- ❌ **CRITICAL: Skipping archive** → ✅ MANDATORY (merges specs into openspec/specs/)
+- ❌ **CRITICAL: Not verifying** → ✅ Check `ls openspec/changes/archive/` AND `ls openspec/specs/`
 
 **DO NOT stop for approval** unless user explicitly requests review.
 
