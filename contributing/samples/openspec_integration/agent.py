@@ -462,6 +462,27 @@ ls -1 simics-project/modules/*/test/s-*.py || {
 
 ## 3. Implementation
 
+**❌ CRITICAL: Distinguish "Implement <device>" vs "Add tests for <device>"**
+
+**A. "Implement <device>" (device implementation tasks):**
+- User says: "implement <device>", "create <device>", "add <device> support"
+- Requires:
+  1. ✅ Modify `simics-project/modules/<device>/<device>.dml` with actual logic
+  2. ✅ Replace ALL "USER-TODO" markers with implementations
+  3. ✅ Implement register side-effects (write_register/read_register)
+  4. ✅ Add event mechanisms for timers/counters/watchdogs
+  5. ✅ Add tests to verify behavior
+- ❌ FORBIDDEN: Proposal saying "implements tests only; does NOT modify DML"
+- ✅ REQUIRED: Proposal MUST include `<device>.dml` in Modified/Added files
+
+**B. "Add tests for <device>" (test-focused tasks):**
+- User says: "add tests", "improve test coverage", "fix test failures"
+- Allowed:
+  1. ✅ Create/modify test files only
+  2. ✅ Proposal can say "test-only change"
+  3. ✅ No DML modifications required
+- Purpose: Increase coverage, fix flaky tests, add edge cases
+
 **❌ PRE-IMPLEMENTATION VALIDATION: Verify Spec Deltas Exist**
 
 **BEFORE writing ANY DML/test code, run this check:**
@@ -483,13 +504,20 @@ fi
 
 echo "✅ Spec deltas verified: $SPEC_DELTA_COUNT file(s)"
 find specs/ -name "spec.md"
+
+# Check for TODO markers (indicates unimplemented skeleton)
+TODO_COUNT=$(grep -c "USER-TODO" simics-project/modules/<device>/<device>.dml 2>/dev/null || echo 0)
+if [ "$TODO_COUNT" -gt 0 ]; then
+    echo "⚠️ INFO: $TODO_COUNT TODO markers in DML (will be replaced during implementation)"
+fi
 ```
 
 **If check fails: DO NOT proceed with implementation. Create spec deltas first.**
 
-**Implementation Tasks:**
+**Implementation Checklist:**
 
 - [ ] **PRE-CHECK: Verify spec deltas exist (run above command)**
+- [ ] **Remove ALL "USER-TODO" comments from `<device>.dml`**
 - [ ] Verify imports intact
 - [ ] Implement [feature] with event-based timing
   - [ ] Lazy evaluation (NOT cycle-accurate)
@@ -569,6 +597,26 @@ grep -c "\.post(" modules/<device>/<device>.dml
 → Add missing component (lazy eval OR event mechanism)
 
 ## 4. Validation
+
+**❌ PRE-VALIDATION: Verify DML Implementation Complete**
+
+```bash
+# Check for remaining TODO markers (indicates incomplete implementation)
+TODO_COUNT=$(grep -c "USER-TODO" simics-project/modules/<device>/<device>.dml 2>/dev/null || echo 0)
+
+if [ "$TODO_COUNT" -gt 0 ]; then
+    echo "❌ IMPLEMENTATION INCOMPLETE: $TODO_COUNT TODO markers remain in DML"
+    echo "Files with TODOs:"
+    grep -l "USER-TODO" simics-project/modules/<device>/*.dml
+    echo ""
+    echo "→ STOP: Go back to Implementation section (Step 3)"
+    echo "→ Replace ALL TODO markers with actual logic"
+    echo "→ DO NOT mark Implementation [x] until all TODOs are resolved"
+    exit 1
+fi
+
+echo "✅ DML implementation validated: No TODO markers found"
+```
 
 **❌ PRE-VALIDATION CHECK: Test Location**
 
