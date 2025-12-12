@@ -17,6 +17,7 @@ set -euo pipefail
 #   --proposal TITLE|FILE    Short summary/title for /proposal (string or file path) (required unless --change-id provided)
 #   --change-id ID           Explicit change id to use (otherwise /proposal generates one)
 #   --device NAME            Optional device name hint for id generation
+#   --workdir DIR            Working directory for agent directories and logs (default: current directory)
 #   --apply                  Run /apply after /proposal using the resolved change id
 #   --archive                Run /archive after /apply using the same change id
 #   --port PORT              MCP server port (default: 8051)
@@ -43,9 +44,10 @@ if [[ ! -x "$ADK_BIN" ]]; then
   ADK_BIN="adk"
 fi
 
-PROPOSAL_TITLE=""
+PROPOSAL=""
 CHANGE_ID=""
 DEVICE_HINT=""
+WORKDIR=""
 RUN_APPLY=false
 RUN_ARCHIVE=false
 MCP_PORT=8051
@@ -61,9 +63,10 @@ usage() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --proposal) PROPOSAL_TITLE="$2"; shift 2;;
+    --proposal) PROPOSAL="$2"; shift 2;;
     --change-id) CHANGE_ID="$2"; shift 2;;
     --device) DEVICE_HINT="$2"; shift 2;;
+    --workdir) WORKDIR="$2"; shift 2;;
     --apply) RUN_APPLY=true; shift;;
     --archive) RUN_ARCHIVE=true; shift;;
     --port) MCP_PORT="$2"; shift 2;;
@@ -105,11 +108,17 @@ export OPENSPEC_MODEL="$MODEL"
 # Start MCP server
 start_mcp
 
-# Prepare temporary sub-agent directories (ADK expects a package with root_agent)
-TMP_DIR="$(pwd)"
-PROPOSAL_DIR="$TMP_DIR/adk_openspec_proposal_agent"
-APPLY_DIR="$TMP_DIR/adk_openspec_apply_agent"
-ARCHIVE_DIR="$TMP_DIR/adk_openspec_archive_agent"
+# Set working directory (default to current directory)
+WORKDIR="${WORKDIR:-$(pwd)}"
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
+echo -e "${BLUE}Working directory: $WORKDIR${NC}"
+
+# Prepare sub-agent directories (ADK expects a package with root_agent)
+PROPOSAL_DIR="$WORKDIR/adk_openspec_proposal_agent"
+APPLY_DIR="$WORKDIR/adk_openspec_apply_agent"
+ARCHIVE_DIR="$WORKDIR/adk_openspec_archive_agent"
 
 prepare_agent_dir() {
   local target_dir="$1"; local import_path="$2"
@@ -123,17 +132,17 @@ EOF
 
 # Resolve change id via /proposal if not provided
 if [[ -z "$CHANGE_ID" ]]; then
-  if [[ -z "$PROPOSAL_TITLE" ]]; then
+  if [[ -z "$PROPOSAL" ]]; then
     echo -e "${RED}Either --change-id or --proposal must be provided.${NC}"; exit 1
   fi
   echo -e "${BLUE}🧩 Running /proposal to generate change id...${NC}"
   prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_agent"
-  # If proposal title is a readable file, read its content
-  if [[ -f "$PROPOSAL_TITLE" ]]; then
-    echo -e "${BLUE}Reading proposal title from file: $PROPOSAL_TITLE${NC}"
-    PROPOSAL_TEXT=$(cat "$PROPOSAL_TITLE")
+  # If proposal is a readable file, read its content
+  if [[ -f "$PROPOSAL" ]]; then
+    echo -e "${BLUE}Reading proposal from file: $PROPOSAL${NC}"
+    PROPOSAL_TEXT=$(cat "$PROPOSAL")
   else
-    PROPOSAL_TEXT="$PROPOSAL_TITLE"
+    PROPOSAL_TEXT="$PROPOSAL"
   fi
   PROPOSAL_CMD="/proposal ${PROPOSAL_TEXT}"
   if [[ -n "$DEVICE_HINT" ]]; then
@@ -143,13 +152,19 @@ if [[ -z "$CHANGE_ID" ]]; then
   PROPOSAL_OUTPUT=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$PROPOSAL_DIR" 2>&1)
   STATUS=$?
   set -e
+  
+  # Save proposal output to log file
+  PROPOSAL_LOG="$PROPOSAL_DIR/proposal.log"
+  echo "$PROPOSAL_OUTPUT" > "$PROPOSAL_LOG"
+  echo -e "${BLUE}📝 Proposal log saved: $PROPOSAL_LOG${NC}"
+  
   if [[ $STATUS -ne 0 ]]; then
     echo -e "${RED}❌ /proposal failed. Output:${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
   fi
   # Extract change_id from agent JSON responses in the output
   CHANGE_ID=$(echo "$PROPOSAL_OUTPUT" | grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
   if [[ -z "$CHANGE_ID" ]]; then
-    echo -e "${RED}❌ Could not extract change_id from /proposal output.${NC}"; echo "$PROPOSAL_JSON"; exit 1
+    echo -e "${RED}❌ Could not extract change_id from /proposal output.${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
   fi
   echo -e "${GREEN}✅ Resolved change id: ${CHANGE_ID}${NC}"
 fi
@@ -158,14 +173,44 @@ fi
 if [[ "$RUN_APPLY" == true ]]; then
   echo -e "${BLUE}🔧 Running /apply for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$APPLY_DIR" "openspec_integration.apply_agent"
-  printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$APPLY_DIR"
+  
+  set +e
+  APPLY_OUTPUT=$(printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$APPLY_DIR" 2>&1)
+  APPLY_STATUS=$?
+  set -e
+  
+  # Save apply output to log file
+  APPLY_LOG="$APPLY_DIR/apply.log"
+  echo "$APPLY_OUTPUT" > "$APPLY_LOG"
+  echo -e "${BLUE}📝 Apply log saved: $APPLY_LOG${NC}"
+  
+  if [[ $APPLY_STATUS -ne 0 ]]; then
+    echo -e "${YELLOW}⚠️  /apply completed with warnings${NC}"
+  else
+    echo -e "${GREEN}✅ /apply completed successfully${NC}"
+  fi
 fi
 
 # Run /archive if requested
 if [[ "$RUN_ARCHIVE" == true ]]; then
   echo -e "${BLUE}📦 Running /archive for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$ARCHIVE_DIR" "openspec_integration.archive_agent"
-  printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$ARCHIVE_DIR"
+  
+  set +e
+  ARCHIVE_OUTPUT=$(printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$ARCHIVE_DIR" 2>&1)
+  ARCHIVE_STATUS=$?
+  set -e
+  
+  # Save archive output to log file
+  ARCHIVE_LOG="$ARCHIVE_DIR/archive.log"
+  echo "$ARCHIVE_OUTPUT" > "$ARCHIVE_LOG"
+  echo -e "${BLUE}📝 Archive log saved: $ARCHIVE_LOG${NC}"
+  
+  if [[ $ARCHIVE_STATUS -ne 0 ]]; then
+    echo -e "${YELLOW}⚠️  /archive completed with warnings${NC}"
+  else
+    echo -e "${GREEN}✅ /archive completed successfully${NC}"
+  fi
 fi
 
 echo -e "${GREEN}✔ Done.${NC}"
