@@ -95,7 +95,7 @@ Reference
 - Use `openspec show <id> --json --deltas-only` if you need additional context from the proposal while implementing.
 
 Simics Integration (best practices)
-- Load knowledge before coding: `openspec-prompts/DML_Best_Practices.md`, `openspec-prompts/Test_Best_Practices.md`.
+- Load knowledge before coding: `openspec-memories/DML_Best_Practices.md`, `openspec-memories/Test_Best_Practices.md`.
 - Use `perform_rag_query` for additional Simics/DML/Python docs as needed.
 - Follow TDD-first implementation order:
   - Create tests first in `simics-project/modules/<device>/test/s-*.py`
