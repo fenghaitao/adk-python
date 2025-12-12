@@ -81,13 +81,13 @@ Guardrails
 Slash Command Arguments
 - Usage: `/proposal <short summary/title> [--id CHANGE_ID] [--device DEVICE_NAME]`
 - Behavior:
-  - If `--id` is provided, use it verbatim after trimming whitespace and validating it's unique; otherwise generate a verb-led id like `NNN-implement-<device-or-topic>`.
+  - If `--id` is provided, use it verbatim after trimming whitespace and validating it's unique; otherwise generate a descriptive verb-led id like `implement-<device-or-topic>` or `add-<feature>`.
   - Extract a concise summary from the trailing text for downstream reference.
   - On success, return a structured response using the provided output schema with: `{ change_id, summary }`.
 
 Steps
 1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs`, and inspect related code or docs (e.g., via `rg`/`ls`) to ground the proposal in current behaviour; note any gaps that require clarification.
-2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
+2. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
 3. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
 4. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
 5. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using `## ADDED|MODIFIED|REMOVED Requirements` with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.

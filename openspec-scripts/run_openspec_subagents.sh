@@ -152,7 +152,12 @@ if [[ -z "$CHANGE_ID" ]]; then
   else
     PROPOSAL_TEXT="$PROPOSAL"
   fi
-  PROPOSAL_CMD="/proposal ${PROPOSAL_TEXT}"
+  
+  # Convert newlines to literal \n so entire prompt is sent as single line
+  # The LLM will still interpret \n as line breaks in the prompt
+  SINGLE_LINE_PROPOSAL=$(echo "$PROPOSAL_TEXT" | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+  
+  PROPOSAL_CMD="/proposal ${SINGLE_LINE_PROPOSAL}"
   if [[ -n "$DEVICE_HINT" ]]; then
     PROPOSAL_CMD+=" --device ${DEVICE_HINT}"
   fi
@@ -169,20 +174,20 @@ if [[ -z "$CHANGE_ID" ]]; then
   PROPOSAL_LOG="$PROPOSAL_DIR/proposal.log"
   
   set +e
-  PROPOSAL_OUTPUT=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" $ADK_PROPOSAL_CMD 2>&1 | tee "$PROPOSAL_LOG")
-  STATUS=$?
+  printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" $ADK_PROPOSAL_CMD 2>&1 | tee "$PROPOSAL_LOG"
+  STATUS=${PIPESTATUS[0]}
   set -e
   
   echo -e "${BLUE}📝 Proposal log saved: $PROPOSAL_LOG${NC}"
   
   if [[ $STATUS -ne 0 ]]; then
-    echo -e "${RED}❌ /proposal failed. Output:${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
+    echo -e "${RED}❌ /proposal failed. Check log: $PROPOSAL_LOG${NC}"; exit 1
   fi
   
-  # Extract change_id from agent JSON responses in the output
-  CHANGE_ID=$(echo "$PROPOSAL_OUTPUT" | grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
+  # Extract change_id from agent JSON responses in the log file
+  CHANGE_ID=$(grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' "$PROPOSAL_LOG" | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
   if [[ -z "$CHANGE_ID" ]]; then
-    echo -e "${RED}❌ Could not extract change_id from /proposal output.${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
+    echo -e "${RED}❌ Could not extract change_id from /proposal output. Check log: $PROPOSAL_LOG${NC}"; exit 1
   fi
   echo -e "${GREEN}✅ Resolved change id: ${CHANGE_ID}${NC}"
   
@@ -216,8 +221,8 @@ if [[ "$RUN_APPLY" == true ]]; then
   APPLY_LOG="$APPLY_DIR/apply.log"
   
   set +e
-  APPLY_OUTPUT=$(printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG")
-  APPLY_STATUS=$?
+  printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG"
+  APPLY_STATUS=${PIPESTATUS[0]}
   set -e
   
   echo -e "${BLUE}📝 Apply log saved: $APPLY_LOG${NC}"
@@ -258,8 +263,8 @@ if [[ "$RUN_ARCHIVE" == true ]]; then
   ARCHIVE_LOG="$ARCHIVE_DIR/archive.log"
   
   set +e
-  ARCHIVE_OUTPUT=$(printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_ARCHIVE_CMD 2>&1 | tee "$ARCHIVE_LOG")
-  ARCHIVE_STATUS=$?
+  printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_ARCHIVE_CMD 2>&1 | tee "$ARCHIVE_LOG"
+  ARCHIVE_STATUS=${PIPESTATUS[0]}
   set -e
   
   echo -e "${BLUE}📝 Archive log saved: $ARCHIVE_LOG${NC}"
