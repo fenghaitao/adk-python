@@ -32,11 +32,13 @@ set -euo pipefail
 # - Uses OpenSpec sub-agents in contributing/samples/openspec_integration/
 # - Starts Simics MCP server unless disabled
 
+source "$(dirname "$0")/common-config.sh"
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-OPEN_SPEC_DIR="$SCRIPT_DIR/contributing/samples/openspec_integration"
-SAMPLES_DIR="$(dirname "$OPEN_SPEC_DIR")"
-MCP_SERVER_DIR="$OPEN_SPEC_DIR/simics-mcp-server"
-ADK_BIN="$SCRIPT_DIR/.venv/bin/adk"
+SPEC_KIT_DIR="$SCRIPT_DIR/../contributing/samples/spec_kit_integration"
+SAMPLES_DIR="$(dirname "$SPEC_KIT_DIR")"
+MCP_SERVER_DIR="$SPEC_KIT_DIR/simics-mcp-server"
+ADK_BIN="$SCRIPT_DIR/../.venv/bin/adk"
 if [[ ! -x "$ADK_BIN" ]]; then
   ADK_BIN="adk"
 fi
@@ -54,7 +56,7 @@ BUILTIN_MCP="${BUILTIN_MCP_SERVER:-yes}"
 RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; BLUE="\033[0;34m"; NC="\033[0m"
 
 usage() {
-  sed -n '1,120p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '4,/^$/p' "$0" | sed 's/^# \{0,1\}//' | sed '/^$/d'
 }
 
 while [[ $# -gt 0 ]]; do
