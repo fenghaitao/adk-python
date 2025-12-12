@@ -79,65 +79,96 @@ Guardrails
 - Identify any vague or ambiguous details and ask the necessary follow-up questions before editing files.
 
 Slash Command Arguments
-- Usage: `/proposal <short summary/title> [--id CHANGE_ID] [--device DEVICE_NAME]`
+- Usage: `/proposal <short summary/title> [--id CHANGE_ID]`
 - Behavior:
   - If `--id` is provided, use it verbatim after trimming whitespace and validating it's unique; otherwise generate a descriptive verb-led id like `implement-<device-or-topic>` or `add-<feature>`.
   - Extract a concise summary from the trailing text for downstream reference.
   - On success, return a structured response using the provided output schema with: `{ change_id, summary }`.
 
+MEMORY LOADING PROTOCOL (for Simics device proposals):
+1. ALWAYS read `openspec-memories/00_DML_Best_Practices_Index.md` FIRST to understand document structure
+2. Use the index's "I want to..." section to identify which 1-2 documents are relevant to your proposal
+3. Load ONLY the specific documents needed (avoid loading all documents - be token-efficient)
+4. For timer/counter/watchdog devices: MUST read `openspec-memories/02_DML_Anti_Patterns.md` FIRST before writing proposal
+   - Anti-Pattern #1 (clock signal modeling) causes 100-1000x performance degradation
+   - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
+   - Anti-Pattern #3 (incomplete timer) causes non-functional devices
+   - Reading anti-patterns first prevents proposing "obvious but wrong" implementations
+5. Also load `openspec-memories/01_Simics_Modeling_Philosophy.md` for high-level design guidance
+6. Use `perform_rag_query` for additional Simics/DML documentation as needed
+
+SPEC FORMAT REQUIREMENTS (CRITICAL - prevents validation failures):
+- ALL requirement keywords MUST be UPPERCASE: "SHALL", "SHOULD", "MAY", "MUST", "MUST NOT"
+- NEVER use lowercase: "shall", "should", "may", "must", "must not"
+- Each requirement MUST have at least one `#### Scenario:` subsection
+- Format: `## ADDED Requirements` or `## MODIFIED Requirements` or `## REMOVED Requirements`
+- Example:
+  ```
+  ## ADDED Requirements
+  
+  ### Device SHALL support register access
+  The device SHALL implement memory-mapped register interface.
+  
+  #### Scenario: Read control register
+  GIVEN device is initialized
+  WHEN software reads control register at offset 0x00
+  THEN device SHALL return current control value
+  ```
+
 Steps
 1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs`, and inspect related code or docs (e.g., via `rg`/`ls`) to ground the proposal in current behaviour; note any gaps that require clarification.
-2. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
-3. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
-4. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
-5. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using `## ADDED|MODIFIED|REMOVED Requirements` with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.
-6. Draft `tasks.md` as an ordered list of small, verifiable work items that deliver user-visible progress, include validation (tests, tooling), and highlight dependencies or parallelizable work.
-7. Validate with `openspec validate <id> --strict` and resolve every issue before sharing the proposal.
+2. Load relevant Simics/DML knowledge using MEMORY LOADING PROTOCOL above (for device proposals).
+3. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
+4. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
+5. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
+6. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using UPPERCASE requirement keywords ("SHALL", "SHOULD", "MAY") with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.
+7. BEFORE running validation: verify all requirements use UPPERCASE keywords and have scenarios - this prevents 40-60s of rework.
+8. Validate with `openspec validate <id> --strict` and resolve every issue before sharing the proposal.
 
 Reference
 - Use `openspec show <id> --json --deltas-only` or `openspec show <spec> --type spec` to inspect details when validation fails.
 - Search existing requirements with `rg -n "Requirement:|Scenario:" openspec/specs` before writing new ones.
 - Explore the codebase with `rg <keyword>`, `ls`, or direct file reads so proposals align with current implementation realities.
 
-Comprehensive Proposal Template (for Simics devices)
+Proposal Template (for Simics devices)
+
+CRITICAL: If spec-kit generated spec exists at `specs/<path>/spec.md`, READ IT FIRST to extract:
+- Hardware Specification: register map with side-effects, external interfaces/signals
+- Device Operational Model: states, transitions, control sequences
+Use this as foundation for your proposal requirements.
 
 ## Context
-Using comprehensive specification at specs/<path>/spec.md as foundation, create complete device implementation covering all essential aspects.
+Current state: DML skeleton exists at simics-project/modules/<device>/ with:
+- Auto-generated register structure (*-registers.dml) - DO NOT EDIT
+- Empty USER-TODO placeholders in <device>.dml for side-effects
+- Spec at specs/<path>/spec.md defines what to implement
 
-**Leveraging from existing spec**:
-- Register Interface: Register map, control registers, status registers, memory mapping, lock mechanisms
-- Functional Behavior: Core logic, state machine, operational behavior, timing requirements, control sequences
-- Platform Integration: External interfaces & signals (interrupt, reset), APB4/bus interface, platform connectivity
+What changes: Implement register side-effects, device state machine, and signal handling.
 
 ## Why
-Implement complete <device> device as specified, extracting all three essential capabilities (register interface, functional behavior, platform integration) from existing comprehensive specification.
-
-## What changes
-- DML Implementation: simics-project/modules/<device>/<device>.dml
-- Register definitions: simics-project/modules/<device>/<device>-registers.dml
-- Comprehensive Test Suite:
-  - Register interface tests: simics-project/modules/<device>/test/s-register-*.py
-  - Behavioral tests: simics-project/modules/<device>/test/s-behavior-*.py
-  - Integration tests: simics-project/modules/<device>/test/s-integration-*.py
-
-## Implementation Context
-- Register Interface: Implement register handlers in <device>.dml
-- Functional Behavior: Implement core device logic/state machine in <device>.dml
-- Platform Integration: Add signal interfaces and bus connectivity in <device>.dml
-- Module Loading: Update simics-project/modules/<device>/module_load.py if needed
-- Build: Use project build system (GNUmakefile/CMake as provided)
+Enable functional <device> device by implementing behavior specified in specs/<path>/spec.md.
 
 ## Scope
-- Modified: simics-project/modules/<device>/<device>.dml (comprehensive implementation)
-- Modified: simics-project/modules/<device>/<device>-registers.dml (register definitions)
-- Added: Complete test suite covering all three aspects
-- Build: Full device build and validation
+Modified:
+- simics-project/modules/<device>/<device>.dml (implement USER-TODO side-effects)
 
-Constraints
-- Preserve ALL import statements (auto-generated during build)
-- Use event-based timing (no cycle-accurate updates)
-- DML 1.4 syntax with session state management
-- Prefer extracting focused requirements from existing comprehensive specs
+Added:
+- simics-project/modules/<device>/test/s-<test-name>.py (test cases for register side-effects and device behavior)
+
+Common Device Patterns:
+- Simple register: Register read/write side-effects only
+- Timer/Counter: Register side-effects + lazy evaluation + event-based countdown + interrupts
+- Watchdog: Timer pattern + reset signal + lock mechanism + reload on write
+- UART: Register side-effects + data buffering + TX/RX interrupts
+- Interrupt controller: Multiple inputs + priority + masking + status registers
+
+Critical Constraints:
+- DML 1.4 syntax only
+- Event-based timing: use event object with `post()` method, NOT cycle-by-cycle updates
+- Session state management (use `session` keyword for state variables)
+- Preserve ALL auto-generated imports in <device>.dml
+- NEVER edit auto-generated files: *-registers.dml
+- NEVER add new .dml files or modify XML/Makefiles
 """
 
     # Tools
