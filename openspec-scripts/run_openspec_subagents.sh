@@ -35,8 +35,6 @@ set -euo pipefail
 # - Uses OpenSpec sub-agents in contributing/samples/openspec_integration/
 # - Starts Simics MCP server unless disabled
 
-source "$(dirname "$0")/common-config.sh"
-
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SPEC_KIT_DIR="$SCRIPT_DIR/../contributing/samples/spec_kit_integration"
 SAMPLES_DIR="$(dirname "$SPEC_KIT_DIR")"
