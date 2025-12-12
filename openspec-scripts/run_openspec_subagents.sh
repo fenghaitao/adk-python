@@ -23,6 +23,8 @@ set -euo pipefail
 #   --port PORT              MCP server port (default: 8051)
 #   --model MODEL            Override model for sub-agents (default: env OPENSPEC_MODEL or github_copilot/gpt-5-mini)
 #   --builtin-mcp yes|no     Start/stop the bundled MCP server (default: yes)
+#   --save-session           Save session files (DEFAULT)
+#   --no-save-session        Disable session saving
 #
 # Environment variables:
 #   OPENSPEC_MODEL           Default model for agents
@@ -53,6 +55,7 @@ RUN_ARCHIVE=false
 MCP_PORT=8051
 MODEL="${OPENSPEC_MODEL:-github_copilot/gpt-5-mini}"
 BUILTIN_MCP="${BUILTIN_MCP_SERVER:-yes}"
+SAVE_SESSION=true
 
 # Colors
 RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; BLUE="\033[0;34m"; NC="\033[0m"
@@ -72,6 +75,8 @@ while [[ $# -gt 0 ]]; do
     --port) MCP_PORT="$2"; shift 2;;
     --model) MODEL="$2"; shift 2;;
     --builtin-mcp) BUILTIN_MCP="$2"; shift 2;;
+    --save-session) SAVE_SESSION=true; shift;;
+    --no-save-session) SAVE_SESSION=false; shift;;
     -h|--help) usage; exit 0;;
     *) echo -e "${RED}Unknown arg: $1${NC}"; usage; exit 1;;
   esac
@@ -113,6 +118,9 @@ WORKDIR="${WORKDIR:-$(pwd)}"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
+# Get absolute path after cd
+WORKDIR="$(pwd)"
+
 echo -e "${BLUE}Working directory: $WORKDIR${NC}"
 
 # Prepare sub-agent directories (ADK expects a package with root_agent)
@@ -148,25 +156,47 @@ if [[ -z "$CHANGE_ID" ]]; then
   if [[ -n "$DEVICE_HINT" ]]; then
     PROPOSAL_CMD+=" --device ${DEVICE_HINT}"
   fi
+  
+  # Build ADK command with session options
+  ADK_PROPOSAL_CMD="$ADK_BIN run $PROPOSAL_DIR"
+  if [[ "$SAVE_SESSION" == true ]]; then
+    SESSION_ID="proposal_${CHANGE_ID:-$(date +%Y%m%d_%H%M%S)}"
+    ADK_PROPOSAL_CMD="$ADK_PROPOSAL_CMD --save_session --session_id $SESSION_ID"
+    echo -e "${BLUE}Session will be saved as: $PROPOSAL_DIR/${SESSION_ID}.session.json${NC}"
+  fi
+  
+  # Save proposal output to log file while displaying it
+  PROPOSAL_LOG="$PROPOSAL_DIR/proposal.log"
+  
   set +e
-  PROPOSAL_OUTPUT=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$PROPOSAL_DIR" 2>&1)
+  PROPOSAL_OUTPUT=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" $ADK_PROPOSAL_CMD 2>&1 | tee "$PROPOSAL_LOG")
   STATUS=$?
   set -e
   
-  # Save proposal output to log file
-  PROPOSAL_LOG="$PROPOSAL_DIR/proposal.log"
-  echo "$PROPOSAL_OUTPUT" > "$PROPOSAL_LOG"
   echo -e "${BLUE}📝 Proposal log saved: $PROPOSAL_LOG${NC}"
   
   if [[ $STATUS -ne 0 ]]; then
     echo -e "${RED}❌ /proposal failed. Output:${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
   fi
+  
   # Extract change_id from agent JSON responses in the output
   CHANGE_ID=$(echo "$PROPOSAL_OUTPUT" | grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
   if [[ -z "$CHANGE_ID" ]]; then
     echo -e "${RED}❌ Could not extract change_id from /proposal output.${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
   fi
   echo -e "${GREEN}✅ Resolved change id: ${CHANGE_ID}${NC}"
+  
+  # Generate human-readable session dump if session was saved
+  if [[ "$SAVE_SESSION" == true ]] && [[ -f "$PROPOSAL_DIR/${SESSION_ID}.session.json" ]]; then
+    echo -e "${GREEN}Proposal session saved: $PROPOSAL_DIR/${SESSION_ID}.session.json${NC}"
+    if [[ -f "$SCRIPT_DIR/../view_session.py" ]]; then
+      echo "📄 Generating human-readable proposal session dump..."
+      python3 "$SCRIPT_DIR/../view_session.py" "$PROPOSAL_DIR/${SESSION_ID}.session.json" > "$PROPOSAL_DIR/${SESSION_ID}.session.txt"
+      if [[ -f "$PROPOSAL_DIR/${SESSION_ID}.session.txt" ]]; then
+        echo -e "${GREEN}Human-readable proposal session saved: $PROPOSAL_DIR/${SESSION_ID}.session.txt${NC}"
+      fi
+    fi
+  fi
 fi
 
 # Run /apply if requested
@@ -174,20 +204,40 @@ if [[ "$RUN_APPLY" == true ]]; then
   echo -e "${BLUE}🔧 Running /apply for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$APPLY_DIR" "openspec_integration.apply_agent"
   
+  # Build ADK command with session options
+  ADK_APPLY_CMD="$ADK_BIN run $APPLY_DIR"
+  if [[ "$SAVE_SESSION" == true ]]; then
+    APPLY_SESSION_ID="apply_${CHANGE_ID}"
+    ADK_APPLY_CMD="$ADK_APPLY_CMD --save_session --session_id $APPLY_SESSION_ID"
+    echo -e "${BLUE}Session will be saved as: $APPLY_DIR/${APPLY_SESSION_ID}.session.json${NC}"
+  fi
+  
+  # Save apply output to log file while displaying it
+  APPLY_LOG="$APPLY_DIR/apply.log"
+  
   set +e
-  APPLY_OUTPUT=$(printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$APPLY_DIR" 2>&1)
+  APPLY_OUTPUT=$(printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG")
   APPLY_STATUS=$?
   set -e
   
-  # Save apply output to log file
-  APPLY_LOG="$APPLY_DIR/apply.log"
-  echo "$APPLY_OUTPUT" > "$APPLY_LOG"
   echo -e "${BLUE}📝 Apply log saved: $APPLY_LOG${NC}"
   
   if [[ $APPLY_STATUS -ne 0 ]]; then
     echo -e "${YELLOW}⚠️  /apply completed with warnings${NC}"
   else
     echo -e "${GREEN}✅ /apply completed successfully${NC}"
+  fi
+  
+  # Generate human-readable session dump if session was saved
+  if [[ "$SAVE_SESSION" == true ]] && [[ -f "$APPLY_DIR/${APPLY_SESSION_ID}.session.json" ]]; then
+    echo -e "${GREEN}Apply session saved: $APPLY_DIR/${APPLY_SESSION_ID}.session.json${NC}"
+    if [[ -f "$SCRIPT_DIR/../view_session.py" ]]; then
+      echo "📄 Generating human-readable apply session dump..."
+      python3 "$SCRIPT_DIR/../view_session.py" "$APPLY_DIR/${APPLY_SESSION_ID}.session.json" > "$APPLY_DIR/${APPLY_SESSION_ID}.session.txt"
+      if [[ -f "$APPLY_DIR/${APPLY_SESSION_ID}.session.txt" ]]; then
+        echo -e "${GREEN}Human-readable apply session saved: $APPLY_DIR/${APPLY_SESSION_ID}.session.txt${NC}"
+      fi
+    fi
   fi
 fi
 
@@ -196,20 +246,40 @@ if [[ "$RUN_ARCHIVE" == true ]]; then
   echo -e "${BLUE}📦 Running /archive for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$ARCHIVE_DIR" "openspec_integration.archive_agent"
   
+  # Build ADK command with session options
+  ADK_ARCHIVE_CMD="$ADK_BIN run $ARCHIVE_DIR"
+  if [[ "$SAVE_SESSION" == true ]]; then
+    ARCHIVE_SESSION_ID="archive_${CHANGE_ID}"
+    ADK_ARCHIVE_CMD="$ADK_ARCHIVE_CMD --save_session --session_id $ARCHIVE_SESSION_ID"
+    echo -e "${BLUE}Session will be saved as: $ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.json${NC}"
+  fi
+  
+  # Save archive output to log file while displaying it
+  ARCHIVE_LOG="$ARCHIVE_DIR/archive.log"
+  
   set +e
-  ARCHIVE_OUTPUT=$(printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$ARCHIVE_DIR" 2>&1)
+  ARCHIVE_OUTPUT=$(printf "/archive --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_ARCHIVE_CMD 2>&1 | tee "$ARCHIVE_LOG")
   ARCHIVE_STATUS=$?
   set -e
   
-  # Save archive output to log file
-  ARCHIVE_LOG="$ARCHIVE_DIR/archive.log"
-  echo "$ARCHIVE_OUTPUT" > "$ARCHIVE_LOG"
   echo -e "${BLUE}📝 Archive log saved: $ARCHIVE_LOG${NC}"
   
   if [[ $ARCHIVE_STATUS -ne 0 ]]; then
     echo -e "${YELLOW}⚠️  /archive completed with warnings${NC}"
   else
     echo -e "${GREEN}✅ /archive completed successfully${NC}"
+  fi
+  
+  # Generate human-readable session dump if session was saved
+  if [[ "$SAVE_SESSION" == true ]] && [[ -f "$ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.json" ]]; then
+    echo -e "${GREEN}Archive session saved: $ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.json${NC}"
+    if [[ -f "$SCRIPT_DIR/../view_session.py" ]]; then
+      echo "📄 Generating human-readable archive session dump..."
+      python3 "$SCRIPT_DIR/../view_session.py" "$ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.json" > "$ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.txt"
+      if [[ -f "$ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.txt" ]]; then
+        echo -e "${GREEN}Human-readable archive session saved: $ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.txt${NC}"
+      fi
+    fi
   fi
 fi
 
