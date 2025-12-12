@@ -5,16 +5,16 @@ set -euo pipefail
 #
 # Usage examples:
 #   ./run_openspec_subagents.sh \
-#       --proposal-title "Implement watchdog timer device" \
+#       --proposal "Implement watchdog timer device" \
 #       --change-id "123-implement-wdt" \
 #       --device wdt \
 #       --apply \
 #       --archive
 #
-#   ./run_openspec_subagents.sh --proposal-title "Add product search" --apply
+#   ./run_openspec_subagents.sh --proposal "Add product search" --apply
 #
 # Options:
-#   --proposal-title TITLE|FILE  Short summary/title for /proposal (string or file path) (required unless --change-id provided)
+#   --proposal TITLE|FILE    Short summary/title for /proposal (string or file path) (required unless --change-id provided)
 #   --change-id ID           Explicit change id to use (otherwise /proposal generates one)
 #   --device NAME            Optional device name hint for id generation
 #   --apply                  Run /apply after /proposal using the resolved change id
@@ -61,7 +61,7 @@ usage() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --proposal-title) PROPOSAL_TITLE="$2"; shift 2;;
+    --proposal) PROPOSAL_TITLE="$2"; shift 2;;
     --change-id) CHANGE_ID="$2"; shift 2;;
     --device) DEVICE_HINT="$2"; shift 2;;
     --apply) RUN_APPLY=true; shift;;
@@ -124,7 +124,7 @@ EOF
 # Resolve change id via /proposal if not provided
 if [[ -z "$CHANGE_ID" ]]; then
   if [[ -z "$PROPOSAL_TITLE" ]]; then
-    echo -e "${RED}Either --change-id or --proposal-title must be provided.${NC}"; exit 1
+    echo -e "${RED}Either --change-id or --proposal must be provided.${NC}"; exit 1
   fi
   echo -e "${BLUE}🧩 Running /proposal to generate change id...${NC}"
   prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_agent"
@@ -140,18 +140,14 @@ if [[ -z "$CHANGE_ID" ]]; then
     PROPOSAL_CMD+=" --device ${DEVICE_HINT}"
   fi
   set +e
-  PROPOSAL_JSON=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$PROPOSAL_DIR" --json 2>/dev/null)
+  PROPOSAL_OUTPUT=$(printf "%s\nexit\n" "$PROPOSAL_CMD" | OPENSPEC_MODEL="$MODEL" "$ADK_BIN" run "$PROPOSAL_DIR" 2>&1)
   STATUS=$?
   set -e
-  if [[ $STATUS -ne 0 || -z "$PROPOSAL_JSON" ]]; then
-    echo -e "${RED}❌ /proposal failed. Output:${NC}"; echo "$PROPOSAL_JSON"; exit 1
+  if [[ $STATUS -ne 0 ]]; then
+    echo -e "${RED}❌ /proposal failed. Output:${NC}"; echo "$PROPOSAL_OUTPUT"; exit 1
   fi
-  if command -v jq >/dev/null 2>&1; then
-    CHANGE_ID=$(echo "$PROPOSAL_JSON" | jq -r '.final_response.output.change_id // empty')
-  fi
-  if [[ -z "$CHANGE_ID" ]]; then
-    CHANGE_ID=$(echo "$PROPOSAL_JSON" | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
-  fi
+  # Extract change_id from agent JSON responses in the output
+  CHANGE_ID=$(echo "$PROPOSAL_OUTPUT" | grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
   if [[ -z "$CHANGE_ID" ]]; then
     echo -e "${RED}❌ Could not extract change_id from /proposal output.${NC}"; echo "$PROPOSAL_JSON"; exit 1
   fi
