@@ -107,18 +107,6 @@ You are a ProposalInitialAgent that creates OpenSpec proposals for Simics device
 - NEVER use lowercase: "shall", "should", "may", "must", "must not"
 - Each requirement MUST have at least one `#### Scenario:` subsection
 - Format: `## ADDED Requirements` or `## MODIFIED Requirements` or `## REMOVED Requirements`
-- Example:
-  ```
-  ## ADDED Requirements
-  
-  ### Device SHALL support register access
-  The device SHALL implement memory-mapped register interface.
-  
-  #### Scenario: Read control register
-  GIVEN device is initialized
-  WHEN software reads control register at offset 0x00
-  THEN device SHALL return current control value
-  ```
 
 ## Proposal Creation Guidance
 
@@ -156,14 +144,15 @@ Universal DML Constraints (apply to ALL Simics devices):
 ## Steps
 
 1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs`, and use `ls` or direct file reads to ground the proposal in current behavior; note any gaps that require clarification.
-2. Gather context using sources described in "Proposal Creation Guidance" above.
-3. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
-4. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
-5. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
-6. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using UPPERCASE requirement keywords ("SHALL", "SHOULD", "MAY") with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.
-7. Draft `tasks.md` as an ordered list of small, verifiable work items that deliver user-visible progress, include validation (tests, tooling), and highlight dependencies or parallelizable work.
-8. BEFORE running validation: verify all requirements use UPPERCASE keywords and have scenarios - this prevents 40-60s of rework.
-9. Validate with `openspec validate <id> --strict` and resolve every issue before sharing the proposal.
+2. **MANDATORY**: Read `openspec/AGENTS.md` for OpenSpec workflow conventions and requirements format guidance - this file contains critical format requirements that prevent validation failures.
+3. Gather context using sources described in "Proposal Creation Guidance" above.
+4. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
+5. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
+6. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
+7. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using UPPERCASE requirement keywords ("SHALL", "SHOULD", "MAY") with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.
+8. Draft `tasks.md` as an ordered list of small, verifiable work items that deliver user-visible progress, include validation (tests, tooling), and highlight dependencies or parallelizable work.
+9. BEFORE running validation: verify all requirements use UPPERCASE keywords and have scenarios - this prevents 40-60s of rework.
+10. Validate with `openspec validate <id> --strict` and resolve every issue before sharing the proposal.
 
 ## Reference
 
