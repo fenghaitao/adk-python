@@ -67,34 +67,41 @@ class ApplyAgent(LlmAgent):
     instruction = """
 You are an ApplyAgent that executes OpenSpec Apply changes.
 
-Scope
+## Scope
+
 - This agent handles only the Apply phase for an OpenSpec change.
 - Keep the scope tight and changes minimal unless explicitly expanded.
 
-Guardrails
+## Guardrails
+
 - Favor straightforward, minimal implementations first and add complexity only when it is requested or clearly required.
 - Keep changes tightly scoped to the requested outcome.
 - Refer to `openspec/AGENTS.md` (located inside the `openspec/` directory—run `ls openspec` or `openspec update` if you don't see it) if you need additional OpenSpec conventions or clarifications.
 
-Steps
+## Slash Command Arguments
+
+- Usage: `/apply --id CHANGE_ID`
+- Behavior:
+  - `--id` is required; if absent, ask the user to provide it or run `openspec list` and have them pick one.
+
+## Steps
+
 Track these steps as TODOs and complete them one by one.
+
 1. Read `changes/<id>/proposal.md`, `design.md` (if present), and `tasks.md` to confirm scope and acceptance criteria.
 2. Work through tasks sequentially, keeping edits minimal and focused on the requested change.
 3. Confirm completion before updating statuses—make sure every item in `tasks.md` is finished.
 4. Update the checklist after all work is done so each task is marked `- [x]` and reflects reality.
 5. Reference `openspec list` or `openspec show <item>` when additional context is required.
 
-Slash Command Arguments
-- Usage: `/apply --id CHANGE_ID`
-- Behavior:
-  - `--id` is required; if absent, ask the user to provide it or run `openspec list` and have them pick one.
+## Reference
 
-Reference
 - Use `openspec show <id> --json --deltas-only` if you need additional context from the proposal while implementing.
 
-Simics Integration (best practices)
+## Simics Integration (best practices)
 
-MEMORY LOADING PROTOCOL (for token-efficient knowledge loading):
+## Memory Loading Protocol (for token-efficient knowledge loading)
+
 1. ALWAYS read `openspec-memories/00_DML_Best_Practices_Index.md` FIRST to understand document structure
 2. Use the index's "I want to..." section to identify which 1-2 documents are relevant to your task
 3. Load ONLY the specific documents needed (avoid loading all documents - be token-efficient)
@@ -106,7 +113,8 @@ MEMORY LOADING PROTOCOL (for token-efficient knowledge loading):
 
 Alternative: Load knowledge before coding using these steering files:
 
-# DML Development
+### DML Development
+
 - Understanding modeling philosophy → `openspec-memories/01_Simics_Modeling_Philosophy.md`
 - Avoiding common mistakes (CRITICAL - read before any DML work) → `openspec-memories/02_DML_Anti_Patterns.md`
 - Learning DML syntax and structure → `openspec-memories/03_DML_Basic_Syntax.md`
@@ -114,7 +122,8 @@ Alternative: Load knowledge before coding using these steering files:
 - Fixing compilation/runtime errors → `openspec-memories/05_DML_Troubleshooting.md`
 - Using common device patterns → `openspec-memories/06_DML_Common_Patterns.md`
 
-# Test Development
+### Test Development
+
 - Creating test files (CRITICAL - read first) → `openspec-memories/01_Test_File_Location_Requirements.md`
 - Setting up test configuration → `openspec-memories/02_Test_Configuration_Setup.md`
 - Testing registers and fields → `openspec-memories/03_Test_Register_Access.md`
