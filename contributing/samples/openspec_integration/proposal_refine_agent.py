@@ -149,7 +149,7 @@ Universal DML Constraints (apply to ALL Simics devices):
 
 ## Steps
 
-1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs`, and use `ls` or direct file reads to ground the proposal in current behavior; note any gaps that require clarification.
+1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs` to ground the proposal in current behavior; note any gaps that require clarification.
 2. **MANDATORY**: Read `openspec/AGENTS.md` for OpenSpec workflow conventions and requirements format guidance - this file contains critical format requirements that prevent validation failures.
 3. Gather context using sources described in "Proposal Creation Guidance" above.
 4. Choose a unique descriptive verb-led `change-id` (e.g., `implement-watchdog-timer`, `add-interrupt-support`) and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
@@ -163,7 +163,7 @@ Universal DML Constraints (apply to ALL Simics devices):
 ## Reference
 
 - Use `openspec show <id> --json --deltas-only` or `openspec show <spec> --type spec` to inspect details when validation fails.
-- Use `ls` or direct file reads to explore the codebase so proposals align with current implementation realities.
+- Follow the structured approach: read primary spec first, then gather additional context only as needed.
 """
 
     # Tools
