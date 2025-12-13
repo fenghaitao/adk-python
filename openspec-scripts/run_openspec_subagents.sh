@@ -141,7 +141,8 @@ else
 fi
 
 # Prepare sub-agent directories (ADK expects a package with root_agent)
-PROPOSAL_DIR="$WORKDIR/adk_openspec_proposal_agent"
+PROPOSAL_INITIAL_DIR="$WORKDIR/adk_openspec_proposal_initial_agent"
+PROPOSAL_REFINE_DIR="$WORKDIR/adk_openspec_proposal_refine_agent"
 APPLY_DIR="$WORKDIR/adk_openspec_apply_agent"
 ARCHIVE_DIR="$WORKDIR/adk_openspec_archive_agent"
 
@@ -170,8 +171,10 @@ if [[ -z "$CHANGE_ID" ]]; then
   
   # Choose the appropriate agent based on type
   if [[ "$AGENT_TYPE" == "initial" ]]; then
+    PROPOSAL_DIR="$PROPOSAL_INITIAL_DIR"
     prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_initial_agent"
   else
+    PROPOSAL_DIR="$PROPOSAL_REFINE_DIR"
     prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_refine_agent"
   fi
   # If proposal is a readable file, read its content
