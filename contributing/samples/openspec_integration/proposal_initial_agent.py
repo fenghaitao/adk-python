@@ -125,12 +125,14 @@ You are a ProposalInitialAgent that creates OpenSpec proposals for Simics device
 The user input provides the purpose (what device/feature to implement).
 
 Use this along with:
-1. Spec at `specs/<path>/spec.md` (hardware specification and operational model) - PRIMARY SOURCE for requirements
+1. Spec at `specs/<branch-name>/spec.md` (hardware specification and operational model) - PRIMARY SOURCE for requirements
+   - `<branch-name>` is the git branch name (e.g., `specs/001-read-the-simics/spec.md`)
+   - Use `find specs -name "spec.md" -type f` to locate the correct spec file
 2. DML best practices from openspec-memories/ (via MEMORY LOADING PROTOCOL)
 
 To create a proposal with:
-- Context: "DML skeleton exists at simics-project/modules/<device>/ with auto-generated register structure and USER-TODO placeholders. Using specification at specs/<path>/spec.md to implement register side-effects and device behavior."
-- Why: "Enable functional <device> device by implementing behavior specified in specs/<path>/spec.md."
+- Context: "DML skeleton exists at simics-project/modules/<device>/ with auto-generated register structure and USER-TODO placeholders. Using specification at specs/<branch-name>/spec.md to implement register side-effects and device behavior."
+- Why: "Enable functional <device> device by implementing behavior specified in specs/<branch-name>/spec.md."
 - Scope: 
   - Modified: simics-project/modules/<device>/<device>.dml (implement USER-TODO side-effects)
   - Added: simics-project/modules/<device>/test/s-*.py (test cases)

@@ -125,7 +125,9 @@ You are a ProposalRefineAgent that creates OpenSpec proposals for Simics device 
 The user input provides the purpose (what feature/enhancement to add).
 
 Extract requirements for the enhancement from:
-1. Spec at `specs/<path>/spec.md` - Extract ONLY the sections relevant to the enhancement
+1. Spec at `specs/<branch-name>/spec.md` - Extract ONLY the sections relevant to the enhancement
+   - `<branch-name>` is the git branch name (e.g., `specs/001-read-the-simics/spec.md`)
+   - Use `find specs -name "spec.md" -type f` to locate the correct spec file
 2. DML best practices from openspec-memories/ (via MEMORY LOADING PROTOCOL)
 
 CRITICAL BOUNDARIES:
