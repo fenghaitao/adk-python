@@ -103,7 +103,13 @@ MEMORY LOADING PROTOCOL (for token-efficient knowledge loading):
    - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
    - Anti-Pattern #3 (incomplete timer) causes non-functional devices
    - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
-5. Also load test guidance from index when implementing tests
+5. For test development, load relevant test guidance from index:
+   - Test file location requirements (CRITICAL - read first)
+   - Test configuration setup
+   - Testing registers and fields
+   - Testing device output signals with fake objects
+   - Testing DMA and memory operations
+   - Testing timers and timing behavior
 6. Use `perform_rag_query` for additional Simics/DML/Python docs as needed
 - Follow TDD-first implementation order:
   - Create tests first in `simics-project/modules/<device>/test/s-*.py`
