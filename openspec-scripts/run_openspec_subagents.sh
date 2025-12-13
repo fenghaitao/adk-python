@@ -6,16 +6,23 @@ set -euo pipefail
 # Usage examples:
 #   ./run_openspec_subagents.sh \
 #       --proposal "Implement watchdog timer device" \
+#       --agent initial \
 #       --change-id "123-implement-wdt" \
 #       --device wdt \
 #       --apply \
 #       --archive
 #
-#   ./run_openspec_subagents.sh --proposal "Add product search" --apply
+#   ./run_openspec_subagents.sh --proposal "Add product search" --agent initial --apply
+#
+#   ./run_openspec_subagents.sh \
+#       --proposal openspec-prompts/refine-wdt-interrupt.md \
+#       --agent refine \
+#       --apply
 #
 # Options:
 #   --proposal TITLE|FILE    Short summary/title for /proposal (string or file path) (required unless --change-id provided)
 #   --change-id ID           Explicit change id to use (otherwise /proposal generates one)
+#   --agent AGENT_TYPE       Agent type: initial|refine (default: initial)
 #   --device NAME            Optional device name hint for id generation
 #   --workdir DIR            Working directory for agent directories and logs (default: current directory)
 #   --apply                  Run /apply after /proposal using the resolved change id
@@ -46,6 +53,7 @@ fi
 
 PROPOSAL=""
 CHANGE_ID=""
+AGENT_TYPE="initial"
 DEVICE_HINT=""
 WORKDIR=""
 RUN_APPLY=false
@@ -66,6 +74,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --proposal) PROPOSAL="$2"; shift 2;;
     --change-id) CHANGE_ID="$2"; shift 2;;
+    --agent) AGENT_TYPE="$2"; shift 2;;
     --device) DEVICE_HINT="$2"; shift 2;;
     --workdir) WORKDIR="$2"; shift 2;;
     --apply) RUN_APPLY=true; shift;;
@@ -146,13 +155,25 @@ from $import_path import root_agent
 EOF
 }
 
+# Validate agent type
+case "$AGENT_TYPE" in
+  initial|refine) ;;
+  *) echo -e "${RED}Invalid agent type: $AGENT_TYPE. Must be 'initial' or 'refine'.${NC}"; exit 1;;
+esac
+
 # Resolve change id via /proposal if not provided
 if [[ -z "$CHANGE_ID" ]]; then
   if [[ -z "$PROPOSAL" ]]; then
     echo -e "${RED}Either --change-id or --proposal must be provided.${NC}"; exit 1
   fi
-  echo -e "${BLUE}🧩 Running /proposal to generate change id...${NC}"
-  prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_agent"
+  echo -e "${BLUE}🧩 Running /proposal with ${AGENT_TYPE} agent to generate change id...${NC}"
+  
+  # Choose the appropriate agent based on type
+  if [[ "$AGENT_TYPE" == "initial" ]]; then
+    prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_initial_agent"
+  else
+    prepare_agent_dir "$PROPOSAL_DIR" "openspec_integration.proposal_refine_agent"
+  fi
   # If proposal is a readable file, read its content
   if [[ -f "$PROPOSAL" ]]; then
     echo -e "${BLUE}Reading proposal from file: $PROPOSAL${NC}"

@@ -5,7 +5,8 @@ source "$(dirname "$0")/common-config.sh"
 
 ~/adk-python/openspec-scripts/run_openspec_subagents.sh \
   --workdir adk_openspec_project \
-  --proposal ~/adk-python/openspec-prompts/proposal-wdt.md \
+  --proposal ~/adk-python/openspec-prompts/refine-wdt-interrupt.md \
+  --agent refine \
   --port 8056 \
   --apply \
   --archive \
