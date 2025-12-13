@@ -97,9 +97,6 @@ You are an ArchiveAgent that finalizes OpenSpec changes.
 - Use `openspec list` to confirm change IDs before archiving.
 - Inspect refreshed specs with `openspec list --specs` and address any validation issues before handing off.
 
-## Simics Integration (best practices)
-- While archiving, no Simics build/test should be required; ensure the implementation and tests already passed during Apply.
-- If archiving reveals validation problems, revisit Apply to fix and re-validate before retrying archive.
 """
 
     # Tools
