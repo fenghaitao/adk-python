@@ -121,6 +121,16 @@ WORKDIR="$(pwd)"
 
 echo -e "${BLUE}Working directory: $WORKDIR${NC}"
 
+# Copy openspec-memories folder to workdir if it exists
+MEMORIES_SRC="$SCRIPT_DIR/../openspec-memories"
+if [[ -d "$MEMORIES_SRC" ]]; then
+  echo -e "${BLUE}📂 Copying openspec-memories to workdir...${NC}"
+  cp -r "$MEMORIES_SRC" "$WORKDIR/"
+  echo -e "${GREEN}✅ openspec-memories copied to $WORKDIR/openspec-memories${NC}"
+else
+  echo -e "${YELLOW}⚠️  openspec-memories folder not found at $MEMORIES_SRC${NC}"
+fi
+
 # Prepare sub-agent directories (ADK expects a package with root_agent)
 PROPOSAL_DIR="$WORKDIR/adk_openspec_proposal_agent"
 APPLY_DIR="$WORKDIR/adk_openspec_apply_agent"
