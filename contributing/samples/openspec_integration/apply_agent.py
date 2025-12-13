@@ -103,14 +103,26 @@ MEMORY LOADING PROTOCOL (for token-efficient knowledge loading):
    - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
    - Anti-Pattern #3 (incomplete timer) causes non-functional devices
    - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
-5. For test development, load relevant test guidance from index:
-   - Test file location requirements (CRITICAL - read first)
-   - Test configuration setup
-   - Testing registers and fields
-   - Testing device output signals with fake objects
-   - Testing DMA and memory operations
-   - Testing timers and timing behavior
-6. Use `perform_rag_query` for additional Simics/DML/Python docs as needed
+
+Alternative: Load knowledge before coding using these steering files:
+
+# DML Development
+- Understanding modeling philosophy → `openspec-memories/01_Simics_Modeling_Philosophy.md`
+- Avoiding common mistakes (CRITICAL - read before any DML work) → `openspec-memories/02_DML_Anti_Patterns.md`
+- Learning DML syntax and structure → `openspec-memories/03_DML_Basic_Syntax.md`
+- Implementing timers/counters/events → `openspec-memories/04_DML_Timing_Timer_Modeling.md`
+- Fixing compilation/runtime errors → `openspec-memories/05_DML_Troubleshooting.md`
+- Using common device patterns → `openspec-memories/06_DML_Common_Patterns.md`
+
+# Test Development
+- Creating test files (CRITICAL - read first) → `openspec-memories/01_Test_File_Location_Requirements.md`
+- Setting up test configuration → `openspec-memories/02_Test_Configuration_Setup.md`
+- Testing registers and fields → `openspec-memories/03_Test_Register_Access.md`
+- Testing device output signals with fake objects → `openspec-memories/04_Test_Fake_Objects_Mocking.md`
+- Testing DMA and memory operations → `openspec-memories/05_Test_DMA_Memory.md`
+- Testing timers and timing behavior → `openspec-memories/06_Test_Events_Timing.md`
+
+- Use `perform_rag_query` for additional Simics/DML/Python docs as needed.
 - Follow TDD-first implementation order:
   - Create tests first in `simics-project/modules/<device>/test/s-*.py`
   - Implement DML updates in `simics-project/modules/<device>/<device>.dml`
