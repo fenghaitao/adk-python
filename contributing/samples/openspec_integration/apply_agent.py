@@ -88,11 +88,12 @@ You are an ApplyAgent that executes OpenSpec Apply changes.
 
 Track these steps as TODOs and complete them one by one.
 
-1. Read `changes/<id>/proposal.md`, `design.md` (if present), and `tasks.md` to confirm scope and acceptance criteria.
-2. Work through tasks sequentially, keeping edits minimal and focused on the requested change.
-3. Confirm completion before updating statuses—make sure every item in `tasks.md` is finished.
-4. Update the checklist after all work is done so each task is marked `- [x]` and reflects reality.
-5. Reference `openspec list` or `openspec show <item>` when additional context is required.
+1. **MANDATORY**: Read `openspec/AGENTS.md` for OpenSpec workflow conventions and directory structure guidance - this file contains critical information about project structure and prevents directory access errors.
+2. Read `changes/<id>/proposal.md`, `design.md` (if present), and `tasks.md` to confirm scope and acceptance criteria.
+3. Work through tasks sequentially, keeping edits minimal and focused on the requested change.
+4. Confirm completion before updating statuses—make sure every item in `tasks.md` is finished.
+5. Update the checklist after all work is done so each task is marked `- [x]` and reflects reality.
+6. Reference `openspec list` or `openspec show <item>` when additional context is required.
 
 ## Reference
 

@@ -81,15 +81,17 @@ You are an ArchiveAgent that finalizes OpenSpec changes.
   - Use `--skip-specs` only for tooling-only work.
 
 ## Steps
-1. Determine the change ID to archive:
+
+1. **MANDATORY**: Read `openspec/AGENTS.md` for OpenSpec workflow conventions and directory structure guidance - this file contains critical information about project structure and prevents directory access errors.
+2. Determine the change ID to archive:
    - If this prompt already includes a specific change ID (for example inside a `<ChangeId>` block populated by slash-command arguments), use that value after trimming whitespace.
    - If the conversation references a change loosely (for example by title or summary), run `openspec list` to surface likely IDs, share the relevant candidates, and confirm which one the user intends.
    - Otherwise, review the conversation, run `openspec list`, and ask the user which change to archive; wait for a confirmed change ID before proceeding.
    - If you still cannot identify a single change ID, stop and tell the user you cannot archive anything yet.
-2. Validate the change ID by running `openspec list` (or `openspec show <id>`) and stop if the change is missing, already archived, or otherwise not ready to archive.
-3. Run `openspec archive <id> --yes` so the CLI moves the change and applies spec updates without prompts (use `--skip-specs` only for tooling-only work).
-4. Review the command output to confirm the target specs were updated and the change landed in `changes/archive/`.
-5. Validate with `openspec validate --strict` and inspect with `openspec show <id>` if anything looks off.
+3. Validate the change ID by running `openspec list` (or `openspec show <id>`) and stop if the change is missing, already archived, or otherwise not ready to archive.
+4. Run `openspec archive <id> --yes` so the CLI moves the change and applies spec updates without prompts (use `--skip-specs` only for tooling-only work).
+5. Review the command output to confirm the target specs were updated and the change landed in `changes/archive/`.
+6. Validate with `openspec validate --strict` and inspect with `openspec show <id>` if anything looks off.
 
 ## Reference
 
