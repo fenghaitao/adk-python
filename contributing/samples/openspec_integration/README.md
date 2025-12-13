@@ -215,11 +215,37 @@ Or run the command yourself:
 openspec archive add-user-auth --yes
 ```
 
-## Agent Capabilities
+## Agent Architecture
+
+### Specialized Agents
+
+The OpenSpec integration provides specialized agents for different workflow phases:
+
+**proposal_initial_agent.py** - For initial implementations (skeleton → working code)
+- Creates proposals when starting from scratch or skeleton code
+- Focuses on implementing base functionality
+- Usage: Initial device/feature implementation
+
+**proposal_refine_agent.py** - For refinements/enhancements (working code → enhanced code)
+- Creates proposals for adding features to existing working code
+- Extracts only new requirements from spec
+- Preserves existing functionality, adds incrementally
+- Usage: Adding features, enhancements, optimizations
+
+**apply_agent.py** - For executing proposals
+- Implements changes specified in proposals
+- Follows TDD approach (tests first, then implementation)
+- Uses Simics MCP tools for build/test (when available)
+
+**archive_agent.py** - For archiving completed changes
+- Marks changes as complete
+- Updates project documentation
+
+**Note**: The generic `proposal_agent_deprecated.py` is kept for reference but specialized agents are now preferred for clearer boundaries and simpler workflows.
 
 ### Understanding OpenSpec Structure
 
-The agent understands the OpenSpec directory layout and can:
+The agents understand the OpenSpec directory layout and can:
 - Navigate between specs/ (truth) and changes/ (proposals)
 - Identify active vs. archived changes
 - Read and interpret AGENTS.md for project-specific conventions
