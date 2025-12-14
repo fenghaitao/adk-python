@@ -47,8 +47,7 @@ except ImportError:
 try:
   from .simics_mcp_tools import create_simics_mcp_toolset
 except Exception:
-  create_simics_mcp_toolset = None  # Optional
-
+  from simics_mcp_tools import create_simics_mcp_toolset
 
 def get_openspec_model():
   """Get OpenSpec model from environment or use default."""
@@ -208,12 +207,11 @@ Common Simics Device Patterns (for reference):
     tools.append(create_openspec_toolset())
 
     # Add Simics MCP toolset where available
-    if create_simics_mcp_toolset:
-      try:
-        tools.append(create_simics_mcp_toolset())
-        print("✓ Simics MCP tools integrated for apply phase")
-      except Exception as e:
-        print(f"ℹ Simics MCP toolset not available for apply: {e}")
+    try:
+      tools.append(create_simics_mcp_toolset())
+      print("✓ Simics MCP tools integrated for apply phase")
+    except Exception as e:
+      print(f"ℹ Simics MCP toolset not available for apply: {e}")
 
     kwargs["tools"] = tools
 

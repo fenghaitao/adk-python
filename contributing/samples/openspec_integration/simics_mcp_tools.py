@@ -141,4 +141,4 @@ def create_simics_mcp_toolset(port: Optional[int] = None) -> MCPToolset:
       # - "create_checkpoint" - Not needed for implementation
   ]
 
-  return MCPToolset(connection_params=connection_params, tool_filter=tool_filte
+  return MCPToolset(connection_params=connection_params, tool_filter=tool_filter)

@@ -42,12 +42,7 @@ try:
 except ImportError:
   from openspec_tools import create_openspec_toolset
 
-# Simics MCP tools are optional for proposal
-try:
-  from .simics_mcp_tools import create_simics_mcp_toolset
-except Exception:
-  create_simics_mcp_toolset = None  # Optional
-
+create_simics_mcp_toolset = None  # Optional
 
 def get_openspec_model():
   """Get OpenSpec model from environment or use default."""
