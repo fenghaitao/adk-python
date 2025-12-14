@@ -105,15 +105,20 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
-- Build and test iteratively using Simics MCP tools
+- Build and test iteratively using these Simics MCP tools:
+  - `build_simics_project(project_path, module)` - Build DML code after each change
+  - `run_simics_test(project_path, module)` - Run tests after implementation
 - When encountering issues, use these recovery strategies:
   - Build failures → Check `openspec-memories/05_DML_Troubleshooting.md`
   - Test failures → Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
 
 **STEP 3: Validate Quality and Report Status**
-- Build MUST succeed without warnings
-- Run all tests and report results (partial passing is acceptable)
-- For failing tests: explain why they fail and what's needed to fix them
+- Build MUST succeed without warnings:
+  - Use `build_simics_project(project_path="simics-project", module="<device-name>")` to compile
+  - If build fails, check error messages and consult troubleshooting docs
+- Run all tests and report results (partial passing is acceptable):
+  - Use `run_simics_test(project_path="simics-project", module="<device-name>")` to execute tests
+  - For failing tests: explain why they fail and what's needed to fix them
 - Confirm no anti-patterns introduced (check against Universal DML Constraints below)
 - Update tasks.md to reflect completed vs remaining work
 
