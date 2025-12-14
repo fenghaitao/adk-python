@@ -183,7 +183,6 @@ When creating proposals, ensure:
 - **Detailed Tasks**: All tasks in tasks.md are actionable and specific with clear sub-tasks (e.g., 1.1, 1.2, etc.)
 - **Comprehensive Testing**: Include detailed test tasks covering all functionality (basic, edge cases, error conditions)
 - **Implementation Guidance**: Tasks reference specific DML patterns and anti-patterns to avoid
-- **Design Documentation**: Document design decisions if complexity warrants design.md
 - **Complete Spec Deltas**: Include sufficient detail for implementation without guessing
 - **Clean Validation**: Validation passes completely before handoff
 - **Clear Context**: Change ID is descriptive enough for apply agent to understand context
