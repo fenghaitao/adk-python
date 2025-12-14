@@ -651,7 +651,10 @@ async def _condense_session_context(
   
   # Check kept events for function responses and ensure their calls are kept
   for i in list(keep_indices):
-    if i < len(events) and events[i].get_function_responses():
+    # Defensive check: ensure index is valid
+    if i >= len(events) or i < 0:
+      continue
+    if events[i].get_function_responses():
       for func_response in events[i].get_function_responses():
         if func_response.id and func_response.id in function_call_map:
           call_idx = function_call_map[func_response.id]
@@ -671,7 +674,10 @@ async def _condense_session_context(
   # Check kept events for function calls and ensure their responses are also kept
   calls_to_remove = set()
   for i in list(keep_indices):
-    if i < len(events) and events[i].get_function_calls():
+    # Defensive check: ensure index is valid
+    if i >= len(events) or i < 0:
+      continue
+    if events[i].get_function_calls():
       for func_call in events[i].get_function_calls():
         if func_call.id:
           # Check if this call's response is in the kept set
@@ -691,7 +697,10 @@ async def _condense_session_context(
   # This prevents "tool_call_id did not have response messages" API errors
   responses_to_remove = set()
   for i in list(keep_indices):
-    if i < len(events) and events[i].get_function_responses():
+    # Defensive check: ensure index is valid
+    if i >= len(events) or i < 0:
+      continue
+    if events[i].get_function_responses():
       for func_response in events[i].get_function_responses():
         if func_response.id:
           # Check if this response's call is in the kept set
