@@ -105,18 +105,18 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
 - Build and test iteratively using these Simics MCP tools:
-  - `build_simics_project(project_path, module)` - Build DML code after each change
-  - `run_simics_test(project_path, module)` - Run tests after implementation
+  - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
+  - `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)` - Run tests after implementation
 - When encountering issues, use these recovery strategies:
   - Build failures → Check `openspec-memories/05_DML_Troubleshooting.md`
   - Test failures → Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
 
 **STEP 3: Validate Quality and Report Status**
 - Build MUST succeed without warnings:
-  - Use `build_simics_project(project_path="simics-project", module="<device-name>")` to compile
+  - Use `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` to compile
   - If build fails, check error messages and consult troubleshooting docs
 - Run all tests and report results (partial passing is acceptable):
-  - Use `run_simics_test(project_path="simics-project", module="<device-name>")` to execute tests
+  - Use `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)` to execute tests
   - For failing tests: explain why they fail and what's needed to fix them
 - Confirm no anti-patterns introduced (check against Universal DML Constraints below)
 - Update tasks.md to reflect completed vs remaining work
@@ -180,7 +180,7 @@ When implementing changes, your primary context sources are:
    - Secondary: Hardware specification file (if mentioned in proposal.md)
    - Use these only when proposal context needs additional clarification
 
-Universal DML Constraints (apply to ALL implementations)
+### Universal DML Constraints (apply to ALL implementations)
 
 - DML 1.4 syntax only
 - Event-based timing: use `after` statement or event object with `post()` method, NOT cycle-by-cycle updates
@@ -189,12 +189,32 @@ Universal DML Constraints (apply to ALL implementations)
 - NEVER edit auto-generated files: *-registers.dml, *-glue.dml
 - NEVER add new .dml files or modify XML/Makefiles
 
-Common Simics Device Patterns (for reference):
+### Common Simics Device Patterns (for reference):
 - Simple register device: Register read/write side-effects only
 - Timer/Counter: Register side-effects + lazy evaluation + event-based countdown + interrupts
 - Watchdog: Timer pattern + reset signal + lock mechanism + reload on write
 - UART: Register side-effects + data buffering + TX/RX interrupts
 - Interrupt controller: Multiple inputs + priority + masking + status registers
+
+### MCP Tool Path Requirements (SSE Transport)
+
+**ALWAYS use ABSOLUTE paths** for ALL Simics MCP tools:
+- **WHY**: SSE transport MCP servers run in different process/directory context
+- **NEVER use relative paths** like `"./simics-project"` or `"simics-project"` or `"../project"`
+- **HOW**: Get workspace root first, then construct absolute paths
+
+**Example workflow:**
+```python
+# 1. Get workspace root
+workspace_root = bash_command(command="pwd")  # Returns "/home/user/workspace"
+
+# 2. Construct absolute path
+project_path = workspace_root + "/simics-project"
+
+# 3. Use absolute path in MCP tools
+build_simics_project(project_path=project_path, module="<device-name>")
+run_simics_test(project_path=project_path, module="<device-name>")
+```
 
 ## Reference
 
