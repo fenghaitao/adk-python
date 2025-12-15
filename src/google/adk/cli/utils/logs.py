@@ -49,7 +49,9 @@ def log_to_tmp_folder(
   Returns
     the log file path.
   """
-  log_dir = os.path.join(tempfile.gettempdir(), sub_folder)
+  # Use user-specific temp directory to avoid permission issues
+  temp_base = os.environ.get('TMPDIR') or os.path.expanduser('~/.adk_tmp')
+  log_dir = os.path.join(temp_base, sub_folder)
   log_filename = f'{log_file_prefix}.{log_file_timestamp}.log'
   log_filepath = os.path.join(log_dir, log_filename)
 
