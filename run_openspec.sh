@@ -919,6 +919,8 @@ build/
 dist/
 *.egg-info/
 linux64/
+bin/
+targets/
 GITIGNORE_EOF
                     echo -e "${GREEN}✅ .gitignore created${NC}"
                 else
