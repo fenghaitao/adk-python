@@ -126,6 +126,7 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
    - Timer/watchdog enhancements → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
    - Register enhancements → `openspec-memories/06_DML_Common_Patterns.md`
    - Test enhancements → `openspec-memories/03_Test_Register_Access.md` or `openspec-memories/06_Test_Events_Timing.md`
+   - Test configuration/setup enhancements → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
    - Performance issues → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/05_DML_Troubleshooting.md`
 
 6. Use `perform_rag_query` for additional Simics/DML documentation as needed

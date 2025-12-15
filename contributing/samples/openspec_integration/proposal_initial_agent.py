@@ -125,6 +125,7 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
    - Timer/watchdog proposals → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
    - Register device proposals → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/06_DML_Common_Patterns.md`
    - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
+   - Test configuration/setup proposals → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
 
 6. Use `perform_rag_query` for additional Simics/DML documentation as needed
 

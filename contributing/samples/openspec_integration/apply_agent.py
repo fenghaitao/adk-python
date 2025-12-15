@@ -146,6 +146,12 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
      - Wrong location causes test-runner failures
      - Wrong patterns cause test functions not to execute
 
+   - For test configuration helpers (wdt_common.py, etc.): MUST read `openspec-memories/02_Test_Configuration_Setup.md` FIRST
+     - Missing clock setup causes "object has no valid queue attribute" runtime crashes
+     - Must set clk.freq_mhz BEFORE instantiation
+     - Must assign dev.queue = clk for all timing-based devices
+     - Wrong pattern causes SIM_cycle_count() and timing functions to fail
+
 5. Quick reference for task-specific loading:
    
    **DML Implementation Tasks:**
@@ -156,6 +162,7 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
    
    **Test Creation Tasks:**
    - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
+   - Creating test configuration helpers (e.g., wdt_common.py, device_common.py) → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
    - Register testing → `openspec-memories/03_Test_Register_Access.md`
    - Timer testing → `openspec-memories/06_Test_Events_Timing.md`
    - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
