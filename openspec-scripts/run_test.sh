@@ -19,11 +19,15 @@ run_cmd_with_timing() {
 
 # Parse command line arguments with smart defaults
 # Usage:
-#   ./run-bootstrap.sh proj_dir                          # 1 arg:  proj_dir (stages: 0,1)
-#   ./run-bootstrap.sh proj_dir stages                   # 2 args: proj_dir stages
-#   ./run-bootstrap.sh model proj_dir stages             # 3 args: model proj_dir stages
-#   ./run-bootstrap.sh mcp_port model proj_dir stages    # 4 args: mcp_port model proj_dir stages
-# stages examples: "0" (only stage 0), "1" (only stage 1), "0,1" (both stages)
+#   ./run_test.sh proj_dir                          # 1 arg:  proj_dir (stages: 0,1)
+#   ./run_test.sh proj_dir stages                   # 2 args: proj_dir stages
+#   ./run_test.sh model proj_dir stages             # 3 args: model proj_dir stages
+#   ./run_test.sh mcp_port model proj_dir stages    # 4 args: mcp_port model proj_dir stages
+#
+# stages format: comma or space separated stage numbers
+#   Examples: "0", "1", "0,1", "1,0", "0 1"
+#   Stage 0 = bootstrap project
+#   Stage 1 = proposal initialization
 
 if [ $# -eq 1 ]; then
     # 1 argument: proj_dir
@@ -67,19 +71,44 @@ echo "  Project Directory: $proj_dir"
 echo "  Stages: $stages"
 echo ""
 
-rm -rf "$proj_dir"
-mkdir -p "$proj_dir"
-cd "$proj_dir" || exit 1
+# Use current working directory + project directory name
+proj_dir_abs="$(pwd)/$proj_dir"
+log_dir="$proj_dir_abs"
 
-# Execute stages based on input
-if [[ "$stages" == *"0"* ]]; then
-    echo "=== Stage 0: bootstrap ===" | tee "$proj_dir.0.log"
-    echo "Using model: $model" | tee -a "$proj_dir.0.log"
-    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --model $model --port $mcp_server_port" "$proj_dir.0.log"
+# Create project directory if it doesn't exist
+if [ ! -d "$proj_dir_abs" ]; then
+    echo "Creating directory: $proj_dir_abs"
+    mkdir -p "$proj_dir_abs"
+else
+    echo "Using existing directory: $proj_dir_abs"
+fi
+echo ""
+
+# Parse stages into array for robust checking
+# Handles: "0", "1", "0,1", "1,0", "0 1", etc.
+IFS=',' read -ra STAGE_ARRAY <<< "$stages"
+declare -A run_stage
+for stage in "${STAGE_ARRAY[@]}"; do
+    # Trim whitespace and store
+    stage_clean=$(echo "$stage" | tr -d ' ')
+    run_stage[$stage_clean]=1
+done
+
+# Execute stages based on parsed input
+if [[ "${run_stage[0]}" == "1" ]]; then
+    echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir}.0.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.0.log"
+    cd "$proj_dir_abs" && \
+        run_cmd_with_timing \
+        "$ADK_ROOT/run_openspec.sh adk_openspec_project --model $model --port $mcp_server_port" \
+        "$log_dir/${proj_dir}.0.log"
 fi
 
-if [[ "$stages" == *"1"* ]]; then
-    echo "=== Stage 1: proposal initialization ===" | tee "$proj_dir.1.log"
-    echo "Using model: $model" | tee -a "$proj_dir.1.log"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" "$proj_dir.1.log"
+if [[ "${run_stage[1]}" == "1" ]]; then
+    echo "=== Stage 1: proposal initialization ===" | tee "$log_dir/${proj_dir}.1.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
+    cd "$proj_dir_abs" && \
+        run_cmd_with_timing \
+        "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" \
+        "$log_dir/${proj_dir}.1.log"
 fi
