@@ -46,6 +46,202 @@ exec env PYTHONUTF8=1 "$_MINI_PYTHON" "$DMLC_DIR/dml/python" "$@"
 
 ## Basic DML Syntax
 
+### DML Language Overview
+
+DML (Device Modeling Language) is an object-oriented, C-like language designed for modeling hardware devices in Simics. Each device is implemented as a module containing one or multiple .dml files.
+
+### Device Module Structure
+
+Each device module has:
+- A **main .dml file** that imports all dependencies
+- **One device definition** per module (across all imported files)
+- See [Minimal DML Device](#minimal-dml-device) below for a basic example
+
+### Object Hierarchy and Scope
+
+The **device** is the root object in DML and can be referenced as:
+- `dev` - explicit device reference (preferred in sub-object scopes)
+- `this` - refers to current object (device at root, sub-object within sub-objects)
+
+#### Device Sub-Objects
+
+The device contains several types of sub-objects:
+
+| Sub-Object | Purpose | Example |
+|------------|---------|---------|
+| `port` | Input interfaces (receive signals/data) | `reset_in` |
+| `connect` | Output interfaces (send signals/data) | `reset_out` |
+| `attribute` | Persistent device state | `counter`, `enabled` |
+| `event` | Timer objects for scheduled hardware tasks | `timeout_event` |
+| `bank` | Memory-mapped register interface (most important) | `regs` |
+
+#### Bank Sub-Objects
+
+The `bank` object hosts register definitions and contains:
+- `register` - 32-bit or 64-bit memory locations matching hardware specifications
+- `field` - Bit ranges within registers (minimal data definition unit)
+
+**Note**: Both `register` and `field` can be treated as specialized attributes.
+
+#### Scope Rules
+
+**CRITICAL**: Understanding scope is essential for correct DML code:
+
+1. **At device scope** (root level):
+   - `this` or `dev` refers to the device
+   - Access sub-objects directly: `attribute_name`, `bank_name`, etc.
+
+2. **Within sub-object scope** (port, connect, attribute, event, bank):
+   - `this` refers to the sub-object itself
+   - Use `dev` to reference the device: `dev.attribute_name`, `dev.bank_name`
+
+3. **Within register/field scope** (inside bank):
+   - `this` refers to the register/field itself
+   - Use parent references: `bank_name.register_name` or `dev.bank_name.register_name`
+   - **Important**: `dev.bank.<bank_name>` is only valid in Python scripts for accessing banks; in DML files, use `dev.<bank_name>` directly
+
+### Object Declaration Syntax
+
+```dml
+// Port - input interface
+port port_name {
+    // port-specific implementation
+}
+
+// Connect - output interface
+connect connect_name {
+    // connect-specific implementation
+}
+
+// Attribute - persistent state
+attribute attr_name {
+    // attribute-specific configuration
+}
+
+// Event - hardware timer
+event event_name {
+    // event-specific implementation
+}
+
+// Bank - register interface
+bank bank_name {
+    register reg_name1 @ 0x00 {
+        field fld_name1 @ [0] {
+            // field-specific behavior
+        }
+        field fld_name2 @ [1] {
+            // field-specific behavior
+        }
+    }
+}
+```
+
+### Accessing Sub-Objects from Device Scope
+
+```dml
+method example_access_patterns() {
+    // Accessing attributes
+    dev.attr_name.val = 0;
+    
+    // Accessing registers
+    dev.bank_name.reg_name1.val = 10;
+    
+    // Accessing fields
+    dev.bank_name.reg_name1.fld_name1.val = 3;
+}
+```
+
+### Common Attribute Templates
+
+Use built-in templates for simple attribute types:
+
+```dml
+attribute is_enabled is bool_attr {
+    param documentation = "Device enable state";
+}
+
+attribute counter is uint64_attr {
+    param documentation = "Operation counter";
+}
+
+attribute elapsed_time is double_attr {
+    param documentation = "Elapsed time in seconds";
+}
+```
+
+### Port Definitions
+
+Ports provide input interfaces and must specify the interface type:
+
+```dml
+// Empty port as connection point
+port dummy_port {
+}
+
+// Port with signal interface
+port reset_in {
+    interface signal;
+}
+```
+
+### Connect Definitions
+
+Connects provide output interfaces, either empty (for linking) or implementing interfaces:
+
+```dml
+// Empty connect as connection point
+connect dummy_conn {
+}
+
+// Connect implementing signal interface
+connect reset_out {
+    implement signal {
+        method signal_raise() {
+            log info: "Raising reset signal";
+            // Concrete implementation
+        }
+        
+        method signal_lower() {
+            log info: "Lowering reset signal";
+            // Concrete implementation
+        }
+    }
+}
+```
+
+### Interface Overview
+
+Interfaces are Simics pre-defined function-like structures that define method signatures for device communication. Common interfaces include:
+- `signal` - For binary signals (raise/lower)
+- `simple_interrupt` - For interrupt handling
+- `io_memory` - For memory-mapped I/O
+
+### Device Connections (Python)
+
+**Important**: Device connections are made in Python scripts, not in DML code.
+
+```python
+import conf
+
+# Connect two devices
+dev1 = conf.my_device1
+dev2 = conf.my_device2
+
+# Connect output to input (must implement same interface, e.g., 'signal')
+dev1.reset_out = dev2.port.reset_in
+
+# Call interface methods on connect object
+dev1.reset_out.iface.signal.signal_raise()
+
+# Call interface methods on port object (note the 'port.' prefix)
+dev2.port.reset_in.iface.signal.signal_raise()
+```
+
+**Key Differences**:
+- **Connect reference**: `<dev_name>.<connect_name>`
+- **Port reference**: `<dev_name>.port.<port_name>` (note the `port.` prefix)
+- **Interface method invocation**: `<object>.iface.<interface_name>.<method_name>()`
+
 ### Minimal DML Device
 
 ```dml
