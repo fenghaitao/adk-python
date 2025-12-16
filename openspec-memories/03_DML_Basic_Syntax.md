@@ -97,8 +97,10 @@ The `bank` object hosts register definitions and contains:
 
 3. **Within register/field scope** (inside bank):
    - `this` refers to the register/field itself
-   - Use parent references: `bank_name.register_name` or `dev.bank_name.register_name` or `this.bank_name.register_name`
-   - **Important**: `dev_name.bank.<bank_name>` is only valid in Python scripts for accessing banks; in DML files, use `dev.<bank_name>`, `this.<bank_name>` or `<bank_name>` directly
+   - Access parent bank: `bank_name` (direct reference from same bank context)
+   - Access device: `dev.attribute_name`, `dev.bank_name`, `dev.event_name`
+   - Access sibling registers: `bank_name.register_name` or from device scope `dev.bank_name.register_name`
+   - **Important**: Python syntax `dev_name.bank.<bank_name>` is only for Python scripts; in DML files, always use `dev.<bank_name>` or `<bank_name>` directly (no `.bank.` prefix)
 
 ### Object Declaration Syntax
 
