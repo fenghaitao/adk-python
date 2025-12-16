@@ -6,7 +6,7 @@ This is the master index for the DML Best Practices documentation. The original 
 
 ## Document Structure
 
-The documentation is organized into 6 focused documents:
+The documentation is organized into 7 focused documents:
 
 ### 1. [Simics Modeling Philosophy](01_Simics_Modeling_Philosophy.md)
 **Focus**: Core principles and philosophy behind Simics device modeling
@@ -90,9 +90,27 @@ The documentation is organized into 6 focused documents:
 
 ---
 
+### 7. [DML Register Access Scope Patterns](07_DML_Register_Access_Scope.md) **CRITICAL**
+**Focus**: Register access syntax based on code context (device/bank/register level)
+
+**Topics Covered**:
+- Device-level register access (`bank.REGISTER.val`)
+- Bank-level register access (`REGISTER.val`)
+- Register-level access (`this.val`)
+- Common "unknown identifier" errors and fixes
+- Pre-build checklist for scope errors
+- Real-world examples from WDT implementation
+
+**When to Read**: **MANDATORY before ANY DML implementation**. This prevents 100% of register scope compilation errors. Review before first build.
+
+---
+
 ## Quick Navigation Guide
 
 ### I want to...
+
+**...start ANY DML implementation** **CRITICAL**  
+→ **FIRST** read [07_DML_Register_Access_Scope.md](07_DML_Register_Access_Scope.md) to prevent scope errors
 
 **...understand Simics modeling philosophy**  
 → Start with [01_Simics_Modeling_Philosophy.md](01_Simics_Modeling_Philosophy.md)
@@ -109,6 +127,9 @@ The documentation is organized into 6 focused documents:
 **...fix compilation/runtime errors**  
 → Check [05_DML_Troubleshooting.md](05_DML_Troubleshooting.md)
 
+**...fix "unknown identifier" errors**  
+→ Check [07_DML_Register_Access_Scope.md](07_DML_Register_Access_Scope.md)
+
 **...build a specific device type**  
 → Use templates from [06_DML_Common_Patterns.md](06_DML_Common_Patterns.md)
 
@@ -116,20 +137,26 @@ The documentation is organized into 6 focused documents:
 
 ## Recommended Reading Order
 
+### For ALL Implementations (MANDATORY):
+1. **07_DML_Register_Access_Scope.md** - **READ FIRST** to prevent scope errors
+
 ### For Beginners:
-1. **01_Simics_Modeling_Philosophy.md** - Understand the "why"
-2. **02_DML_Anti_Patterns.md** - Learn what NOT to do
-3. **03_DML_Basic_Syntax.md** - Learn the language
-4. **06_DML_Common_Patterns.md** - Practice with examples
-5. **05_DML_Troubleshooting.md** - Keep handy for issues
+1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
+2. **01_Simics_Modeling_Philosophy.md** - Understand the "why"
+3. **02_DML_Anti_Patterns.md** - Learn what NOT to do
+4. **03_DML_Basic_Syntax.md** - Learn the language
+5. **06_DML_Common_Patterns.md** - Practice with examples
+6. **05_DML_Troubleshooting.md** - Keep handy for issues
 
 ### For Timer/Counter Devices:
-1. **01_Simics_Modeling_Philosophy.md** - Understand lazy evaluation principle
-2. **02_DML_Anti_Patterns.md** - **CRITICAL**: Read anti-patterns 1, 2, and 3
-3. **04_DML_Timing_Timer_Modeling.md** - Complete guide and examples
-4. **05_DML_Troubleshooting.md** - For debugging
+1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
+2. **01_Simics_Modeling_Philosophy.md** - Understand lazy evaluation principle
+3. **02_DML_Anti_Patterns.md** - **CRITICAL**: Read anti-patterns 1, 2, and 3
+4. **04_DML_Timing_Timer_Modeling.md** - Complete guide and examples
+5. **05_DML_Troubleshooting.md** - For debugging
 
 ### For Quick Reference:
+- **07_DML_Register_Access_Scope.md** - Register scope quick reference (check before every build)
 - **03_DML_Basic_Syntax.md** - Syntax quick reference
 - **04_DML_Timing_Timer_Modeling.md** - Timing quick reference card
 - **06_DML_Common_Patterns.md** - Copy-paste templates
@@ -178,6 +205,9 @@ When updating any document:
 
 ---
 
-**Document Status**: ✅ Complete  
-**Last Updated**: December 11, 2025  
-**Total Documents**: 6 focused guides + this index
+**Document Status**: Complete  
+**Last Updated**: December 15, 2025  
+**Total Documents**: 7 focused guides + this index
+
+**Recent Additions**:
+- December 15, 2025: Added `07_DML_Register_Access_Scope.md` based on session analysis findings

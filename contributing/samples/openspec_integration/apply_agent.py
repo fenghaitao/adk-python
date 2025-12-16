@@ -104,24 +104,41 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
-- Build and test iteratively using these Simics MCP tools:
+- Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
-  - `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)` - Run tests after implementation
-- When encountering issues, use these recovery strategies:
-  - Build failures → Check `openspec-memories/05_DML_Troubleshooting.md`
-  - Test failures → Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+- When encountering build failures:
+  - Check `openspec-memories/05_DML_Troubleshooting.md`
+  - Verify register scope patterns (device/bank/register level)
 
-**STEP 3: Validate Quality and Report Status**
-- Build MUST succeed without warnings:
-  - Use `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` to compile
-  - If build fails, check error messages and consult troubleshooting docs
-- Run all tests and report results (partial passing is acceptable):
-  - Use `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)` to execute tests
+**STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
+
+Before running tests, verify you've implemented BEHAVIOR, not just structure:
+
+**Checklist:**
+1. Timer/Watchdog devices: Countdown logic with `after` or event posting implemented?
+2. Interrupt devices: Interrupt signal raising/lowering implemented?
+3. Register side-effects: Write operations trigger actual behavior (not just storage)?
+4. Review `changes/<id>/tasks.md`: All functional requirements implemented?
+
+**Red Flag Detection:**
+- If all tests fail with identical errors across 2+ runs → Missing functionality, not test issues
+- If build succeeds but no behavior → Implemented structure without logic
+
+**Action if Red Flag:** Stop testing, implement missing functionality first.
+
+**STEP 3: Test and Validate Quality**
+- Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
+- When encountering test failures:
+  - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+  - Verify implementation completeness (return to STEP 2.5)
+
+**STEP 4: Report Status**
+- Build MUST succeed without warnings
+- Report test results (partial passing is acceptable):
   - For failing tests: explain why they fail and what's needed to fix them
+  - Distinguish between: missing functionality vs incorrect implementation vs test issues
 - Confirm no anti-patterns introduced (check against Universal DML Constraints below)
 - Update tasks.md to reflect completed vs remaining work
-
-**STEP 4: Return Results**
 - Use output schema with structured results
 
 ## Memory Loading Protocol (CRITICAL - for token-efficient knowledge loading)
@@ -155,8 +172,9 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 5. Quick reference for task-specific loading:
    
    **DML Implementation Tasks:**
+   - **ANY DML implementation** → MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST (prevents 100% of scope errors)
    - Timer/watchdog devices → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
-   - Register side-effects → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/06_DML_Common_Patterns.md`
+   - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
    - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
    - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
    
