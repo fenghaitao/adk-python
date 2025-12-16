@@ -513,6 +513,12 @@ class FakeResetCtrl(pyobj.ConfObject):
         def signal_raise(self):
             self._up.reset_count.val += 1
 
+# ============================================================================
+# Ignore 'spec-viol' or 'unimpl' logs, test modeled behavior firstly
+# ============================================================================
+
+stest.untrap_log('spec-viol')
+stest.untrap_log('unimpl')
 
 # ============================================================================
 # Configuration Helper
