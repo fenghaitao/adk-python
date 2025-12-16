@@ -407,6 +407,8 @@ fi
 
 # Export model and port as environment variables
 export OPENSPEC_MODEL="$MODEL"
+export SPEC_KIT_MODEL="$MODEL"
+export SIMICS_MODEL="$MODEL"
 export MCP_PORT="$MCP_PORT"
 
 # Export IPXACT_XML and SPEC_FILE if provided
