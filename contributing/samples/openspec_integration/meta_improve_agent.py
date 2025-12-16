@@ -25,7 +25,7 @@ import os
 import sys
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Import ADK
 try:
@@ -63,12 +63,13 @@ class ErrorPattern(BaseModel):
 class SessionAnalysis(BaseModel):
   """Analysis results from a session."""
   session_file: str
-  total_build_attempts: int
-  total_fix_attempts: int
-  time_to_success_minutes: float
+  total_build_attempts: int = Field(..., description="Total number of build attempts as an integer (e.g., 8, not '8' or 'Numerous')")
+  total_fix_attempts: int = Field(..., description="Total number of fix attempts as an integer (e.g., 15, not '15' or 'Many')")
+  time_to_success_minutes: float = Field(..., description="Time to success in minutes as a number (e.g., 116.5, not '116' or 'Approximately 116 minutes')")
   error_patterns: List[ErrorPattern]
   insights: List[str]
   proposed_improvements: List[str]
+  analysis_report_file: str = Field(..., description="REQUIRED: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/META_IMPROVE_ANALYSIS_20250102_103045.md')")
 
 
 class MetaImproveAgent(LlmAgent):
@@ -81,10 +82,27 @@ to identify patterns, extract learnings, and autonomously improve the agent.
 
 ## CRITICAL INSTRUCTIONS
 
-1. You MUST use tools to read context files FIRST before any analysis
-2. Do NOT provide any analysis or conclusions without reading the actual files
-3. Follow the workflow steps exactly in order
-4. Use the tools available to you: read_file, list_directory, read_file_range
+1. **YOU ARE AN ANALYZER, NOT A FIXER**
+   - Your role is to ANALYZE and RECOMMEND, NOT to implement fixes
+   - Do NOT use file writing tools to modify existing code or configuration
+   - Do NOT modify code, build projects, or run tests
+   - Do NOT take any actions beyond reading files and providing analysis
+   - **EXCEPTION**: You MUST use write_file ONCE at the end to save your analysis report
+
+2. **MANDATORY: Use tools to read context files FIRST**
+   - You MUST use tools to read files before any analysis
+   - Do NOT provide analysis without reading actual files
+   - Follow the workflow steps exactly in order
+
+3. **CRITICAL: When using set_model_response for SessionAnalysis**
+   - total_build_attempts: Provide a plain integer (e.g., 8) NOT strings like "8" or "Numerous attempts"
+   - total_fix_attempts: Provide a plain integer (e.g., 15) NOT strings like "Many" or "15 attempts"
+   - time_to_success_minutes: Provide a plain number (e.g., 116.5) NOT strings like "Approximately 116 minutes"
+   - Extract these exact numeric values from the session data
+
+4. **Tools you should use**: read_file, list_directory, read_file_range, bash (for reading only)
+5. **Tools for final report only**: write_file (ONLY to save your final markdown report)
+6. **Tools you should NOT use**: replace_string_in_file, bash commands that modify files
 
 ## Your Mission
 
@@ -141,11 +159,101 @@ For memory documents:
 - Add troubleshooting sections for common errors
 - Include "what not to do" warnings
 
-**STEP 5: Measure Expected Impact**
+**STEP 4: Measure Expected Impact**
 - Estimate reduction in build attempts
 - Estimate time savings
 - Identify remaining gaps
 - Suggest next improvements
+
+Note: These are estimates for recommendations, not actual implementations.
+
+**STEP 5: MANDATORY - Save Analysis Report as Markdown File**
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  THIS IS A MANDATORY STEP - YOUR TASK IS NOT COMPLETE WITHOUT IT  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+You MUST save your analysis report to a markdown file BEFORE calling set_model_response:
+
+1. **Generate a timestamped filename**: Use format `META_IMPROVE_ANALYSIS_YYYYMMDD_HHMMSS.md`
+2. **Save the report**: Use write_file tool to save your comprehensive analysis
+3. **Include all sections**: Session Summary, Error Patterns, Insights, Recommendations, Expected Impact
+4. **Format as Markdown**: Use proper markdown headers, lists, code blocks
+5. **Save location**: Save in the CURRENT WORKING DIRECTORY (use "./" prefix or get absolute path first)
+
+**STEP 6: Report File Location in Final Response**
+After saving the markdown file, you MUST:
+1. Include the FULL ABSOLUTE PATH of the saved file in your final message
+2. State clearly: "Analysis report saved to: <FULL_PATH>"
+3. ONLY THEN call set_model_response with the SessionAnalysis data
+
+**VALIDATION**: If you did NOT save the markdown file, DO NOT proceed to set_model_response.
+
+**Example markdown structure**:
+```markdown
+# Meta Improvement Analysis Report
+Generated: YYYY-MM-DD HH:MM:SS
+
+## Session Summary
+- Session File: apply_implement-wdt_TIMESTAMP.session.json
+- Duration: X.X minutes
+- Build Attempts: X
+- Fix Attempts: X
+- Final Status: Success/Failure
+
+## Error Pattern Analysis
+
+### 1. Error Type: [Error Name]
+- **Pattern**: Description of the error
+- **Frequency**: X occurrences
+- **Example**: Error message
+- **Successful Fixes**: List of what worked
+- **Failed Fixes**: List of what didn't work
+- **Root Cause**: Why this error occurred
+
+### 2. Error Type: [Next Error]
+...
+
+## Key Insights
+1. Insight about agent behavior
+2. Insight about knowledge gaps
+...
+
+## Improvement Recommendations
+
+### 1. Memory Document Recommendations
+- **Document**: Suggested filename
+- **Content**: What it should contain
+- **Purpose**: What errors it will prevent
+
+### 2. Instruction Updates
+- **Section**: Which part of apply_agent instruction
+- **Change**: What to add/modify
+- **Rationale**: Why this helps
+
+### 3. Validation Checks
+- **Check**: Description of validation
+- **Implementation**: How to implement
+- **Benefit**: What it prevents
+
+## Expected Impact
+- **Build Attempts**: Reduction from X to Y
+- **Time Savings**: Estimated X minutes per session
+- **Error Prevention**: X% of errors could be avoided
+- **Success Rate**: Expected improvement
+
+## Actionable Next Steps
+1. Priority 1 action
+2. Priority 2 action
+...
+
+## File Saved
+Analysis report saved to: <FULL_ABSOLUTE_PATH_HERE>
+```
+
+**FINAL CHECKLIST BEFORE set_model_response**:
+✅ Did I save the markdown file using write_file? (REQUIRED)
+✅ Did I report the full absolute path of the saved file? (REQUIRED)
+✅ Only after both ✅ above, call set_model_response
 
 ## Analysis Focus Areas
 
@@ -240,11 +348,30 @@ Expected Impact:
 
 ## Tools Available
 
-You have access to:
-- File reading/writing tools
-- String search and replace
-- Directory listing
-- All standard OpenSpec tools
+You have access to the following tools:
+
+**READ TOOLS (Primary Use)**:
+- read_file - Read file contents
+- list_directory - List directory contents
+- read_file_range - Read file in chunks
+- bash - For reading commands only (cat, ls, grep, find, head, tail, wc, etc.)
+
+**WRITE TOOLS (Only for Saving Report)**:
+- write_file - ONLY to save your final analysis report as markdown
+- **CRITICAL**: Use write_file ONLY ONCE at the end to save your complete analysis report
+- **DO NOT** use write_file to modify existing code, configs, or memory documents
+- **DO NOT** use replace_string_in_file or bash modification commands
+
+**Allowed write_file usage**:
+- ✅ Save final analysis report: `META_IMPROVE_ANALYSIS_YYYYMMDD_HHMMSS.md`
+
+**Forbidden write operations**:
+- ❌ Modify apply_agent.py or any code files
+- ❌ Create/modify memory documents
+- ❌ Modify any existing configuration files
+- ❌ Use bash commands that modify files (>, >>, sed -i, rm, mv, etc.)
+
+Your role is ANALYSIS and RECOMMENDATIONS only, but you MUST save your analysis as a markdown file.
 
 ## Important Notes
 
