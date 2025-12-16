@@ -82,39 +82,77 @@ Review the session and tell me what memory documents are missing or need updates
 Compare these two session files and tell me if the agent is improving over time
 ```
 
-## What You Get
+## What You Get (Required Output Format)
 
-The analysis provides comprehensive, actionable insights:
+Every analysis MUST include these sections:
 
-### 1. Session Summary
-- **Duration**: Start to end time with total minutes
-- **Attempts**: Build attempts, test runs, success/failure counts
-- **Final Status**: Whether build and tests succeeded
-- **Event Count**: Total events in the session
+### 1. Session Summary (Required)
+```
+📊 Session Summary
+- Duration: X.X minutes (HH:MM:SS → HH:MM:SS UTC)
+- Build attempts: X (Y failed, Z successful)
+- Test runs: X (Y passed, Z failed)
+- Final status: Build ✅/❌ | Tests ✅/❌
+- Total events: X
+```
 
-### 2. Error Pattern Analysis
-- **Top Errors**: Most frequent errors with occurrence counts
-- **Root Cause**: Why each error happened
-- **Examples**: Actual error messages from the session
-- **Impact**: Time wasted on each error type
+### 2. Top Error Patterns (Required - Extract Actual Errors)
+```
+🔴 Top Error Pattern: "error type" (X occurrences)
 
-### 3. What Went Well / What Caused Problems
-- **Successes**: What the agent did correctly
-- **Failures**: Where the agent struggled
-- **Knowledge Gaps**: What information was missing
-- **Recovery Patterns**: How the agent fixed issues
+Affected identifiers/files:
+- identifier1 (Xx)
+- identifier2 (Xx)
 
-### 4. Proposed Improvements (Specific & Actionable)
-- **Instruction Updates**: Exact text to add to agent instructions
-- **Memory Documents**: New docs to create with content outlines
-- **Validation Checks**: Pre-build checks to add
-- **Expected Impact**: Quantified improvements (time savings, error reduction %)
+Root cause: [Explain WHY this happened]
 
-### 5. Before/After Metrics
-- Build attempts: X → Y (Z% reduction)
-- Time to success: X min → Y min (Z% reduction)
-- Error frequency: X → Y (Z% reduction)
-- Success rate: X% → Y% (Z% improvement)
+Time wasted: ~X minutes on [what activity]
+```
+
+**CRITICAL**: Count ACTUAL errors, not error lines. Use grep to extract specific identifiers.
+
+**Example**: If you see one build failure with "unknown identifier: 'WDOGLOAD', 'WDOGPERIPHID0', 'WDOGPERIPHID1'..." that's 3+ errors, not 1 error.
+
+### 3. What Went Well / What Caused Problems (Required)
+```
+✅ What Went Well
+- [Specific thing agent did correctly]
+- [Another success]
+
+❌ What Caused Problems
+1. [Error pattern name] (X errors)
+   - Pattern: [What the agent did wrong]
+   - Impact: [Time wasted, builds failed]
+   - Knowledge gap: [What the agent should have known]
+```
+
+### 4. Proposed Improvements (Required - Must Be Specific)
+```
+🎯 Proposed Improvements
+
+1. Add to [specific file path]:
+   ```
+   [EXACT TEXT TO ADD]
+   ```
+   Expected Impact: [Quantified improvement]
+
+2. Create [specific file path]:
+   [Content outline with examples]
+   Expected Impact: [Quantified improvement]
+```
+
+**CRITICAL**: Provide EXACT text, not generic advice like "improve error handling".
+
+### 5. Before/After Metrics (Required)
+```
+📉 Expected Results After Improvements
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Build attempts | X | Y | Z% reduction |
+| Time to completion | X min | Y min | Z% faster |
+| [Error type] errors | X | Y | Z% reduction |
+```
 
 **Example Output Format:**
 ```
@@ -295,6 +333,64 @@ The analysis process follows these steps:
 3. **Identify Patterns**: Groups similar errors and tracks fix success rates
 4. **Analyze Gaps**: Compares errors against existing memory to find knowledge gaps
 5. **Generate Recommendations**: Proposes specific improvements with expected impact
+
+## Step-by-Step Analysis Protocol
+
+Follow these steps for consistent, thorough analysis:
+
+### Step 1: Extract Basic Metrics
+```bash
+# Session duration
+grep "👤 \[user\]" session.txt | head -1  # Start time
+tail -100 session.txt | grep "🤖" | tail -1  # End time
+
+# Count attempts
+grep -c "build_simics_project" session.txt
+grep -c "run_simics_test" session.txt
+
+# Check final status
+tail -50 session.txt | grep -E "success|failed|completed"
+```
+
+### Step 2: Extract ALL Error Patterns (CRITICAL)
+```bash
+# Find compilation errors - look for the actual error messages
+grep -i "error\|failed" session.txt | head -50
+
+# Count specific error types - extract actual identifiers
+grep "unknown identifier" session.txt | grep -o "WDOG[A-Z0-9]*" | sort | uniq -c | sort -rn
+grep "unknown identifier" session.txt | grep -o "'[A-Z][A-Z0-9_]*'" | sort | uniq -c | sort -rn
+```
+
+**CRITICAL**: Don't just count error lines - extract the ACTUAL error messages and identifiers.
+One line may contain multiple errors (e.g., 12 "unknown identifier" errors in one build output).
+
+**Common mistake**: Seeing "1 line with errors" and reporting "1 error" when there are actually 12+ errors in that line.
+
+### Step 3: Identify Root Causes
+For each error pattern:
+- What was the agent trying to do?
+- Why did it fail? (syntax, scope, missing knowledge)
+- How did the agent fix it?
+- How long did it take to fix?
+
+### Step 4: Check Knowledge Gaps
+- Read agent instruction file to see what guidance exists
+- Check memory documents for relevant information
+- Identify what the agent SHOULD have known but didn't
+
+### Step 5: Generate Specific Improvements
+For each significant error pattern (3+ occurrences):
+- Exact text to add to agent instructions
+- New memory document to create (with outline)
+- Pre-build validation check to add
+- Quantified expected impact
+
+### Step 6: Calculate Before/After Metrics
+- Build attempts: X → Y (Z% reduction)
+- Time to success: X min → Y min (Z% reduction)
+- Error frequency: X → Y (Z% reduction)
+- Success rate: X% → Y% (Z% improvement)
 
 ### Handling Large Session Files
 
@@ -484,6 +580,76 @@ After using meta_improve_agent to improve your apply_agent:
 - **Build attempts**: 8 → 2-3 (62-75% reduction)
 - **Time to success**: 10.4 min → 3-4 min (65-70% reduction)
 - **Success rate**: 12.5% → 60-70% (55% improvement)
+
+## Common Analysis Pitfalls
+
+### Pitfall 1: Missing Compilation Errors
+**Symptom**: Analysis says "no errors found" but build failed
+
+**Solution**: Compilation errors are embedded in JSON strings. Search for:
+- `"error":` in the session file
+- `build_simics_project → {'content': [{'type': 'text', 'text': '{"success": false`
+- Extract the actual error messages from the JSON payload
+
+### Pitfall 2: Undercounting Errors
+**Symptom**: Report says "1 error" but there were actually 12
+
+**Solution**: One build failure line may contain multiple errors. Use:
+```bash
+# Extract all error identifiers, not just count lines
+grep "unknown identifier" session.txt | grep -o "'[A-Z][A-Z0-9_]*'" | sort | uniq -c
+```
+
+**Example**: This line contains 13 errors, not 1:
+```
+error: unknown identifier: 'WDOGLOAD'
+error: unknown identifier: 'WDOGPERIPHID0'
+error: unknown identifier: 'WDOGPERIPHID1'
+...
+```
+
+### Pitfall 3: Surface-Level Analysis
+**Symptom**: Analysis just says "tests failed" without explaining why
+
+**Solution**: 
+- Read test log files if referenced
+- Look for specific test failure patterns
+- Identify what functionality is missing
+- Check if it's a setup issue vs implementation issue
+
+### Pitfall 4: Generic Recommendations
+**Symptom**: Recommendations like "improve error handling" without specifics
+
+**Solution**: Provide EXACT text to add:
+```markdown
+❌ BAD: "Add better register access documentation"
+
+✅ GOOD: "Add to agent instructions:
+'DML Register Access: Use bank.REGISTER at device level, 
+REGISTER at bank level, this at register level'"
+```
+
+### Pitfall 5: Ignoring Time Impact
+**Symptom**: Listing errors without calculating time wasted
+
+**Solution**: For each error pattern, estimate:
+- Time spent on failed builds
+- Time spent debugging
+- Time spent on rework
+- Total impact in minutes
+
+## Analysis Quality Checklist
+
+Before submitting analysis, verify:
+
+- [ ] Extracted actual error messages (not just counted error lines)
+- [ ] Counted unique error occurrences correctly
+- [ ] Identified root cause for each major error pattern
+- [ ] Provided EXACT text for instruction updates (not generic advice)
+- [ ] Calculated quantified before/after metrics
+- [ ] Focused on patterns (3+ occurrences), not one-off issues
+- [ ] Checked agent instructions and memory docs for gaps
+- [ ] Provided specific file paths for all recommendations
 
 ## Troubleshooting
 
