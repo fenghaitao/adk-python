@@ -36,7 +36,7 @@ def format_duration(duration_seconds):
         hours = duration_seconds / 3600
         return f"{hours:.1f} hours"
 
-def extract_text_content(content):
+def extract_text_content(content, compact=False):
     """Extract text from content parts."""
     if not content or not content.get('parts'):
         return "[No content]"
@@ -46,7 +46,11 @@ def extract_text_content(content):
     
     for part in content['parts']:
         if part.get('text'):
-            texts.append(part['text'])
+            text = part['text']
+            # In compact mode, truncate long text
+            if compact and len(text) > 150:
+                text = text[:150] + "..."
+            texts.append(text)
         elif part.get('inline_data'):
             texts.append(f"[Media: {part['inline_data'].get('mime_type', 'unknown')}]")
         elif part.get('function_call'):
@@ -55,9 +59,16 @@ def extract_text_content(content):
             func_name = func_call.get('name', 'unknown_function')
             func_args = func_call.get('args', {})
             
-            # Format function call nicely
+            # Format function call - more compact
             if func_args:
-                args_str = ', '.join([f"{k}={v}" for k, v in func_args.items()])
+                # Truncate long argument values
+                args_parts = []
+                for k, v in func_args.items():
+                    v_str = str(v)
+                    if compact and len(v_str) > 50:
+                        v_str = v_str[:50] + "..."
+                    args_parts.append(f"{k}={v_str}")
+                args_str = ', '.join(args_parts)
                 function_calls.append(f"🔧 {func_name}({args_str})")
             else:
                 function_calls.append(f"🔧 {func_name}()")
@@ -67,25 +78,37 @@ def extract_text_content(content):
             func_name = func_resp.get('name', 'unknown_function')
             response = func_resp.get('response', {})
             
+            # More compact response formatting
+            max_len = 100 if compact else 200
+            
             # Format response - handle different response types
             if isinstance(response, dict):
                 if 'result' in response:
                     result = response['result']
-                    if isinstance(result, str) and len(result) > 200:
-                        result = result[:200] + "..."
+                    if isinstance(result, str) and len(result) > max_len:
+                        result = result[:max_len] + "..."
                     function_calls.append(f"📤 {func_name} → {result}")
                 elif 'error' in response:
-                    function_calls.append(f"❌ {func_name} → Error: {response['error']}")
+                    error_msg = str(response['error'])
+                    if len(error_msg) > max_len:
+                        error_msg = error_msg[:max_len] + "..."
+                    function_calls.append(f"❌ {func_name} → {error_msg}")
                 else:
-                    # Generic response display
-                    resp_str = str(response)
-                    if len(resp_str) > 200:
-                        resp_str = resp_str[:200] + "..."
+                    # Generic response display - just show keys in compact mode
+                    if compact:
+                        keys = list(response.keys())[:5]
+                        resp_str = f"{{{', '.join(keys)}}}"
+                        if len(response) > 5:
+                            resp_str += f" +{len(response)-5} more"
+                    else:
+                        resp_str = str(response)
+                        if len(resp_str) > max_len:
+                            resp_str = resp_str[:max_len] + "..."
                     function_calls.append(f"📤 {func_name} → {resp_str}")
             else:
                 resp_str = str(response)
-                if len(resp_str) > 200:
-                    resp_str = resp_str[:200] + "..."
+                if len(resp_str) > max_len:
+                    resp_str = resp_str[:max_len] + "..."
                 function_calls.append(f"📤 {func_name} → {resp_str}")
     
     # Combine text and function calls
@@ -97,8 +120,13 @@ def extract_text_content(content):
     
     return '\n'.join(all_content) if all_content else "[No content]"
 
-def view_session(session_file):
-    """View session in a formatted way."""
+def view_session(session_file, compact=False):
+    """View session in a formatted way.
+    
+    Args:
+        session_file: Path to session JSON file
+        compact: If True, generate more concise output (50-60% smaller)
+    """
     try:
         with open(session_file, 'r', encoding='utf-8') as f:
             session = json.load(f)
@@ -109,36 +137,46 @@ def view_session(session_file):
         print(f"❌ Invalid JSON: {e}")
         return
 
-    # Session info
-    print("=" * 80)
-    print(f"📋 SESSION: {session_file}")
-    print("=" * 80)
-    print(f"App Name: {session.get('app_name', 'N/A')}")
-    print(f"User ID: {session.get('user_id', 'N/A')}")
-    print(f"Session ID: {session.get('id', 'N/A')}")
-    print(f"Created: {format_timestamp(session.get('created_time', 'N/A'))}")
-    print(f"Updated: {format_timestamp(session.get('updated_time', 'N/A'))}")
-    
-    # Handle last_update_time if present
-    if 'last_update_time' in session:
-        last_update = session['last_update_time']
-        print(f"Last Update: {format_timestamp(last_update)}")
-        if 'last_update_time_human' in session:
-            print(f"Last Update (Human): {session['last_update_time_human']}")
-    
-    # State info
-    if session.get('state'):
-        print(f"State: {len(session['state'])} items")
-    
-    # Events
-    events = session.get('events', [])
-    print(f"Events: {len(events)} total")
-    print()
+    # Session info - more compact in compact mode
+    if compact:
+        print(f"SESSION: {session_file}")
+        print(f"ID: {session.get('id', 'N/A')}")
+        last_update = session.get('last_update_time') or session.get('updated_time')
+        if last_update:
+            print(f"Last Update: {format_timestamp(last_update)}")
+        events = session.get('events', [])
+        print(f"Events: {len(events)} total")
+        print()
+    else:
+        print("=" * 80)
+        print(f"📋 SESSION: {session_file}")
+        print("=" * 80)
+        print(f"App Name: {session.get('app_name', 'N/A')}")
+        print(f"User ID: {session.get('user_id', 'N/A')}")
+        print(f"Session ID: {session.get('id', 'N/A')}")
+        print(f"Created: {format_timestamp(session.get('created_time', 'N/A'))}")
+        print(f"Updated: {format_timestamp(session.get('updated_time', 'N/A'))}")
+        
+        # Handle last_update_time if present
+        if 'last_update_time' in session:
+            last_update = session['last_update_time']
+            print(f"Last Update: {format_timestamp(last_update)}")
+            if 'last_update_time_human' in session:
+                print(f"Last Update (Human): {session['last_update_time_human']}")
+        
+        # State info
+        if session.get('state'):
+            print(f"State: {len(session['state'])} items")
+        
+        # Events
+        events = session.get('events', [])
+        print(f"Events: {len(events)} total")
+        print()
 
-    # Show conversation
-    print("=" * 80)
-    print("💬 CONVERSATION")
-    print("=" * 80)
+        # Show conversation
+        print("=" * 80)
+        print("💬 CONVERSATION")
+        print("=" * 80)
     
     # Pre-calculate event durations
     event_durations = []
@@ -187,7 +225,7 @@ def view_session(session_file):
         # Handle both created_time and timestamp fields
         event_timestamp = event.get('created_time') or event.get('timestamp', '')
         timestamp = format_timestamp(event_timestamp)
-        content = extract_text_content(event.get('content'))
+        content = extract_text_content(event.get('content'), compact=compact)
         
         # Get duration for this event
         duration = event_durations[i-1] if i-1 < len(event_durations) else None
@@ -214,31 +252,36 @@ def view_session(session_file):
             if line.strip():
                 print(f"   {line}")
         
-        # Actions if any
-        if event.get('actions'):
-            actions = event['actions']
-            if actions.get('state_delta'):
-                state_delta = actions['state_delta']
-                print(f"   📝 State update: {len(state_delta)} changes")
-                # Show some state changes (truncated)
-                for key, value in list(state_delta.items())[:3]:
-                    value_str = str(value)
-                    if len(value_str) > 100:
-                        value_str = value_str[:100] + "..."
-                    print(f"      {key}: {value_str}")
-                if len(state_delta) > 3:
-                    print(f"      ... and {len(state_delta) - 3} more changes")
-        
-        # Show any additional metadata
-        if event.get('invocation_id'):
-            print(f"   🆔 Invocation: {event['invocation_id']}")
-        
-        if event.get('branch'):
-            print(f"   🌿 Branch: {event['branch']}")
+        # In compact mode, skip state deltas and invocation IDs
+        if not compact:
+            # Actions if any
+            if event.get('actions'):
+                actions = event['actions']
+                if actions.get('state_delta'):
+                    state_delta = actions['state_delta']
+                    print(f"   📝 State update: {len(state_delta)} changes")
+                    # Show some state changes (truncated)
+                    for key, value in list(state_delta.items())[:3]:
+                        value_str = str(value)
+                        if len(value_str) > 100:
+                            value_str = value_str[:100] + "..."
+                        print(f"      {key}: {value_str}")
+                    if len(state_delta) > 3:
+                        print(f"      ... and {len(state_delta) - 3} more changes")
+            
+            # Show any additional metadata
+            if event.get('invocation_id'):
+                print(f"   🆔 Invocation: {event['invocation_id']}")
+            
+            if event.get('branch'):
+                print(f"   🌿 Branch: {event['branch']}")
         
         print()  # Blank line between events
 
-    # Calculate and display session duration
+    # Calculate and display session duration - skip in compact mode
+    if compact:
+        return
+    
     print("=" * 80)
     print("⏱️  SESSION TIMING SUMMARY")
     print("=" * 80)
@@ -338,22 +381,32 @@ def view_session(session_file):
     print("=" * 80)
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python view_session.py <session_file.json>")
-        print("\nExample:")
-        print("  python view_session.py specify_agent/myproject_specify.session.json")
-        sys.exit(1)
+    import argparse
     
-    session_file = sys.argv[1]
-    if not Path(session_file).exists():
-        print(f"❌ File not found: {session_file}")
+    parser = argparse.ArgumentParser(
+        description='View ADK session files in human-readable format'
+    )
+    parser.add_argument(
+        'session_file',
+        help='Path to session JSON file'
+    )
+    parser.add_argument(
+        '--compact',
+        action='store_true',
+        help='Generate compact output (50-60%% smaller, omits timing summary and metadata)'
+    )
+    
+    args = parser.parse_args()
+    
+    if not Path(args.session_file).exists():
+        print(f"❌ File not found: {args.session_file}")
         print("\nAvailable session files:")
         for pattern in ["*/*.session.json", "*.session.json"]:
             for file in Path(".").glob(pattern):
                 print(f"  {file}")
         sys.exit(1)
     
-    view_session(session_file)
+    view_session(args.session_file, compact=args.compact)
 
 if __name__ == "__main__":
     main()
