@@ -2,7 +2,7 @@
 
 # Context management for ADK agents
 export CONTEXT_ENABLE_CONDENSATION="true"
-export CONTEXT_MAX_TOKENS="256000"
+export CONTEXT_MAX_TOKENS="200000"
 export CONTEXT_KEEP_SYSTEM_MESSAGES="2"
 export CONTEXT_KEEP_RECENT_TURNS="3"
 export CONTEXT_SUMMARIZATION_MODEL="iflow/qwen3-coder-plus"
