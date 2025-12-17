@@ -29,6 +29,7 @@ set -euo pipefail
 #   --archive                Run /archive after /apply using the same change id
 #   --port PORT              MCP server port (default: 8051)
 #   --model MODEL            Override model for sub-agents (default: env OPENSPEC_MODEL or github_copilot/gpt-5-mini)
+#   --apply-template FILE     User-level instruction template with $ARGUMENT placeholder (optional)
 #   --builtin-mcp yes|no     Start/stop the bundled MCP server (default: yes)
 #   --save-session           Save session files (DEFAULT)
 #   --no-save-session        Disable session saving
@@ -62,6 +63,7 @@ MCP_PORT=8051
 MODEL="${OPENSPEC_MODEL:-github_copilot/gpt-5-mini}"
 BUILTIN_MCP="${BUILTIN_MCP_SERVER:-yes}"
 SAVE_SESSION=true
+APPLY_TEMPLATE=""
 
 # Colors
 RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; BLUE="\033[0;34m"; NC="\033[0m"
@@ -81,6 +83,7 @@ while [[ $# -gt 0 ]]; do
     --archive) RUN_ARCHIVE=true; shift;;
     --port) MCP_PORT="$2"; shift 2;;
     --model) MODEL="$2"; shift 2;;
+    --apply-template) APPLY_TEMPLATE="$2"; shift 2;;
     --builtin-mcp) BUILTIN_MCP="$2"; shift 2;;
     --save-session) SAVE_SESSION=true; shift;;
     --no-save-session) SAVE_SESSION=false; shift;;
@@ -101,6 +104,38 @@ start_mcp() {
   else
     echo -e "${RED}❌ Failed to start MCP servers${NC}"; exit 1
   fi
+}
+
+render_apply_user_msg() {
+  local change_id="$1"
+  local template_path="$2"
+
+  # Construct ARGUMENT payload as JSON for clarity
+  local arg_json
+  arg_json=$(printf '{"id":"%s"}' "$change_id")
+
+  # Default template if not provided
+  if [[ -z "$template_path" ]]; then
+    template_path="$SCRIPT_DIR/../openspec-commands/apply.md"
+  fi
+  if [[ ! -f "$template_path" ]]; then
+    echo "Template not found: $template_path" >&2
+    return 1
+  fi
+
+  # Escape replacement special chars for sed
+  local arg_escaped
+  arg_escaped=$(printf '%s' "$arg_json" | sed 's/[&/\\]/\\&/g')
+
+  # Substitute $ARGUMENT placeholder
+  local content_subst
+  content_subst=$(sed "s|\$ARGUMENT|$arg_escaped|g" "$template_path")
+
+  # Convert to single line with literal \n
+  local single_line
+  single_line=$(printf '%s' "$content_subst" | awk '{printf "%s\\n", $0} END{printf ""}')
+
+  printf '%s' "$single_line"
 }
 
 stop_mcp() {
@@ -252,8 +287,22 @@ if [[ "$RUN_APPLY" == true ]]; then
   # Save apply output to log file while displaying it
   APPLY_LOG="$APPLY_DIR/apply.log"
   
+  # Render user-level instruction message (template + $ARGUMENT substitution)
+  USER_MSG=""
+  if USER_MSG="$(render_apply_user_msg "$CHANGE_ID" "$APPLY_TEMPLATE")"; then
+    :
+  else
+    echo -e "${YELLOW}⚠️  User-level template not available or failed to render; continuing without it.${NC}"
+  fi
+
   set +e
-  printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG"
+  if [[ -n "$USER_MSG" ]]; then
+    # Send the user-level instruction first, then the slash command
+    printf "%s\n/apply --id %s\nexit\n" "$USER_MSG" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG"
+  else
+    # Fallback: preserve current behavior
+    printf "/apply --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_APPLY_CMD 2>&1 | tee "$APPLY_LOG"
+  fi
   APPLY_STATUS=${PIPESTATUS[0]}
   set -e
   
