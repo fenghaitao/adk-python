@@ -106,9 +106,32 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
-- When encountering build failures:
+
+**CRITICAL: Two Different Languages - DO NOT MIX THEM UP**
+
+You will work with TWO completely different programming languages:
+
+| Aspect | DML Code (Device Implementation) | Python Code (Tests) |
+|--------|----------------------------------|---------------------|
+| **Language** | DML 1.4 (C-like syntax) | Python 3 |
+| **File Extension** | `.dml` | `.py` |
+| **Location** | `simics-project/modules/<device>/<device>.dml` | `simics-project/modules/<device>/test/s-*.py` |
+| **Build Command** | `make <device>` / `build_simics_project()` | N/A (interpreted) |
+| **Run Command** | N/A (compiled into module) | `bin/test-runner` / `run_simics_test()` |
+| **Best Practices** | `openspec-memories/0*_DML_*.md` | `openspec-memories/0*_Test_*.md` |
+
+**Common Mistakes to AVOID:**
+- ❌ Using `this.val` in Python tests (DML syntax)
+- ❌ Using Python `def` functions in .dml files
+- ❌ Using DML `method` declarations in .py files
+- ❌ Consulting DML docs (`0*_DML_*.md`) when writing Python tests
+- ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
+
+- When encountering build failures (DML compilation errors):
   - Check `openspec-memories/05_DML_Troubleshooting.md`
+  - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
   - Verify register scope patterns (device/bank/register level)
+  - These are DML-specific issues - do NOT apply Python patterns
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
 
@@ -128,8 +151,14 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 **STEP 3: Test and Validate Quality**
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
-- When encountering test failures:
+- When encountering test failures (Python test errors):
   - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+  - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
+  - These are Python-specific issues - do NOT apply DML patterns
+  - Common Python test issues:
+    * `AttributeError` → Wrong object/method name (check Python API)
+    * `TypeError` → Wrong argument types (Python types, not DML types)
+    * Test not found → Check file location per `01_Test_File_Location_Requirements.md`
   - Verify implementation completeness (return to STEP 2.5)
 
 **STEP 4: Report Status**
@@ -143,9 +172,11 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 ## Memory Loading Protocol (CRITICAL - for token-efficient knowledge loading)
 
+**IMPORTANT: DML and Test documents are for DIFFERENT languages - load the correct category!**
+
 1. **MANDATORY**: Read BOTH index files FIRST before any other memory documents:
-   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML implementation guidance)
-   - MUST read `openspec-memories/00_Test_Best_Practices_Index.md` (for test creation guidance)
+   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML/C-like implementation in .dml files)
+   - MUST read `openspec-memories/00_Test_Best_Practices_Index.md` (for Python test code in .py files)
    - These provide the roadmap for selecting additional documents
 
 2. Use the indices' "I want to..." or "For Specific Tasks" sections to identify which 1-2 additional documents are relevant to your current task
@@ -171,19 +202,21 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 5. Quick reference for task-specific loading:
    
-   **DML Implementation Tasks:**
+   **DML Implementation Tasks (C-like .dml files):**
    - **ANY DML implementation** → MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST (prevents 100% of scope errors)
    - Timer/watchdog devices → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
    - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
    - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
    - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
+   - ⚠️ These docs use DML syntax (C-like): `method`, `this.val`, `uint64`, etc.
    
-   **Test Creation Tasks:**
+   **Test Creation Tasks (Python .py files):**
    - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
    - Creating test configuration helpers (e.g., wdt_common.py, device_common.py) → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
    - Register testing → `openspec-memories/03_Test_Register_Access.md`
    - Timer testing → `openspec-memories/06_Test_Events_Timing.md`
    - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+   - ⚠️ These docs use Python syntax: `def`, `regs.REG.read()`, `stest.expect_equal()`, etc.
 
 6. Use `perform_rag_query` for additional Simics/DML documentation as needed
 
