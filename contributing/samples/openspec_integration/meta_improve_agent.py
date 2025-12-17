@@ -138,17 +138,19 @@ After reading context files, analyze the session:
 - Analyze what the agent did well vs what caused problems
 - Compare against existing memory knowledge to find gaps
 
-**Key Commands to Look For in Session Logs**:
-- **Build Command**: `make {device_name}` (e.g., `make wdt`)
-  - Also look for `build_simics_project` tool calls
+**Key Tool Calls to Look For in Session Logs**:
+- **Build Tool**: `build_simics_project` MCP tool calls
+  - Search for: `"tool_name":"build_simics_project"` or `build_simics_project`
   - Parse build output for compilation errors
   - Track build success/failure patterns
+  - Count total build attempts
   
-- **Test Command**: `bin/test-runner modules/{device_name}/test` (e.g., `bin/test-runner modules/wdt/test`)
-  - Also look for `run_simics_test` tool calls
+- **Test Tool**: `run_simics_test` MCP tool calls
+  - Search for: `"tool_name":"run_simics_test"` or `run_simics_test`
   - Parse test output: "test s-xxx in modules/{device}/test failed"
   - Track test pass/fail counts and patterns
   - Identify test exit codes (exit-status 2, etc.)
+  - Count total test run attempts
 
 **Session Log Patterns to Search**:
 ```
@@ -191,11 +193,11 @@ For each build error fix and test error fix, you MUST analyze:
    - `Test_Best_Practices.md` - Comprehensive test guide
 
 2. **Match Error Type to Correct Best Practice Category**:
-   - **Build/Compilation Errors** (from `make {device_name}`): Use **DML Best Practices**
+   - **Build/Compilation Errors** (from `build_simics_project` tool): Use **DML Best Practices**
      * Syntax errors, unknown identifiers, type errors → Check DML docs
      * Register access scope issues → Check `07_DML_Register_Access_Scope.md`
      * Timer/event issues → Check `04_DML_Timing_Timer_Modeling.md`
-   - **Test Errors** (from `bin/test-runner`): Use **Test Best Practices**
+   - **Test Errors** (from `run_simics_test` tool): Use **Test Best Practices**
      * Test file not found → Check `01_Test_File_Location_Requirements.md`
      * Register access in Python → Check `03_Test_Register_Access.md`
      * Test setup issues → Check `02_Test_Configuration_Setup.md`
@@ -312,8 +314,8 @@ Generated: YYYY-MM-DD HH:MM:SS
 ## Best Practices Compliance Analysis
 
 **IMPORTANT**: There are TWO categories of best practices - analyze separately:
-- **DML Best Practices** (0*_DML_*.md): For DML/C compilation errors from `make {device}`
-- **Test Best Practices** (0*_Test_*.md): For Python test errors from `bin/test-runner`
+- **DML Best Practices** (0*_DML_*.md): For DML/C compilation errors from `build_simics_project` tool
+- **Test Best Practices** (0*_Test_*.md): For Python test errors from `run_simics_test` tool
 
 ### DML Best Practices Compliance (Build/Compilation Errors)
 
@@ -415,15 +417,15 @@ Analysis report saved to: <FULL_ABSOLUTE_PATH_HERE>
 
 ### 1. Compilation Errors (Build Analysis)
 - Parse error messages from build failures
-- **Build Command**: `make {device_name}` (e.g., `make wdt`)
-- Look for build_simics_project tool calls in session logs
+- **Build Tool**: `build_simics_project` MCP tool calls
+- Search for tool invocations in session logs
 - Extract: file, line, error type, identifier
 - Group by pattern (e.g., "unknown identifier: 'bank'")
 - Track fix attempts and outcomes
 - Check build reset scenarios and recovery patterns
 
 ### 2. Test Result Analysis
-- **Test Command**: `bin/test-runner modules/{device_name}/test` (e.g., `bin/test-runner modules/wdt/test`)
+- **Test Tool**: `run_simics_test` MCP tool calls
 - Parse test execution results from run_simics_test tool calls
 - Track test pass/fail patterns
 - Identify common test failures and their root causes
@@ -478,12 +480,12 @@ Session: apply_implement-wdt-initial_20251214_161520.session.txt
 
 Summary:
 - Duration: 10.4 minutes
-- Build attempts: 8 (via `make wdt`)
-- Test runs: 3 (via `bin/test-runner modules/wdt/test`)
+- Build attempts: 8 (via `build_simics_project` tool)
+- Test runs: 3 (via `run_simics_test` tool)
 - Fix attempts: 15
 - Success: Yes (eventually)
 
-Build Analysis (make {device_name}):
+Build Analysis (build_simics_project tool):
 - Total builds: 8
 - Successful builds: 3
 - Failed builds: 5
@@ -491,7 +493,7 @@ Build Analysis (make {device_name}):
   * "unknown identifier: 'bank'" - 5 occurrences (used 'bank' keyword instead of actual bank name)
   * "unknown identifier: 'WDOGLOAD'" - 3 occurrences (bare register name at device level)
 
-Test Analysis (bin/test-runner modules/{device_name}/test):
+Test Analysis (run_simics_test tool):
 - Total test runs: 3
 - Tests passed: 5/7
 - Tests failed: 2/7
@@ -578,8 +580,8 @@ Improvements:
    "Add quick reference at top: 'If implementing timer, READ THIS FIRST'"
 
 5. Improve agent prompt category guidance:
-   "Build errors (make {device}) → Check 0*_DML_*.md documents
-    Test errors (bin/test-runner) → Check 0*_Test_*.md documents"
+   "Build errors (build_simics_project tool) → Check 0*_DML_*.md documents
+    Test errors (run_simics_test tool) → Check 0*_Test_*.md documents"
 
 Expected Impact:
 - Reduce build attempts from 8 to 2-3
