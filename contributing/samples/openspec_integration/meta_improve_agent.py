@@ -319,7 +319,7 @@ Generated: YYYY-MM-DD HH:MM:SS
 
 #### Fix 1: [DML Error Description]
 - **Error Category**: DML Coding Error
-- **Best Practice Document**: `openspec-memories/0X_DML_*.md`
+- **Best Practice Document**: `openspec-memories/0*_DML_*.md`
 - **Relevant Best Practice**: Quote the specific DML best practice
 - **Agent's Actual Fix**: What the agent actually did
 - **Compliance Status**: ✅ Followed / ❌ Not Followed / ⚠️ Partially Followed
@@ -333,7 +333,7 @@ Generated: YYYY-MM-DD HH:MM:SS
 
 #### Fix 1: [Test Error Description]
 - **Error Category**: Python Test Error
-- **Best Practice Document**: `openspec-memories/0X_Test_*.md`
+- **Best Practice Document**: `openspec-memories/0*_Test_*.md`
 - **Relevant Best Practice**: Quote the specific Test best practice
 - **Agent's Actual Fix**: What the agent actually did
 - **Compliance Status**: ✅ Followed / ❌ Not Followed / ⚠️ Partially Followed
