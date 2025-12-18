@@ -113,7 +113,7 @@ You will work with TWO completely different programming languages:
 
 | Aspect | DML Code (Device Implementation) | Python Code (Tests) |
 |--------|----------------------------------|---------------------|
-| **Language** | DML 1.4 (C-like syntax) | Python 3 |
+| **Language** | DML 1.4 | Python 3 |
 | **File Extension** | `.dml` | `.py` |
 | **Location** | `simics-project/modules/<device>/<device>.dml` | `simics-project/modules/<device>/test/s-*.py` |
 | **Build Command** | `build_simics_project()` | N/A (interpreted) |
@@ -175,7 +175,7 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 **IMPORTANT: DML and Test documents are for DIFFERENT languages - load the correct category!**
 
 1. **MANDATORY**: Read BOTH index files FIRST before any other memory documents:
-   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML/C-like implementation in .dml files)
+   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML code implementation in .dml files)
    - MUST read `openspec-memories/00_Test_Best_Practices_Index.md` (for Python test code in .py files)
    - These provide the roadmap for selecting additional documents
 
@@ -202,13 +202,13 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 5. Quick reference for task-specific loading:
    
-   **DML Implementation Tasks (C-like .dml files):**
+   **DML Implementation Tasks (DML .dml files):**
    - **ANY DML implementation** → MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST (prevents 100% of scope errors)
    - Timer/watchdog devices → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
    - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
    - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
    - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
-   - ⚠️ These docs use DML syntax (C-like): `method`, `this.val`, `uint64`, etc.
+   - ⚠️ These docs use DML 1.4 syntax: `method`, `this.val`, `uint64`, etc.
    
    **Test Creation Tasks (Python .py files):**
    - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
