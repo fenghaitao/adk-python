@@ -190,6 +190,98 @@ When updating any document:
 
 ---
 
+## Memory Loading Protocol for AI Agents
+
+This section provides token-efficient loading strategies for AI agents implementing DML device code.l
+
+### Core Protocol
+
+1. **ALWAYS read this index file FIRST** - It provides the roadmap for all DML implementation tasks
+2. **Use task-specific guidance below** to identify which 1-2 additional documents are relevant
+3. **Load ONLY the specific documents needed** - Avoid loading all documents to preserve token budget
+4. **These documents use DML syntax** (C-like): `method`, `this.val`, `uint64`, `bank.REGISTER.val`, etc.
+
+### Task-Specific Document Loading
+
+#### For ANY DML Implementation (MANDATORY)
+- **MUST read FIRST**: `07_DML_Register_Access_Scope.md`
+- **Why**: Prevents 100% of register scope compilation errors
+- **Prevents**: "unknown identifier REGISTER" errors, "REGISTER is not a member" errors
+
+#### For Timer/Watchdog/Counter Devices (CRITICAL)
+**Load in this order:**
+1. `07_DML_Register_Access_Scope.md` (MANDATORY for all implementations)
+2. `02_DML_Anti_Patterns.md` (CRITICAL - read anti-patterns 1, 2, and 3)
+   - Anti-Pattern #1 (clock signal modeling): Causes 100-1000x performance degradation
+   - Anti-Pattern #2 (SIM_cycle_count in init): Causes runtime crashes
+   - Anti-Pattern #3 (incomplete timer): Causes non-functional devices
+   - **Reading anti-patterns FIRST prevents generating "obvious but wrong" code**
+3. `04_DML_Timing_Timer_Modeling.md` (Complete implementation guide)
+
+**Why this order**: Anti-patterns MUST be known before implementation to avoid generating broken code that needs extensive fixing.
+
+#### For Register Side-Effects Implementation
+- **Core**: `07_DML_Register_Access_Scope.md` (MANDATORY)
+- **Patterns**: `06_DML_Common_Patterns.md` (Common device patterns)
+
+#### For Compilation Errors
+- **Scope errors** ("unknown identifier"): `07_DML_Register_Access_Scope.md`
+- **Other errors**: `05_DML_Troubleshooting.md`
+
+#### For New DML Developers
+**Recommended reading order:**
+1. `07_DML_Register_Access_Scope.md` (MANDATORY - prevents scope errors)
+2. `01_Simics_Modeling_Philosophy.md` (Understand the "why")
+3. `02_DML_Anti_Patterns.md` (Learn what NOT to do)
+4. `03_DML_Basic_Syntax.md` (Learn the language)
+
+### Anti-Pattern Prevention Strategy
+
+**CRITICAL**: For timer/counter/watchdog devices, reading anti-patterns BEFORE implementation is essential because:
+
+1. **Performance**: Anti-Pattern #1 (clock signal modeling) seems "obvious" but causes 100-1000x slowdown
+2. **Stability**: Anti-Pattern #2 (timing APIs in init) causes immediate crashes
+3. **Functionality**: Anti-Pattern #3 (incomplete timer) results in non-functional devices
+4. **Prevention is cheaper than fixing**: Avoiding these patterns is far more efficient than generating broken code and then debugging it
+
+**Strategy**: Load `02_DML_Anti_Patterns.md` FIRST (after scope guide) for any timing-related device.
+
+### Troubleshooting Document Map
+
+| Symptom | Document to Load |
+|---------|------------------|
+| "unknown identifier REGISTER" | `07_DML_Register_Access_Scope.md` |
+| "REGISTER is not a member of bank" | `07_DML_Register_Access_Scope.md` |
+| Device builds but runs very slowly | `02_DML_Anti_Patterns.md` (Anti-Pattern #1) |
+| Runtime crash on device init | `02_DML_Anti_Patterns.md` (Anti-Pattern #2) |
+| Timer doesn't count down | `02_DML_Anti_Patterns.md` (Anti-Pattern #3) + `04_DML_Timing_Timer_Modeling.md` |
+| Syntax errors | `03_DML_Basic_Syntax.md` + `05_DML_Troubleshooting.md` |
+| Missing imports | `05_DML_Troubleshooting.md` |
+
+### Pre-Build Checklist (Token-Efficient Validation)
+
+Before building, verify against this checklist (found in referenced documents):
+
+- [ ] Register access uses correct scope (device/bank/register level) - `07_DML_Register_Access_Scope.md`
+- [ ] No clock signal modeling anti-pattern - `02_DML_Anti_Patterns.md`
+- [ ] No timing API calls in init/post_init - `02_DML_Anti_Patterns.md`
+- [ ] Timer implementation includes interrupt logic - `02_DML_Anti_Patterns.md`
+
+### Token Budget Optimization
+
+**Efficient Loading Pattern:**
+```
+1. Load this index (00_DML_Best_Practices_Index.md) → ~2K tokens
+2. Identify task from "Task-Specific Document Loading" section
+3. Load 1-2 specific documents (typically 3-8K tokens each)
+4. Total: ~5-15K tokens vs ~40K+ for loading all documents
+```
+
+**When to load additional documents:**
+- Load on-demand when encountering specific issues
+- Use troubleshooting map for error-driven loading
+- Reference quick navigation sections for targeted reads
+
 ## Additional Resources
 
 ### See Also
@@ -206,8 +298,9 @@ When updating any document:
 ---
 
 **Document Status**: Complete  
-**Last Updated**: December 15, 2025  
+**Last Updated**: December 17, 2025  
 **Total Documents**: 7 focused guides + this index
 
-**Recent Additions**:
+**Recent Updates**:
+- December 17, 2025: Added "Memory Loading Protocol for AI Agents" section with token-efficient loading strategies
 - December 15, 2025: Added `07_DML_Register_Access_Scope.md` based on session analysis findings

@@ -175,50 +175,17 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 **IMPORTANT: DML and Test documents are for DIFFERENT languages - load the correct category!**
 
 1. **MANDATORY**: Read BOTH index files FIRST before any other memory documents:
-   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML/C-like implementation in .dml files)
-   - MUST read `openspec-memories/00_Test_Best_Practices_Index.md` (for Python test code in .py files)
-   - These provide the roadmap for selecting additional documents
+   - `openspec-memories/00_DML_Best_Practices_Index.md` (for DML/C-like implementation in .dml files)
+   - `openspec-memories/00_Test_Best_Practices_Index.md` (for Python test code in .py files)
+   - These indices contain complete guidance on which documents to load and when
 
-2. Use the indices' "I want to..." or "For Specific Tasks" sections to identify which 1-2 additional documents are relevant to your current task
+2. Follow the "Memory Loading Protocol for AI Agents" section in each index file for:
+   - Task-specific document selection
+   - Anti-pattern prevention guidance
+   - Troubleshooting document mapping
+   - Token-efficient loading strategies
 
-3. Load ONLY the specific documents needed (avoid loading all documents - be token-efficient)
-
-4. CRITICAL ANTI-PATTERN PREVENTION:
-   - For timer/counter/watchdog devices: MUST read `openspec-memories/02_DML_Anti_Patterns.md` FIRST before any DML implementation
-     - Anti-Pattern #1 (clock signal modeling) causes 100-1000x performance degradation
-     - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
-     - Anti-Pattern #3 (incomplete timer) causes non-functional devices
-     - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
-
-   - For test creation: MUST read `openspec-memories/01_Test_File_Location_Requirements.md` FIRST before creating any test files
-     - Wrong location causes test failures
-     - Wrong patterns cause test functions not to execute
-
-   - For test configuration helpers (wdt_common.py, etc.): MUST read `openspec-memories/02_Test_Configuration_Setup.md` FIRST
-     - Missing clock setup causes "object has no valid queue attribute" runtime crashes
-     - Must set clk.freq_mhz BEFORE instantiation
-     - Must assign dev.queue = clk for all timing-based devices
-     - Wrong pattern causes SIM_cycle_count() and timing functions to fail
-
-5. Quick reference for task-specific loading:
-   
-   **DML Implementation Tasks (C-like .dml files):**
-   - **ANY DML implementation** → MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST (prevents 100% of scope errors)
-   - Timer/watchdog devices → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
-   - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
-   - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
-   - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
-   - ⚠️ These docs use DML syntax (C-like): `method`, `this.val`, `uint64`, etc.
-   
-   **Test Creation Tasks (Python .py files):**
-   - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
-   - Creating test configuration helpers (e.g., wdt_common.py, device_common.py) → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
-   - Register testing → `openspec-memories/03_Test_Register_Access.md`
-   - Timer testing → `openspec-memories/06_Test_Events_Timing.md`
-   - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
-   - ⚠️ These docs use Python syntax: `def`, `regs.REG.read()`, `stest.expect_equal()`, etc.
-
-6. Use `perform_rag_query` for additional Simics/DML documentation as needed
+3. Use `perform_rag_query` for additional Simics/DML documentation as needed
 
 ## Simics-Specific Implementation Guidance
 
