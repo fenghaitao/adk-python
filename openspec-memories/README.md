@@ -19,6 +19,9 @@ python3 search_cli.py "register bank" --top-k 8 --json
 - --top-k <N>: Max results to return (default: 10)
 - --snippet <N>: Snippet width in characters (default: 160)
 - --json: Emit machine-readable JSON instead of pretty text
+- --bm25: Use BM25 ranking instead of TF–IDF (recommended for mixed-length sections)
+- --k1 <float>: BM25 k1 parameter (default: 1.5)
+- --b <float>: BM25 b parameter (default: 0.75)
 
 ## Output (JSON schema)
 
@@ -56,13 +59,19 @@ The CLI is designed to be fast, simple, and dependency-free while returning usef
 - Tokens are word-like sequences `[A-Za-z0-9_]+` lowercased.
 - Both section body and heading text are tokenized to compute term statistics.
 
-3) TF–IDF ranking (body + heading)
+3) Ranking (TF–IDF by default, BM25 optional)
 - For each section `i` and query term `t`:
   - `tf_i(t)` = frequency of `t` in that section (body + heading)
   - `idf(t)` = `log((N + 1) / (df(t) + 0.5)) + 1`, where `N` is number of sections and `df(t)` is the number of sections containing `t`.
   - Term contribution = `(1 + log(1 + tf_i(t))) * idf(t)`
 - Section score = sum of contributions over all query terms, normalized by `sqrt(section_length)` to reduce long-text bias.
 - Rationale: Simple, proven weighting that rewards rare-but-relevant terms and multiple hits.
+
+BM25 option (use --bm25)
+- Term contribution for a section `i` with length `dl` and average section length `avgdl`:
+  - `idf(t) * ((tf_i(t) * (k1 + 1)) / (tf_i(t) + k1 * (1 - b + b * (dl / avgdl))))`
+- Parameters: `k1` controls tf saturation; `b` controls length normalization strength.
+- Benefits: More robust on mixed-length sections and multi-term queries.
 
 4) Fuzzy title bonus (lightweight recall boost)
 - Compute `ratio = SequenceMatcher(query, title).ratio()` where `title = "<filename> <heading>"`.

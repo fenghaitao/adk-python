@@ -183,11 +183,30 @@ def highlight_snippet(text: str, terms: List[str], width: int = 160) -> str:
   return snippet.replace("\n", " ")
 
 
-def search(idx: CorpusIndex, query: str, top_k: int, snippet_width: int) -> List[Tuple[float, int]]:
+def bm25_score(query_terms: List[str], idx: CorpusIndex, i: int, *, k1: float = 1.5, b: float = 0.75) -> float:
+  tf_i = idx.tf[i]
+  N = max(1, len(idx.sections))
+  avgdl = (sum(idx.lengths) / N) if N > 0 else 1.0
+  dl = idx.lengths[i] if idx.lengths[i] > 0 else 1
+  score = 0.0
+  for t in query_terms:
+    if t not in idx.df:
+      continue
+    # Okapi BM25 idf variant
+    idf = math.log((N - idx.df[t] + 0.5) / (idx.df[t] + 0.5) + 1.0)
+    tf = tf_i.get(t, 0)
+    if tf == 0:
+      continue
+    denom = tf + k1 * (1.0 - b + b * (dl / avgdl))
+    score += idf * ((tf * (k1 + 1.0)) / denom)
+  return score
+
+
+def search(idx: CorpusIndex, query: str, top_k: int, snippet_width: int, *, use_bm25: bool = False, k1: float = 1.5, b: float = 0.75) -> List[Tuple[float, int]]:
   q_terms = tokenize(query)
   scored: List[Tuple[float, int]] = []
   for i, sec in enumerate(idx.sections):
-    base = tfidf_score(q_terms, idx, i)
+    base = bm25_score(q_terms, idx, i, k1=k1, b=b) if use_bm25 else tfidf_score(q_terms, idx, i)
     bonus = fuzzy_bonus(query, sec)
     total = base + bonus
     if total > 0:
@@ -246,6 +265,9 @@ def main(argv: List[str]) -> int:
   p.add_argument("--top-k", type=int, default=10, help="Number of results to return (default: 10)")
   p.add_argument("--snippet", type=int, default=160, help="Snippet width in characters (default: 160)")
   p.add_argument("--json", action="store_true", help="Output results as JSON")
+  p.add_argument("--bm25", action="store_true", help="Use BM25 scoring instead of TF-IDF")
+  p.add_argument("--k1", type=float, default=1.5, help="BM25 k1 parameter (default: 1.5)")
+  p.add_argument("--b", type=float, default=0.75, help="BM25 b parameter (default: 0.75)")
 
   args = p.parse_args(argv)
   root = Path(args.root)
@@ -254,7 +276,7 @@ def main(argv: List[str]) -> int:
     return 2
 
   idx = build_index(root)
-  results = search(idx, args.query, args.top_k, args.snippet)
+  results = search(idx, args.query, args.top_k, args.snippet, use_bm25=args.bm25, k1=args.k1, b=args.b)
   if args.json:
     print(results_as_json(results, idx, args.query, args.snippet))
   else:
