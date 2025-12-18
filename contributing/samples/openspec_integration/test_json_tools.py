@@ -37,9 +37,9 @@ async def test_tools():
   
   metrics_tool = JsonSessionMetricsTool()
   try:
-    result = await metrics_tool.run(
-      context=None,
-      session_file=session_file
+    result = await metrics_tool.run_async(
+      args={"session_file": session_file},
+      tool_context=None
     )
     print("✅ SUCCESS")
     print(f"Result: {result}")
@@ -57,10 +57,9 @@ async def test_tools():
   
   error_tool = JsonErrorPatternTool()
   try:
-    result = await error_tool.run(
-      context=None,
-      session_file=session_file,
-      max_examples=3
+    result = await error_tool.run_async(
+      args={"session_file": session_file, "max_examples": 3},
+      tool_context=None
     )
     print("✅ SUCCESS")
     print(f"Result: {result}")
@@ -78,11 +77,9 @@ async def test_tools():
   
   query_tool = JsonSessionQueryTool()
   try:
-    result = await query_tool.run(
-      context=None,
-      session_file=session_file,
-      query_type="tool_calls",
-      limit=5
+    result = await query_tool.run_async(
+      args={"session_file": session_file, "query_type": "tool_calls", "limit": 5},
+      tool_context=None
     )
     print("✅ SUCCESS")
     print(f"Result: {result}")
@@ -99,11 +96,9 @@ async def test_tools():
   print("-" * 80)
   
   try:
-    result = await query_tool.run(
-      context=None,
-      session_file=session_file,
-      query_type="event_count",
-      limit=10
+    result = await query_tool.run_async(
+      args={"session_file": session_file, "query_type": "event_count", "limit": 10},
+      tool_context=None
     )
     print("✅ SUCCESS")
     print(f"Result: {result}")
