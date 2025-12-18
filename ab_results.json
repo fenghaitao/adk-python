@@ -1,0 +1,56 @@
+[
+  {
+    "query": "timer",
+    "tfidf_top": "06_Test_Events_Timing.md :: Timer Countdown Test",
+    "bm25_top": "06_Test_Events_Timing.md :: Problem: Timer Doesn't Stop",
+    "tfidf_first_score": 2.875724,
+    "bm25_first_score": 4.389524,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  },
+  {
+    "query": "register bank",
+    "tfidf_top": "03_Test_Register_Access.md :: Finding Bank Names",
+    "bm25_top": "07_DML_Register_Access_Scope.md :: Device Level (Outside Any Bank/Register)",
+    "tfidf_first_score": 3.059403,
+    "bm25_first_score": 6.366492,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  },
+  {
+    "query": "freq_mhz clock",
+    "tfidf_top": "02_Test_Configuration_Setup.md :: Clock Configuration",
+    "bm25_top": "02_Test_Configuration_Setup.md :: ⚠️ CRITICAL: Clock freq_mhz Must Be Set Before Instantiation",
+    "tfidf_first_score": 4.33772,
+    "bm25_first_score": 9.171725,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  },
+  {
+    "query": "DMA descriptor",
+    "tfidf_top": "05_Test_DMA_Memory.md :: Descriptor-Based DMA",
+    "bm25_top": "05_Test_DMA_Memory.md :: Descriptor-Based DMA",
+    "tfidf_first_score": 8.900533,
+    "bm25_first_score": 11.903131,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  },
+  {
+    "query": "watchdog interrupt",
+    "tfidf_top": "06_Test_Events_Timing.md :: Pattern 2: Watchdog Timer",
+    "bm25_top": "06_Test_Events_Timing.md :: Pattern 2: Watchdog Timer",
+    "tfidf_first_score": 4.07043,
+    "bm25_first_score": 6.935013,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  },
+  {
+    "query": "troubleshooting compile error",
+    "tfidf_top": "05_Test_DMA_Memory.md :: Troubleshooting",
+    "bm25_top": "05_Test_DMA_Memory.md :: Troubleshooting",
+    "tfidf_first_score": 8.715655,
+    "bm25_first_score": 7.361044,
+    "tfidf_count": 5,
+    "bm25_count": 5
+  }
+]

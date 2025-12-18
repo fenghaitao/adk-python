@@ -1,0 +1,7 @@
+query,tfidf_top,bm25_top,tfidf_first_score,bm25_first_score,tfidf_count,bm25_count
+timer,06_Test_Events_Timing.md :: Timer Countdown Test,06_Test_Events_Timing.md :: Problem: Timer Doesn't Stop,2.875724,4.389524,5,5
+register bank,03_Test_Register_Access.md :: Finding Bank Names,07_DML_Register_Access_Scope.md :: Device Level (Outside Any Bank/Register),3.059403,6.366492,5,5
+freq_mhz clock,02_Test_Configuration_Setup.md :: Clock Configuration,02_Test_Configuration_Setup.md :: ⚠️ CRITICAL: Clock freq_mhz Must Be Set Before Instantiation,4.33772,9.171725,5,5
+DMA descriptor,05_Test_DMA_Memory.md :: Descriptor-Based DMA,05_Test_DMA_Memory.md :: Descriptor-Based DMA,8.900533,11.903131,5,5
+watchdog interrupt,06_Test_Events_Timing.md :: Pattern 2: Watchdog Timer,06_Test_Events_Timing.md :: Pattern 2: Watchdog Timer,4.07043,6.935013,5,5
+troubleshooting compile error,05_Test_DMA_Memory.md :: Troubleshooting,05_Test_DMA_Memory.md :: Troubleshooting,8.715655,7.361044,5,5
