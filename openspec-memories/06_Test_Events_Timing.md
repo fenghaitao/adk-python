@@ -559,3 +559,7 @@ print("All timing tests passed!")
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Next Reading**: [07_Test_Suite_Organization.md](07_Test_Suite_Organization.md)
+
+---
+
+Tags: testing, events, timing, timers, watchdog

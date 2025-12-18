@@ -343,3 +343,7 @@ register counter {
 **Document Status**: ✅ Complete  
 **Extracted From**: DML_Best_Practices.md  
 **Last Updated**: December 11, 2025
+
+---
+
+Tags: dml, anti-patterns, callbacks, after, performance

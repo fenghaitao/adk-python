@@ -507,3 +507,7 @@ Before asking for help, check:
 **Extracted From**: DML_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Tested With**: Simics 7.57.0, DML 1.4, API version 7
+
+---
+
+Tags: dml, troubleshooting, compilation, runtime, constants

@@ -103,3 +103,7 @@ Common issues and solutions:
 ---
 
 **Next Steps**: If this is your first time writing Simics tests, start with [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md).
+
+---
+
+Tags: index, navigation, reading-order, testing, troubleshooting

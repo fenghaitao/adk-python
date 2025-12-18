@@ -211,3 +211,7 @@ When updating any document:
 
 **Recent Additions**:
 - December 15, 2025: Added `07_DML_Register_Access_Scope.md` based on session analysis findings
+
+---
+
+Tags: index, navigation, reading-order, dml

@@ -613,3 +613,7 @@ stest.expect_equal(regs.CONTROL.read(), 0x5, "Control mismatch")
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 12, 2025  
 **Next Reading**: [03_Test_Register_Access.md](03_Test_Register_Access.md)
+
+---
+
+Tags: testing, configuration, clock, freq_mhz, common.py

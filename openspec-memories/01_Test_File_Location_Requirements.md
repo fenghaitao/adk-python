@@ -393,3 +393,7 @@ ImportError: No module named 'simics'
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Next Reading**: [02_Test_Configuration_Setup.md](02_Test_Configuration_Setup.md)
+
+---
+
+Tags: testing, file-structure, suiteinfo, test-runner

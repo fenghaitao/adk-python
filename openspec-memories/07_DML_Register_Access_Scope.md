@@ -282,3 +282,7 @@ Always check scope before first build to prevent "unknown identifier" errors.
 **Created From**: Session analysis findings (WDT implementation 2024-12-14)  
 **Last Updated**: December 15, 2025  
 **Next Reading**: [06_DML_Common_Patterns.md](06_DML_Common_Patterns.md)
+
+---
+
+Tags: dml, register-access, scope, bank, analysis

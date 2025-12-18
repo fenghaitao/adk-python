@@ -1972,3 +1972,7 @@ dmlc --simics-api=7 -I ../linux64/bin/dml/api/7/1.4 -I ../linux64/bin/dml/1.4 in
 **Document Status**: ✅ Complete
 **Last Updated**: Generated after solving DML compilation issues
 **Tested With**: Simics 7.57.0, DML 1.4, API version 7
+
+---
+
+Tags: dml, best-practices, modeling, tlm, timing, interrupts, watchdog, tsc, uart, compilation, troubleshooting

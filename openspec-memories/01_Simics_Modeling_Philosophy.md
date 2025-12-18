@@ -44,3 +44,7 @@ A good Simics model implements the what and not the how of device functionality,
 **Document Status**: ✅ Complete  
 **Extracted From**: DML_Best_Practices.md  
 **Last Updated**: December 11, 2025
+
+---
+
+Tags: dml, philosophy, tlm, modeling

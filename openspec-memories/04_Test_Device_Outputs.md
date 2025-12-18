@@ -543,3 +543,7 @@ print("All fake object tests passed!")
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Next Reading**: [05_Test_DMA_Memory.md](05_Test_DMA_Memory.md)
+
+---
+
+Tags: testing, outputs, signals, mocking, dma

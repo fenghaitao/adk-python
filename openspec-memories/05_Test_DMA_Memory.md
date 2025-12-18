@@ -589,3 +589,7 @@ print("DMA test passed!")
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Next Reading**: [06_Test_Events_Timing.md](06_Test_Events_Timing.md)
+
+---
+
+Tags: testing, dma, memory, descriptors, scatter-gather

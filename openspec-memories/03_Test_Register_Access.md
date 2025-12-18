@@ -578,3 +578,7 @@ print("All register tests passed!")
 **Extracted From**: Test_Best_Practices.md  
 **Last Updated**: December 11, 2025  
 **Next Reading**: [04_Test_Fake_Objects_Mocking.md](04_Test_Fake_Objects_Mocking.md)
+
+---
+
+Tags: testing, register-access, bank, fields, errors
