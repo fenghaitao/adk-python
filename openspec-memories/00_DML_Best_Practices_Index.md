@@ -105,6 +105,68 @@ The documentation is organized into 7 focused documents:
 
 ---
 
+### 8. [DML 1.4 Code Examples](008-code-examples/) **PRODUCTION CODE REFERENCE**
+**Focus**: Real-world DML 1.4 device implementations from production Simics models
+
+**Topics Covered**:
+- **9 Device Categories**: DMA, Interrupt Controllers, MMU/IOMMU, PCIe, TRNG, I2C, I3C, Timer, UART
+- **Implementation Patterns**: Device declarations, register banks, interfaces, timing, error handling
+- **Production Features**: Real implementations of FIFOs, DMA, interrupts, protocol handling, state machines
+- **Complete Context**: Full device structure with imports, attributes, connects, methods, events, ports
+
+**Document Structure**:
+- `000_overview.md` - Introduction, common patterns, navigation guide
+- `001_dma.md` - DMA controllers (Synopsys AHB DMAC, etc.)
+- `002_interrupt_controller.md` - Interrupt controllers (RISC-V CLINT, etc.)
+- `003_mmu.md` - MMU/IOMMU devices (SMMU-v3, ARM MMU-600, etc.)
+- `004_pcie.md` - PCIe devices (endpoints, switches, capabilities)
+- `005_trng.md` - True Random Number Generators (Synopsys TRNG)
+- `006_i2c.md` - I2C controllers and targets (Synopsys APB I2C)
+- `007_i3c.md` - I3C controllers (Synopsys MIPI I3C)
+- `008_timer.md` - Timer and watchdog devices (Synopsys APB Timers/WDT)
+- `009_uart.md` - UART devices (Synopsys APB UART, PL011)
+
+**When to Read**: 
+- **During Implementation**: Reference when implementing specific device features or protocols
+- **Pattern Discovery**: Find proven patterns for features you need (FIFOs, DMA, interrupts, etc.)
+- **Code Validation**: Compare your implementation against production examples
+- **Learning Idioms**: Understand how experienced developers structure DML code
+- **Feature Research**: See how specific hardware features are modeled in DML
+
+**Critical Use Cases**:
+1. **Implementing device-specific features**: Search category docs for similar devices
+2. **Understanding register bank structure**: See real register layouts and field definitions
+3. **Interface implementation**: Study how devices connect to buses, signals, and other devices
+4. **Error handling patterns**: Learn from production error checking and status reporting
+5. **Protocol implementation**: See complete protocol state machines (I2C, I3C, PCIe, UART)
+6. **Timing and events**: Study real timer implementations with lazy evaluation
+7. **DMA patterns**: Understand DMA channel management, descriptors, and transfers
+8. **Interrupt patterns**: See how devices generate, mask, and manage interrupts
+
+**Relationship to Best Practices**:
+- **Principles (01)**: Code examples demonstrate the philosophy in action
+- **Anti-Patterns (02)**: Examples show correct implementations avoiding common mistakes
+- **Syntax (03)**: Real code showing proper DML syntax usage
+- **Timing (04)**: Production timer implementations using correct patterns
+- **Patterns (06)**: Extended library of production patterns beyond basic examples
+- **Scope (07)**: Examples demonstrate correct register access scope in context
+
+**How to Use**:
+1. **Start with `000_overview.md`** to understand organization and common patterns
+2. **Navigate to relevant category** based on your device type
+3. **Study similar devices** in that category for applicable patterns
+4. **Extract and adapt** code patterns to your implementation
+5. **Cross-reference** with best practices documents for principles
+6. **Validate** your approach against multiple production examples
+
+**When NOT to Use**:
+- As a substitute for DML language documentation (use 03_DML_Basic_Syntax.md)
+- As a substitute for principles (read 01_Simics_Modeling_Philosophy.md first)
+- Without understanding anti-patterns (review 02_DML_Anti_Patterns.md)
+- For debugging errors (use 05_DML_Troubleshooting.md)
+
+---
+
 ## Quick Navigation Guide
 
 ### I want to...
@@ -133,6 +195,18 @@ The documentation is organized into 7 focused documents:
 **...build a specific device type**  
 → Use templates from [06_DML_Common_Patterns.md](06_DML_Common_Patterns.md)
 
+**...see real production implementations**  
+→ Browse [008-code-examples/](008-code-examples/) for your device category
+
+**...implement a specific feature (FIFO, DMA, protocol)**  
+→ Search [008-code-examples/](008-code-examples/) for devices with that feature
+
+**...understand how a device type works**  
+→ Study complete examples in [008-code-examples/](008-code-examples/)
+
+**...validate my implementation approach**  
+→ Compare against production code in [008-code-examples/](008-code-examples/)
+
 ---
 
 ## Recommended Reading Order
@@ -146,20 +220,49 @@ The documentation is organized into 7 focused documents:
 3. **02_DML_Anti_Patterns.md** - Learn what NOT to do
 4. **03_DML_Basic_Syntax.md** - Learn the language
 5. **06_DML_Common_Patterns.md** - Practice with examples
-6. **05_DML_Troubleshooting.md** - Keep handy for issues
+6. **008-code-examples/** - Study production code for your device type
+7. **05_DML_Troubleshooting.md** - Keep handy for issues
+
+### For Implementing Specific Device Types:
+1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
+2. **008-code-examples/000_overview.md** - Understand example organization
+3. **008-code-examples/[your-category].md** - Study similar production devices
+4. **02_DML_Anti_Patterns.md** - Avoid mistakes for your device type
+5. **06_DML_Common_Patterns.md** - Start with basic template
+6. **008-code-examples/** - Reference production patterns as you build
 
 ### For Timer/Counter Devices:
 1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
 2. **01_Simics_Modeling_Philosophy.md** - Understand lazy evaluation principle
 3. **02_DML_Anti_Patterns.md** - **CRITICAL**: Read anti-patterns 1, 2, and 3
 4. **04_DML_Timing_Timer_Modeling.md** - Complete guide and examples
-5. **05_DML_Troubleshooting.md** - For debugging
+5. **008-code-examples/008_timer.md** - Study production timer implementations
+6. **05_DML_Troubleshooting.md** - For debugging
+
+### For Serial Communication Devices (UART, I2C, I3C):
+1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
+2. **008-code-examples/009_uart.md** - UART production examples
+3. **008-code-examples/006_i2c.md** - I2C production examples
+4. **008-code-examples/007_i3c.md** - I3C production examples
+5. **06_DML_Common_Patterns.md** - UART basic pattern
+6. **03_DML_Basic_Syntax.md** - Interface and protocol syntax
 
 ### For Quick Reference:
 - **07_DML_Register_Access_Scope.md** - Register scope quick reference (check before every build)
 - **03_DML_Basic_Syntax.md** - Syntax quick reference
 - **04_DML_Timing_Timer_Modeling.md** - Timing quick reference card
 - **06_DML_Common_Patterns.md** - Copy-paste templates
+- **008-code-examples/000_overview.md** - Common DML patterns and navigation
+
+### For Feature-Specific Implementation:
+- **FIFOs and Buffers**: 008-code-examples/009_uart.md, 008-code-examples/001_dma.md
+- **Interrupts**: 008-code-examples/002_interrupt_controller.md, 008-code-examples/009_uart.md
+- **DMA**: 008-code-examples/001_dma.md
+- **PCIe Capabilities**: 008-code-examples/004_pcie.md
+- **Protocol State Machines**: 008-code-examples/006_i2c.md, 008-code-examples/007_i3c.md
+- **Memory Translation**: 008-code-examples/003_mmu.md
+- **Random Number Generation**: 008-code-examples/005_trng.md
+- **Timing and Events**: 008-code-examples/008_timer.md, 04_DML_Timing_Timer_Modeling.md
 
 ---
 
@@ -192,22 +295,30 @@ When updating any document:
 
 ## Additional Resources
 
+### Documentation Library
+- **Best Practices** (01-07): Principles, anti-patterns, syntax, timing, troubleshooting, patterns, scope
+- **Code Examples** (008-code-examples/): 353 production devices across 9 categories
+- **Simics Documentation**: Model Builder User's Guide, DML 1.4 Reference Manual, API documentation
+
 ### See Also
-- Simics Model Builder User's Guide
-- DML 1.4 Reference Manual
-- Simics API documentation
+- Simics Model Builder User's Guide - Official DML language reference
+- DML 1.4 Reference Manual - Complete language specification
+- Simics API documentation - C API for device models
+- 008-code-examples/ - Production device implementations
 
 ### Getting Help
-1. Check troubleshooting guide first
-2. Review anti-patterns document
-3. Verify your code against examples
-4. Use the quick reference sections
+1. **Check troubleshooting guide first**: [05_DML_Troubleshooting.md](05_DML_Troubleshooting.md)
+2. **Review anti-patterns document**: [02_DML_Anti_Patterns.md](02_DML_Anti_Patterns.md)
+3. **Verify your code against examples**: [06_DML_Common_Patterns.md](06_DML_Common_Patterns.md) and [008-code-examples/](008-code-examples/)
+4. **Check production implementations**: Search [008-code-examples/](008-code-examples/) for similar devices
+5. **Use the quick reference sections**: Each document has quick-reference cards
 
 ---
 
 **Document Status**: Complete  
-**Last Updated**: December 15, 2025  
-**Total Documents**: 7 focused guides + this index
+**Last Updated**: December 17, 2025  
+**Total Documents**: 7 focused guides + 1 code examples library (9 categories) + this index
 
 **Recent Additions**:
+- December 17, 2025: Added `008-code-examples/` documentation with 9 device categories and 353 production devices
 - December 15, 2025: Added `07_DML_Register_Access_Scope.md` based on session analysis findings
