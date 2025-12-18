@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MetaImproveAgent for analyzing and improving apply_agent.
+"""MetaImproveTextAgent for analyzing and improving apply_agent.
 
-This agent analyzes apply_agent execution sessions to identify patterns,
-extract learnings, and autonomously improve the agent's instructions and
-memory documents.
+This agent analyzes apply_agent execution sessions using text analysis tools
+(grep, wc, sort, uniq) on .session.txt files to identify patterns, extract
+learnings, and autonomously improve the agent's instructions and memory documents.
 """
 
 from __future__ import annotations
@@ -73,13 +73,14 @@ class SessionAnalysis(BaseModel):
   analysis_report_file: Optional[str] = Field(None, description="Optional: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/META_IMPROVE_ANALYSIS_20250102_103045.md'). Include this if you saved the report file.")
 
 
-class MetaImproveAgent(LlmAgent):
-  """Agent that analyzes apply_agent sessions and generates improvements."""
+class MetaImproveTextAgent(LlmAgent):
+  """Agent that analyzes apply_agent sessions using text analysis tools."""
 
   def __init__(self, **kwargs):
     instruction = """
-You are a MetaImproveAgent that analyzes apply_agent execution sessions
-to identify patterns, extract learnings, and autonomously improve the agent.
+You are a MetaImproveTextAgent that analyzes apply_agent execution sessions
+using text analysis tools (grep, wc, sort, uniq) on .session.txt files to
+identify patterns, extract learnings, and autonomously improve the agent.
 
 ## CRITICAL INSTRUCTIONS
 
@@ -680,24 +681,27 @@ Your role is ANALYSIS and RECOMMENDATIONS only, but you MUST save your analysis 
     kwargs["tools"] = tools
 
     # Remove name and model from kwargs to avoid conflicts
-    agent_name = kwargs.pop("name", "meta_improve_agent")
+    agent_name = kwargs.pop("name", "meta_improve_text_agent")
     agent_model = kwargs.pop("model", get_openspec_model())
 
     super().__init__(
       name=agent_name,
       model=agent_model,
       instruction=instruction,
-      description="Meta-agent that analyzes and improves apply_agent through session analysis",
+      description=(
+        "Meta-agent that analyzes and improves apply_agent through "
+        "text-based session analysis"
+      ),
       output_schema=SessionAnalysis,
       **kwargs,
     )
 
 
-# Create the meta improve agent instance for ADK discovery
-meta_improve_agent = MetaImproveAgent(
-  name="meta_improve_agent",
+# Create the meta improve text agent instance for ADK discovery
+meta_improve_text_agent = MetaImproveTextAgent(
+  name="meta_improve_text_agent",
   model=get_openspec_model()
 )
 
 # Alias for ADK discovery conventions
-root_agent = meta_improve_agent
+root_agent = meta_improve_text_agent
