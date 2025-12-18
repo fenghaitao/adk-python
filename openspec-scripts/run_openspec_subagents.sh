@@ -130,12 +130,12 @@ WORKDIR="$(pwd)"
 
 echo -e "${BLUE}Working directory: $WORKDIR${NC}"
 
-# Copy openspec-memories folder to workdir if it exists
+# Symlink openspec-memories folder to workdir if it exists
 MEMORIES_SRC="$SCRIPT_DIR/../openspec-memories"
 if [[ -d "$MEMORIES_SRC" ]]; then
-  echo -e "${BLUE}📂 Copying openspec-memories to workdir...${NC}"
-  cp -r "$MEMORIES_SRC" "$WORKDIR/"
-  echo -e "${GREEN}✅ openspec-memories copied to $WORKDIR/openspec-memories${NC}"
+  echo -e "${BLUE}📂 Symlinking openspec-memories to workdir...${NC}"
+  ln -sf "$MEMORIES_SRC" "$WORKDIR/openspec-memories"
+  echo -e "${GREEN}✅ openspec-memories symlinked to $WORKDIR/openspec-memories${NC}"
 else
   echo -e "${YELLOW}⚠️  openspec-memories folder not found at $MEMORIES_SRC${NC}"
 fi
@@ -154,6 +154,38 @@ import sys, os
 sys.path.insert(0, '$SAMPLES_DIR')
 from $import_path import root_agent
 EOF
+}
+
+prepare_apply_agent_dir() {
+  local target_dir="$1"
+  mkdir -p "$target_dir"
+  
+  # Symlink apply_agent_instruction.md from source to target directory
+  local instruction_src="$SCRIPT_DIR/../contributing/samples/openspec_integration/apply_agent_instruction.md"
+  if [[ -f "$instruction_src" ]]; then
+    ln -sf "$instruction_src" "$target_dir/apply_agent_instruction.md"
+    echo -e "${GREEN}✅ Symlinked apply_agent_instruction.md to $target_dir${NC}"
+  else
+    echo -e "${YELLOW}⚠️  apply_agent_instruction.md not found at $instruction_src${NC}"
+  fi
+  
+  # Create agent.py that reads instruction from markdown file``
+  cat > "$target_dir/agent.py" <<'EOF'
+import sys, os
+sys.path.insert(0, '$SAMPLES_DIR')
+from openspec_integration.apply_agent import ApplyAgent, get_openspec_model
+
+# Read instruction from apply_agent_instruction.md
+instruction_path = os.path.join(os.path.dirname(__file__), "apply_agent_instruction.md")
+with open(instruction_path, "r") as f:
+    instruction = f.read()
+
+root_agent = ApplyAgent(name="apply_agent",
+                        model=get_openspec_model(),
+                        instruction=instruction)
+EOF
+  # Replace $SAMPLES_DIR placeholder with actual value
+  sed -i "s|\$SAMPLES_DIR|$SAMPLES_DIR|g" "$target_dir/agent.py"
 }
 
 # Validate agent type
@@ -239,7 +271,7 @@ fi
 # Run /apply if requested
 if [[ "$RUN_APPLY" == true ]]; then
   echo -e "${BLUE}🔧 Running /apply for ${CHANGE_ID}...${NC}"
-  prepare_agent_dir "$APPLY_DIR" "openspec_integration.apply_agent"
+  prepare_apply_agent_dir "$APPLY_DIR"
   
   # Build ADK command with session options
   ADK_APPLY_CMD="$ADK_BIN run $APPLY_DIR"

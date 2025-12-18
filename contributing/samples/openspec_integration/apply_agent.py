@@ -267,7 +267,7 @@ run_simics_test(project_path=project_path, module="<device-name>")
     super().__init__(
       name=agent_name,
       model=agent_model,
-      instruction=instruction,
+      #instruction=instruction,
       description="Agent specialized for executing OpenSpec Apply changes for Simics devices",
       output_schema=ApplyResult,
       **kwargs,
