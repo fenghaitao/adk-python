@@ -1,0 +1,937 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""JSON analysis tools for meta_improve_json_agent.
+
+This module provides Python-based tools for analyzing session JSON files
+without using bash commands.
+"""
+
+from __future__ import annotations
+
+import json
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from google.adk.tools import BaseTool
+from google.adk.tools.base_toolset import BaseToolset
+from google.adk.tools.tool_context import ToolContext
+from pydantic import BaseModel, Field
+
+
+class SessionMetrics(BaseModel):
+  """Metrics extracted from a session."""
+  session_file: str
+  start_time: str
+  end_time: str
+  duration_minutes: float
+  total_events: int
+  build_attempts: int
+  build_failures: int
+  test_runs: int
+  test_failures: int
+  tool_calls: Dict[str, int]
+
+
+class ErrorPattern(BaseModel):
+  """An error pattern found in the session."""
+  error_type: str
+  count: int
+  examples: List[str]
+
+
+class JsonSessionMetricsTool(BaseTool):
+  """Extract metrics from a JSON session file."""
+
+  def __init__(self):
+    super().__init__(
+      name="extract_session_metrics",
+      description=(
+        "Extract comprehensive metrics from a session JSON file including "
+        "build attempts, test runs, duration, and tool usage statistics. "
+        "Returns structured data about the session execution."
+      ),
+    )
+
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="extract_session_metrics",
+        description=(
+          "Extract comprehensive metrics from a session JSON file including "
+          "build attempts, test runs, duration, and tool usage statistics. "
+          "Returns structured data about the session execution."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to analyze"
+            )
+          },
+          required=["session_file"]
+        )
+      )
+    except ImportError:
+      return None
+
+  async def run_async(
+    self,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
+  ) -> Dict[str, Any]:
+    """Extract metrics from session JSON file."""
+    session_file = args.get("session_file")
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    
+    try:
+      file_path = Path(session_file)
+      if not file_path.exists():
+        return {
+          "success": False,
+          "error": f"Session file not found: {session_file}"
+        }
+
+      with open(file_path, 'r', encoding='utf-8') as f:
+        session_data = json.load(f)
+
+      events = session_data.get('events', [])
+
+      # Extract timestamps (support ISO strings or epoch floats)
+      start_ts = None
+      end_ts = None
+      for event in events:
+        ts = event.get('timestamp')
+        if ts is None:
+          continue
+        # Normalize to float epoch seconds
+        if isinstance(ts, (int, float)):
+          cur = float(ts)
+        else:
+          # Expect ISO string
+          try:
+            cur = datetime.fromisoformat(str(ts).replace('Z', '+00:00')).timestamp()
+          except Exception:
+            continue
+        if start_ts is None:
+          start_ts = cur
+        end_ts = cur
+
+      # Calculate duration
+      duration_minutes = 0.0
+      if start_ts is not None and end_ts is not None and end_ts >= start_ts:
+        duration_minutes = round((end_ts - start_ts) / 60.0, 1)
+
+      # Count tool calls
+      tool_calls = Counter()
+      build_attempts = 0
+      build_failures = 0
+      test_runs = 0
+      test_failures = 0
+
+      # Support two schemas:
+      # 1) ADK session events with content.parts.function_call/function_response
+      # 2) Generic tool_call/tool_result events used in some runners
+      for event in events:
+        # Schema 2: generic tool_call/tool_result
+        event_type = event.get('type')
+        if event_type == 'tool_call':
+          tool_name = event.get('tool_name', 'unknown')
+          tool_calls[tool_name] += 1
+          if tool_name == 'build_simics_project':
+            build_attempts += 1
+          elif tool_name == 'run_simics_test':
+            test_runs += 1
+          continue
+        if event_type == 'tool_result':
+          tool_name = event.get('tool_name', 'unknown')
+          result = event.get('result', {})
+          if tool_name == 'build_simics_project':
+            if isinstance(result, dict):
+              success = result.get('success')
+              # treat missing success as success
+              if success is False:
+                build_failures += 1
+          elif tool_name == 'run_simics_test':
+            if isinstance(result, dict):
+              output = str(result.get('output', ''))
+              if 'failed' in output.lower():
+                test_failures += 1
+          continue
+
+        # Schema 1: check parts
+        content = event.get('content') or {}
+        parts = content.get('parts') if isinstance(content, dict) else None
+        if isinstance(parts, list):
+          for part in parts:
+            # function_call part
+            fc = part.get('function_call') if isinstance(part, dict) else None
+            if isinstance(fc, dict):
+              tool_name = fc.get('name', 'unknown')
+              tool_calls[tool_name] += 1
+              if tool_name == 'build_simics_project':
+                build_attempts += 1
+              elif tool_name == 'run_simics_test':
+                test_runs += 1
+            # function_response part
+            fr = part.get('function_response') if isinstance(part, dict) else None
+            if isinstance(fr, dict):
+              tool_name = fr.get('name', 'unknown')
+              response = fr.get('response', {})
+              if tool_name == 'build_simics_project':
+                if isinstance(response, dict):
+                  # failure if explicit success False or non-zero return_code
+                  success = response.get('success')
+                  return_code = response.get('return_code')
+                  if success is False or (isinstance(return_code, int) and return_code != 0):
+                    build_failures += 1
+              elif tool_name == 'run_simics_test':
+                if isinstance(response, dict):
+                  output = str(response.get('output', ''))
+                  stderr = str(response.get('stderr', ''))
+                  if 'failed' in output.lower() or 'failed' in stderr.lower():
+                    test_failures += 1
+
+      # Build start/end time strings
+      def _format_time(ts: Optional[float]) -> str:
+        if ts is None:
+          return 'unknown'
+        try:
+          return datetime.fromtimestamp(ts).isoformat()
+        except Exception:
+          return 'unknown'
+
+      metrics = SessionMetrics(
+        session_file=session_file,
+        start_time=_format_time(start_ts),
+        end_time=_format_time(end_ts),
+        duration_minutes=duration_minutes,
+        total_events=len(events),
+        build_attempts=build_attempts,
+        build_failures=build_failures,
+        test_runs=test_runs,
+        test_failures=test_failures,
+        tool_calls=dict(tool_calls)
+      )
+
+      return {
+        "success": True,
+        "metrics": metrics.model_dump()
+      }
+
+    except json.JSONDecodeError as e:
+      return {
+        "success": False,
+        "error": f"Failed to parse JSON: {str(e)}"
+      }
+    except Exception as e:
+      return {
+        "success": False,
+        "error": f"Error extracting metrics: {str(e)}"
+      }
+
+
+class JsonErrorPatternTool(BaseTool):
+  """Extract error patterns from a JSON session file."""
+
+  def __init__(self):
+    super().__init__(
+      name="extract_error_patterns",
+      description=(
+        "Extract and analyze error patterns from a session JSON file. "
+        "Identifies compilation errors, test failures, and other error types "
+        "with their frequencies and examples."
+      ),
+    )
+
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="extract_error_patterns",
+        description=(
+          "Extract and analyze error patterns from a session JSON file. "
+          "Identifies compilation errors, test failures, and other error types "
+          "with their frequencies and examples."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to analyze"
+            ),
+            "max_examples": types.Schema(
+              type=types.Type.INTEGER,
+              description="Maximum number of examples to include per error type (default: 3)"
+            )
+          },
+          required=["session_file"]
+        )
+      )
+    except ImportError:
+      return None
+
+  async def run_async(
+    self,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
+  ) -> Dict[str, Any]:
+    """Extract error patterns from session JSON file."""
+    session_file = args.get("session_file")
+    max_examples = args.get("max_examples", 3)
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    
+    try:
+      file_path = Path(session_file)
+      if not file_path.exists():
+        return {
+          "success": False,
+          "error": f"Session file not found: {session_file}"
+        }
+
+      with open(file_path, 'r', encoding='utf-8') as f:
+        session_data = json.load(f)
+
+      events = session_data.get('events', [])
+
+      # Collect errors by type
+      error_patterns = {}
+
+      for event in events:
+        event_type = event.get('type')
+
+        # Schema 2: generic tool_result with result payload
+        if event_type == 'tool_result':
+          tool_name = event.get('tool_name', 'unknown')
+          result = event.get('result', {})
+
+          # Extract errors from build results
+          if tool_name == 'build_simics_project':
+            if isinstance(result, dict):
+              error_msg = result.get('error', '')
+              output = result.get('output', '')
+              # Parse compilation errors
+              error_text = error_msg or output
+              if error_text:
+                self._extract_compilation_errors(
+                  error_text,
+                  error_patterns,
+                  max_examples
+                )
+
+          # Extract errors from test results
+          elif tool_name == 'run_simics_test':
+            if isinstance(result, dict):
+              output = str(result.get('output', ''))
+              if 'failed' in output.lower():
+                error_type = 'test_failure'
+                if error_type not in error_patterns:
+                  error_patterns[error_type] = {
+                    'count': 0,
+                    'examples': []
+                  }
+                error_patterns[error_type]['count'] += 1
+                if len(error_patterns[error_type]['examples']) < max_examples:
+                  # Extract test name
+                  for line in output.split('\n'):
+                    if 'failed' in line.lower():
+                      error_patterns[error_type]['examples'].append(
+                        line.strip()
+                      )
+                      break
+          continue
+
+        # Schema 1: ADK events with parts.function_response
+        content = event.get('content') or {}
+        parts = content.get('parts') if isinstance(content, dict) else None
+        if isinstance(parts, list):
+          for part in parts:
+            fr = part.get('function_response') if isinstance(part, dict) else None
+            if not isinstance(fr, dict):
+              continue
+            tool_name = fr.get('name', 'unknown')
+            response = fr.get('response', {})
+            if not isinstance(response, dict):
+              continue
+
+            # Generic error fields
+            msg = str(response.get('error', '') or response.get('stderr', '') or '')
+            stdout = str(response.get('stdout', ''))
+            return_code = response.get('return_code')
+
+            # Classify bash_command failures
+            if tool_name == 'bash_command':
+              if isinstance(return_code, int) and return_code != 0:
+                error_type = 'command_error'
+                if error_type not in error_patterns:
+                  error_patterns[error_type] = {'count': 0, 'examples': []}
+                error_patterns[error_type]['count'] += 1
+                example = (msg or stdout or '').strip()
+                if example and len(error_patterns[error_type]['examples']) < max_examples:
+                  error_patterns[error_type]['examples'].append(example.split('\n')[0])
+
+            # Classify read_file errors (e.g., File not found)
+            if tool_name == 'read_file' and response.get('error'):
+              error_type = 'file_not_found'
+              if error_type not in error_patterns:
+                error_patterns[error_type] = {'count': 0, 'examples': []}
+              error_patterns[error_type]['count'] += 1
+              example = str(response.get('error', '')).strip()
+              if example and len(error_patterns[error_type]['examples']) < max_examples:
+                error_patterns[error_type]['examples'].append(example)
+
+            # Heuristic: parse compilation-like errors from outputs
+            if tool_name == 'build_simics_project':
+              error_text = msg or stdout
+              if error_text:
+                self._extract_compilation_errors(
+                  error_text,
+                  error_patterns,
+                  max_examples
+                )
+
+      # Convert to list format
+      patterns = []
+      for error_type, data in error_patterns.items():
+        patterns.append(ErrorPattern(
+          error_type=error_type,
+          count=data['count'],
+          examples=data['examples'][:max_examples]
+        ))
+
+      # Sort by count (most frequent first)
+      patterns.sort(key=lambda x: x.count, reverse=True)
+
+      return {
+        "success": True,
+        "error_patterns": [p.model_dump() for p in patterns],
+        "total_error_types": len(patterns),
+        "total_errors": sum(p.count for p in patterns)
+      }
+
+    except json.JSONDecodeError as e:
+      return {
+        "success": False,
+        "error": f"Failed to parse JSON: {str(e)}"
+      }
+    except Exception as e:
+      return {
+        "success": False,
+        "error": f"Error extracting error patterns: {str(e)}"
+      }
+
+  def _extract_compilation_errors(
+    self,
+    error_text: str,
+    error_patterns: Dict,
+    max_examples: int
+  ):
+    """Extract compilation error patterns from error text."""
+    lines = error_text.split('\n')
+    
+    for line in lines:
+      if 'error:' in line.lower():
+        # Extract error type
+        if 'unknown identifier' in line:
+          error_type = 'unknown_identifier'
+        elif 'unknown template' in line:
+          error_type = 'unknown_template'
+        elif 'name collision' in line:
+          error_type = 'name_collision'
+        elif 'non-boolean condition' in line:
+          error_type = 'non_boolean_condition'
+        elif 'type mismatch' in line:
+          error_type = 'type_mismatch'
+        else:
+          error_type = 'other_compilation_error'
+        
+        if error_type not in error_patterns:
+          error_patterns[error_type] = {
+            'count': 0,
+            'examples': []
+          }
+        
+        error_patterns[error_type]['count'] += 1
+        if len(error_patterns[error_type]['examples']) < max_examples:
+          error_patterns[error_type]['examples'].append(line.strip())
+
+
+class JsonSessionQueryTool(BaseTool):
+  """Query specific information from a JSON session file."""
+
+  def __init__(self):
+    super().__init__(
+      name="query_session_data",
+      description=(
+        "Query specific information from a session JSON file using JSONPath-like "
+        "queries. Can extract tool calls, agent messages, timestamps, and other "
+        "structured data from the session."
+      ),
+    )
+
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="query_session_data",
+        description=(
+          "Query specific information from a session JSON file using JSONPath-like "
+          "queries. Can extract tool calls, agent messages, timestamps, and other "
+          "structured data from the session."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to query"
+            ),
+            "query_type": types.Schema(
+              type=types.Type.STRING,
+              description=(
+                "Type of query: 'tool_calls', 'agent_messages', 'user_messages', "
+                "'tool_results', 'timestamps', 'event_count'"
+              )
+            ),
+            "filter_tool": types.Schema(
+              type=types.Type.STRING,
+              description="Filter by specific tool name (for tool_calls/tool_results)"
+            ),
+            "limit": types.Schema(
+              type=types.Type.INTEGER,
+              description="Maximum number of results to return (default: 10)"
+            )
+          },
+          required=["session_file", "query_type"]
+        )
+      )
+    except ImportError:
+      return None
+
+  async def run_async(
+    self,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
+  ) -> Dict[str, Any]:
+    """Query session JSON file."""
+    session_file = args.get("session_file")
+    query_type = args.get("query_type")
+    filter_tool = args.get("filter_tool")
+    limit = args.get("limit", 10)
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    if not query_type:
+      return {"success": False, "error": "query_type is required"}
+    
+    try:
+      file_path = Path(session_file)
+      if not file_path.exists():
+        return {
+          "success": False,
+          "error": f"Session file not found: {session_file}"
+        }
+
+      with open(file_path, 'r', encoding='utf-8') as f:
+        session_data = json.load(f)
+
+      events = session_data.get('events', [])
+      results = []
+
+      if query_type == 'tool_calls':
+        for event in events:
+          if event.get('type') == 'tool_call':
+            tool_name = event.get('tool_name')
+            if not filter_tool or tool_name == filter_tool:
+              results.append({
+                'tool_name': tool_name,
+                'timestamp': event.get('timestamp'),
+                'arguments': event.get('arguments', {})
+              })
+              if len(results) >= limit:
+                break
+
+      elif query_type == 'tool_results':
+        for event in events:
+          if event.get('type') == 'tool_result':
+            tool_name = event.get('tool_name')
+            if not filter_tool or tool_name == filter_tool:
+              results.append({
+                'tool_name': tool_name,
+                'timestamp': event.get('timestamp'),
+                'result': event.get('result', {})
+              })
+              if len(results) >= limit:
+                break
+
+      elif query_type == 'agent_messages':
+        for event in events:
+          if event.get('type') == 'agent_message':
+            results.append({
+              'timestamp': event.get('timestamp'),
+              'content': event.get('content', '')
+            })
+            if len(results) >= limit:
+              break
+
+      elif query_type == 'user_messages':
+        for event in events:
+          if event.get('type') == 'user_message':
+            results.append({
+              'timestamp': event.get('timestamp'),
+              'content': event.get('content', '')
+            })
+            if len(results) >= limit:
+              break
+
+      elif query_type == 'timestamps':
+        for event in events[:limit]:
+          results.append({
+            'type': event.get('type'),
+            'timestamp': event.get('timestamp')
+          })
+
+      elif query_type == 'event_count':
+        event_types = Counter(event.get('type') for event in events)
+        results = [
+          {'event_type': k, 'count': v}
+          for k, v in event_types.most_common(limit)
+        ]
+
+      return {
+        "success": True,
+        "query_type": query_type,
+        "filter_tool": filter_tool,
+        "results": results,
+        "result_count": len(results),
+        "total_events": len(events)
+      }
+
+    except json.JSONDecodeError as e:
+      return {
+        "success": False,
+        "error": f"Failed to parse JSON: {str(e)}"
+      }
+    except Exception as e:
+      return {
+        "success": False,
+        "error": f"Error querying session: {str(e)}"
+      }
+
+
+
+class JsonAnalysisToolset(BaseToolset):
+  """Toolset for JSON session analysis operations."""
+
+  def __init__(self):
+    super().__init__()
+    self.name = "json_analysis_toolset"
+    self._tools = [
+      JsonSessionMetricsTool(),
+      JsonErrorPatternTool(),
+      JsonSessionQueryTool(),
+      JsonBuildErrorExtractorTool(),
+    ]
+
+  async def get_tools(self, readonly_context=None) -> list:
+    """Return the list of tools in this toolset."""
+    return self._tools
+
+
+def create_json_analysis_toolset():
+  """Create a toolset for JSON session analysis.
+
+  Returns:
+    JsonAnalysisToolset: Configured toolset with JSON analysis tools
+  """
+  return JsonAnalysisToolset()
+
+
+
+class JsonBuildErrorExtractorTool(BaseTool):
+  """Extract detailed build error messages and fix attempts from session JSON."""
+
+  def __init__(self):
+    super().__init__(
+      name="extract_build_errors_detailed",
+      description=(
+        "Extract detailed build error messages with individual error parsing, "
+        "agent reasoning, fix attempts, and outcomes. Returns structured data "
+        "about each error type, what fixes were tried, and which ones worked."
+      ),
+    )
+
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="extract_build_errors_detailed",
+        description=(
+          "Extract detailed build error messages with individual error parsing, "
+          "agent reasoning, fix attempts, and outcomes. Returns structured data "
+          "about each error type, what fixes were tried, and which ones worked."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to analyze"
+            )
+          },
+          required=["session_file"]
+        )
+      )
+    except ImportError:
+      return None
+
+  async def run_async(
+    self,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
+  ) -> Dict[str, Any]:
+    """Extract detailed build errors with fix tracking from session JSON."""
+    session_file = args.get("session_file")
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    
+    try:
+      file_path = Path(session_file)
+      if not file_path.exists():
+        return {
+          "success": False,
+          "error": f"Session file not found: {session_file}"
+        }
+
+      with open(file_path, 'r', encoding='utf-8') as f:
+        session_data = json.load(f)
+
+      events = session_data.get('events', [])
+      
+      # Track build attempts with their errors and subsequent fixes
+      build_attempts = []
+      current_build_errors = None
+      agent_reasoning = []
+      
+      for i, event in enumerate(events):
+        content = event.get('content', {})
+        if not isinstance(content, dict):
+          continue
+          
+        parts = content.get('parts', [])
+        if not isinstance(parts, list):
+          continue
+        
+        # Extract agent reasoning (text parts from model role)
+        if event.get('author') == 'apply_agent' or content.get('role') == 'model':
+          for part in parts:
+            if isinstance(part, dict) and 'text' in part:
+              text = part['text'].strip()
+              if text and len(text) > 20:  # Skip very short messages
+                agent_reasoning.append({
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'text': text[:500]  # Limit length
+                })
+        
+        # Extract tool results
+        for part in parts:
+          if not isinstance(part, dict):
+            continue
+            
+          # Check for function_response (tool result)
+          fr = part.get('function_response')
+          if not fr:
+            continue
+          
+          tool_name = fr.get('name')
+          response = fr.get('response', {})
+          
+          # Extract build_simics_project errors
+          if tool_name == 'build_simics_project':
+            if isinstance(response, dict):
+              success = response.get('success')
+              error_msg = response.get('error', '')
+              
+              if success is False and error_msg:
+                # Parse individual errors from the error message
+                parsed_errors = self._parse_dml_errors(error_msg)
+                
+                build_attempt = {
+                  'attempt_number': len(build_attempts) + 1,
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'success': False,
+                  'total_errors': len(parsed_errors),
+                  'error_types': {},
+                  'parsed_errors': parsed_errors,
+                  'raw_error': error_msg[:1000],  # First 1000 chars
+                  'agent_reasoning_before': agent_reasoning[-3:] if len(agent_reasoning) >= 3 else agent_reasoning
+                }
+                
+                # Group errors by type
+                for err in parsed_errors:
+                  err_type = err['error_type']
+                  if err_type not in build_attempt['error_types']:
+                    build_attempt['error_types'][err_type] = {
+                      'count': 0,
+                      'examples': []
+                    }
+                  build_attempt['error_types'][err_type]['count'] += 1
+                  if len(build_attempt['error_types'][err_type]['examples']) < 2:
+                    build_attempt['error_types'][err_type]['examples'].append(err['message'])
+                
+                build_attempts.append(build_attempt)
+                current_build_errors = parsed_errors
+                agent_reasoning = []  # Reset for next cycle
+              
+              elif success is True or success is None:
+                # Successful build
+                build_attempt = {
+                  'attempt_number': len(build_attempts) + 1,
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'success': True,
+                  'total_errors': 0,
+                  'error_types': {},
+                  'parsed_errors': [],
+                  'agent_reasoning_before': agent_reasoning[-2:] if len(agent_reasoning) >= 2 else agent_reasoning
+                }
+                build_attempts.append(build_attempt)
+                agent_reasoning = []
+          
+          # Extract test errors
+          elif tool_name == 'run_simics_test':
+            if isinstance(response, dict):
+              output = str(response.get('output', ''))
+              if 'failed' in output.lower() or 'error' in output.lower():
+                # This is a test failure, not a build error
+                # Could add test failure tracking here if needed
+                pass
+
+      # Analyze fix patterns
+      fix_analysis = self._analyze_fix_patterns(build_attempts)
+
+      return {
+        "success": True,
+        "total_build_attempts": len(build_attempts),
+        "failed_builds": sum(1 for b in build_attempts if not b['success']),
+        "successful_builds": sum(1 for b in build_attempts if b['success']),
+        "build_attempts": build_attempts,
+        "fix_analysis": fix_analysis,
+        "session_file": session_file
+      }
+
+    except json.JSONDecodeError as e:
+      return {
+        "success": False,
+        "error": f"Failed to parse JSON: {str(e)}"
+      }
+    except Exception as e:
+      return {
+        "success": False,
+        "error": f"Error extracting build errors: {str(e)}"
+      }
+
+  def _parse_dml_errors(self, error_text: str) -> List[Dict[str, str]]:
+    """Parse DML compiler error messages into structured format."""
+    errors = []
+    lines = error_text.split('\\n')
+    
+    for line in lines:
+      if 'error:' in line.lower():
+        # Extract file, line number, and error message
+        parts = line.split('error:', 1)
+        if len(parts) == 2:
+          location = parts[0].strip()
+          message = parts[1].strip()
+          
+          # Classify error type
+          error_type = 'other_error'
+          if 'unknown template' in message:
+            error_type = 'unknown_template'
+          elif 'unknown identifier' in message:
+            error_type = 'unknown_identifier'
+          elif 'name collision' in message:
+            error_type = 'name_collision'
+          elif 'non-boolean condition' in message:
+            error_type = 'non_boolean_condition'
+          elif 'type mismatch' in message:
+            error_type = 'type_mismatch'
+          elif 'conflicting definition' in message:
+            error_type = 'conflicting_definition'
+          
+          errors.append({
+            'location': location,
+            'message': message,
+            'error_type': error_type,
+            'full_line': line
+          })
+    
+    return errors
+
+  def _analyze_fix_patterns(self, build_attempts: List[Dict]) -> Dict:
+    """Analyze what errors were fixed and how."""
+    if len(build_attempts) < 2:
+      return {
+        'total_fix_cycles': 0,
+        'errors_fixed': [],
+        'errors_persisted': []
+      }
+    
+    fix_cycles = []
+    
+    for i in range(len(build_attempts) - 1):
+      current = build_attempts[i]
+      next_attempt = build_attempts[i + 1]
+      
+      if not current['success']:
+        current_error_types = set(current['error_types'].keys())
+        next_error_types = set(next_attempt['error_types'].keys()) if not next_attempt['success'] else set()
+        
+        fixed_errors = current_error_types - next_error_types
+        persisted_errors = current_error_types & next_error_types
+        new_errors = next_error_types - current_error_types
+        
+        fix_cycle = {
+          'from_attempt': current['attempt_number'],
+          'to_attempt': next_attempt['attempt_number'],
+          'fixed_error_types': list(fixed_errors),
+          'persisted_error_types': list(persisted_errors),
+          'new_error_types': list(new_errors),
+          'build_succeeded': next_attempt['success']
+        }
+        fix_cycles.append(fix_cycle)
+    
+    return {
+      'total_fix_cycles': len(fix_cycles),
+      'fix_cycles': fix_cycles
+    }

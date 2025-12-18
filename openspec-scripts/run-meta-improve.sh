@@ -3,9 +3,13 @@ set -euo pipefail
 
 # Run only the Meta-Improvement Agent on a given OpenSpec project
 #
-# This script runs the openspec_integration.meta_improve_agent using ADK and
-# analyzes the apply agent session logs and context to generate improvement
-# insights and optional memory files.
+# This script runs the meta improvement agent using ADK and analyzes the
+# apply agent session logs and context to generate improvement insights
+# and optional memory files.
+#
+# Supports two agent variants:
+#   - meta_improve_text_agent (default): Uses text analysis tools on .session.txt files
+#   - meta_improve_json_agent: Uses Python JSON tools on .session.json files
 #
 # Usage examples:
 #   ./run_meta_improve.sh \
@@ -13,6 +17,11 @@ set -euo pipefail
 #       --change-id "123-implement-wdt" \
 #       --model github_copilot/gpt-5-mini \
 #       --save-session
+#
+#   # Use JSON-based agent
+#   ./run_meta_improve.sh \
+#       --workdir adk_openspec_project \
+#       --agent json
 #
 
 # Source helpers and config
@@ -46,6 +55,7 @@ MODEL="${OPENSPEC_MODEL:-iflow/qwen3-coder-plus}"
 SAVE_SESSION=true
 WORKDIR=""
 CHANGE_ID="meta_improve"
+AGENT_TYPE="text"  # Options: "text" (default) or "json"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -56,10 +66,35 @@ while [[ $# -gt 0 ]]; do
       MODEL="$2"; shift 2;;
     --workdir)
       WORKDIR="$2"; shift 2;;
+    --agent)
+      AGENT_TYPE="$2"; shift 2;;
     --save-session)
       SAVE_SESSION=true; shift;;
     --help|-h)
-      echo "Usage: $0 --workdir <openspec_project_dir> [--change-id ID] [--model MODEL] [--save-session]"; exit 0;;
+      cat <<HELP
+Usage: $0 --workdir <openspec_project_dir> [OPTIONS]
+
+Options:
+  --workdir DIR         Working directory (required)
+  --change-id ID        Change identifier (default: meta_improve)
+  --model MODEL         Model to use (default: iflow/qwen3-coder-plus)
+  --agent TYPE          Agent type: text or json (default: text)
+                        - text: Uses text analysis tools on .session.txt files (production)
+                        - json: Uses Python JSON tools on .session.json files (experimental)
+  --save-session        Save session logs (default: true)
+  --help, -h            Show this help message
+
+Examples:
+  # Use default text-based agent
+  $0 --workdir adk_openspec_project
+
+  # Use JSON-based agent (experimental)
+  $0 --workdir adk_openspec_project --agent json
+
+  # Specify model and change ID
+  $0 --workdir adk_openspec_project --model github_copilot/gpt-5-mini --change-id wdt-123
+HELP
+      exit 0;;
     *)
       echo "Unknown argument: $1"; exit 1;;
   esac
@@ -108,9 +143,28 @@ if [[ ! -d "openspec-memories" ]]; then
   echo -e "${YELLOW}   The agent will work without memory context${NC}"
 fi
 
+# Validate agent type and set import path
+case "$AGENT_TYPE" in
+  text)
+    AGENT_IMPORT="openspec_integration.meta_improve_text_agent"
+    AGENT_NAME="meta_improve_text_agent (text-based)"
+    ;;
+  json)
+    AGENT_IMPORT="openspec_integration.meta_improve_json_agent"
+    AGENT_NAME="meta_improve_json_agent (JSON-based)"
+    ;;
+  *)
+    echo -e "${RED}❌ Invalid agent type: $AGENT_TYPE${NC}"
+    echo -e "${RED}   Valid options: text, json${NC}"
+    exit 1
+    ;;
+esac
+
+echo -e "${BLUE}Using agent: $AGENT_NAME${NC}"
+
 # Prepare meta improve agent directory under workdir
 META_IMPROVE_DIR="$WORKDIR/adk_openspec_meta_improvement_agent"
-prepare_agent_dir "$META_IMPROVE_DIR" "openspec_integration.meta_improve_agent"
+prepare_agent_dir "$META_IMPROVE_DIR" "$AGENT_IMPORT"
 
 # Build ADK command
 ADK_META_CMD="$ADK_BIN run $META_IMPROVE_DIR"
