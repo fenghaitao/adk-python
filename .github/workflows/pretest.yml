@@ -24,6 +24,7 @@ jobs:
 
       - name: set up env
         run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
           ./setup_env.sh
 
       - name: run basic test
