@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from google.adk.tools import BaseTool
+from google.adk.tools.base_toolset import BaseToolset
 from google.adk.tools.tool_context import ToolContext
 from pydantic import BaseModel, Field
 
@@ -568,3 +569,30 @@ class JsonSessionQueryTool(BaseTool):
         "success": False,
         "error": f"Error querying session: {str(e)}"
       }
+
+
+
+class JsonAnalysisToolset(BaseToolset):
+  """Toolset for JSON session analysis operations."""
+
+  def __init__(self):
+    super().__init__()
+    self.name = "json_analysis_toolset"
+    self._tools = [
+      JsonSessionMetricsTool(),
+      JsonErrorPatternTool(),
+      JsonSessionQueryTool(),
+    ]
+
+  async def get_tools(self, readonly_context=None) -> list:
+    """Return the list of tools in this toolset."""
+    return self._tools
+
+
+def create_json_analysis_toolset():
+  """Create a toolset for JSON session analysis.
+
+  Returns:
+    JsonAnalysisToolset: Configured toolset with JSON analysis tools
+  """
+  return JsonAnalysisToolset()

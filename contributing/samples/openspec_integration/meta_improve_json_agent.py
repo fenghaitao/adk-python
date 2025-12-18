@@ -40,18 +40,10 @@ except ImportError:
 
 try:
   from .openspec_tools import create_openspec_toolset
-  from .json_analysis_tools import (
-    JsonSessionMetricsTool,
-    JsonErrorPatternTool,
-    JsonSessionQueryTool,
-  )
+  from .json_analysis_tools import create_json_analysis_toolset
 except ImportError:
   from openspec_tools import create_openspec_toolset
-  from json_analysis_tools import (
-    JsonSessionMetricsTool,
-    JsonErrorPatternTool,
-    JsonSessionQueryTool,
-  )
+  from json_analysis_tools import create_json_analysis_toolset
 
 
 def get_openspec_model():
@@ -403,14 +395,7 @@ read the session JSON file directly with read_file!
     # Tools
     tools = kwargs.get("tools", [])
     tools.append(create_openspec_toolset())
-    
-    # Add JSON analysis tools
-    tools.extend([
-      JsonSessionMetricsTool(),
-      JsonErrorPatternTool(),
-      JsonSessionQueryTool(),
-    ])
-    
+    tools.append(create_json_analysis_toolset())
     kwargs["tools"] = tools
 
     # Remove name and model from kwargs to avoid conflicts
