@@ -101,7 +101,7 @@ to identify patterns, extract learnings, and autonomously improve the agent.
    - time_to_success_minutes: Provide a plain number (e.g., 116.5) NOT strings like "Approximately 116 minutes"
    - Extract these exact numeric values from the session data
 
-4. **Tools you should use**: read_file, list_directory, read_file_range, bash_command (for reading only)
+4. **Tools you should use**: read_file, list_directory, bash_command (for reading only)
 5. **Tools for final report only**: write_file (ONLY to save your final markdown report)
 6. **Tools you should NOT use**: replace_string_in_file, bash_command commands that modify files
 
@@ -115,7 +115,8 @@ Analyze apply_agent session logs to make the agent smarter and more efficient.
 
 You have access to the following context through tools:
 - **adk_openspec_apply_agent/apply_agent_instruction.md** - Current agent instruction and capabilities
-- **adk_openspec_apply_agent/*.session.json** - Session execution logs with all attempts, errors, and fixes
+- **adk_openspec_apply_agent/*.session.txt** - Session execution logs in human-readable text format (PREFERRED)
+- **adk_openspec_apply_agent/*.session.json** - Session execution logs in JSON format (use .txt instead)
 - **openspec-memories/*.md** - Memory documents with existing knowledge and patterns
 
 ## MANDATORY Workflow - Follow Every Step
@@ -127,43 +128,54 @@ You MUST start by reading context files using tools. Do not proceed without comp
 2. Use read_file tool to read "adk_openspec_apply_agent/apply_agent_instruction.md" to understand current agent capabilities
 3. Use list_directory tool on "openspec-memories" to see available memory documents  
 4. Use read_file tool to read 2-3 key memory documents to understand existing knowledge
-5. Find and identify the session JSON file in adk_openspec_apply_agent directory
-6. Use read_file_range tool to read the session JSON file in chunks (start with offset=0, length=65536)
+5. Find and identify the session file in adk_openspec_apply_agent directory (prefer .txt over .json)
 
-**STEP 2: Analyze Session Data (Only After Step 1)**
-After reading context files, analyze the session:
-- Extract all events with timestamps from session JSON
-- Identify: build attempts, errors, fixes, successes
-- Calculate: total time, attempts, success rate
-- Identify recurring error patterns and their frequencies
-- Analyze what the agent did well vs what caused problems
-- Compare against existing memory knowledge to find gaps
+**CRITICAL: Use .session.txt files, NOT .session.json files**
+- Session .txt files are human-readable and easier to analyze
+- Use bash_command with grep, wc, head, tail to extract data
+- The .txt file contains the same information as .json in readable format
+- Analyzing text files with grep prevents confusion from seeing code snippets
 
-**Key Tool Calls to Look For in Session Logs**:
-- **Build Tool**: `build_simics_project` MCP tool calls
-  - Search for: `"tool_name":"build_simics_project"` or `build_simics_project`
-  - Parse build output for compilation errors
-  - Track build success/failure patterns
-  - Count total build attempts
-  
-- **Test Tool**: `run_simics_test` MCP tool calls
-  - Search for: `"tool_name":"run_simics_test"` or `run_simics_test`
-  - Parse test output: "test s-xxx in modules/<device>/test failed"
-  - Track test pass/fail counts and patterns
-  - Identify test exit codes (exit-status 2, etc.)
-  - Count total test run attempts
+**STEP 2: Analyze Session Data Using Text Tools (Only After Step 1)**
+Use bash_command with grep, wc, and other text tools to analyze the .session.txt file:
 
-**Session Log Patterns to Search**:
+**Extract Basic Metrics**:
+```bash
+# Get session duration
+bash_command("grep '👤 \\[user\\]' session.txt | head -1")  # Start time
+bash_command("tail -100 session.txt | grep '🤖' | tail -1")  # End time
+
+# Count build attempts
+bash_command("grep -c 'build_simics_project' session.txt")
+
+# Count test runs
+bash_command("grep -c 'run_simics_test' session.txt")
+
+# Check final status
+bash_command("tail -50 session.txt | grep -E 'success|failed|completed'")
 ```
-# Build results pattern
-📤 build_simics_project → {'content': [{'type': 'text', 'text': '{"success": true/false
 
-# Test results pattern  
-📤 run_simics_test → {'content': [{'type': 'text', 'text': '{"success": true/false
-test s-xxx in modules/<device>/test failed (*** failed (exit-status 2) ***)
-Ran X tests in Y suites
-Failures: X  Timeouts: Y
+**Extract Error Patterns (CRITICAL - Count Actual Errors)**:
+```bash
+# Find compilation errors
+bash_command("grep -i 'error:' session.txt | head -50")
+
+# Count specific error types - extract actual identifiers
+bash_command("grep 'unknown identifier' session.txt | grep -o \"'[A-Z][A-Z0-9_]*'\" | sort | uniq -c | sort -rn")
+
+# Find test failures
+bash_command("grep 'test.*failed' session.txt")
 ```
+
+**CRITICAL**: Extract ACTUAL error messages and identifiers, not just line counts.
+One build failure may contain 12+ individual errors - count each one.
+
+**Key Patterns to Search**:
+- Build attempts: `grep -c "build_simics_project"`
+- Build failures: `grep "build_simics_project.*success.*false"`
+- Test runs: `grep -c "run_simics_test"`
+- Test failures: `grep "test.*failed"`
+- Error types: `grep "error:" | sort | uniq -c`
 
 **STEP 2.5: Best Practices Compliance Analysis (CRITICAL)**
 For each build error fix and test error fix, you MUST analyze:
@@ -474,46 +486,70 @@ Provide structured analysis with:
    - Expected impact
    - Testing approach
 
-## Example Analysis
+## Example Analysis Workflow
+
+**Step-by-Step Analysis Using bash_command**:
+
+```bash
+# Step 1: Get session duration
+bash_command("grep '👤 \\[user\\]' session.txt | head -1")
+# Output: [94m👤 [user] 2025-12-18 07:54:30 UTC[0m
+
+bash_command("tail -100 session.txt | grep '🤖' | tail -1")
+# Output: [92m🤖 [apply_agent] 2025-12-18 08:02:55 UTC (+0.5 seconds)[0m
+# Duration: 8.4 minutes
+
+# Step 2: Count build attempts
+bash_command("grep -c 'build_simics_project' session.txt")
+# Output: 6
+
+# Step 3: Extract error patterns
+bash_command("grep 'error: unknown identifier' session.txt | grep -o \"'[A-Z][A-Z0-9_]*'\" | sort | uniq -c | sort -rn")
+# Output:
+# 1 'WDOGLOAD'
+# 1 'WDOGPERIPHID0'
+# 1 'WDOGPERIPHID1'
+# ... (12 total unique identifiers)
+
+# Step 4: Count test runs
+bash_command("grep -c 'run_simics_test' session.txt")
+# Output: 6
+
+# Step 5: Check test results
+bash_command("grep 'test.*failed' session.txt | head -5")
+# Output: test s-basic-timer in modules/wdt/test failed
+```
+
+## Example Analysis Output
 
 ```
 Session: apply_implement-wdt-initial_20251214_161520.session.txt
 
 Summary:
-- Duration: 10.4 minutes
-- Build attempts: 8 (via `build_simics_project` tool)
-- Test runs: 3 (via `run_simics_test` tool)
-- Fix attempts: 15
-- Success: Yes (eventually)
+- Duration: 8.4 minutes (07:54:30 → 08:02:55 UTC)
+- Build attempts: 6 (1 failed, 5 successful)
+- Test runs: 6 (all failed - implementation incomplete)
+- Final status: Build ✅ | Tests ❌
 
-Build Analysis (build_simics_project tool):
-- Total builds: 8
-- Successful builds: 3
-- Failed builds: 5
-- Common build errors:
-  * "unknown identifier: 'bank'" - 5 occurrences (used 'bank' keyword instead of actual bank name)
-  * "unknown identifier: 'WDOGLOAD'" - 3 occurrences (bare register name at device level)
+Error Pattern Analysis (using grep):
+- Total unique errors: 12 (extracted with grep, not just line count)
+- Error type: "unknown identifier" 
+- Affected identifiers: WDOGLOAD, WDOGPERIPHID0-7, WDOGPCELLID0-3
+- Root cause: Agent referenced registers directly instead of using bank.register pattern
+- Time wasted: ~4 minutes on compilation errors
 
-Test Analysis (run_simics_test tool):
-- Total test runs: 3
-- Tests passed: 5/7
-- Tests failed: 2/7
-- Common test failures:
-  * s-basic-operations: exit-status 2
-  * s-interrupt-operations: exit-status 2
+Test Analysis (using grep):
+- Total test runs: 6
+- All tests failed (implementation incomplete)
+- Test failures: s-basic-timer, s-interrupt-generation, etc.
 
-Top Errors:
-1. "unknown identifier: 'bank'" (5 occurrences)
-   - Cause: Used 'bank' as keyword instead of actual bank name (e.g., WatchdogRegisters)
+Top Error Pattern:
+1. "unknown identifier" for register names (12 occurrences)
+   - Extracted with: grep 'unknown identifier' | grep -o "'[A-Z][A-Z0-9_]*'"
+   - Cause: Used bare register names at device level without bank prefix
    - Best Practice: 07_DML_Register_Access_Scope.md - "Use <bank_name>.REGISTER.val at device level"
-   - Fix: Replace `bank.WDOGLOAD.val` with `WatchdogRegisters.WDOGLOAD.val`
-   - Time: 3.2 minutes total
-
-2. "unknown identifier: 'WDOGLOAD'" (3 occurrences)
-   - Cause: Used bare register name at device level without bank prefix
-   - Best Practice: 07_DML_Register_Access_Scope.md - "At device level, must qualify with bank name"
    - Fix: Replace `WDOGLOAD.val` with `WatchdogRegisters.WDOGLOAD.val`
-   - Time: 2.1 minutes total
+   - Time: ~4 minutes total
 
 Best Practices Compliance Analysis:
 
@@ -597,10 +633,17 @@ Expected Impact:
 You have access to the following tools:
 
 **READ TOOLS (Primary Use)**:
-- read_file - Read file contents
+- read_file - Read file contents (for instruction and memory docs)
 - list_directory - List directory contents
-- read_file_range - Read file in chunks
-- bash_command - For reading commands only (cat, ls, grep, find, head, tail, wc, etc.)
+- bash_command - For analyzing session files (grep, wc, head, tail, sort, uniq, etc.)
+  * Use grep to extract error patterns
+  * Use wc to count occurrences
+  * Use sort | uniq -c to find unique patterns
+  * Use head/tail to get timestamps
+
+**DO NOT USE**:
+- ❌ read_file on .session.json - Too large and causes misinterpretation
+- ❌ Use bash_command with grep instead for session analysis
 
 **WRITE TOOLS (Only for Saving Report)**:
 - write_file - ONLY to save your final analysis report as markdown
