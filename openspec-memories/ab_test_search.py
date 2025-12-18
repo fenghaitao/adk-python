@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
+import csv
 import json
 import subprocess
 import sys
@@ -49,8 +51,48 @@ def compare_queries(queries: List[str]) -> List[Dict[str, Any]]:
   return rows
 
 
+def write_csv(rows: List[Dict[str, Any]], path: Path) -> None:
+  with path.open('w', newline='', encoding='utf-8') as f:
+    w = csv.DictWriter(f, fieldnames=[
+      'query','tfidf_top','bm25_top','tfidf_first_score','bm25_first_score','tfidf_count','bm25_count'
+    ])
+    w.writeheader()
+    for r in rows:
+      w.writerow(r)
+
+
+def write_json(rows: List[Dict[str, Any]], path: Path) -> None:
+  path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def load_queries(path: Path) -> List[str]:
+  lines = path.read_text(encoding='utf-8').splitlines()
+  return [ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith('#')]
+
+
 def main():
-  rows = compare_queries(COMMON_QUERIES)
+  ap = argparse.ArgumentParser(description='A/B compare TF-IDF vs BM25 for common queries')
+  ap.add_argument('--queries', help='Path to a file containing one query per line')
+  ap.add_argument('--csv', help='Write results to CSV at this path')
+  ap.add_argument('--json', dest='json_out', help='Write results to JSON at this path')
+  args = ap.parse_args()
+
+  queries = COMMON_QUERIES
+  if args.queries:
+    qpath = Path(args.queries)
+    if not qpath.exists():
+      print(f"Queries file not found: {qpath}", file=sys.stderr)
+      sys.exit(2)
+    queries = load_queries(qpath)
+
+  rows = compare_queries(queries)
+
+  if args.csv:
+    write_csv(rows, Path(args.csv))
+  if args.json_out:
+    write_json(rows, Path(args.json_out))
+
+  # Always print a compact table to stdout
   print("Query | TF-IDF top | BM25 top | TF-IDF score | BM25 score | TF-IDF n | BM25 n")
   print("------|------------|----------|--------------|------------|----------|--------")
   for r in rows:
