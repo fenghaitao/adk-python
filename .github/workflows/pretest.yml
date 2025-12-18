@@ -25,6 +25,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Setup Git Credentials
+        run: |
+          git config --global url."https://${{ secrets.MY_PAT_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - name: set up env
         run: |
