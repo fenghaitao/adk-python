@@ -138,18 +138,111 @@ After reading context files, analyze the session:
 - Analyze what the agent did well vs what caused problems
 - Compare against existing memory knowledge to find gaps
 
+**Key Tool Calls to Look For in Session Logs**:
+- **Build Tool**: `build_simics_project` MCP tool calls
+  - Search for: `"tool_name":"build_simics_project"` or `build_simics_project`
+  - Parse build output for compilation errors
+  - Track build success/failure patterns
+  - Count total build attempts
+  
+- **Test Tool**: `run_simics_test` MCP tool calls
+  - Search for: `"tool_name":"run_simics_test"` or `run_simics_test`
+  - Parse test output: "test s-xxx in modules/<device>/test failed"
+  - Track test pass/fail counts and patterns
+  - Identify test exit codes (exit-status 2, etc.)
+  - Count total test run attempts
+
+**Session Log Patterns to Search**:
+```
+# Build results pattern
+📤 build_simics_project → {'content': [{'type': 'text', 'text': '{"success": true/false
+
+# Test results pattern  
+📤 run_simics_test → {'content': [{'type': 'text', 'text': '{"success": true/false
+test s-xxx in modules/<device>/test failed (*** failed (exit-status 2) ***)
+Ran X tests in Y suites
+Failures: X  Timeouts: Y
+```
+
+**STEP 2.5: Best Practices Compliance Analysis (CRITICAL)**
+For each build error fix and test error fix, you MUST analyze:
+
+1. **Read Best Practice Documents First**:
+   - Read ALL relevant documents in `openspec-memories/` folder
+   - **IMPORTANT**: There are TWO categories of best practices - DO NOT mix them up:
+   
+   **Category A: DML Best Practices (for DML/C code compilation errors)**:
+   - `00_DML_Best_Practices_Index.md` - Index of all DML best practices
+   - `01_Simics_Modeling_Philosophy.md` - Simics modeling concepts
+   - `02_DML_Anti_Patterns.md` - Common DML mistakes to avoid
+   - `03_DML_Basic_Syntax.md` - DML syntax rules
+   - `04_DML_Timing_Timer_Modeling.md` - Timer and timing patterns
+   - `05_DML_Troubleshooting.md` - DML debugging guide
+   - `06_DML_Common_Patterns.md` - Common DML patterns
+   - `07_DML_Register_Access_Scope.md` - Register access scope rules
+   - `DML_Best_Practices.md` - Comprehensive DML guide
+   
+   **Category B: Test Best Practices (for Python test writing/execution errors)**:
+   - `00_Test_Best_Practices_Index.md` - Index of all test best practices
+   - `01_Test_File_Location_Requirements.md` - Where to put test files
+   - `02_Test_Configuration_Setup.md` - Test configuration setup
+   - `03_Test_Register_Access.md` - How to access registers in tests
+   - `04_Test_Device_Outputs.md` - Testing device outputs
+   - `05_Test_DMA_Memory.md` - DMA and memory testing
+   - `06_Test_Events_Timing.md` - Testing events and timing
+   - `Test_Best_Practices.md` - Comprehensive test guide
+
+2. **Match Error Type to Correct Best Practice Category**:
+   - **Build/Compilation Errors** (from `build_simics_project` tool): Use **DML Best Practices**
+     * Syntax errors, unknown identifiers, type errors → Check DML docs
+     * Register access scope issues → Check `07_DML_Register_Access_Scope.md`
+     * Timer/event issues → Check `04_DML_Timing_Timer_Modeling.md`
+   - **Test Errors** (from `run_simics_test` tool): Use **Test Best Practices**
+     * Test file not found → Check `01_Test_File_Location_Requirements.md`
+     * Register access in Python → Check `03_Test_Register_Access.md`
+     * Test setup issues → Check `02_Test_Configuration_Setup.md`
+
+3. **Compare Agent's Fix Against Best Practices**:
+   - For each fix attempt, check: Did the agent follow the documented best practice?
+   - If YES: Document which best practice was followed
+   - If NO: Analyze WHY the agent did not follow the best practice
+
+3. **Identify Blockers to Following Best Practices**:
+   - Was the best practice document not consulted?
+   - Was the best practice unclear or incomplete?
+   - Was the agent's prompt missing guidance to check best practices?
+   - Was there conflicting information?
+   - Did the agent misinterpret the best practice?
+
+4. **Analyze Root Causes**:
+   - **Prompt Issues**: Is the agent's instruction missing guidance to consult best practices?
+   - **Document Issues**: Are the best practice documents unclear, incomplete, or hard to find?
+   - **RAG Issues**: Did the agent fail to retrieve relevant best practice documents?
+   - **Context Issues**: Did the agent have too much context and miss key information?
+
+5. **Propose Specific Improvements**:
+   - For Agent Prompt: What specific instructions should be added?
+   - For Best Practice Documents: What should be clarified, added, or restructured?
+   - For Workflow: What checks should be mandatory before attempting fixes?
+
 **STEP 3: Provide Comprehensive Analysis and Improvements**
 After completing your analysis, provide a detailed response that includes:
 
 1. **Session Summary**: What the apply agent accomplished and how long it took
 2. **Error Pattern Analysis**: What specific errors occurred repeatedly and why
-3. **Knowledge Gap Analysis**: What the agent should have known but didn't
-4. **Specific Improvement Recommendations**: 
+3. **Best Practices Compliance Analysis** (NEW - REQUIRED):
+   - Which best practices were followed vs. not followed
+   - Specific blockers that prevented following best practices
+   - Gap analysis between documented practices and agent behavior
+4. **Knowledge Gap Analysis**: What the agent should have known but didn't
+5. **Specific Improvement Recommendations**: 
    - New memory documents to create with specific content
    - Updates needed for apply_agent_instruction.md
+   - **Updates needed for best practice documents**
+   - **Prompt improvements to enforce best practice consultation**
    - Better error handling approaches
    - Patterns to remember for future sessions
-5. **Actionable Next Steps**: Concrete steps to implement improvements
+6. **Actionable Next Steps**: Concrete steps to implement improvements
 
 **CRITICAL**: Provide detailed explanations and recommendations in natural language. The set_model_response tool should structure your output, but you must give comprehensive analysis and specific recommendations in your response text.
 
@@ -218,6 +311,50 @@ Generated: YYYY-MM-DD HH:MM:SS
 2. Insight about knowledge gaps
 ...
 
+## Best Practices Compliance Analysis
+
+**IMPORTANT**: There are TWO categories of best practices - analyze separately:
+- **DML Best Practices** (0*_DML_*.md): For DML/C compilation errors from `build_simics_project` tool
+- **Test Best Practices** (0*_Test_*.md): For Python test errors from `run_simics_test` tool
+
+### DML Best Practices Compliance (Build/Compilation Errors)
+
+#### Fix 1: [DML Error Description]
+- **Error Category**: DML Coding Error
+- **Best Practice Document**: `openspec-memories/0*_DML_*.md`
+- **Relevant Best Practice**: Quote the specific DML best practice
+- **Agent's Actual Fix**: What the agent actually did
+- **Compliance Status**: ✅ Followed / ❌ Not Followed / ⚠️ Partially Followed
+- **Blocker Analysis** (if not followed):
+  - Root Cause: Why the agent didn't follow the best practice
+  - Was correct category (DML) consulted: Yes/No
+  - Was guidance clear: Yes/No
+  - Did agent mistakenly use Test docs for DML error: Yes/No
+
+### Test Best Practices Compliance (Python Test Errors)
+
+#### Fix 1: [Test Error Description]
+- **Error Category**: Python Test Error
+- **Best Practice Document**: `openspec-memories/0*_Test_*.md`
+- **Relevant Best Practice**: Quote the specific Test best practice
+- **Agent's Actual Fix**: What the agent actually did
+- **Compliance Status**: ✅ Followed / ❌ Not Followed / ⚠️ Partially Followed
+- **Blocker Analysis** (if not followed):
+  - Root Cause: Why the agent didn't follow the best practice
+  - Was correct category (Test) consulted: Yes/No
+  - Was guidance clear: Yes/No
+  - Did agent mistakenly use DML docs for Test error: Yes/No
+
+### Summary of Best Practice Gaps
+- **DML Best Practices Compliance**: X/Y (Z%)
+- **Test Best Practices Compliance**: X/Y (Z%)
+- **Overall Compliance**: X/Y (Z%)
+- **Category Confusion**: X times agent used wrong category
+- **Top Blockers**:
+  1. Blocker reason 1 (X occurrences)
+  2. Blocker reason 2 (X occurrences)
+  3. Mixed up DML vs Test categories (X occurrences)
+
 ## Improvement Recommendations
 
 ### 1. Memory Document Recommendations
@@ -230,7 +367,26 @@ Generated: YYYY-MM-DD HH:MM:SS
 - **Change**: What to add/modify
 - **Rationale**: Why this helps
 
-### 3. Validation Checks
+### 3. DML Best Practice Document Improvements
+- **Document**: Which DML best practice document needs update
+- **Current Issue**: What is unclear or missing
+- **Proposed Change**: Specific text to add/modify
+- **Expected Benefit**: How this will improve DML error fixing
+
+### 4. Test Best Practice Document Improvements
+- **Document**: Which Test best practice document needs update
+- **Current Issue**: What is unclear or missing
+- **Proposed Change**: Specific text to add/modify
+- **Expected Benefit**: How this will improve Test error fixing
+
+### 5. Agent Prompt Improvements
+- **Current Gap**: What's missing in the agent's prompt
+- **Proposed Addition**: Specific instruction to add
+- **Category Guidance**: How to help agent choose correct category (DML vs Test)
+- **Example**: How the instruction should guide the agent
+- **Expected Benefit**: How this will improve best practice compliance
+
+### 6. Validation Checks
 - **Check**: Description of validation
 - **Implementation**: How to implement
 - **Benefit**: What it prevents
@@ -240,6 +396,7 @@ Generated: YYYY-MM-DD HH:MM:SS
 - **Time Savings**: Estimated X minutes per session
 - **Error Prevention**: X% of errors could be avoided
 - **Success Rate**: Expected improvement
+- **Best Practice Compliance**: Expected improvement from X% to Y%
 
 ## Actionable Next Steps
 1. Priority 1 action
@@ -253,15 +410,26 @@ Analysis report saved to: <FULL_ABSOLUTE_PATH_HERE>
 **FINAL CHECKLIST BEFORE set_model_response**:
 ✅ Did I save the markdown file using write_file? (REQUIRED)
 ✅ Did I report the full absolute path of the saved file? (REQUIRED)
-✅ Only after both ✅ above, call set_model_response
+✅ Did I include Best Practices Compliance Analysis? (REQUIRED)
+✅ Only after all ✅ above, call set_model_response
 
 ## Analysis Focus Areas
 
-### 1. Compilation Errors
-- Parse error messages from build_simics_project failures
+### 1. Compilation Errors (Build Analysis)
+- Parse error messages from build failures
+- **Build Tool**: `build_simics_project` MCP tool calls
+- Search for tool invocations in session logs
 - Extract: file, line, error type, identifier
 - Group by pattern (e.g., "unknown identifier: 'bank'")
 - Track fix attempts and outcomes
+- Check build reset scenarios and recovery patterns
+
+### 2. Test Result Analysis
+- **Test Tool**: `run_simics_test` MCP tool calls
+- Parse test execution results from run_simics_test tool calls
+- Track test pass/fail patterns
+- Identify common test failures and their root causes
+- Analyze test-driven fixes and their effectiveness
 
 ### 2. Fix Strategies
 - What did the agent try?
@@ -312,38 +480,115 @@ Session: apply_implement-wdt-initial_20251214_161520.session.txt
 
 Summary:
 - Duration: 10.4 minutes
-- Build attempts: 8
+- Build attempts: 8 (via `build_simics_project` tool)
+- Test runs: 3 (via `run_simics_test` tool)
 - Fix attempts: 15
 - Success: Yes (eventually)
 
+Build Analysis (build_simics_project tool):
+- Total builds: 8
+- Successful builds: 3
+- Failed builds: 5
+- Common build errors:
+  * "unknown identifier: 'bank'" - 5 occurrences (used 'bank' keyword instead of actual bank name)
+  * "unknown identifier: 'WDOGLOAD'" - 3 occurrences (bare register name at device level)
+
+Test Analysis (run_simics_test tool):
+- Total test runs: 3
+- Tests passed: 5/7
+- Tests failed: 2/7
+- Common test failures:
+  * s-basic-operations: exit-status 2
+  * s-interrupt-operations: exit-status 2
+
 Top Errors:
-1. "unknown identifier: 'bank'" (12 occurrences)
-   - Cause: Wrong scope/context for register access
-   - Fix: Use BankName.RegisterName pattern
+1. "unknown identifier: 'bank'" (5 occurrences)
+   - Cause: Used 'bank' as keyword instead of actual bank name (e.g., WatchdogRegisters)
+   - Best Practice: 07_DML_Register_Access_Scope.md - "Use <bank_name>.REGISTER.val at device level"
+   - Fix: Replace `bank.WDOGLOAD.val` with `WatchdogRegisters.WDOGLOAD.val`
    - Time: 3.2 minutes total
 
-2. "unknown identifier: 'regs'" (8 occurrences)
-   - Cause: DML 1.2 legacy pattern
-   - Fix: Remove regs. prefix
+2. "unknown identifier: 'WDOGLOAD'" (3 occurrences)
+   - Cause: Used bare register name at device level without bank prefix
+   - Best Practice: 07_DML_Register_Access_Scope.md - "At device level, must qualify with bank name"
+   - Fix: Replace `WDOGLOAD.val` with `WatchdogRegisters.WDOGLOAD.val`
    - Time: 2.1 minutes total
 
+Best Practices Compliance Analysis:
+
+## DML Best Practices Compliance (Build Errors)
+- Build Error Fix #1: "unknown identifier: 'bank'"
+  * Category: DML Coding Error (use DML Best Practices)
+  * Best Practice Doc: 07_DML_Register_Access_Scope.md
+  * Relevant Practice: "At device level, use <bank_name>.REGISTER.val (e.g., WatchdogRegisters.WDOGLOAD.val)"
+  * Agent's Fix: Tried "bank.WDOGLOAD.val" first (wrong - 'bank' is a keyword, not a variable)
+  * Compliance: ❌ Not Followed Initially
+  * Blocker: Agent didn't consult 07_DML_Register_Access_Scope.md before fixing
+  * Root Cause: Prompt doesn't instruct to check DML best practices for compilation errors
+
+- Build Error Fix #2: Cycle-accurate timer implementation
+  * Category: DML Coding Error (use DML Best Practices)
+  * Best Practice Doc: 02_DML_Anti_Patterns.md
+  * Relevant Practice: "NEVER model clock signals or update counters every cycle - use lazy evaluation"
+  * Agent's Fix: Initially used `event timer_tick` posting every cycle
+  * Compliance: ❌ Not Followed Initially
+  * Blocker: Agent didn't know about lazy evaluation pattern
+  * Root Cause: Anti-pattern doc not consulted before implementing timer
+
+## Test Best Practices Compliance (Test Errors)
+- Test Error Fix #1: s-basic-operations failed - test file location
+  * Category: Python Test Error (use Test Best Practices)
+  * Best Practice Doc: 01_Test_File_Location_Requirements.md
+  * Relevant Practice: "Tests MUST be in modules/<device>/test/ with s-*.py naming"
+  * Agent's Fix: Created test in correct location
+  * Compliance: ✅ Followed
+  * Note: Agent consulted correct category of best practices
+
+- Test Error Fix #2: Register access failed in test
+  * Category: Python Test Error (use Test Best Practices)  
+  * Best Practice Doc: 03_Test_Register_Access.md
+  * Relevant Practice: "Use regs.REGISTER.read()/write() pattern in Python tests"
+  * Agent's Fix: Used correct `regs.CONTROL.write(0x1)` syntax
+  * Compliance: ✅ Followed
+  * Note: Agent correctly used Test best practices (not DML syntax)
+
+Summary:
+- DML Fixes Following Best Practices: 0/2 (0%)
+- Test Fixes Following Best Practices: 2/2 (100%)
+- Overall Compliance: 2/4 (50%)
+- Top Blockers:
+  1. DML best practice docs not consulted for build errors (2 cases)
+  2. Prompt missing "check DML best practices for compilation errors" instruction
+  3. 02_DML_Anti_Patterns.md has critical info but hard to discover
+
 Improvements:
-1. Add to apply_agent.py:
-   "Before implementing register access, check context:
-    - Device level: Use BankName.RegisterName
-    - Bank level: Use RegisterName directly
-    - Register level: Use this"
+1. Add to apply_agent prompt:
+   "For DML compilation errors, ALWAYS check these docs first:
+    - 07_DML_Register_Access_Scope.md for 'unknown identifier' errors
+    - 02_DML_Anti_Patterns.md for timer/event implementation issues
+    - 03_DML_Basic_Syntax.md for syntax errors"
 
-2. Create memory: 07_DML_Common_Compilation_Errors.md
-   With sections for each error pattern and fix
+2. Update 07_DML_Register_Access_Scope.md:
+   "Add common error messages section mapping errors to fixes:
+    - 'unknown identifier: bank' → Use actual bank name (e.g., WatchdogRegisters)
+    - 'unknown identifier: REGNAME' at device level → Add bank prefix"
 
-3. Add validation:
-   "Search code for 'bank.' or 'regs.' before building"
+3. Add validation to agent workflow:
+   "Before building, grep for 'bank.' pattern - if found, likely wrong syntax"
+
+4. Update 02_DML_Anti_Patterns.md:
+   "Add quick reference at top: 'If implementing timer, READ THIS FIRST'"
+
+5. Improve agent prompt category guidance:
+   "Build errors (build_simics_project tool) → Check 0*_DML_*.md documents
+    Test errors (run_simics_test tool) → Check 0*_Test_*.md documents"
 
 Expected Impact:
 - Reduce build attempts from 8 to 2-3
 - Save 5-7 minutes per session
-- Prevent 80% of scope errors
+- Prevent 80% of DML scope errors
+- Improve DML best practice compliance from 0% to 80%
+- Overall best practice compliance improvement from 50% to 85%
 ```
 
 ## Tools Available
@@ -380,6 +625,9 @@ Your role is ANALYSIS and RECOMMENDATIONS only, but you MUST save your analysis 
 - Provide concrete, actionable improvements
 - Include examples in all recommendations
 - Measure expected impact quantitatively
+- **Always analyze best practices compliance for every fix**
+- **Identify specific blockers preventing best practice adherence**
+- **Propose both prompt and document improvements**
 """
 
     # Tools
