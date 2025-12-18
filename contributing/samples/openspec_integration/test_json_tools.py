@@ -114,5 +114,68 @@ async def test_tools():
   print("=" * 80)
 
 
+async def test_detailed_error_extractor():
+  """Test the detailed build error extractor."""
+  print("\n" + "="*80)
+  print("Testing JsonBuildErrorExtractorTool (Detailed)")
+  print("="*80)
+  
+  from json_analysis_tools import JsonBuildErrorExtractorTool
+  
+  tool = JsonBuildErrorExtractorTool()
+  
+  # Test with the actual session file
+  session_file = "/home/hfeng1/demo/adk_openspec_project/adk_openspec_apply_agent/apply_implement-wdt-watchdog_20251218_175839.session.json"
+  
+  print(f"\nTesting with: {session_file}")
+  
+  try:
+    result = await tool.run_async(
+      args={"session_file": session_file},
+      tool_context=None
+    )
+    
+    print("✅ SUCCESS")
+    print(f"\nSuccess: {result.get('success')}")
+    if result.get('success'):
+      print(f"Total build attempts: {result.get('total_build_attempts')}")
+      print(f"Failed builds: {result.get('failed_builds')}")
+      print(f"Successful builds: {result.get('successful_builds')}")
+      
+      print("\n--- Build Attempts (first 3) ---")
+      for attempt in result.get('build_attempts', [])[:3]:
+        print(f"\nAttempt {attempt['attempt_number']}:")
+        print(f"  Success: {attempt['success']}")
+        print(f"  Total errors: {attempt['total_errors']}")
+        if attempt['error_types']:
+          print(f"  Error types:")
+          for err_type, data in attempt['error_types'].items():
+            print(f"    - {err_type}: {data['count']} occurrences")
+            if data['examples']:
+              print(f"      Example: {data['examples'][0][:80]}...")
+      
+      print("\n--- Fix Analysis ---")
+      fix_analysis = result.get('fix_analysis', {})
+      print(f"Total fix cycles: {fix_analysis.get('total_fix_cycles')}")
+      for cycle in fix_analysis.get('fix_cycles', [])[:3]:
+        print(f"\nFix cycle {cycle['from_attempt']} → {cycle['to_attempt']}:")
+        print(f"  Fixed: {cycle['fixed_error_types']}")
+        print(f"  Persisted: {cycle['persisted_error_types']}")
+        print(f"  New: {cycle['new_error_types']}")
+        print(f"  Build succeeded: {cycle['build_succeeded']}")
+    else:
+      print(f"Error: {result.get('error')}")
+    print()
+  except Exception as e:
+    print(f"❌ FAILED: {e}")
+    import traceback
+    traceback.print_exc()
+    print()
+
+
 if __name__ == "__main__":
+  print("Running basic JSON tools tests...")
   asyncio.run(test_tools())
+  
+  print("\n\nRunning detailed error extractor test...")
+  asyncio.run(test_detailed_error_extractor())

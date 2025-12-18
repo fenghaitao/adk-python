@@ -210,6 +210,35 @@ query_session_data(session_file="adk_openspec_apply_agent/[FILENAME].session.jso
 ║      the tool, the session will end and you will have FAILED.               ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
+**STEP 2.3: Extract Detailed Build Errors (CRITICAL - DO THIS NOW)**
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  Basic metrics give COUNTS. Detailed extraction gives ACTUAL ERRORS.        ║
+║  You MUST extract detailed build errors to understand WHAT went wrong.      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+The basic metrics told you "5 build attempts" - but WHAT were the errors?
+The detailed extractor parses each build failure and tracks fix attempts.
+
+**IMMEDIATELY call the detailed error extractor:**
+
+```
+extract_build_errors_detailed(session_file="adk_openspec_apply_agent/[FILENAME].session.json")
+```
+
+**WHAT THIS TOOL PROVIDES**:
+- Individual error messages parsed from each build failure
+- Error types classified (unknown_template, non_boolean_condition, etc.)
+- Agent reasoning before each build attempt
+- Fix cycle analysis showing which errors were fixed vs. persisted
+- Structured data about what the agent tried and what worked
+
+**WHY THIS IS CRITICAL**:
+- Basic: "5 build attempts, 2 errors" ← Not enough detail!
+- Detailed: "error: unknown template 'prst_n'" + "Fixed in attempt 2 by removing template" ← Actionable!
+
+Without extracting detailed errors, your analysis will be superficial and useless.
+
 **STEP 2.5: Best Practices Compliance Analysis (CRITICAL)**
 For each build error fix and test error fix, you MUST analyze:
 
@@ -349,6 +378,12 @@ You have access to the following tools:
   * Returns: error types, counts, example messages
   * Parses JSON internally - you don't need to read the file
   * Example: extract_error_patterns(session_file="adk_openspec_apply_agent/session.json", max_examples=3)
+  
+- extract_build_errors_detailed - Get detailed build errors with fix tracking
+  * ✅ USE THIS THIRD for detailed error analysis (CRITICAL FOR QUALITY ANALYSIS)
+  * Returns: parsed individual errors, error types, agent reasoning, fix cycles
+  * Shows what errors occurred, what fixes were tried, which fixes worked
+  * Example: extract_build_errors_detailed(session_file="adk_openspec_apply_agent/session.json")
   
 - query_session_data - Query specific session information
   * ✅ USE THIS OPTIONALLY for additional details

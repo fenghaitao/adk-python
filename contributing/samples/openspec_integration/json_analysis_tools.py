@@ -655,6 +655,7 @@ class JsonAnalysisToolset(BaseToolset):
       JsonSessionMetricsTool(),
       JsonErrorPatternTool(),
       JsonSessionQueryTool(),
+      JsonBuildErrorExtractorTool(),
     ]
 
   async def get_tools(self, readonly_context=None) -> list:
@@ -669,3 +670,268 @@ def create_json_analysis_toolset():
     JsonAnalysisToolset: Configured toolset with JSON analysis tools
   """
   return JsonAnalysisToolset()
+
+
+
+class JsonBuildErrorExtractorTool(BaseTool):
+  """Extract detailed build error messages and fix attempts from session JSON."""
+
+  def __init__(self):
+    super().__init__(
+      name="extract_build_errors_detailed",
+      description=(
+        "Extract detailed build error messages with individual error parsing, "
+        "agent reasoning, fix attempts, and outcomes. Returns structured data "
+        "about each error type, what fixes were tried, and which ones worked."
+      ),
+    )
+
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="extract_build_errors_detailed",
+        description=(
+          "Extract detailed build error messages with individual error parsing, "
+          "agent reasoning, fix attempts, and outcomes. Returns structured data "
+          "about each error type, what fixes were tried, and which ones worked."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to analyze"
+            )
+          },
+          required=["session_file"]
+        )
+      )
+    except ImportError:
+      return None
+
+  async def run_async(
+    self,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
+  ) -> Dict[str, Any]:
+    """Extract detailed build errors with fix tracking from session JSON."""
+    session_file = args.get("session_file")
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    
+    try:
+      file_path = Path(session_file)
+      if not file_path.exists():
+        return {
+          "success": False,
+          "error": f"Session file not found: {session_file}"
+        }
+
+      with open(file_path, 'r', encoding='utf-8') as f:
+        session_data = json.load(f)
+
+      events = session_data.get('events', [])
+      
+      # Track build attempts with their errors and subsequent fixes
+      build_attempts = []
+      current_build_errors = None
+      agent_reasoning = []
+      
+      for i, event in enumerate(events):
+        content = event.get('content', {})
+        if not isinstance(content, dict):
+          continue
+          
+        parts = content.get('parts', [])
+        if not isinstance(parts, list):
+          continue
+        
+        # Extract agent reasoning (text parts from model role)
+        if event.get('author') == 'apply_agent' or content.get('role') == 'model':
+          for part in parts:
+            if isinstance(part, dict) and 'text' in part:
+              text = part['text'].strip()
+              if text and len(text) > 20:  # Skip very short messages
+                agent_reasoning.append({
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'text': text[:500]  # Limit length
+                })
+        
+        # Extract tool results
+        for part in parts:
+          if not isinstance(part, dict):
+            continue
+            
+          # Check for function_response (tool result)
+          fr = part.get('function_response')
+          if not fr:
+            continue
+          
+          tool_name = fr.get('name')
+          response = fr.get('response', {})
+          
+          # Extract build_simics_project errors
+          if tool_name == 'build_simics_project':
+            if isinstance(response, dict):
+              success = response.get('success')
+              error_msg = response.get('error', '')
+              
+              if success is False and error_msg:
+                # Parse individual errors from the error message
+                parsed_errors = self._parse_dml_errors(error_msg)
+                
+                build_attempt = {
+                  'attempt_number': len(build_attempts) + 1,
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'success': False,
+                  'total_errors': len(parsed_errors),
+                  'error_types': {},
+                  'parsed_errors': parsed_errors,
+                  'raw_error': error_msg[:1000],  # First 1000 chars
+                  'agent_reasoning_before': agent_reasoning[-3:] if len(agent_reasoning) >= 3 else agent_reasoning
+                }
+                
+                # Group errors by type
+                for err in parsed_errors:
+                  err_type = err['error_type']
+                  if err_type not in build_attempt['error_types']:
+                    build_attempt['error_types'][err_type] = {
+                      'count': 0,
+                      'examples': []
+                    }
+                  build_attempt['error_types'][err_type]['count'] += 1
+                  if len(build_attempt['error_types'][err_type]['examples']) < 2:
+                    build_attempt['error_types'][err_type]['examples'].append(err['message'])
+                
+                build_attempts.append(build_attempt)
+                current_build_errors = parsed_errors
+                agent_reasoning = []  # Reset for next cycle
+              
+              elif success is True or success is None:
+                # Successful build
+                build_attempt = {
+                  'attempt_number': len(build_attempts) + 1,
+                  'event_index': i,
+                  'timestamp': event.get('timestamp'),
+                  'success': True,
+                  'total_errors': 0,
+                  'error_types': {},
+                  'parsed_errors': [],
+                  'agent_reasoning_before': agent_reasoning[-2:] if len(agent_reasoning) >= 2 else agent_reasoning
+                }
+                build_attempts.append(build_attempt)
+                agent_reasoning = []
+          
+          # Extract test errors
+          elif tool_name == 'run_simics_test':
+            if isinstance(response, dict):
+              output = str(response.get('output', ''))
+              if 'failed' in output.lower() or 'error' in output.lower():
+                # This is a test failure, not a build error
+                # Could add test failure tracking here if needed
+                pass
+
+      # Analyze fix patterns
+      fix_analysis = self._analyze_fix_patterns(build_attempts)
+
+      return {
+        "success": True,
+        "total_build_attempts": len(build_attempts),
+        "failed_builds": sum(1 for b in build_attempts if not b['success']),
+        "successful_builds": sum(1 for b in build_attempts if b['success']),
+        "build_attempts": build_attempts,
+        "fix_analysis": fix_analysis,
+        "session_file": session_file
+      }
+
+    except json.JSONDecodeError as e:
+      return {
+        "success": False,
+        "error": f"Failed to parse JSON: {str(e)}"
+      }
+    except Exception as e:
+      return {
+        "success": False,
+        "error": f"Error extracting build errors: {str(e)}"
+      }
+
+  def _parse_dml_errors(self, error_text: str) -> List[Dict[str, str]]:
+    """Parse DML compiler error messages into structured format."""
+    errors = []
+    lines = error_text.split('\\n')
+    
+    for line in lines:
+      if 'error:' in line.lower():
+        # Extract file, line number, and error message
+        parts = line.split('error:', 1)
+        if len(parts) == 2:
+          location = parts[0].strip()
+          message = parts[1].strip()
+          
+          # Classify error type
+          error_type = 'other_error'
+          if 'unknown template' in message:
+            error_type = 'unknown_template'
+          elif 'unknown identifier' in message:
+            error_type = 'unknown_identifier'
+          elif 'name collision' in message:
+            error_type = 'name_collision'
+          elif 'non-boolean condition' in message:
+            error_type = 'non_boolean_condition'
+          elif 'type mismatch' in message:
+            error_type = 'type_mismatch'
+          elif 'conflicting definition' in message:
+            error_type = 'conflicting_definition'
+          
+          errors.append({
+            'location': location,
+            'message': message,
+            'error_type': error_type,
+            'full_line': line
+          })
+    
+    return errors
+
+  def _analyze_fix_patterns(self, build_attempts: List[Dict]) -> Dict:
+    """Analyze what errors were fixed and how."""
+    if len(build_attempts) < 2:
+      return {
+        'total_fix_cycles': 0,
+        'errors_fixed': [],
+        'errors_persisted': []
+      }
+    
+    fix_cycles = []
+    
+    for i in range(len(build_attempts) - 1):
+      current = build_attempts[i]
+      next_attempt = build_attempts[i + 1]
+      
+      if not current['success']:
+        current_error_types = set(current['error_types'].keys())
+        next_error_types = set(next_attempt['error_types'].keys()) if not next_attempt['success'] else set()
+        
+        fixed_errors = current_error_types - next_error_types
+        persisted_errors = current_error_types & next_error_types
+        new_errors = next_error_types - current_error_types
+        
+        fix_cycle = {
+          'from_attempt': current['attempt_number'],
+          'to_attempt': next_attempt['attempt_number'],
+          'fixed_error_types': list(fixed_errors),
+          'persisted_error_types': list(persisted_errors),
+          'new_error_types': list(new_errors),
+          'build_succeeded': next_attempt['success']
+        }
+        fix_cycles.append(fix_cycle)
+    
+    return {
+      'total_fix_cycles': len(fix_cycles),
+      'fix_cycles': fix_cycles
+    }
