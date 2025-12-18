@@ -116,8 +116,8 @@ You will work with TWO completely different programming languages:
 | **Language** | DML 1.4 (C-like syntax) | Python 3 |
 | **File Extension** | `.dml` | `.py` |
 | **Location** | `simics-project/modules/<device>/<device>.dml` | `simics-project/modules/<device>/test/s-*.py` |
-| **Build Command** | `make <device>` / `build_simics_project()` | N/A (interpreted) |
-| **Run Command** | N/A (compiled into module) | `bin/test-runner` / `run_simics_test()` |
+| **Build Command** | `build_simics_project()` | N/A (interpreted) |
+| **Run Command** | N/A (compiled into module) | `run_simics_test()` |
 | **Best Practices** | `openspec-memories/0*_DML_*.md` | `openspec-memories/0*_Test_*.md` |
 
 **Common Mistakes to AVOID:**
@@ -191,7 +191,7 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
      - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
 
    - For test creation: MUST read `openspec-memories/01_Test_File_Location_Requirements.md` FIRST before creating any test files
-     - Wrong location causes test-runner failures
+     - Wrong location causes test failures
      - Wrong patterns cause test functions not to execute
 
    - For test configuration helpers (wdt_common.py, etc.): MUST read `openspec-memories/02_Test_Configuration_Setup.md` FIRST
