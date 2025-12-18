@@ -37,7 +37,9 @@ jobs:
           cd contributing/samples/spec_kit_integration/simics-mcp-server/
           ./start_mcp_servers.sh
           cd -
-          ./openspec-scripts/run_test.sh 8051 github_copilot/gpt-5-mini wdt-test 0,1
+          mkdir -p /home/runner/.config/litellm/github_copilot/
+          echo '{"access_token": "${{ secrets.MY_PAT_TOKEN }}"}' > /home/runner/.config/litellm/github_copilot/api-key.json
+          ./openspec-scripts/run_test.sh 8051 github_copilot/gpt-5-mini wdt-test "0,1"
           cd -
           ./stop_mcp_servers.sh
           echo "Test complete successfully"
