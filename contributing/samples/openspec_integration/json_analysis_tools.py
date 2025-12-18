@@ -262,24 +262,48 @@ class JsonErrorPatternTool(BaseTool):
       ),
     )
 
-  class InputSchema(BaseModel):
-    """Input schema for extract_error_patterns."""
-    session_file: str = Field(
-      ...,
-      description="Path to the session JSON file to analyze"
-    )
-    max_examples: int = Field(
-      3,
-      description="Maximum number of examples to include per error type"
-    )
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="extract_error_patterns",
+        description=(
+          "Extract and analyze error patterns from a session JSON file. "
+          "Identifies compilation errors, test failures, and other error types "
+          "with their frequencies and examples."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to analyze"
+            ),
+            "max_examples": types.Schema(
+              type=types.Type.INTEGER,
+              description="Maximum number of examples to include per error type (default: 3)"
+            )
+          },
+          required=["session_file"]
+        )
+      )
+    except ImportError:
+      return None
 
-  async def run(
+  async def run_async(
     self,
-    context: ToolContext,
-    session_file: str,
-    max_examples: int = 3,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
   ) -> Dict[str, Any]:
     """Extract error patterns from session JSON file."""
+    session_file = args.get("session_file")
+    max_examples = args.get("max_examples", 3)
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    
     try:
       file_path = Path(session_file)
       if not file_path.exists():
@@ -468,37 +492,63 @@ class JsonSessionQueryTool(BaseTool):
       ),
     )
 
-  class InputSchema(BaseModel):
-    """Input schema for query_session_data."""
-    session_file: str = Field(
-      ...,
-      description="Path to the session JSON file to query"
-    )
-    query_type: str = Field(
-      ...,
-      description=(
-        "Type of query: 'tool_calls', 'agent_messages', 'user_messages', "
-        "'tool_results', 'timestamps', 'event_count'"
+  def _get_declaration(self) -> Optional['types.FunctionDeclaration']:
+    """Get function declaration for the LLM."""
+    try:
+      from google.genai import types
+      return types.FunctionDeclaration(
+        name="query_session_data",
+        description=(
+          "Query specific information from a session JSON file using JSONPath-like "
+          "queries. Can extract tool calls, agent messages, timestamps, and other "
+          "structured data from the session."
+        ),
+        parameters=types.Schema(
+          type=types.Type.OBJECT,
+          properties={
+            "session_file": types.Schema(
+              type=types.Type.STRING,
+              description="Path to the session JSON file to query"
+            ),
+            "query_type": types.Schema(
+              type=types.Type.STRING,
+              description=(
+                "Type of query: 'tool_calls', 'agent_messages', 'user_messages', "
+                "'tool_results', 'timestamps', 'event_count'"
+              )
+            ),
+            "filter_tool": types.Schema(
+              type=types.Type.STRING,
+              description="Filter by specific tool name (for tool_calls/tool_results)"
+            ),
+            "limit": types.Schema(
+              type=types.Type.INTEGER,
+              description="Maximum number of results to return (default: 10)"
+            )
+          },
+          required=["session_file", "query_type"]
+        )
       )
-    )
-    filter_tool: Optional[str] = Field(
-      None,
-      description="Filter by specific tool name (for tool_calls/tool_results)"
-    )
-    limit: int = Field(
-      10,
-      description="Maximum number of results to return"
-    )
+    except ImportError:
+      return None
 
-  async def run(
+  async def run_async(
     self,
-    context: ToolContext,
-    session_file: str,
-    query_type: str,
-    filter_tool: Optional[str] = None,
-    limit: int = 10,
+    *,
+    args: Dict[str, Any],
+    tool_context: ToolContext
   ) -> Dict[str, Any]:
     """Query session JSON file."""
+    session_file = args.get("session_file")
+    query_type = args.get("query_type")
+    filter_tool = args.get("filter_tool")
+    limit = args.get("limit", 10)
+    
+    if not session_file:
+      return {"success": False, "error": "session_file is required"}
+    if not query_type:
+      return {"success": False, "error": "query_type is required"}
+    
     try:
       file_path = Path(session_file)
       if not file_path.exists():
