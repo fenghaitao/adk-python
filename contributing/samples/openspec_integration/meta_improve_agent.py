@@ -147,7 +147,7 @@ After reading context files, analyze the session:
   
 - **Test Tool**: `run_simics_test` MCP tool calls
   - Search for: `"tool_name":"run_simics_test"` or `run_simics_test`
-  - Parse test output: "test s-xxx in modules/{device}/test failed"
+  - Parse test output: "test s-xxx in modules/<device_name>/test failed"
   - Track test pass/fail counts and patterns
   - Identify test exit codes (exit-status 2, etc.)
   - Count total test run attempts
@@ -159,7 +159,7 @@ After reading context files, analyze the session:
 
 # Test results pattern  
 📤 run_simics_test → {'content': [{'type': 'text', 'text': '{"success": true/false
-test s-xxx in modules/{device}/test failed (*** failed (exit-status 2) ***)
+test s-xxx in modules/<device_name>/test failed (*** failed (exit-status 2) ***)
 Ran X tests in Y suites
 Failures: X  Timeouts: Y
 ```
@@ -539,7 +539,7 @@ Best Practices Compliance Analysis:
 - Test Error Fix #1: s-basic-operations failed - test file location
   * Category: Python Test Error (use Test Best Practices)
   * Best Practice Doc: 01_Test_File_Location_Requirements.md
-  * Relevant Practice: "Tests MUST be in modules/<device>/test/ with s-*.py naming"
+  * Relevant Practice: "Tests MUST be in modules/<device_name>/test/ with s-*.py naming"
   * Agent's Fix: Created test in correct location
   * Compliance: ✅ Followed
   * Note: Agent consulted correct category of best practices
