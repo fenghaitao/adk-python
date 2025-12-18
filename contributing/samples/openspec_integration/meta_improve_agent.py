@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -69,7 +70,7 @@ class SessionAnalysis(BaseModel):
   error_patterns: List[ErrorPattern]
   insights: List[str]
   proposed_improvements: List[str]
-  analysis_report_file: str = Field(..., description="REQUIRED: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/META_IMPROVE_ANALYSIS_20250102_103045.md')")
+  analysis_report_file: Optional[str] = Field(None, description="Optional: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/META_IMPROVE_ANALYSIS_20250102_103045.md'). Include this if you saved the report file.")
 
 
 class MetaImproveAgent(LlmAgent):
@@ -100,9 +101,9 @@ to identify patterns, extract learnings, and autonomously improve the agent.
    - time_to_success_minutes: Provide a plain number (e.g., 116.5) NOT strings like "Approximately 116 minutes"
    - Extract these exact numeric values from the session data
 
-4. **Tools you should use**: read_file, list_directory, read_file_range, bash (for reading only)
+4. **Tools you should use**: read_file, list_directory, read_file_range, bash_command (for reading only)
 5. **Tools for final report only**: write_file (ONLY to save your final markdown report)
-6. **Tools you should NOT use**: replace_string_in_file, bash commands that modify files
+6. **Tools you should NOT use**: replace_string_in_file, bash_command commands that modify files
 
 ## Your Mission
 
@@ -277,7 +278,7 @@ You MUST save your analysis report to a markdown file BEFORE calling set_model_r
 After saving the markdown file, you MUST:
 1. Include the FULL ABSOLUTE PATH of the saved file in your final message
 2. State clearly: "Analysis report saved to: <FULL_PATH>"
-3. ONLY THEN call set_model_response with the SessionAnalysis data
+3. Call set_model_response with the SessionAnalysis data, including the file path in analysis_report_file field
 
 **VALIDATION**: If you did NOT save the markdown file, DO NOT proceed to set_model_response.
 
@@ -599,7 +600,7 @@ You have access to the following tools:
 - read_file - Read file contents
 - list_directory - List directory contents
 - read_file_range - Read file in chunks
-- bash - For reading commands only (cat, ls, grep, find, head, tail, wc, etc.)
+- bash_command - For reading commands only (cat, ls, grep, find, head, tail, wc, etc.)
 
 **WRITE TOOLS (Only for Saving Report)**:
 - write_file - ONLY to save your final analysis report as markdown
@@ -614,7 +615,7 @@ You have access to the following tools:
 - ❌ Modify apply_agent.py or any code files
 - ❌ Create/modify memory documents
 - ❌ Modify any existing configuration files
-- ❌ Use bash commands that modify files (>, >>, sed -i, rm, mv, etc.)
+- ❌ Use bash_command commands that modify files (>, >>, sed -i, rm, mv, etc.)
 
 Your role is ANALYSIS and RECOMMENDATIONS only, but you MUST save your analysis as a markdown file.
 
