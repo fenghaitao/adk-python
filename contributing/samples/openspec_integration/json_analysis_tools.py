@@ -90,23 +90,31 @@ class JsonSessionMetricsTool(BaseTool):
         session_data = json.load(f)
 
       events = session_data.get('events', [])
-      
-      # Extract timestamps
-      start_time = None
-      end_time = None
+
+      # Extract timestamps (support ISO strings or epoch floats)
+      start_ts = None
+      end_ts = None
       for event in events:
-        timestamp = event.get('timestamp')
-        if timestamp:
-          if not start_time:
-            start_time = timestamp
-          end_time = timestamp
+        ts = event.get('timestamp')
+        if ts is None:
+          continue
+        # Normalize to float epoch seconds
+        if isinstance(ts, (int, float)):
+          cur = float(ts)
+        else:
+          # Expect ISO string
+          try:
+            cur = datetime.fromisoformat(str(ts).replace('Z', '+00:00')).timestamp()
+          except Exception:
+            continue
+        if start_ts is None:
+          start_ts = cur
+        end_ts = cur
 
       # Calculate duration
       duration_minutes = 0.0
-      if start_time and end_time:
-        start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-        end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-        duration_minutes = (end_dt - start_dt).total_seconds() / 60.0
+      if start_ts is not None and end_ts is not None and end_ts >= start_ts:
+        duration_minutes = round((end_ts - start_ts) / 60.0, 1)
 
       # Count tool calls
       tool_calls = Counter()
@@ -115,39 +123,83 @@ class JsonSessionMetricsTool(BaseTool):
       test_runs = 0
       test_failures = 0
 
+      # Support two schemas:
+      # 1) ADK session events with content.parts.function_call/function_response
+      # 2) Generic tool_call/tool_result events used in some runners
       for event in events:
+        # Schema 2: generic tool_call/tool_result
         event_type = event.get('type')
-        
         if event_type == 'tool_call':
           tool_name = event.get('tool_name', 'unknown')
           tool_calls[tool_name] += 1
-          
           if tool_name == 'build_simics_project':
             build_attempts += 1
           elif tool_name == 'run_simics_test':
             test_runs += 1
-            
-        elif event_type == 'tool_result':
+          continue
+        if event_type == 'tool_result':
           tool_name = event.get('tool_name', 'unknown')
           result = event.get('result', {})
-          
           if tool_name == 'build_simics_project':
             if isinstance(result, dict):
-              success = result.get('success', True)
-              if not success:
+              success = result.get('success')
+              # treat missing success as success
+              if success is False:
                 build_failures += 1
           elif tool_name == 'run_simics_test':
-            # Check for test failures in result
             if isinstance(result, dict):
               output = str(result.get('output', ''))
               if 'failed' in output.lower():
                 test_failures += 1
+          continue
+
+        # Schema 1: check parts
+        content = event.get('content') or {}
+        parts = content.get('parts') if isinstance(content, dict) else None
+        if isinstance(parts, list):
+          for part in parts:
+            # function_call part
+            fc = part.get('function_call') if isinstance(part, dict) else None
+            if isinstance(fc, dict):
+              tool_name = fc.get('name', 'unknown')
+              tool_calls[tool_name] += 1
+              if tool_name == 'build_simics_project':
+                build_attempts += 1
+              elif tool_name == 'run_simics_test':
+                test_runs += 1
+            # function_response part
+            fr = part.get('function_response') if isinstance(part, dict) else None
+            if isinstance(fr, dict):
+              tool_name = fr.get('name', 'unknown')
+              response = fr.get('response', {})
+              if tool_name == 'build_simics_project':
+                if isinstance(response, dict):
+                  # failure if explicit success False or non-zero return_code
+                  success = response.get('success')
+                  return_code = response.get('return_code')
+                  if success is False or (isinstance(return_code, int) and return_code != 0):
+                    build_failures += 1
+              elif tool_name == 'run_simics_test':
+                if isinstance(response, dict):
+                  output = str(response.get('output', ''))
+                  stderr = str(response.get('stderr', ''))
+                  if 'failed' in output.lower() or 'failed' in stderr.lower():
+                    test_failures += 1
+
+      # Build start/end time strings
+      def _format_time(ts: Optional[float]) -> str:
+        if ts is None:
+          return 'unknown'
+        try:
+          return datetime.fromtimestamp(ts).isoformat()
+        except Exception:
+          return 'unknown'
 
       metrics = SessionMetrics(
         session_file=session_file,
-        start_time=start_time or "unknown",
-        end_time=end_time or "unknown",
-        duration_minutes=round(duration_minutes, 1),
+        start_time=_format_time(start_ts),
+        end_time=_format_time(end_ts),
+        duration_minutes=duration_minutes,
         total_events=len(events),
         build_attempts=build_attempts,
         build_failures=build_failures,
@@ -216,23 +268,23 @@ class JsonErrorPatternTool(BaseTool):
         session_data = json.load(f)
 
       events = session_data.get('events', [])
-      
+
       # Collect errors by type
       error_patterns = {}
-      
+
       for event in events:
         event_type = event.get('type')
-        
+
+        # Schema 2: generic tool_result with result payload
         if event_type == 'tool_result':
           tool_name = event.get('tool_name', 'unknown')
           result = event.get('result', {})
-          
+
           # Extract errors from build results
           if tool_name == 'build_simics_project':
             if isinstance(result, dict):
               error_msg = result.get('error', '')
               output = result.get('output', '')
-              
               # Parse compilation errors
               error_text = error_msg or output
               if error_text:
@@ -241,7 +293,7 @@ class JsonErrorPatternTool(BaseTool):
                   error_patterns,
                   max_examples
                 )
-          
+
           # Extract errors from test results
           elif tool_name == 'run_simics_test':
             if isinstance(result, dict):
@@ -262,6 +314,56 @@ class JsonErrorPatternTool(BaseTool):
                         line.strip()
                       )
                       break
+          continue
+
+        # Schema 1: ADK events with parts.function_response
+        content = event.get('content') or {}
+        parts = content.get('parts') if isinstance(content, dict) else None
+        if isinstance(parts, list):
+          for part in parts:
+            fr = part.get('function_response') if isinstance(part, dict) else None
+            if not isinstance(fr, dict):
+              continue
+            tool_name = fr.get('name', 'unknown')
+            response = fr.get('response', {})
+            if not isinstance(response, dict):
+              continue
+
+            # Generic error fields
+            msg = str(response.get('error', '') or response.get('stderr', '') or '')
+            stdout = str(response.get('stdout', ''))
+            return_code = response.get('return_code')
+
+            # Classify bash_command failures
+            if tool_name == 'bash_command':
+              if isinstance(return_code, int) and return_code != 0:
+                error_type = 'command_error'
+                if error_type not in error_patterns:
+                  error_patterns[error_type] = {'count': 0, 'examples': []}
+                error_patterns[error_type]['count'] += 1
+                example = (msg or stdout or '').strip()
+                if example and len(error_patterns[error_type]['examples']) < max_examples:
+                  error_patterns[error_type]['examples'].append(example.split('\n')[0])
+
+            # Classify read_file errors (e.g., File not found)
+            if tool_name == 'read_file' and response.get('error'):
+              error_type = 'file_not_found'
+              if error_type not in error_patterns:
+                error_patterns[error_type] = {'count': 0, 'examples': []}
+              error_patterns[error_type]['count'] += 1
+              example = str(response.get('error', '')).strip()
+              if example and len(error_patterns[error_type]['examples']) < max_examples:
+                error_patterns[error_type]['examples'].append(example)
+
+            # Heuristic: parse compilation-like errors from outputs
+            if tool_name == 'build_simics_project':
+              error_text = msg or stdout
+              if error_text:
+                self._extract_compilation_errors(
+                  error_text,
+                  error_patterns,
+                  max_examples
+                )
 
       # Convert to list format
       patterns = []
