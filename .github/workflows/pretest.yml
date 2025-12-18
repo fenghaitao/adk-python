@@ -1,0 +1,37 @@
+
+name: Pretest for each PR before merged
+
+on:
+  push:
+    # Run on all branches except `main`
+    branches-ignore:
+      - 'main'
+
+jobs:
+  pretest-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: set up env
+        run: |
+          ./setup_env.sh
+
+      - name: run basic test
+        run: |
+          cd contributing/samples/spec_kit_integration/simics-mcp-server/
+          ./start_mcp_servers.sh
+          cd -
+          ./openspec-scripts/run_test.sh 8051 github_copilot/gpt-5-mini wdt-test 0,1
+          cd -
+          ./stop_mcp_servers.sh
+          echo "Test complete successfully"
