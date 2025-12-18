@@ -34,6 +34,7 @@ jobs:
 
       - name: run basic test
         run: |
+          npm install -g @fission-ai/openspec@latest
           cd contributing/samples/spec_kit_integration/simics-mcp-server/
           ./start_mcp_servers.sh
           cd -
