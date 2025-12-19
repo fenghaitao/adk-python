@@ -30,31 +30,36 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 
 **STEP 2: Load Context and Implement**
 - Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
-- **Load Knowledge (Implementation)**:
-  1. **Start with index**: Read `openspec-memories/00_DML_Best_Practices_Index.md`
-  2. **Identify device type from proposal**, then read targeted documents:
-     - **Timer/Counter/Watchdog**: Anti-Patterns (02) + Timing (04) + Timer example (008_timer.md)
-     - **Register-heavy devices**: Scope (07) + Registers reference (003-DML-Language/006_registers.md)
-     - **Serial/UART/I2C/I3C**: Relevant code example (009_uart.md, 006_i2c.md, or 007_i3c.md)
-     - **Interrupt controllers**: Interrupt controller example (002_interrupt_controller.md)
-     - **Unknown device type**: Use index "Quick Navigation" → read 1-2 most relevant docs
-  3. **Load only what you need**: Typically 2-3 documents total (index + 1-2 specific docs)
-- **Load Knowledge (Testing)**:
-  1. **Start with index**: Read `openspec-memories/00_Test_Best_Practices_Index.md`
-  2. **For test creation**: Read test file requirements (01) + configuration (02)
-  3. **For debugging**: Use index "For Troubleshooting" table → read error-specific doc
-  4. **Load only what you need**: Typically index + 1-2 specific docs
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
-- **When encountering build failures**:
-  1. **Read the error message carefully** - Identify the specific error type (syntax, unknown identifier, type mismatch, etc.)
-  2. **For "unknown identifier" errors** - Check `openspec-memories/07_DML_Register_Access_Scope.md` for register scope patterns
-  3. **For other compilation errors** - Check `openspec-memories/05_DML_Troubleshooting.md` for common issues and solutions
-  4. **For syntax errors** - Reference `003-DML-Language/` documentation for correct syntax
-  5. **Fix incrementally** - Resolve one error at a time, rebuild after each fix
-  6. **If stuck after 2-3 attempts** - Re-read relevant best practices document or use `perform_rag_query` for additional context
+
+**CRITICAL: Two Different Languages - DO NOT MIX THEM UP**
+
+You will work with TWO completely different programming languages:
+
+| Aspect | DML Code (Device Implementation) | Python Code (Tests) |
+|--------|----------------------------------|---------------------|
+| **Language** | DML 1.4 | Python 3 |
+| **File Extension** | `.dml` | `.py` |
+| **Location** | `simics-project/modules/<device>/<device>.dml` | `simics-project/modules/<device>/test/s-*.py` |
+| **Build Command** | `build_simics_project()` | N/A (interpreted) |
+| **Run Command** | N/A (compiled into module) | `run_simics_test()` |
+| **Best Practices** | `openspec-memories/0*_DML_*.md` | `openspec-memories/0*_Test_*.md` |
+
+**Common Mistakes to AVOID:**
+- ❌ Using `this.val` in Python tests (DML syntax)
+- ❌ Using Python `def` functions in .dml files
+- ❌ Using DML `method` declarations in .py files
+- ❌ Consulting DML docs (`0*_DML_*.md`) when writing Python tests
+- ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
+
+- When encountering build failures (DML compilation errors):
+  - Check `openspec-memories/05_DML_Troubleshooting.md`
+  - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
+  - Verify register scope patterns (device/bank/register level)
+  - These are DML-specific issues - do NOT apply Python patterns
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
 
@@ -74,28 +79,15 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 **STEP 3: Test and Validate Quality**
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
-- **When encountering test failures**:
-  1. **Analyze failure patterns**:J
-     - All tests fail identically → Likely missing implementation (return to STEP 2.5)
-     - Specific tests fail → Check test logic or implementation for those scenarios
-     - Random/intermittent failures → Timing or race condition issues
-  2. **Use troubleshooting resources**:
-     - Check "For Troubleshooting" table in `00_Test_Best_Practices_Index.md` for error-to-document mapping
-     - Common errors:
-       - "Queue not set" → Read `02_Test_Configuration_Setup.md`
-       - "Test files not found" → Read `01_Test_File_Location_Requirements.md`
-       - "Segfault" → Read `04_Test_Fake_Objects_Mocking.md`
-       - "Register access errors" → Read `03_Test_Register_Access.md`
-       - "Events don't fire" → Read `06_Test_Events_Timing.md`
-  3. **Verify implementation completeness** (return to STEP 2.5):
-     - Check if behavior (not just structure) is implemented
-     - Confirm register side-effects are working
-     - Validate timing/event logic for timer devices
-  4. **Debug systematically**:
-     - Add logging to understand execution flow
-     - Test one scenario at a time
-     - Compare against working examples in code examples library
-  5. **If stuck after multiple attempts** - Re-read relevant test best practices or implementation documents
+- When encountering test failures (Python test errors):
+  - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+  - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
+  - These are Python-specific issues - do NOT apply DML patterns
+  - Common Python test issues:
+    * `AttributeError` → Wrong object/method name (check Python API)
+    * `TypeError` → Wrong argument types (Python types, not DML types)
+    * Test not found → Check file location per `01_Test_File_Location_Requirements.md`
+  - Verify implementation completeness (return to STEP 2.5)
 
 **STEP 4: Report Status**
 - Build MUST succeed without warnings
@@ -105,6 +97,56 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 - Confirm no anti-patterns introduced (check against Universal DML Constraints below)
 - Update tasks.md to reflect completed vs remaining work
 - Use output schema with structured results
+
+## Memory Loading Protocol (CRITICAL - for token-efficient knowledge loading)
+
+**IMPORTANT: DML and Test documents are for DIFFERENT languages - load the correct category!**
+
+1. **MANDATORY**: Read BOTH index files FIRST before any other memory documents:
+   - MUST read `openspec-memories/00_DML_Best_Practices_Index.md` (for DML code implementation in .dml files)
+   - MUST read `openspec-memories/00_Test_Best_Practices_Index.md` (for Python test code in .py files)
+   - These provide the roadmap for selecting additional documents
+
+2. Use the indices' "I want to..." or "For Specific Tasks" sections to identify which 1-2 additional documents are relevant to your current task
+
+3. Load ONLY the specific documents needed (avoid loading all documents - be token-efficient)
+
+4. CRITICAL ANTI-PATTERN PREVENTION:
+   - For timer/counter/watchdog devices: MUST read `openspec-memories/02_DML_Anti_Patterns.md` FIRST before any DML implementation
+     - Anti-Pattern #1 (clock signal modeling) causes 100-1000x performance degradation
+     - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
+     - Anti-Pattern #3 (incomplete timer) causes non-functional devices
+     - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
+
+   - For test creation: MUST read `openspec-memories/01_Test_File_Location_Requirements.md` FIRST before creating any test files
+     - Wrong location causes test failures
+     - Wrong patterns cause test functions not to execute
+
+   - For test configuration helpers (wdt_common.py, etc.): MUST read `openspec-memories/02_Test_Configuration_Setup.md` FIRST
+     - Missing clock setup causes "object has no valid queue attribute" runtime crashes
+     - Must set clk.freq_mhz BEFORE instantiation
+     - Must assign dev.queue = clk for all timing-based devices
+     - Wrong pattern causes SIM_cycle_count() and timing functions to fail
+
+5. Quick reference for task-specific loading:
+   
+   **DML Implementation Tasks (DML .dml files):**
+   - **ANY DML implementation** → MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST (prevents 100% of scope errors)
+   - Timer/watchdog devices → `openspec-memories/02_DML_Anti_Patterns.md` + `openspec-memories/04_DML_Timing_Timer_Modeling.md`
+   - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
+   - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
+   - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
+   - ⚠️ These docs use DML 1.4 syntax: `method`, `this.val`, `uint64`, etc.
+   
+   **Test Creation Tasks (Python .py files):**
+   - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
+   - Creating test configuration helpers (e.g., wdt_common.py, device_common.py) → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
+   - Register testing → `openspec-memories/03_Test_Register_Access.md`
+   - Timer testing → `openspec-memories/06_Test_Events_Timing.md`
+   - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+   - ⚠️ These docs use Python syntax: `def`, `regs.REG.read()`, `stest.expect_equal()`, etc.
+
+6. Use `perform_rag_query` for additional Simics/DML documentation as needed
 
 ## Simics-Specific Implementation Guidance
 
@@ -116,7 +158,7 @@ When implementing changes, your primary context sources are:
    - `changes/<id>/design.md` - Technical decisions (if exists)
 
 2. **DML and Test Best Practices** (ESSENTIAL):
-   - Follow knowledge loading guidance in STEP 2 and STEP 3 to load relevant documents from openspec-memories/
+   - Follow Memory Loading Protocol above to load relevant knowledge from openspec-memories/
    - These provide implementation patterns and anti-patterns to avoid
 
 3. **Specifications** (OPTIONAL - only if clarification needed):
