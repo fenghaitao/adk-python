@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # OpenSpec Runner Script with Session Support
 # Usage: ./run_openspec.sh [PROJECT_NAME] [INITIAL_PROMPT] [OPTIONS]
 # Example: ./run_openspec.sh myproject "Create a REST API for user management"
