@@ -7,6 +7,12 @@ on:
     branches-ignore:
       - 'main'
 
+# Only 1 run total for the whole repo
+# prevent race condition on iflow token
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   pretest-job:
     runs-on: ubuntu-latest
