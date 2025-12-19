@@ -6,7 +6,9 @@ This is the master index for the DML Best Practices documentation. The original 
 
 ## Document Structure
 
-The documentation is organized into 7 focused documents:
+The documentation is organized into multiple focused areas:
+
+### Best Practices Guides (01-07):
 
 ### 1. [Simics Modeling Philosophy](01_Simics_Modeling_Philosophy.md)
 **Focus**: Core principles and philosophy behind Simics device modeling
@@ -35,17 +37,69 @@ The documentation is organized into 7 focused documents:
 
 ---
 
-### 3. [DML Basic Syntax and Structure](03_DML_Basic_Syntax.md)
-**Focus**: Fundamental DML syntax, compilation, and basic programming constructs
+### 3. [DML 1.4 Language Reference](003-DML-Language/)
+**Focus**: Complete DML 1.4 language specification and reference documentation
 
 **Topics Covered**:
-- DML compilation setup and flags
-- Basic DML syntax and device structure
-- DML core constructs (parameters, attributes, banks, registers, interfaces, templates, methods, variables)
-- File organization and naming conventions
-- Documentation and logging best practices
+- Lexical structure, module system, and file organization
+- Object model, device hierarchy, and object types
+- Register banks, registers, and fields modeling
+- Templates, parameters, and code reuse patterns
+- Data types, methods, and control flow
+- Variables (session and saved), hooks, and declarations
+- Conditional compilation and metaprogramming
+- Expression syntax, operators, and statements
+- Override resolution and comparison to C/C++
 
-**When to Read**: Essential reference for all DML development. Keep this handy while coding.
+**Document Structure**: 22 focused reference documents (000-021):
+
+- **[000_overview.md](003-DML-Language/000_overview.md)** - DML 1.4 introduction and navigation guide
+- **[001_lexical-structure.md](003-DML-Language/001_lexical-structure.md)** - Character encoding, reserved words, identifiers, literals
+- **[002_module-system.md](003-DML-Language/002_module-system.md)** - Import mechanism and module organization
+- **[003_source-file-structure.md](003-DML-Language/003_source-file-structure.md)** - File structure and organization
+- **[004_pragmas.md](003-DML-Language/004_pragmas.md)** - Compiler directives and annotations
+- **[005_object-model.md](003-DML-Language/005_object-model.md)** - Device hierarchy and object types
+- **[006_registers.md](003-DML-Language/006_registers.md)** - Register banks, registers, and fields
+- **[007_templates.md](003-DML-Language/007_templates.md)** - Template system and code reuse
+- **[008_parameters-detailed.md](003-DML-Language/008_parameters-detailed.md)** - Parameter system in depth
+- **[009_data-types.md](003-DML-Language/009_data-types.md)** - Type system and data structures
+- **[010_methods.md](003-DML-Language/010_methods.md)** - Method declarations and implementations
+- **[011_session-variables.md](003-DML-Language/011_session-variables.md)** - Transient state variables
+- **[012_saved-variables.md](003-DML-Language/012_saved-variables.md)** - Checkpointed state variables
+- **[013_hook-declarations.md](003-DML-Language/013_hook-declarations.md)** - Hook extension points
+- **[014_object-declarations.md](003-DML-Language/014_object-declarations.md)** - Object declaration syntax
+- **[015_conditional-objects.md](003-DML-Language/015_conditional-objects.md)** - Conditional compilation
+- **[016_in-each-declarations.md](003-DML-Language/016_in-each-declarations.md)** - Metaprogramming iteration
+- **[017_global-declarations.md](003-DML-Language/017_global-declarations.md)** - Import and global scope
+- **[018_resolution-of-overrides.md](003-DML-Language/018_resolution-of-overrides.md)** - Override resolution rules
+- **[019_comparison-to-c-cpp.md](003-DML-Language/019_comparison-to-c-cpp.md)** - DML vs. C/C++ differences
+- **[020_method-statements.md](003-DML-Language/020_method-statements.md)** - Control flow and statements
+- **[021_expressions.md](003-DML-Language/021_expressions.md)** - Expression syntax and operators
+
+**How to Use**:
+1. **Start with overview**: Read `003-DML-Language/000_overview.md` for introduction and navigation
+2. **Quick lookup**: Use specific documents for syntax questions (e.g., bit-slicing in `021_expressions.md`)
+3. **Register implementation**: Reference `006_registers.md` for register modeling details
+4. **Template usage**: Study `007_templates.md` and `008_parameters-detailed.md` for advanced patterns
+5. **Type questions**: Check `009_data-types.md` for type system details
+6. **Method implementation**: Reference `010_methods.md` and `020_method-statements.md` for control flow
+7. **File organization**: Use `002_module-system.md` and `003_source-file-structure.md` for project structure
+
+**When to Read**:
+- **During compilation errors**: Check syntax in relevant language reference document
+- **Learning new features**: Read focused documents on specific topics (templates, registers, etc.)
+- **Understanding overrides**: Study `018_resolution-of-overrides.md` for template and parameter resolution
+- **Module organization**: Reference `002_module-system.md` for multi-file projects
+- **Type conversions**: Check `009_data-types.md` for casting and type compatibility
+- **Starting new device**: Read `003_source-file-structure.md` and `005_object-model.md`
+
+**Integration with Best Practices**:
+- **Philosophy (01)**: Language reference provides syntax for implementing modeling principles
+- **Anti-Patterns (02)**: Language docs clarify correct usage vs. common mistakes
+- **Timing (04)**: References language features for timing (`after` statements, events in `020_method-statements.md`)
+- **Patterns (06)**: Uses language constructs in practical examples
+- **Scope (07)**: Explains register access scope rules using language syntax
+- **Code Examples (001-code-examples/)**: Shows language features in production code
 
 ---
 
@@ -146,7 +200,7 @@ The documentation is organized into 7 focused documents:
 **Relationship to Best Practices**:
 - **Principles (01)**: Code examples demonstrate the philosophy in action
 - **Anti-Patterns (02)**: Examples show correct implementations avoiding common mistakes
-- **Syntax (03)**: Real code showing proper DML syntax usage
+- **Language Reference (03)**: Real code showing proper DML syntax usage
 - **Timing (04)**: Production timer implementations using correct patterns
 - **Patterns (06)**: Extended library of production patterns beyond basic examples
 - **Scope (07)**: Examples demonstrate correct register access scope in context
@@ -160,7 +214,7 @@ The documentation is organized into 7 focused documents:
 6. **Validate** your approach against multiple production examples
 
 **When NOT to Use**:
-- As a substitute for DML language documentation (use 03_DML_Basic_Syntax.md)
+- As a substitute for DML language documentation (use 003-DML-Language/)
 - As a substitute for principles (read 01_Simics_Modeling_Philosophy.md first)
 - Without understanding anti-patterns (review 02_DML_Anti_Patterns.md)
 - For debugging errors (use 05_DML_Troubleshooting.md)
@@ -181,7 +235,7 @@ The documentation is organized into 7 focused documents:
 → Read [02_DML_Anti_Patterns.md](02_DML_Anti_Patterns.md) first
 
 **...learn DML syntax**  
-→ Study [03_DML_Basic_Syntax.md](03_DML_Basic_Syntax.md)
+→ Study [003-DML-Language/](003-DML-Language/) language reference
 
 **...implement a timer device**  
 → Follow [04_DML_Timing_Timer_Modeling.md](04_DML_Timing_Timer_Modeling.md)
@@ -218,7 +272,7 @@ The documentation is organized into 7 focused documents:
 1. **07_DML_Register_Access_Scope.md** - **MANDATORY** - Prevent scope errors
 2. **01_Simics_Modeling_Philosophy.md** - Understand the "why"
 3. **02_DML_Anti_Patterns.md** - Learn what NOT to do
-4. **03_DML_Basic_Syntax.md** - Learn the language
+4. **003-DML-Language/000_overview.md** - Learn the language
 5. **06_DML_Common_Patterns.md** - Practice with examples
 6. **008-code-examples/** - Study production code for your device type
 7. **05_DML_Troubleshooting.md** - Keep handy for issues
@@ -245,11 +299,11 @@ The documentation is organized into 7 focused documents:
 3. **008-code-examples/006_i2c.md** - I2C production examples
 4. **008-code-examples/007_i3c.md** - I3C production examples
 5. **06_DML_Common_Patterns.md** - UART basic pattern
-6. **03_DML_Basic_Syntax.md** - Interface and protocol syntax
+6. **003-DML-Language/** - Interface and protocol syntax
 
 ### For Quick Reference:
 - **07_DML_Register_Access_Scope.md** - Register scope quick reference (check before every build)
-- **03_DML_Basic_Syntax.md** - Syntax quick reference
+- **003-DML-Language/** - Language syntax quick reference
 - **04_DML_Timing_Timer_Modeling.md** - Timing quick reference card
 - **06_DML_Common_Patterns.md** - Copy-paste templates
 - **008-code-examples/000_overview.md** - Common DML patterns and navigation
@@ -296,7 +350,8 @@ When updating any document:
 ## Additional Resources
 
 ### Documentation Library
-- **Best Practices** (01-07): Principles, anti-patterns, syntax, timing, troubleshooting, patterns, scope
+- **Best Practices** (01-02, 04-07): Philosophy, anti-patterns, timing, troubleshooting, patterns, scope
+- **Language Reference** (003-DML-Language/): Complete DML 1.4 specification (22 documents, 000-021)
 - **Code Examples** (008-code-examples/): 353 production devices across 9 categories
 - **Simics Documentation**: Model Builder User's Guide, DML 1.4 Reference Manual, API documentation
 
@@ -316,9 +371,10 @@ When updating any document:
 ---
 
 **Document Status**: Complete  
-**Last Updated**: December 17, 2025  
-**Total Documents**: 7 focused guides + 1 code examples library (9 categories) + this index
+**Last Updated**: December 18, 2025  
+**Total Documents**: 7 best practices guides + 1 complete language reference (22 docs) + 1 code examples library (9 categories) + this index
 
 **Recent Additions**:
+- December 18, 2025: Replaced `03_DML_Basic_Syntax.md` with complete `003-DML-Language/` reference (22 documents)
 - December 17, 2025: Added `008-code-examples/` documentation with 9 device categories and 353 production devices
 - December 15, 2025: Added `07_DML_Register_Access_Scope.md` based on session analysis findings
