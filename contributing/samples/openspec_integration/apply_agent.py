@@ -77,7 +77,7 @@ class ApplyAgent(LlmAgent):
       raise RuntimeError(
         f"Apply agent instruction file not found: {instruction_file}"
       )
-
+  
     # Tools
     tools = kwargs.get("tools", [])
     tools.append(create_openspec_toolset())

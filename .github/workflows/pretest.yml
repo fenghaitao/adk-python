@@ -1,0 +1,60 @@
+
+name: Pretest for each PR before merged
+
+on:
+  push:
+    # Run on all branches except `main`
+    branches-ignore:
+      - 'main'
+
+# Only 1 run total for the whole repo
+# prevent race condition on iflow token
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  pretest-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          # Use secret PAT here
+          token: ${{ secrets.PRIVATE_REPO_PAT }}
+          # This ensures submodules are fetched
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: set up env
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          git config --global url."https://${{ secrets.PRIVATE_REPO_PAT }}@github.com/".insteadOf "https://github.com/"
+          ./setup_env.sh
+
+      - name: run basic test
+        run: |
+          npm install -g @fission-ai/openspec@latest
+          export ADK_ROOT=`pwd`
+          cd contributing/samples/spec_kit_integration/simics-mcp-server/
+          ./start_mcp_servers.sh
+          cd $ADK_ROOT
+          mkdir -p /home/runner/.config/litellm/github_copilot/
+          # echo "${{ secrets.COPILOT_TOKEN }}" > /home/runner/.config/litellm/github_copilot/access-token
+          # echo '{"access_token": "${{ secrets.COPILOT_TOKEN }}"}' > /home/runner/.config/litellm/github_copilot/api-key.json
+          # export GITHUB_TOKEN=${{ secrets.PRIVATE_REPO_PAT }}
+          export IFLOW_API_KEY=${{ secrets.IFLOW_API_KEY }}
+          $ADK_ROOT/openspec-scripts/run_test.sh 8051 iflow/qwen3-coder-plus wdt-test "0,1"
+          cd wdt-test
+          $ADK_ROOT/openspec-scripts/run-meta-improve.sh --workdir ./adk_openspec_project
+          cat ./adk_openspec_project/META*.md
+          cd $ADK_ROOT
+          cd contributing/samples/spec_kit_integration/simics-mcp-server/
+          ./stop_mcp_servers.sh
+          echo "Test complete successfully"
