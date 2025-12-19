@@ -58,9 +58,9 @@ def extract_text_content(content):
             # Format function call nicely
             if func_args:
                 args_str = ', '.join([f"{k}={v}" for k, v in func_args.items()])
-                function_calls.append(f"🔧 {func_name}({args_str})")
+                function_calls.append(f"[TOOL_CALL] {func_name}({args_str})")
             else:
-                function_calls.append(f"🔧 {func_name}()")
+                function_calls.append(f"[TOOL_CALL] {func_name}()")
         elif part.get('function_response'):
             # Extract function response details
             func_resp = part['function_response']
@@ -73,20 +73,20 @@ def extract_text_content(content):
                     result = response['result']
                     if isinstance(result, str) and len(result) > 200:
                         result = result[:200] + "..."
-                    function_calls.append(f"📤 {func_name} → {result}")
+                    function_calls.append(f"[TOOL_RESULT] {func_name} -> {result}")
                 elif 'error' in response:
-                    function_calls.append(f"❌ {func_name} → Error: {response['error']}")
+                    function_calls.append(f"[TOOL_ERROR] {func_name} -> Error: {response['error']}")
                 else:
                     # Generic response display
                     resp_str = str(response)
                     if len(resp_str) > 200:
                         resp_str = resp_str[:200] + "..."
-                    function_calls.append(f"📤 {func_name} → {resp_str}")
+                    function_calls.append(f"[TOOL_RESULT] {func_name} -> {resp_str}")
             else:
                 resp_str = str(response)
                 if len(resp_str) > 200:
                     resp_str = resp_str[:200] + "..."
-                function_calls.append(f"📤 {func_name} → {resp_str}")
+                function_calls.append(f"[TOOL_RESULT] {func_name} -> {resp_str}")
     
     # Combine text and function calls
     all_content = []
@@ -103,15 +103,15 @@ def view_session(session_file):
         with open(session_file, 'r', encoding='utf-8') as f:
             session = json.load(f)
     except FileNotFoundError:
-        print(f"❌ File not found: {session_file}")
+        print(f"ERROR: File not found: {session_file}")
         return
     except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON: {e}")
+        print(f"ERROR: Invalid JSON: {e}")
         return
 
     # Session info
     print("=" * 80)
-    print(f"📋 SESSION: {session_file}")
+    print(f"SESSION: {session_file}")
     print("=" * 80)
     print(f"App Name: {session.get('app_name', 'N/A')}")
     print(f"User ID: {session.get('user_id', 'N/A')}")
@@ -137,7 +137,7 @@ def view_session(session_file):
 
     # Show conversation
     print("=" * 80)
-    print("💬 CONVERSATION")
+    print("CONVERSATION")
     print("=" * 80)
     
     # Pre-calculate event durations
@@ -194,10 +194,8 @@ def view_session(session_file):
         
         # Format based on author
         if author == 'user':
-            icon = "👤"
             color_start = "\033[94m"  # Blue
         else:
-            icon = "🤖"
             color_start = "\033[92m"  # Green
         
         color_end = "\033[0m"  # Reset
@@ -205,9 +203,9 @@ def view_session(session_file):
         # Format the header with duration
         if duration is not None:
             duration_str = f" (+{format_duration(duration)})"
-            print(f"{color_start}{icon} [{author}] {timestamp}{duration_str}{color_end}")
+            print(f"{color_start}[{author}] {timestamp}{duration_str}{color_end}")
         else:
-            print(f"{color_start}{icon} [{author}] {timestamp}{color_end}")
+            print(f"{color_start}[{author}] {timestamp}{color_end}")
         
         # Indent content
         for line in content.split('\n'):
@@ -219,7 +217,7 @@ def view_session(session_file):
             actions = event['actions']
             if actions.get('state_delta'):
                 state_delta = actions['state_delta']
-                print(f"   📝 State update: {len(state_delta)} changes")
+                print(f"   [STATE_UPDATE] {len(state_delta)} changes")
                 # Show some state changes (truncated)
                 for key, value in list(state_delta.items())[:3]:
                     value_str = str(value)
@@ -231,16 +229,16 @@ def view_session(session_file):
         
         # Show any additional metadata
         if event.get('invocation_id'):
-            print(f"   🆔 Invocation: {event['invocation_id']}")
+            print(f"   [INVOCATION_ID] {event['invocation_id']}")
         
         if event.get('branch'):
-            print(f"   🌿 Branch: {event['branch']}")
+            print(f"   [BRANCH] {event['branch']}")
         
         print()  # Blank line between events
 
     # Calculate and display session duration
     print("=" * 80)
-    print("⏱️  SESSION TIMING SUMMARY")
+    print("SESSION TIMING SUMMARY")
     print("=" * 80)
     
     # Calculate session duration from events
@@ -275,7 +273,7 @@ def view_session(session_file):
             
             # Analyze time-consuming events
             print()
-            print("🐌 TIME-CONSUMING EVENTS")
+            print("TIME-CONSUMING EVENTS")
             print("=" * 40)
             
             # Create list of events with durations and metadata
@@ -314,8 +312,7 @@ def view_session(session_file):
                 print()
                 for i, event_info in enumerate(time_consuming_events, 1):  # Show ALL events
                     duration_str = format_duration(event_info['duration'])
-                    author_icon = "👤" if event_info['author'] == 'user' else "🤖"
-                    print(f"{i:3d}. {author_icon} {duration_str:>12} - {event_info['content']}")
+                    print(f"{i:3d}. [{event_info['author']}] {duration_str:>12} - {event_info['content']}")
                     print(f"      Event #{event_info['index']} at {event_info['timestamp']}")
                     print()
                 
@@ -334,7 +331,7 @@ def view_session(session_file):
         print("No events found in session")
     
     print("=" * 80)
-    print("✅ Session view complete")
+    print("Session view complete")
     print("=" * 80)
 
 def main():
@@ -346,7 +343,7 @@ def main():
     
     session_file = sys.argv[1]
     if not Path(session_file).exists():
-        print(f"❌ File not found: {session_file}")
+        print(f"ERROR: File not found: {session_file}")
         print("\nAvailable session files:")
         for pattern in ["*/*.session.json", "*.session.json"]:
             for file in Path(".").glob(pattern):
