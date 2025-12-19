@@ -255,9 +255,10 @@ Note: These are estimates for recommendations, not actual implementations.
 
 **STEP 5: Save Analysis Report and Complete**
 
-1. Save your analysis as `META_IMPROVE_ANALYSIS_YYYYMMDD_HHMMSS.md` using write_file
-2. Include: Session Summary, Error Patterns, Best Practices Compliance, Recommendations, Expected Impact
-3. Call set_model_response with SessionAnalysis including the file path
+1. Get current directory: `bash_command("pwd")` to get absolute path
+2. Save your analysis as `META_IMPROVE_ANALYSIS_YYYYMMDD_HHMMSS.md` using write_file
+3. Include: Session Summary, Error Patterns, Best Practices Compliance, Recommendations, Expected Impact
+4. Call set_model_response with SessionAnalysis including the full absolute file path
 
 ## Analysis Focus Areas
 
