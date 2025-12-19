@@ -43,9 +43,13 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
-- When encountering build failures:
-  - Check `openspec-memories/05_DML_Troubleshooting.md`
-  - Verify register scope patterns (device/bank/register level)
+- **When encountering build failures**:
+  1. **Read the error message carefully** - Identify the specific error type (syntax, unknown identifier, type mismatch, etc.)
+  2. **For "unknown identifier" errors** - Check `openspec-memories/07_DML_Register_Access_Scope.md` for register scope patterns
+  3. **For other compilation errors** - Check `openspec-memories/05_DML_Troubleshooting.md` for common issues and solutions
+  4. **For syntax errors** - Reference `003-DML-Language/` documentation for correct syntax
+  5. **Fix incrementally** - Resolve one error at a time, rebuild after each fix
+  6. **If stuck after 2-3 attempts** - Re-read relevant best practices document or use `perform_rag_query` for additional context
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
 
@@ -69,9 +73,28 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
   2. Use the index navigation sections ("For Specific Testing Tasks", "For Troubleshooting", "Recommended Reading Order") to identify relevant documents
   3. Read ONLY the specific test documents needed for your testing task
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
-- When encountering test failures:
-  - Use "For Troubleshooting" table in the index for error-to-document mapping
-  - Verify implementation completeness (return to STEP 2.5)
+- **When encountering test failures**:
+  1. **Analyze failure patterns**:
+     - All tests fail identically → Likely missing implementation (return to STEP 2.5)
+     - Specific tests fail → Check test logic or implementation for those scenarios
+     - Random/intermittent failures → Timing or race condition issues
+  2. **Use troubleshooting resources**:
+     - Check "For Troubleshooting" table in `00_Test_Best_Practices_Index.md` for error-to-document mapping
+     - Common errors:
+       - "Queue not set" → Read `02_Test_Configuration_Setup.md`
+       - "Test files not found" → Read `01_Test_File_Location_Requirements.md`
+       - "Segfault" → Read `04_Test_Fake_Objects_Mocking.md`
+       - "Register access errors" → Read `03_Test_Register_Access.md`
+       - "Events don't fire" → Read `06_Test_Events_Timing.md`
+  3. **Verify implementation completeness** (return to STEP 2.5):
+     - Check if behavior (not just structure) is implemented
+     - Confirm register side-effects are working
+     - Validate timing/event logic for timer devices
+  4. **Debug systematically**:
+     - Add logging to understand execution flow
+     - Test one scenario at a time
+     - Compare against working examples in code examples library
+  5. **If stuck after multiple attempts** - Re-read relevant test best practices or implementation documents
 
 **STEP 4: Report Status**
 - Build MUST succeed without warnings
