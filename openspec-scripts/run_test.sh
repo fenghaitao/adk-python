@@ -109,11 +109,13 @@ done
 if [[ "${run_stage[0]}" == "1" ]]; then
     echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir}.0.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.0.log"
-    cd "$proj_dir_abs" && run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --model $model --port $mcp_server_port" "$log_dir/${proj_dir}.0.log"
+    cd "$proj_dir_abs"
+    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --model $model --port $mcp_server_port" "$log_dir/${proj_dir}.0.log"
 fi
 
 if [[ "${run_stage[1]}" == "1" ]]; then
     echo "=== Stage 1: proposal initialization ===" | tee "$log_dir/${proj_dir}.1.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
-    cd "$proj_dir_abs" && run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" "$log_dir/${proj_dir}.1.log"
+    cd "$proj_dir_abs"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" "$log_dir/${proj_dir}.1.log"
 fi
