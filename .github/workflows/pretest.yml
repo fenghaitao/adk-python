@@ -39,8 +39,8 @@ jobs:
           ./start_mcp_servers.sh
           cd -
           mkdir -p /home/runner/.config/litellm/github_copilot/
-          #echo "${{ secrets.COPILOT_TOKEN }}" > /home/runner/.config/litellm/github_copilot/access-token
-          #echo '{"access_token": "${{ secrets.COPILOT_TOKEN }}"}' > /home/runner/.config/litellm/github_copilot/api-key.json
+          echo "${{ secrets.COPILOT_TOKEN }}" > /home/runner/.config/litellm/github_copilot/access-token
+          echo '{"access_token": "${{ secrets.COPILOT_TOKEN }}"}' > /home/runner/.config/litellm/github_copilot/api-key.json
           #export GITHUB_TOKEN=${{ secrets.PRIVATE_REPO_PAT }}
           ./openspec-scripts/run_test.sh 8051 github_copilot/gpt-5-mini wdt-test "0,1"
           cd -
