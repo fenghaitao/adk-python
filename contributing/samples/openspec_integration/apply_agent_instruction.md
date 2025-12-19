@@ -30,15 +30,20 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 
 **STEP 2: Load Context and Implement**
 - Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
-- **Knowledge Discovery Process**:
-  1. Read `openspec-memories/00_DML_Best_Practices_Index.md` to understand available DML knowledge
-  2. Use the index navigation sections ("Quick Navigation Guide", "When to Read", "Recommended Reading Order") to identify relevant documents
-  3. **For specific device types**, prioritize these documents:
-     - **Timer/Counter/Watchdog** → Anti-Patterns (02), Timing (04), Code Examples (008-code-examples/008_timer.md)
-     - **Register-heavy devices** → Scope (07), Language Reference (003-DML-Language/006_registers.md)
-     - **Serial (UART/I2C/I3C)** → Code Examples (008-code-examples/009_uart.md, 006_i2c.md, 007_i3c.md)
-     - **Interrupt controllers** → Code Examples (008-code-examples/002_interrupt_controller.md)
-  4. Read ONLY the 1-3 specific documents needed for your implementation task
+- **Load Knowledge (Implementation)**:
+  1. **Start with index**: Read `openspec-memories/00_DML_Best_Practices_Index.md`
+  2. **Identify device type from proposal**, then read targeted documents:
+     - **Timer/Counter/Watchdog**: Anti-Patterns (02) + Timing (04) + Timer example (008_timer.md)
+     - **Register-heavy devices**: Scope (07) + Registers reference (003-DML-Language/006_registers.md)
+     - **Serial/UART/I2C/I3C**: Relevant code example (009_uart.md, 006_i2c.md, or 007_i3c.md)
+     - **Interrupt controllers**: Interrupt controller example (002_interrupt_controller.md)
+     - **Unknown device type**: Use index "Quick Navigation" → read 1-2 most relevant docs
+  3. **Load only what you need**: Typically 2-3 documents total (index + 1-2 specific docs)
+- **Load Knowledge (Testing)**:
+  1. **Start with index**: Read `openspec-memories/00_Test_Best_Practices_Index.md`
+  2. **For test creation**: Read test file requirements (01) + configuration (02)
+  3. **For debugging**: Use index "For Troubleshooting" table → read error-specific doc
+  4. **Load only what you need**: Typically index + 1-2 specific docs
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
@@ -68,13 +73,9 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 **Action if Red Flag:** Stop testing, implement missing functionality first.
 
 **STEP 3: Test and Validate Quality**
-- **Knowledge Discovery Process for Testing**:
-  1. Read `openspec-memories/00_Test_Best_Practices_Index.md` to understand test best practices
-  2. Use the index navigation sections ("For Specific Testing Tasks", "For Troubleshooting", "Recommended Reading Order") to identify relevant documents
-  3. Read ONLY the specific test documents needed for your testing task
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
 - **When encountering test failures**:
-  1. **Analyze failure patterns**:
+  1. **Analyze failure patterns**:J
      - All tests fail identically → Likely missing implementation (return to STEP 2.5)
      - Specific tests fail → Check test logic or implementation for those scenarios
      - Random/intermittent failures → Timing or race condition issues
@@ -105,19 +106,6 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 - Update tasks.md to reflect completed vs remaining work
 - Use output schema with structured results
 
-## Memory Loading Protocol (CRITICAL - for token-efficient knowledge loading)
-
-1. **MANDATORY**: Read BOTH index files FIRST before any other documents:
-   - `openspec-memories/00_DML_Best_Practices_Index.md` (for DML implementation)
-   - `openspec-memories/00_Test_Best_Practices_Index.md` (for test creation)
-   - These provide the roadmap for selecting additional documents
-
-2. Use the index navigation sections to identify which 1-2 additional documents are relevant to your task
-
-3. Load ONLY the specific documents needed (be token-efficient)
-
-4. Use `perform_rag_query` for additional Simics/DML documentation as needed
-
 ## Simics-Specific Implementation Guidance
 
 When implementing changes, your primary context sources are:
@@ -128,7 +116,7 @@ When implementing changes, your primary context sources are:
    - `changes/<id>/design.md` - Technical decisions (if exists)
 
 2. **DML and Test Best Practices** (ESSENTIAL):
-   - Follow Memory Loading Protocol above to load relevant knowledge from openspec-memories/
+   - Follow knowledge loading guidance in STEP 2 and STEP 3 to load relevant documents from openspec-memories/
    - These provide implementation patterns and anti-patterns to avoid
 
 3. **Specifications** (OPTIONAL - only if clarification needed):
