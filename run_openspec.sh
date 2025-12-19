@@ -737,9 +737,22 @@ EOF
             # Generate human-readable session dump
             if [ -f "$SCRIPT_DIR/view_session.py" ]; then
                 echo "📄 Generating human-readable Specify session dump..."
-                python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt"
-                if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
-                    echo -e "${GREEN}Human-readable Specify session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt${NC}"
+                ERROR_LOG=$(mktemp)
+                if python3 "$SCRIPT_DIR/view_session.py" "adk_specify_agent/${PROJECT_NAME}_specify.session.json" > "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" 2>"$ERROR_LOG"; then
+                    if [ -f "adk_specify_agent/${PROJECT_NAME}_specify.session.txt" ]; then
+                        echo -e "${GREEN}Human-readable Specify session saved: adk_specify_agent/${PROJECT_NAME}_specify.session.txt${NC}"
+                    else
+                        echo -e "${YELLOW}⚠️  Specify session dump file not created${NC}"
+                    fi
+                    rm -f "$ERROR_LOG"
+                else
+                    echo -e "${RED}❌ Failed to generate Specify session dump (Python error)${NC}"
+                    if [ -s "$ERROR_LOG" ]; then
+                        echo -e "${RED}Error details:${NC}"
+                        cat "$ERROR_LOG" | head -20
+                    fi
+                    rm -f "$ERROR_LOG"
+                    exit 1
                 fi
             fi
         fi
@@ -756,6 +769,7 @@ EOF
     else
         echo ""
         echo -e "${YELLOW}⚠️  Specify agent completed with warnings${NC}"
+        exit 1
     fi
     
     echo ""
@@ -849,15 +863,29 @@ EOF
                     # Generate human-readable session dump
                     if [ -f "$SCRIPT_DIR/view_session.py" ]; then
                         echo "📄 Generating human-readable Simics setup session dump..."
-                        python3 "$SCRIPT_DIR/view_session.py" "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json" > "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt"
-                        if [ -f "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt" ]; then
-                            echo -e "${GREEN}Human-readable Simics setup session saved: adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt${NC}"
+                        ERROR_LOG=$(mktemp)
+                        if python3 "$SCRIPT_DIR/view_session.py" "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.json" > "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt" 2>"$ERROR_LOG"; then
+                            if [ -f "adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt" ]; then
+                                echo -e "${GREEN}Human-readable Simics setup session saved: adk_simics_setup_agent/${PROJECT_NAME}_simics_setup.session.txt${NC}"
+                            else
+                                echo -e "${YELLOW}⚠️  Simics setup session dump file not created${NC}"
+                            fi
+                            rm -f "$ERROR_LOG"
+                        else
+                            echo -e "${RED}❌ Failed to generate Simics setup session dump (Python error)${NC}"
+                            if [ -s "$ERROR_LOG" ]; then
+                                echo -e "${RED}Error details:${NC}"
+                                cat "$ERROR_LOG" | head -20
+                            fi
+                            rm -f "$ERROR_LOG"
+                            exit 1
                         fi
                     fi
                 fi
             else
                 echo ""
                 echo -e "${YELLOW}⚠️  Simics setup agent completed with warnings${NC}"
+                eixt 1
             fi
             
             # Check if the simics-project directory was actually created
@@ -1032,7 +1060,21 @@ else
         # Convert newlines to literal \n so entire prompt is sent as single line
         # The LLM will still interpret \n as line breaks in the prompt
         SINGLE_LINE_PROMPT=$(echo "$INITIAL_PROMPT" | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
-        printf "%s\nexit\n" "$SINGLE_LINE_PROMPT" | $ADK_CMD
+        
+        # Run ADK command and capture errors
+        ERROR_LOG=$(mktemp)
+        if printf "%s\nexit\n" "$SINGLE_LINE_PROMPT" | $ADK_CMD 2>"$ERROR_LOG"; then
+            rm -f "$ERROR_LOG"
+        else
+            echo ""
+            echo -e "${RED}❌ ADK agent execution failed${NC}"
+            if [ -s "$ERROR_LOG" ]; then
+                echo -e "${RED}Error details:${NC}"
+                cat "$ERROR_LOG" | head -20
+            fi
+            rm -f "$ERROR_LOG"
+            exit 1
+        fi
 
         # Commit all changes made during OpenSpec agent session
         echo ""
@@ -1084,11 +1126,22 @@ if [ "$SKIP_OPENSPEC" = false ] && [ "$SAVE_SESSION" = true ] && [ -f "adk_opens
     # Generate human-readable session dump
     if [ -f "$SCRIPT_DIR/view_session.py" ]; then
         echo "📄 Generating human-readable session dump..."
-        python3 "$SCRIPT_DIR/view_session.py" "adk_openspec_agent/${SESSION_ID}.session.json" > "adk_openspec_agent/${SESSION_ID}.session.txt"
-        if [ -f "adk_openspec_agent/${SESSION_ID}.session.txt" ]; then
-            echo -e "${GREEN}Human-readable session saved: adk_openspec_agent/${SESSION_ID}.session.txt${NC}"
+        ERROR_LOG=$(mktemp)
+        if python3 "$SCRIPT_DIR/view_session.py" "adk_openspec_agent/${SESSION_ID}.session.json" > "adk_openspec_agent/${SESSION_ID}.session.txt" 2>"$ERROR_LOG"; then
+            if [ -f "adk_openspec_agent/${SESSION_ID}.session.txt" ]; then
+                echo -e "${GREEN}Human-readable session saved: adk_openspec_agent/${SESSION_ID}.session.txt${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Session dump file not created${NC}"
+            fi
+            rm -f "$ERROR_LOG"
         else
-            echo -e "${YELLOW}Failed to generate human-readable session dump${NC}"
+            echo -e "${RED}❌ Failed to generate session dump (Python error)${NC}"
+            if [ -s "$ERROR_LOG" ]; then
+                echo -e "${RED}Error details:${NC}"
+                cat "$ERROR_LOG" | head -20
+            fi
+            rm -f "$ERROR_LOG"
+            exit 1
         fi
     fi
 fi
