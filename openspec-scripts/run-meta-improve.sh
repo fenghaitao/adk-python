@@ -4,8 +4,8 @@ set -euo pipefail
 # Run only the Meta-Improvement Agent on a given OpenSpec project
 #
 # This script runs the meta improvement agent using ADK and analyzes the
-# apply agent session logs and context to generate improvement insights
-# and optional memory files.
+# apply_improve agent session logs and context to generate improvement insights
+# and optional memory files. This is meta-improvement: improving the improvers.
 #
 # Supports two agent variants:
 #   - meta_improve_text_agent (default): Uses text analysis tools on .session.txt files
@@ -117,25 +117,12 @@ WORKDIR="$(pwd)"
 echo -e "${BLUE}Working directory: $WORKDIR${NC}"
 
 # Validate required directories exist
-APPLY_DIR_REL="adk_openspec_apply_agent"
-APPLY_DIR="$WORKDIR/$APPLY_DIR_REL"
-if [[ ! -d "$APPLY_DIR" ]]; then
-  echo -e "${RED}❌ $APPLY_DIR_REL directory not found in $WORKDIR${NC}"
-  echo -e "${RED}   This script requires an apply agent at: $APPLY_DIR_REL${NC}"
+APPLY_IMPROVE_DIR_REL="adk_openspec_apply_improvement_agent"
+APPLY_IMPROVE_DIR="$WORKDIR/$APPLY_IMPROVE_DIR_REL"
+if [[ ! -d "$APPLY_IMPROVE_DIR" ]]; then
+  echo -e "${RED}❌ $APPLY_IMPROVE_DIR_REL directory not found in $WORKDIR${NC}"
+  echo -e "${RED}   This script requires an apply_improve agent at: $APPLY_IMPROVE_DIR_REL${NC}"
   exit 1
-else
-  # Ensure the apply agent instruction exists (required for analysis prompts)
-  APPLY_INSTRUCTION_FILE="$APPLY_DIR/apply_agent_instruction.md"
-  if [[ ! -f "$APPLY_INSTRUCTION_FILE" ]]; then
-    echo -e "${YELLOW}ℹ️  Missing $APPLY_INSTRUCTION_FILE — attempting to export it now${NC}"
-    if [[ -x "$SCRIPT_DIR/export_apply_instruction.sh" ]]; then
-      bash "$SCRIPT_DIR/export_apply_instruction.sh" "$APPLY_DIR" || {
-        echo -e "${RED}❌ Failed to export apply agent instruction. Continuing without it.${NC}"
-      }
-    else
-      echo -e "${YELLOW}⚠️  export_apply_instruction.sh not executable or not found at $SCRIPT_DIR${NC}"
-    fi
-  fi
 fi
 
 if [[ ! -d "openspec-memories" ]]; then

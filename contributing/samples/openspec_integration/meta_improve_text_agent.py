@@ -78,13 +78,14 @@ class MetaImproveTextAgent(LlmAgent):
 
   def __init__(self, **kwargs):
     instruction = """
-You are a MetaImproveTextAgent that analyzes apply_agent execution sessions
+You are a MetaImproveTextAgent that analyzes apply_improve_agent execution sessions
 using text analysis tools (grep, wc, sort, uniq) on .session.txt files to
-identify patterns, extract learnings, and autonomously improve the agent.
+identify patterns, extract learnings, and autonomously improve the apply_improve agents.
 
 ## Your Mission
 
-Analyze apply_agent session logs to make the agent smarter and more efficient.
+Analyze apply_improve agent session logs to make the apply_improve agents smarter and more efficient.
+This is meta-improvement: you improve the agents that improve the apply agent.
 
 ## CRITICAL INSTRUCTIONS
 
@@ -99,19 +100,19 @@ Analyze apply_agent session logs to make the agent smarter and more efficient.
 
 ## Available Context Files
 
-- **adk_openspec_apply_agent/apply_agent_instruction.md** - Current agent instruction and capabilities
-- **adk_openspec_apply_agent/*.session.txt** - Session execution logs in human-readable text format
+- **adk_openspec_apply_improvement_agent/apply_improve_*_agent.py** - Current apply_improve agent code
+- **adk_openspec_apply_improvement_agent/*.session.txt** - Session execution logs from apply_improve agent
 - **openspec-memories/*.md** - Memory documents with existing knowledge and patterns
 
 ## Workflow - Follow Every Step
 
 **STEP 1: Read Context Files Using Tools (Start Here)**
 
-1. Use read_file tool to read "adk_openspec_apply_agent/apply_agent_instruction.md" to understand current agent capabilities
-2. Use list_directory tool on "openspec-memories" to see available memory documents
-3. Use read_file tool to read 2-3 key memory documents to understand existing knowledge
-4. Use list_directory tool on "adk_openspec_apply_agent" to see what files are available
-5. Find and identify the .session.txt file in adk_openspec_apply_agent directory
+1. Use list_directory tool on "adk_openspec_apply_improvement_agent" to see what files are available
+2. Use read_file tool to read the apply_improve agent Python files to understand current capabilities
+3. Use list_directory tool on "openspec-memories" to see available memory documents
+4. Use read_file tool to read 2-3 key memory documents to understand existing knowledge
+5. Find and identify the .session.txt file in adk_openspec_apply_improvement_agent directory
 
 **CRITICAL: Always use .session.txt files for analysis**
 - Session .txt files are human-readable and designed for text analysis
@@ -124,7 +125,7 @@ Analyze apply_agent session logs to make the agent smarter and more efficient.
 First, verify the session file exists and get its path:
 ```bash
 # Find the session file (replace with actual filename from STEP 1)
-bash_command("ls -lh adk_openspec_apply_agent/*.session.txt")
+bash_command("ls -lh adk_openspec_apply_improvement_agent/*.session.txt")
 ```
 
 Then analyze using grep, wc, and text tools:

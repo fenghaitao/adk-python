@@ -198,13 +198,13 @@ else
 fi
 
 # Optional: human-readable dump for saved session
-if [[ "${SAVE_SESSION}" == true ]] && [[ -f "$META_IMPROVE_DIR/${META_SESSION_ID}.session.json" ]]; then
+if [[ "${SAVE_SESSION}" == true ]] && [[ -f "$APPLY_IMPROVE_DIR/${IMPROVE_SESSION_ID}.session.json" ]]; then
   if [[ -f "$SCRIPT_DIR/../view_session.py" ]]; then
-    python3 "$SCRIPT_DIR/../view_session.py" "$META_IMPROVE_DIR/${META_SESSION_ID}.session.json" > "$META_IMPROVE_DIR/${META_SESSION_ID}.session.txt"
-    if [[ -f "$META_IMPROVE_DIR/${META_SESSION_ID}.session.txt" ]]; then
-      echo -e "${GREEN}Human-readable meta-improvement session saved: $META_IMPROVE_DIR/${META_SESSION_ID}.session.txt${NC}"
+    python3 "$SCRIPT_DIR/../view_session.py" "$APPLY_IMPROVE_DIR/${IMPROVE_SESSION_ID}.session.json" > "$APPLY_IMPROVE_DIR/${IMPROVE_SESSION_ID}.session.txt"
+    if [[ -f "$APPLY_IMPROVE_DIR/${IMPROVE_SESSION_ID}.session.txt" ]]; then
+      echo -e "${GREEN}Human-readable apply-improvement session saved: $APPLY_IMPROVE_DIR/${IMPROVE_SESSION_ID}.session.txt${NC}"
     fi
   fi
 fi
 
-echo -e "${GREEN}✔ Meta-Improvement run complete.${NC}"
+echo -e "${GREEN}✔ Apply-Improvement run complete.${NC}"
