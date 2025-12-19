@@ -169,11 +169,22 @@ One build failure may contain 12+ individual errors - count each one.
 - If timestamps are malformed: Extract what you can, note incomplete data in report
 
 **STEP 2.5: Best Practices Compliance Analysis (CRITICAL)**
+
+**DECISION TABLE - Choose the Correct Category:**
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ERROR SOURCE           │ ERROR TYPE          │ USE THESE DOCS      ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  build_simics_project   │ Compilation/Build   │ 0*_DML_*.md         ┃
+┃  run_simics_test        │ Test Execution      │ 0*_Test_*.md        ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
 For each build error fix and test error fix, you MUST analyze:
 
 1. **Read Best Practice Documents First**:
    - Read ALL relevant documents in `openspec-memories/` folder
-   - **IMPORTANT**: There are TWO categories of best practices - DO NOT mix them up:
+   - **CRITICAL**: Use the decision table above to choose the correct category
    
    **Category A: DML Best Practices (for DML/C code compilation errors)**:
    - `00_DML_Best_Practices_Index.md` - Index of all DML best practices
@@ -194,38 +205,18 @@ For each build error fix and test error fix, you MUST analyze:
    - `05_Test_DMA_Memory.md` - DMA and memory testing
    - `06_Test_Events_Timing.md` - Testing events and timing
 
-2. **Match Error Type to Correct Best Practice Category**:
-   - **Build/Compilation Errors** (from `build_simics_project` tool): Use **DML Best Practices**
-     * Syntax errors, unknown identifiers, type errors → Check DML docs
-     * Register access scope issues → Check `07_DML_Register_Access_Scope.md`
-     * Timer/event issues → Check `04_DML_Timing_Timer_Modeling.md`
-   - **Test Errors** (from `run_simics_test` tool): Use **Test Best Practices**
-     * Test file not found → Check `01_Test_File_Location_Requirements.md`
-     * Register access in Python → Check `03_Test_Register_Access.md`
-     * Test setup issues → Check `02_Test_Configuration_Setup.md`
+2. **Compare Agent's Fix Against Best Practices**:
+   - Did the agent follow the documented best practice?
+   - If NO: Why not? (blocker analysis below)
 
-3. **Compare Agent's Fix Against Best Practices**:
-   - For each fix attempt, check: Did the agent follow the documented best practice?
-   - If YES: Document which best practice was followed
-   - If NO: Analyze WHY the agent did not follow the best practice
+3. **Identify Blockers**:
+   - Document not consulted? Unclear? Missing from prompt?
+   - Wrong category used? (DML docs for test errors or vice versa)
 
-3. **Identify Blockers to Following Best Practices**:
-   - Was the best practice document not consulted?
-   - Was the best practice unclear or incomplete?
-   - Was the agent's prompt missing guidance to check best practices?
-   - Was there conflicting information?
-   - Did the agent misinterpret the best practice?
-
-4. **Analyze Root Causes**:
-   - **Prompt Issues**: Is the agent's instruction missing guidance to consult best practices?
-   - **Document Issues**: Are the best practice documents unclear, incomplete, or hard to find?
-   - **RAG Issues**: Did the agent fail to retrieve relevant best practice documents?
-   - **Context Issues**: Did the agent have too much context and miss key information?
-
-5. **Propose Specific Improvements**:
-   - For Agent Prompt: What specific instructions should be added?
-   - For Best Practice Documents: What should be clarified, added, or restructured?
-   - For Workflow: What checks should be mandatory before attempting fixes?
+4. **Propose Improvements**:
+   - Agent prompt: Add specific instructions
+   - Best practice docs: Clarify, add examples
+   - Workflow: Add mandatory checks
 
 **STEP 3: Provide Comprehensive Analysis and Improvements**
 After completing your analysis, provide a detailed response that includes:
