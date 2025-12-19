@@ -128,12 +128,12 @@ else
   APPLY_INSTRUCTION_FILE="$APPLY_DIR/apply_agent_instruction.md"
   if [[ ! -f "$APPLY_INSTRUCTION_FILE" ]]; then
     echo -e "${YELLOW}ℹ️  Missing $APPLY_INSTRUCTION_FILE — attempting to export it now${NC}"
-    if [[ -x "$SCRIPT_DIR/export_apply_instruction.sh" ]]; then
-      bash "$SCRIPT_DIR/export_apply_instruction.sh" "$APPLY_DIR" || {
+    if [[ -x "$SCRIPT_DIR/export_instruction.sh" ]]; then
+      bash "$SCRIPT_DIR/export_instruction.sh" "$APPLY_DIR" || {
         echo -e "${RED}❌ Failed to export apply agent instruction. Continuing without it.${NC}"
       }
     else
-      echo -e "${YELLOW}⚠️  export_apply_instruction.sh not executable or not found at $SCRIPT_DIR${NC}"
+      echo -e "${YELLOW}⚠️  export_instruction.sh not executable or not found at $SCRIPT_DIR${NC}"
     fi
   fi
 fi
