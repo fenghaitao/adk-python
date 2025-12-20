@@ -26,11 +26,30 @@ Analyzes apply_agent execution sessions with comprehensive 100-point scoring sys
   - Code Evolution (10): Improvement trajectory, refinement
 
 ### MODE 2: /self-improve
-Self-improves by comparing own analysis reports to high-quality reference examples.
+Self-improves by generating concrete instruction improvements for MODE 1 (and optionally MODE 2).
 
 **Input**: Own previous analysis reports + reference examples  
 **Output**: `SELF_IMPROVEMENT_ANALYSIS_YYYYMMDD_HHMMSS.md`  
-**Schema**: `SelfImprovementAnalysis`
+**Schema**: `SelfImprovementAnalysis` (includes `InstructionImprovement` list)
+
+**Primary Output**: Concrete instruction text to add/modify in MODE 1's `_get_analyze_apply_instruction` method
+
+**Example Output**:
+```python
+mode1_instruction_improvements = [
+  InstructionImprovement(
+    improvement_name="Enforce Code Examples in Recommendations",
+    gap_identified="Recommendations lack before/after code examples",
+    root_cause="MODE 1 instruction doesn't require code examples",
+    target_mode="MODE 1",
+    location_in_instruction="Add to STEP 3, after recommendations section",
+    instruction_text_to_add="**CRITICAL**: For every code recommendation, provide before/after examples...",
+    example_of_enforced_behavior="Shows exact format MODE 1 should follow",
+    expected_impact="Gap score 65/100 → 80/100, recommendations become actionable",
+    priority="High"
+  )
+]
+```
 
 ## Quick Start
 
@@ -121,6 +140,17 @@ class SessionAnalysis(BaseModel):
 
 ### SelfImprovementAnalysis (MODE 2)
 ```python
+class InstructionImprovement(BaseModel):
+  improvement_name: str
+  gap_identified: str
+  root_cause: str
+  target_mode: str  # 'MODE 1' or 'MODE 2'
+  location_in_instruction: str
+  instruction_text_to_add: str
+  example_of_enforced_behavior: str
+  expected_impact: str
+  priority: str
+
 class SelfImprovementAnalysis(BaseModel):
   reference_file: str
   reference_quality: float
@@ -130,6 +160,8 @@ class SelfImprovementAnalysis(BaseModel):
   key_finding: str
   gap_analyses: List[GapAnalysis]  # 6 dimensions
   improvement_actions: List[ImprovementAction]
+  mode1_instruction_improvements: List[InstructionImprovement]  # PRIMARY OUTPUT
+  mode2_instruction_improvements: Optional[List[InstructionImprovement]]  # Optional
   expected_quality_improvement: float
   self_improvement_report_file: Optional[str]
 ```
@@ -233,6 +265,47 @@ Recommendations:
 - Add validation checks before building
 
 Expected Improvement: 56/100 → 78/100 (22 point gain)
+```
+
+## Example MODE 2 Output (Instruction Improvements)
+
+```
+MODE 1 Instruction Improvement #1:
+
+Improvement Name: Enforce Code Examples in Recommendations
+Gap Identified: MODE 1's recommendations lack before/after code examples
+Root Cause: MODE 1 instruction says "provide recommendations" but doesn't require code examples
+Target Mode: MODE 1
+Location: Add to STEP 3, after "Specific Improvement Recommendations"
+
+Instruction Text to Add:
+```
+**CRITICAL - Code Examples Required**:
+For every recommendation involving code changes, provide:
+1. **Before**: Problematic code from session
+2. **After**: Corrected code
+3. **Explanation**: Why this fixes the issue
+```
+
+Example of Enforced Behavior:
+```
+Recommendation: Fix register access scope
+
+**Before** (line 45 in wdt.dml):
+```dml
+bank.WDOGLOAD.val = bank.WDOGLOAD.val - 1;
+```
+
+**After**:
+```dml
+WatchdogRegisters.WDOGLOAD.val = WatchdogRegisters.WDOGLOAD.val - 1;
+```
+
+**Explanation**: 'bank' is keyword, use actual bank name
+```
+
+Expected Impact: Gap score 65/100 → 80/100 (Code Examples dimension)
+Priority: High
 ```
 
 ## Reference System
