@@ -197,7 +197,7 @@ if [[ -z "$CHANGE_ID" ]]; then
   # Build ADK command with session options
   ADK_PROPOSAL_CMD="$ADK_BIN run $PROPOSAL_DIR"
   if [[ "$SAVE_SESSION" == true ]]; then
-    SESSION_ID="proposal_${CHANGE_ID:-$(date +%Y%m%d_%H%M%S)}"
+    SESSION_ID="${CHANGE_ID:-$(date +%Y%m%d_%H%M%S)}"
     ADK_PROPOSAL_CMD="$ADK_PROPOSAL_CMD --save_session --session_id $SESSION_ID"
     echo -e "${BLUE}Session will be saved as: $PROPOSAL_DIR/${SESSION_ID}.session.json${NC}"
   fi
@@ -244,7 +244,7 @@ if [[ "$RUN_APPLY" == true ]]; then
   # Build ADK command with session options
   ADK_APPLY_CMD="$ADK_BIN run $APPLY_DIR"
   if [[ "$SAVE_SESSION" == true ]]; then
-    APPLY_SESSION_ID="apply_${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
+    APPLY_SESSION_ID="${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
     ADK_APPLY_CMD="$ADK_APPLY_CMD --save_session --session_id $APPLY_SESSION_ID"
     echo -e "${BLUE}Session will be saved as: $APPLY_DIR/${APPLY_SESSION_ID}.session.json${NC}"
   fi
@@ -286,7 +286,7 @@ if [[ "$RUN_ARCHIVE" == true ]]; then
   # Build ADK command with session options
   ADK_ARCHIVE_CMD="$ADK_BIN run $ARCHIVE_DIR"
   if [[ "$SAVE_SESSION" == true ]]; then
-    ARCHIVE_SESSION_ID="archive_${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
+    ARCHIVE_SESSION_ID="${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
     ADK_ARCHIVE_CMD="$ADK_ARCHIVE_CMD --save_session --session_id $ARCHIVE_SESSION_ID"
     echo -e "${BLUE}Session will be saved as: $ARCHIVE_DIR/${ARCHIVE_SESSION_ID}.session.json${NC}"
   fi

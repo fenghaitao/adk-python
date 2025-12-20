@@ -260,7 +260,7 @@ fi
 # Build ADK command
 ADK_CMD="$ADK_BIN run $IMPROVE_DIR"
 if [[ "$SAVE_SESSION" == true ]]; then
-  SESSION_ID="${IMPROVE_LEVEL}_${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
+  SESSION_ID="${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
   ADK_CMD="$ADK_CMD --save_session --session_id $SESSION_ID"
   echo -e "${BLUE}Session will be saved as: $IMPROVE_DIR/${SESSION_ID}.session.json${NC}"
 fi
