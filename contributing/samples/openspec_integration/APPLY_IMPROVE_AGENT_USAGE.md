@@ -7,11 +7,23 @@ The `ApplyImproveAgent` is a dual-mode agent that analyzes apply_agent sessions 
 ## Two Modes
 
 ### MODE 1: /analyze-apply
-Analyzes apply_agent execution sessions to identify patterns and provide recommendations.
+Analyzes apply_agent execution sessions with comprehensive 100-point scoring system.
 
 **Input**: apply_agent session files (`.session.txt`)  
 **Output**: `APPLY_AGENT_ANALYSIS_YYYYMMDD_HHMMSS.md`  
-**Schema**: `SessionAnalysis`
+**Schema**: `SessionAnalysis` (includes `ApplyAgentScore`)
+
+**Scoring System (100 points)**:
+- **Result Quality (50 points)**
+  - DML Code Quality (15): Correctness, idioms, maintainability
+  - Test Quality (15): Coverage, assertions, clarity
+  - Documentation (10): Completeness, clarity
+  - Functionality (10): Spec compliance, correctness
+- **Process Quality (50 points)**
+  - Efficiency (15): Build attempts, time, iterations
+  - Methodology (15): Workflow adherence, best practices usage
+  - Error Handling (10): Recovery, learning from errors
+  - Code Evolution (10): Improvement trajectory, refinement
 
 ### MODE 2: /self-improve
 Self-improves by comparing own analysis reports to high-quality reference examples.
@@ -22,7 +34,7 @@ Self-improves by comparing own analysis reports to high-quality reference exampl
 
 ## Quick Start
 
-### Using MODE 1: Analyze Apply Agent
+### Using MODE 1: Analyze Apply Agent with Scoring
 
 ```python
 from google.adk.runners import Runner
@@ -33,7 +45,14 @@ result = runner.run(
   apply_improve_agent,
   "Analyze the latest apply_agent session"
 )
-# Output: APPLY_AGENT_ANALYSIS_*.md with error patterns and recommendations
+
+# Access the score
+score = result.apply_agent_score
+print(f"Overall Score: {score.overall_score}/100 ({score.overall_score_out_of_10}/10)")
+print(f"Result Quality: {score.result_quality_total}/50")
+print(f"Process Quality: {score.process_quality_total}/50")
+print(f"DML Code: {score.dml_code_quality}/15")
+print(f"Efficiency: {score.efficiency_score}/15")
 ```
 
 ### Using MODE 2: Self-Improve
@@ -53,15 +72,41 @@ result = runner.run(
 ## Complete Improvement Cycle
 
 1. **Run apply_agent** to implement a feature
-2. **Run MODE 1** to analyze the session
-3. **Run MODE 2** to self-improve by comparing to references
-4. **Implement improvements** to prompts and documents
-5. **Validate** with next apply_agent run
+2. **Run MODE 1** to analyze the session and get performance score
+3. **Review score breakdown** to identify weaknesses
+4. **Run MODE 2** to self-improve by comparing to references
+5. **Implement improvements** to prompts and documents
+6. **Validate** with next apply_agent run and compare scores
 
 ## Output Schemas
 
 ### SessionAnalysis (MODE 1)
 ```python
+class ApplyAgentScore(BaseModel):
+  # Result Quality (50 points)
+  dml_code_quality: int  # 0-15
+  test_quality: int  # 0-15
+  documentation_quality: int  # 0-10
+  functionality_score: int  # 0-10
+  
+  # Process Quality (50 points)
+  efficiency_score: int  # 0-15
+  methodology_score: int  # 0-15
+  error_handling_score: int  # 0-10
+  code_evolution_score: int  # 0-10
+  
+  # Totals
+  result_quality_total: int  # max 50
+  process_quality_total: int  # max 50
+  overall_score: int  # max 100
+  overall_score_out_of_10: float  # 0-10 scale
+  
+  # Justifications
+  dml_code_justification: str
+  test_quality_justification: str
+  efficiency_justification: str
+  methodology_justification: str
+
 class SessionAnalysis(BaseModel):
   session_file: str
   total_build_attempts: int
@@ -70,6 +115,7 @@ class SessionAnalysis(BaseModel):
   error_patterns: List[ErrorPattern]
   insights: List[str]
   proposed_improvements: List[str]
+  apply_agent_score: ApplyAgentScore  # NEW: Comprehensive scoring
   analysis_report_file: Optional[str]
 ```
 
@@ -88,6 +134,66 @@ class SelfImprovementAnalysis(BaseModel):
   self_improvement_report_file: Optional[str]
 ```
 
+## Scoring Guide (MODE 1)
+
+### Result Quality (50 points)
+
+**DML Code Quality (0-15)**
+- 13-15: Excellent - correct, idiomatic, maintainable
+- 10-12: Good - correct, mostly idiomatic
+- 7-9: Adequate - works but has style issues
+- 4-6: Poor - works but violates best practices
+- 0-3: Very poor - doesn't work or major violations
+
+**Test Quality (0-15)**
+- 13-15: Excellent - comprehensive, meaningful, clear
+- 10-12: Good - covers main cases
+- 7-9: Adequate - basic coverage
+- 4-6: Poor - minimal coverage
+- 0-3: Very poor - tests don't work
+
+**Documentation (0-10)**
+- 9-10: Excellent - complete, clear, helpful
+- 7-8: Good - mostly complete
+- 5-6: Adequate - basic documentation
+- 3-4: Poor - incomplete
+- 0-2: Very poor - missing
+
+**Functionality (0-10)**
+- 9-10: Excellent - fully implements spec
+- 7-8: Good - implements most features
+- 5-6: Adequate - implements core features
+- 3-4: Poor - missing features
+- 0-2: Very poor - incomplete or broken
+
+### Process Quality (50 points)
+
+**Efficiency (0-15)**
+- Build attempts: 1-2 (5pts), 3-4 (4pts), 5-6 (3pts), 7-8 (2pts), 9+ (0-1pts)
+- Time: <30min (5pts), 30-60 (4pts), 60-90 (3pts), 90-120 (2pts), >120 (0-1pts)
+- Iterations: 1-5 (5pts), 6-10 (4pts), 11-15 (3pts), 16-20 (2pts), 20+ (0-1pts)
+
+**Methodology (0-15)**
+- 13-15: Excellent - follows all protocols
+- 10-12: Good - follows most protocols
+- 7-9: Adequate - follows some protocols
+- 4-6: Poor - frequently skips protocols
+- 0-3: Very poor - ignores protocols
+
+**Error Handling (0-10)**
+- 9-10: Excellent - recovers quickly, learns
+- 7-8: Good - recovers well
+- 5-6: Adequate - eventually recovers
+- 3-4: Poor - struggles to recover
+- 0-2: Very poor - can't recover
+
+**Code Evolution (0-10)**
+- 9-10: Excellent - clear improvement
+- 7-8: Good - generally improves
+- 5-6: Adequate - some improvement
+- 3-4: Poor - little improvement
+- 0-2: Very poor - no improvement
+
 ## Gap Analysis Dimensions (MODE 2)
 
 1. **Structure & Organization** (10 points)
@@ -98,6 +204,36 @@ class SelfImprovementAnalysis(BaseModel):
 6. **Code Examples & Specificity** (15 points)
 
 **Total**: 100 points
+
+## Example Score Interpretation
+
+```
+Overall Score: 56/100 (5.6/10)
+
+Result Quality: 32/50
+- DML Code: 8/15 (works but violated scope patterns)
+- Tests: 10/15 (good coverage, could be more specific)
+- Docs: 6/10 (basic but adequate)
+- Functionality: 8/10 (works correctly)
+
+Process Quality: 24/50
+- Efficiency: 5/15 (8 builds, 116 min - poor)
+- Methodology: 6/15 (didn't consult best practices)
+- Error Handling: 6/10 (recovered but repeated errors)
+- Code Evolution: 7/10 (improved over time)
+
+Key Issues:
+- Didn't consult 07_DML_Register_Access_Scope.md before implementing
+- 12 preventable scope errors
+- Poor efficiency (8 builds, 116 minutes)
+
+Recommendations:
+- Add mandatory best practice consultation to workflow
+- Improve register access scope documentation
+- Add validation checks before building
+
+Expected Improvement: 56/100 → 78/100 (22 point gain)
+```
 
 ## Reference System
 
@@ -114,3 +250,4 @@ The following aliases are maintained:
 ## Related Documentation
 
 - [Dual Mode Implementation Summary](./DUAL_MODE_IMPLEMENTATION_SUMMARY.md)
+

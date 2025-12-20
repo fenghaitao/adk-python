@@ -11,14 +11,21 @@ The `meta_improve_text_agent.py` has been enhanced with dual-mode operation capa
 - **New**: `ApplyImproveAgent`
 - **Rationale**: Better reflects the agent's role in analyzing and self-improving
 
-### 2. Dual-Mode Architecture
+### 2. Comprehensive Scoring System (MODE 1)
+- **100-point scoring system** for apply_agent performance
+- **Result Quality (50 points)**: DML code (15), Tests (15), Docs (10), Functionality (10)
+- **Process Quality (50 points)**: Efficiency (15), Methodology (15), Error handling (10), Code evolution (10)
+- **Justifications required** for each major dimension
+- **Converted to 0-10 scale** for easy interpretation
+
+### 3. Dual-Mode Architecture
 
 #### MODE 1: /analyze-apply (Enhanced from original)
-- **Purpose**: Analyze apply_agent execution sessions
+- **Purpose**: Analyze apply_agent execution sessions with comprehensive scoring
 - **Input**: `.session.txt` files from apply_agent runs
 - **Output**: `APPLY_AGENT_ANALYSIS_YYYYMMDD_HHMMSS.md`
-- **Schema**: `SessionAnalysis`
-- **Focus**: Error patterns, best practices compliance, recommendations
+- **Schema**: `SessionAnalysis` (includes `ApplyAgentScore`)
+- **Focus**: Error patterns, best practices compliance, recommendations, **100-point performance score**
 
 #### MODE 2: /self-improve (New)
 - **Purpose**: Self-improve by comparing to reference examples
@@ -30,6 +37,31 @@ The `meta_improve_text_agent.py` has been enhanced with dual-mode operation capa
 ### 3. New Output Schemas for MODE 2
 
 ```python
+class ApplyAgentScore(BaseModel):
+  """Comprehensive 100-point scoring (MODE 1)."""
+  # Result Quality (50 points)
+  dml_code_quality: int  # 0-15
+  test_quality: int  # 0-15
+  documentation_quality: int  # 0-10
+  functionality_score: int  # 0-10
+  
+  # Process Quality (50 points)
+  efficiency_score: int  # 0-15
+  methodology_score: int  # 0-15
+  error_handling_score: int  # 0-10
+  code_evolution_score: int  # 0-10
+  
+  # Totals and justifications
+  result_quality_total: int
+  process_quality_total: int
+  overall_score: int  # max 100
+  overall_score_out_of_10: float
+  
+  dml_code_justification: str
+  test_quality_justification: str
+  efficiency_justification: str
+  methodology_justification: str
+
 class GapAnalysis(BaseModel):
   dimension: str
   reference_approach: str
@@ -129,9 +161,11 @@ result = runner.run(apply_improve_agent_self_improve, "Compare my analysis to re
 
 1. **Simplified Architecture**: Two levels instead of three, no infinite recursion
 2. **Reference-Based Learning**: Learn from high-quality human examples
-3. **Comprehensive Analysis**: 100-point scoring across 6 dimensions
-4. **Self-Improvement Loop**: Agent continuously improves itself
-5. **Clean Implementation**: Mode-based design, easy to extend
+3. **Comprehensive Scoring**: 100-point system (50 result + 50 process) with justifications
+4. **Quantified Performance**: Objective metrics for apply_agent quality
+5. **Self-Improvement Loop**: Agent continuously improves itself
+6. **Clean Implementation**: Mode-based design, easy to extend
+7. **Actionable Insights**: Score breakdown identifies specific weaknesses
 
 ## Files Modified
 
