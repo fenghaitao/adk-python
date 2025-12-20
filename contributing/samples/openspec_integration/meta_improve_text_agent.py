@@ -12,11 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MetaImproveTextAgent for analyzing and improving apply_agent.
+"""ApplyImproveAgent - Dual-mode agent for analyzing and self-improving.
 
-This agent analyzes apply_agent execution sessions using text analysis tools
-(grep, wc, sort, uniq) on .session.txt files to identify patterns, extract
-learnings, and autonomously improve the agent's instructions and memory documents.
+MODE 1 (/analyze-apply): Analyzes apply_agent execution sessions using text 
+analysis tools to identify patterns and provide improvement recommendations.
+
+MODE 2 (/self-improve): Self-improves by comparing own analysis reports 
+against high-quality reference examples to enhance analytical capabilities.
+
+Usage:
+  # MODE 1: Analyze apply_agent session
+  from meta_improve_text_agent import apply_improve_agent
+  result = runner.run(apply_improve_agent, "Analyze the latest session")
+  
+  # MODE 2: Self-improve by comparing to references
+  from meta_improve_text_agent import apply_improve_agent_self_improve
+  result = runner.run(apply_improve_agent_self_improve, "Self-improve")
 """
 
 from __future__ import annotations
@@ -24,7 +35,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -62,7 +73,7 @@ class ErrorPattern(BaseModel):
 
 
 class SessionAnalysis(BaseModel):
-  """Analysis results from a session."""
+  """Analysis results from a session (MODE 1 output)."""
   session_file: str
   total_build_attempts: int = Field(..., description="Total number of build attempts as an integer (e.g., 8, not '8' or 'Numerous')")
   total_fix_attempts: int = Field(..., description="Total number of fix attempts as an integer (e.g., 15, not '15' or 'Many')")
@@ -70,14 +81,83 @@ class SessionAnalysis(BaseModel):
   error_patterns: List[ErrorPattern]
   insights: List[str]
   proposed_improvements: List[str]
-  analysis_report_file: Optional[str] = Field(None, description="Optional: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/META_IMPROVE_ANALYSIS_20250102_103045.md'). Include this if you saved the report file.")
+  analysis_report_file: Optional[str] = Field(None, description="Optional: Full absolute path to the saved markdown analysis report file (e.g., '/path/to/APPLY_AGENT_ANALYSIS_20250102_103045.md'). Include this if you saved the report file.")
 
 
-class MetaImproveTextAgent(LlmAgent):
-  """Agent that analyzes apply_agent sessions using text analysis tools."""
+class GapAnalysis(BaseModel):
+  """Represents a gap between current work and reference (MODE 2)."""
+  dimension: str = Field(..., description="Dimension name (e.g., 'Structure', 'Depth', 'Compliance')")
+  reference_approach: str = Field(..., description="How the reference handles this")
+  my_approach: str = Field(..., description="How I currently handle this")
+  gap_identified: str = Field(..., description="Specific gaps identified")
+  score: int = Field(..., description="Score out of maximum (e.g., 6)")
+  max_score: int = Field(..., description="Maximum possible score")
 
-  def __init__(self, **kwargs):
-    instruction = """
+
+class ImprovementAction(BaseModel):
+  """Represents a specific improvement action (MODE 2)."""
+  improvement_name: str
+  current_behavior: str
+  target_behavior: str
+  implementation_steps: List[str]
+  priority: str = Field(..., description="High, Medium, or Low")
+
+
+class SelfImprovementAnalysis(BaseModel):
+  """Self-improvement analysis results (MODE 2 output)."""
+  reference_file: str = Field(..., description="Reference file analyzed")
+  reference_quality: float = Field(..., description="Quality score of reference (e.g., 9.5)")
+  my_report_file: str = Field(..., description="My own report analyzed")
+  my_estimated_quality: float = Field(..., description="Estimated quality of my report")
+  overall_gap_score: int = Field(..., description="Total gap score out of 100")
+  key_finding: str = Field(..., description="One sentence summary of biggest gap")
+  gap_analyses: List[GapAnalysis] = Field(..., description="Gap analysis for each dimension")
+  improvement_actions: List[ImprovementAction] = Field(..., description="Concrete improvement actions")
+  expected_quality_improvement: float = Field(..., description="Expected quality after improvements")
+  self_improvement_report_file: Optional[str] = Field(None, description="Full path to saved report")
+
+
+class ApplyImproveAgent(LlmAgent):
+  """Dual-mode agent: analyzes apply_agent sessions AND self-improves."""
+
+  def __init__(self, mode: str = "analyze-apply", **kwargs):
+    """Initialize agent with specified mode.
+    
+    Args:
+      mode: "analyze-apply" (MODE 1) or "self-improve" (MODE 2)
+      **kwargs: Additional arguments passed to LlmAgent
+    """
+    
+    if mode == "self-improve":
+      instruction = self._get_self_improve_instruction()
+      output_schema = SelfImprovementAnalysis
+      description = "Agent that self-improves by comparing to references"
+    else:  # analyze-apply mode
+      instruction = self._get_analyze_apply_instruction()
+      output_schema = SessionAnalysis
+      description = "Agent that analyzes apply_agent sessions"
+    
+    # Tools
+    tools = kwargs.get("tools", [])
+    tools.append(create_openspec_toolset())
+    kwargs["tools"] = tools
+
+    # Remove name and model from kwargs to avoid conflicts
+    agent_name = kwargs.pop("name", f"apply_improve_agent_{mode}")
+    agent_model = kwargs.pop("model", get_openspec_model())
+
+    super().__init__(
+      name=agent_name,
+      model=agent_model,
+      instruction=instruction,
+      description=description,
+      output_schema=output_schema,
+      **kwargs,
+    )
+  
+  def _get_analyze_apply_instruction(self) -> str:
+    """Get MODE 1 instruction for analyzing apply_agent sessions."""
+    return """
 You are a MetaImproveTextAgent that analyzes apply_agent execution sessions
 using text analysis tools (grep, wc, sort, uniq) on .session.txt files to
 identify patterns, extract learnings, and autonomously improve the agent.
@@ -306,34 +386,125 @@ You have access to the following tools:
 - **Identify specific blockers preventing best practice adherence**
 - **Propose both prompt and document improvements**
 """
+  
+  def _get_self_improve_instruction(self) -> str:
+    """Get MODE 2 instruction for self-improvement via reference comparison."""
+    return """
+You are an ApplyImproveAgent in SELF-IMPROVE mode. Your mission: compare your 
+own analysis reports to high-quality reference examples and identify how to 
+improve your analytical capabilities.
 
-    # Tools
-    tools = kwargs.get("tools", [])
-    tools.append(create_openspec_toolset())
-    kwargs["tools"] = tools
+## Your Mission
 
-    # Remove name and model from kwargs to avoid conflicts
-    agent_name = kwargs.pop("name", "meta_improve_text_agent")
-    agent_model = kwargs.pop("model", get_openspec_model())
+Learn from reference examples (9-10/10 quality) to enhance your future analyses.
 
-    super().__init__(
-      name=agent_name,
-      model=agent_model,
-      instruction=instruction,
-      description=(
-        "Meta-agent that analyzes and improves apply_agent through "
-        "text-based session analysis"
-      ),
-      output_schema=SessionAnalysis,
-      **kwargs,
-    )
+## Workflow - Follow Every Step
+
+**STEP 1: Read Reference Examples (Start Here)**
+
+1. Use list_directory on "openspec-memories/references" to see available references
+2. Use read_file to read "openspec-memories/references/00_REFERENCE_GUIDE.md"
+3. Use read_file to read "openspec-memories/references/apply_improve_agent_reference_example.md"
+4. Understand what a 9-10/10 quality analysis looks like
+
+**STEP 2: Read Your Own Recent Analysis Reports**
+
+1. Use list_directory to find your recent APPLY_AGENT_ANALYSIS_*.md reports
+2. Use read_file to read 1-2 of your most recent reports
+3. Identify which report to use for comparison
+
+**STEP 3: Compare Your Work to Reference (Gap Analysis)**
+
+Perform comparison across these 6 dimensions (100 points total):
+
+**A. Structure & Organization (10 points)**
+- How is reference structured vs. your work?
+- What structural elements are missing?
+
+**B. Depth of Error Analysis (20 points)**
+- How deeply does reference analyze errors vs. you?
+- Do you trace to root causes or just list symptoms?
+
+**C. Best Practices Compliance Analysis (20 points)**
+- Does reference map fixes to best practice docs?
+- Did you analyze compliance thoroughly?
+
+**D. Actionability of Recommendations (20 points)**
+- How specific are reference recommendations vs. yours?
+- Do you provide exact text and code examples?
+
+**E. Quantification & Metrics (15 points)**
+- Does reference quantify impact?
+- Do you provide time savings estimates?
+
+**F. Code Examples & Specificity (15 points)**
+- Does reference show before/after code?
+- Do you include concrete examples?
+
+**STEP 4: Identify Root Causes of Gaps**
+
+For each gap, analyze WHY:
+- Knowledge gap: Didn't know this was important?
+- Process gap: Skipped a step?
+- Tool usage gap: Didn't use right tools?
+
+**STEP 5: Create Specific Improvement Plan**
+
+For each gap:
+- What to do differently (specific behavior)
+- How to implement (concrete steps)
+- How to validate (check you did it right)
+
+**STEP 6: Save Self-Improvement Report**
+
+1. Get current directory: `bash_command("pwd")`
+2. Save as `SELF_IMPROVEMENT_ANALYSIS_YYYYMMDD_HHMMSS.md` using write_file
+3. Include: Reference Summary, Your Work Summary, Gap Analysis, Root Causes, Improvement Plan
+4. Call set_model_response with SelfImprovementAnalysis including file path
+
+## Output Structure
+
+Provide comprehensive analysis with:
+1. **Executive Summary**: Key finding, overall gap score
+2. **Reference Analysis**: What makes it excellent (9-10/10)
+3. **Your Work Analysis**: Strengths and weaknesses
+4. **Gap Analysis**: Detailed comparison across 6 dimensions
+5. **Root Causes**: Why gaps exist
+6. **Improvement Plan**: Concrete actions with priorities
+
+## Tools Available
+
+- read_file: Read reference examples and your own reports
+- list_directory: Find available files
+- bash_command: Get current directory for saving
+- write_file: Save your self-improvement report
+
+## Important Notes
+
+- Be honest about gaps (don't inflate scores)
+- Focus on actionable improvements
+- Include specific examples
+- Prioritize high-impact changes
+- Commit to implementing improvements
+"""
 
 
-# Create the meta improve text agent instance for ADK discovery
-meta_improve_text_agent = MetaImproveTextAgent(
-  name="meta_improve_text_agent",
+# Create agent instances for ADK discovery
+
+# Default instance for MODE 1: analyze-apply
+apply_improve_agent = ApplyImproveAgent(
+  mode="analyze-apply",
+  name="apply_improve_agent",
   model=get_openspec_model()
 )
 
-# Alias for ADK discovery conventions
-root_agent = meta_improve_text_agent
+# MODE 2 instance for self-improvement
+apply_improve_agent_self_improve = ApplyImproveAgent(
+  mode="self-improve",
+  name="apply_improve_agent_self_improve",
+  model=get_openspec_model()
+)
+
+# Backward compatibility aliases
+meta_improve_text_agent = apply_improve_agent
+root_agent = apply_improve_agent
