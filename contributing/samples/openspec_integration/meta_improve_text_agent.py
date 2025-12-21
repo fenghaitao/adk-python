@@ -76,9 +76,9 @@ class ApplyAgentScore(BaseModel):
   """Comprehensive scoring of apply_agent performance (100 points total)."""
   # Result Quality (50 points)
   dml_code_quality: int = Field(..., description="DML code quality score (0-15): correctness, idioms, maintainability")
-  test_quality: int = Field(..., description="Python test quality score (0-15): coverage, assertions, clarity")
-  documentation_quality: int = Field(..., description="Documentation quality score (0-10): completeness, clarity")
-  functionality_score: int = Field(..., description="Functionality score (0-10): meets spec, works correctly")
+  test_quality: int = Field(..., description="Python test quality score (0-15): coverage, clarity")
+  documentation_quality: int = Field(..., description="Documentation quality score (0-5): completeness, clarity")
+  functionality_score: int = Field(..., description="Functionality score (0-15): meets spec, works correctly")
   
   # Process Quality (50 points)
   efficiency_score: int = Field(..., description="Efficiency score (0-15): build attempts, time, iterations")
@@ -370,37 +370,37 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - 4-6: Poor - minimal coverage or unclear
    - 0-3: Very poor - tests don't work or missing
 
-3. **Documentation Quality (0-10 points)**
-   - Completeness: Are all components documented? (0-5)
+3. **Documentation Quality (0-5 points)**
+   - Completeness: Are all components documented? (0-3)
      * DML: Device, banks, registers, methods have docstrings
      * Tests: Test files and functions have docstrings
      * Complex logic has explanatory comments (WHY, not WHAT)
-   - Clarity: Is documentation clear and helpful? (0-5)
+   - Clarity: Is documentation clear and helpful? (0-2)
      * Descriptions are accurate and understandable
      * Examples provided where helpful
      * Register purposes explained
    
    **Scoring Guide**:
-   - 9-10: Excellent - complete docstrings, clear comments, helpful
-   - 7-8: Good - most components documented, mostly clear
-   - 5-6: Adequate - basic docstrings, minimal comments
-   - 3-4: Poor - incomplete docstrings or unclear
-   - 0-2: Very poor - missing or unhelpful documentation
+   - 5: Excellent - complete docstrings, clear comments, helpful
+   - 4: Good - most components documented, mostly clear
+   - 3: Adequate - basic docstrings, minimal comments
+   - 2: Poor - incomplete docstrings or unclear
+   - 0-1: Very poor - missing or unhelpful documentation
    
    **Note**: Focus on docstrings and explanatory comments for complex logic.
    Avoid penalizing for lack of obvious comments (e.g., "increment counter").
    Per AGENTS.md: "Comments should explain WHY, not WHAT."
 
-4. **Functionality Score (0-10 points)**
-   - Spec compliance: Implements all required features? (0-5)
-   - Correctness: Works as specified? (0-5)
+4. **Functionality Score (0-15 points)**
+   - Spec compliance: Implements all required features? (0-8)
+   - Correctness: Works as specified? (0-7)
    
    **Scoring Guide**:
-   - 9-10: Excellent - fully implements spec, works perfectly
-   - 7-8: Good - implements most features, works well
-   - 5-6: Adequate - implements core features, mostly works
-   - 3-4: Poor - missing features or doesn't work well
-   - 0-2: Very poor - incomplete or broken
+   - 13-15: Excellent - fully implements spec, works perfectly
+   - 10-12: Good - implements most features, works well
+   - 7-9: Adequate - implements core features, mostly works
+   - 4-6: Poor - missing features or doesn't work well
+   - 0-3: Very poor - incomplete or broken
 
 **PROCESS QUALITY (50 points total)**
 
@@ -493,13 +493,13 @@ Test Quality: 10/15
 Justification: "Tests cover core functionality and use correct register access patterns. 
 However, missing edge case coverage and tests could be better organized with clearer naming."
 
-Documentation: 6/10
-- Completeness: 3/5 (basic docs, missing some details)
-- Clarity: 3/5 (clear but could be more detailed)
+Documentation: 3/5
+- Completeness: 2/3 (basic docstrings, missing some details)
+- Clarity: 1/2 (clear but could be more detailed)
 
-Functionality: 8/10
-- Spec compliance: 4/5 (implements all required features)
-- Correctness: 4/5 (works correctly after fixes)
+Functionality: 11/15
+- Spec compliance: 6/8 (implements all required features)
+- Correctness: 5/7 (works correctly after fixes)
 
 Result Quality Total: 32/50
 
