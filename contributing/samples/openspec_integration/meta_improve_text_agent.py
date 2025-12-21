@@ -256,8 +256,9 @@ bash_command("ls -lh adk_openspec_apply_agent/*.session.txt")
 bash_command("grep -i 'change.*id\|--id' session.txt | head -5")
 # Example output: "Implementing change ID: wdt-001"
 ```
-The specification is in `changes/<id>/proposal.md` and `changes/<id>/tasks.md` 
-which define what MUST be implemented. You'll need this for scoring Functionality.
+The specification is in `changes/[change-id]/specs/<capability>/spec.md` which 
+defines what MUST be implemented. Also check `changes/[change-id]/proposal.md` 
+and `changes/[change-id]/tasks.md`. You'll need these for scoring Functionality.
 
 Then analyze using grep, wc, and text tools:
 
@@ -407,13 +408,13 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    **How to Score Functionality**:
    1. **Find the specification**: The spec is in apply_agent's context files
       - Read `adk_openspec_apply_agent/apply_agent_instruction.md` (already in STEP 1)
-      - The instruction references: `changes/<id>/proposal.md` and `changes/<id>/tasks.md`
-      - These files define what features MUST be implemented
-      - May also reference hardware spec files (e.g., wdt.xml for register definitions)
+      - The instruction references: `changes/[change-id]/specs/<capability>/spec.md`
+      - This spec.md file defines what features MUST be implemented
+      - Also check `changes/[change-id]/proposal.md` and `changes/[change-id]/tasks.md`
    2. **Compare implementation to spec**:
-      - Check `changes/<id>/tasks.md`: Are all tasks completed?
-      - Check `changes/<id>/proposal.md`: Are all proposed features implemented?
-      - If hardware spec exists: Are all registers/fields present with correct bit positions?
+      - Check `changes/[change-id]/specs/<capability>/spec.md`: Are all specified features implemented?
+      - Check `changes/[change-id]/tasks.md`: Are all tasks completed?
+      - Check `changes/[change-id]/proposal.md`: Are all proposed features present?
    3. **Verify correctness**:
       - Do tests pass?
       - Does the device respond correctly to register reads/writes?
@@ -427,8 +428,8 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - 0-3: Very poor - incomplete or broken, tests fail
    
    **Example**:
+   - spec.md defines timer countdown behavior → Implemented (8/8)
    - tasks.md lists 8 tasks → 7 completed, 1 partial (7/8)
-   - proposal.md requires timer countdown → Implemented but uses wrong pattern (6/7)
    - Tests: 4/6 pass (Total: 13/15)
 
 **PROCESS QUALITY (50 points total)**
@@ -508,7 +509,8 @@ For each major dimension, provide 2-3 sentence justification:
 ```
 Session: 8 build attempts, 116.5 minutes, 47 errors
 Change ID: wdt-001 (watchdog timer implementation)
-Specification: changes/wdt-001/proposal.md, changes/wdt-001/tasks.md
+Specification: changes/wdt-001/specs/watchdog-timer/spec.md
+Additional context: changes/wdt-001/proposal.md, changes/wdt-001/tasks.md
 
 DML Code Quality: 8/15
 - Correctness: 4/5 (works but had 12 scope errors initially)
@@ -529,12 +531,12 @@ Documentation: 3/5
 - Clarity: 1/2 (clear but could be more detailed)
 
 Functionality: 11/15
-- Spec compliance: 6/8 (tasks.md: 7/8 tasks completed, proposal.md: all features present)
+- Spec compliance: 6/8 (spec.md: timer countdown specified and implemented, all registers present)
 - Correctness: 5/7 (basic operations work, but timer behavior has issues)
-Justification: "Per tasks.md, 7 of 8 tasks completed (register implementation, basic tests). 
-Per proposal.md, all proposed features present. However, watchdog timer countdown behavior 
-doesn't match proposal - uses cycle-accurate updates instead of lazy evaluation as specified. 
-Tests for timer expiration fail."
+Justification: "Per spec.md, timer countdown behavior is specified and implemented. All required 
+registers from spec.md are present. Per tasks.md, 7 of 8 tasks completed. However, timer countdown 
+uses cycle-accurate updates instead of lazy evaluation as specified in spec.md. Tests for timer 
+expiration fail."
 
 Result Quality Total: 32/50
 
