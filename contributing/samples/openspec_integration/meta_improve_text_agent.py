@@ -250,6 +250,14 @@ First, verify the session file exists and get its path:
 bash_command("ls -lh adk_openspec_apply_agent/*.session.txt")
 ```
 
+**CRITICAL: Identify the OpenSpec XML file used**:
+```bash
+# Find the specification file that apply_agent used
+bash_command("grep -i '\\.xml' session.txt | head -5")
+# Example output: "Using specification: wdt.xml"
+```
+This XML file defines what the device MUST implement. You'll need it for scoring Functionality.
+
 Then analyze using grep, wc, and text tools:
 
 **Extract Basic Metrics**:
@@ -395,12 +403,30 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - Spec compliance: Implements all required features? (0-8)
    - Correctness: Works as specified? (0-7)
    
+   **How to Score Functionality**:
+   1. **Find the specification**: Look for the OpenSpec XML file (e.g., wdt.xml) that apply_agent used
+      - Check session logs for the spec file path
+      - The spec defines required registers, fields, behaviors
+   2. **Compare implementation to spec**:
+      - Are all registers from spec implemented?
+      - Are all register fields present with correct bit positions?
+      - Does behavior match spec description?
+   3. **Verify correctness**:
+      - Do tests pass?
+      - Does the device respond correctly to register reads/writes?
+      - Are interrupts/events triggered as specified?
+   
    **Scoring Guide**:
-   - 13-15: Excellent - fully implements spec, works perfectly
-   - 10-12: Good - implements most features, works well
-   - 7-9: Adequate - implements core features, mostly works
-   - 4-6: Poor - missing features or doesn't work well
-   - 0-3: Very poor - incomplete or broken
+   - 13-15: Excellent - fully implements spec, works perfectly, all tests pass
+   - 10-12: Good - implements most features, works well, most tests pass
+   - 7-9: Adequate - implements core features, mostly works, some tests pass
+   - 4-6: Poor - missing features or doesn't work well, many test failures
+   - 0-3: Very poor - incomplete or broken, tests fail
+   
+   **Example**:
+   - Spec (wdt.xml) defines 12 registers → Implementation has all 12 registers (8/8)
+   - All register fields match spec bit positions (7/7)
+   - Tests verify basic operations and pass (Total: 15/15)
 
 **PROCESS QUALITY (50 points total)**
 
@@ -478,6 +504,7 @@ For each major dimension, provide 2-3 sentence justification:
 
 ```
 Session: 8 build attempts, 116.5 minutes, 47 errors
+Specification: wdt.xml (defines 12 registers, watchdog timer behavior)
 
 DML Code Quality: 8/15
 - Correctness: 4/5 (works but had 12 scope errors initially)
@@ -498,8 +525,12 @@ Documentation: 3/5
 - Clarity: 1/2 (clear but could be more detailed)
 
 Functionality: 11/15
-- Spec compliance: 6/8 (implements all required features)
-- Correctness: 5/7 (works correctly after fixes)
+- Spec compliance: 6/8 (implements all 12 registers from wdt.xml, correct bit positions)
+- Correctness: 5/7 (basic operations work, but timer behavior has issues)
+Justification: "All registers from wdt.xml specification are implemented with correct 
+bit positions. Basic read/write operations work. However, watchdog timer countdown 
+behavior doesn't match spec - uses cycle-accurate updates instead of lazy evaluation. 
+Tests for timer expiration fail."
 
 Result Quality Total: 32/50
 
