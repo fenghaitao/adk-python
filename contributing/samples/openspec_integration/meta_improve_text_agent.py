@@ -250,13 +250,14 @@ First, verify the session file exists and get its path:
 bash_command("ls -lh adk_openspec_apply_agent/*.session.txt")
 ```
 
-**CRITICAL: Identify the OpenSpec XML file used**:
+**CRITICAL: Identify the change ID and specification**:
 ```bash
-# Find the specification file that apply_agent used
-bash_command("grep -i '\\.xml' session.txt | head -5")
-# Example output: "Using specification: wdt.xml"
+# Find the change ID that apply_agent worked on
+bash_command("grep -i 'change.*id\|--id' session.txt | head -5")
+# Example output: "Implementing change ID: wdt-001"
 ```
-This XML file defines what the device MUST implement. You'll need it for scoring Functionality.
+The specification is in `changes/<id>/proposal.md` and `changes/<id>/tasks.md` 
+which define what MUST be implemented. You'll need this for scoring Functionality.
 
 Then analyze using grep, wc, and text tools:
 
@@ -404,13 +405,15 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - Correctness: Works as specified? (0-7)
    
    **How to Score Functionality**:
-   1. **Find the specification**: Look for the OpenSpec XML file (e.g., wdt.xml) that apply_agent used
-      - Check session logs for the spec file path
-      - The spec defines required registers, fields, behaviors
+   1. **Find the specification**: The spec is in apply_agent's context files
+      - Read `adk_openspec_apply_agent/apply_agent_instruction.md` (already in STEP 1)
+      - The instruction references: `changes/<id>/proposal.md` and `changes/<id>/tasks.md`
+      - These files define what features MUST be implemented
+      - May also reference hardware spec files (e.g., wdt.xml for register definitions)
    2. **Compare implementation to spec**:
-      - Are all registers from spec implemented?
-      - Are all register fields present with correct bit positions?
-      - Does behavior match spec description?
+      - Check `changes/<id>/tasks.md`: Are all tasks completed?
+      - Check `changes/<id>/proposal.md`: Are all proposed features implemented?
+      - If hardware spec exists: Are all registers/fields present with correct bit positions?
    3. **Verify correctness**:
       - Do tests pass?
       - Does the device respond correctly to register reads/writes?
@@ -424,9 +427,9 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - 0-3: Very poor - incomplete or broken, tests fail
    
    **Example**:
-   - Spec (wdt.xml) defines 12 registers → Implementation has all 12 registers (8/8)
-   - All register fields match spec bit positions (7/7)
-   - Tests verify basic operations and pass (Total: 15/15)
+   - tasks.md lists 8 tasks → 7 completed, 1 partial (7/8)
+   - proposal.md requires timer countdown → Implemented but uses wrong pattern (6/7)
+   - Tests: 4/6 pass (Total: 13/15)
 
 **PROCESS QUALITY (50 points total)**
 
@@ -504,7 +507,8 @@ For each major dimension, provide 2-3 sentence justification:
 
 ```
 Session: 8 build attempts, 116.5 minutes, 47 errors
-Specification: wdt.xml (defines 12 registers, watchdog timer behavior)
+Change ID: wdt-001 (watchdog timer implementation)
+Specification: changes/wdt-001/proposal.md, changes/wdt-001/tasks.md
 
 DML Code Quality: 8/15
 - Correctness: 4/5 (works but had 12 scope errors initially)
@@ -525,11 +529,11 @@ Documentation: 3/5
 - Clarity: 1/2 (clear but could be more detailed)
 
 Functionality: 11/15
-- Spec compliance: 6/8 (implements all 12 registers from wdt.xml, correct bit positions)
+- Spec compliance: 6/8 (tasks.md: 7/8 tasks completed, proposal.md: all features present)
 - Correctness: 5/7 (basic operations work, but timer behavior has issues)
-Justification: "All registers from wdt.xml specification are implemented with correct 
-bit positions. Basic read/write operations work. However, watchdog timer countdown 
-behavior doesn't match spec - uses cycle-accurate updates instead of lazy evaluation. 
+Justification: "Per tasks.md, 7 of 8 tasks completed (register implementation, basic tests). 
+Per proposal.md, all proposed features present. However, watchdog timer countdown behavior 
+doesn't match proposal - uses cycle-accurate updates instead of lazy evaluation as specified. 
 Tests for timer expiration fail."
 
 Result Quality Total: 32/50
