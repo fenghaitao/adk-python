@@ -20,6 +20,45 @@ analysis tools to identify patterns and provide improvement recommendations.
 MODE 2 (/self-improve): Self-improves by comparing own analysis reports 
 against high-quality reference examples to enhance analytical capabilities.
 
+## Architecture Overview
+
+**MODE 1 - Analyze Apply Agent**:
+  Inputs:
+    - apply_agent instruction (adk_openspec_apply_agent/apply_agent_instruction.md)
+    - apply_agent memories (openspec-memories/*.md)
+    - apply_agent session logs (adk_openspec_apply_agent/*.session.txt)
+  
+  Outputs:
+    - Performance score (100 points: 50 result + 50 process quality)
+    - Error pattern analysis
+    - Best practices compliance analysis
+    - Recommendations to improve apply_agent instruction and memories
+    - Analysis report (APPLY_AGENT_ANALYSIS_*.md)
+
+**MODE 2 - Self-Improve**:
+  Inputs:
+    - MODE 1's instruction (_get_analyze_apply_instruction method)
+    - MODE 1's analysis reports (APPLY_AGENT_ANALYSIS_*.md)
+    - MODE 1's session logs (adk_openspec_apply_improve_agent/*.session.txt)
+    - Reference examples (openspec-memories/references/*.md)
+    - MODE 2's own session logs (adk_openspec_apply_improve_agent_self_improve/*.session.txt)
+  
+  Outputs:
+    - Gap analysis (7 dimensions, 100 points)
+    - Concrete instruction text to add/modify in MODE 1's instruction
+    - Concrete instruction text to add/modify in MODE 2's own instruction (based on session log analysis)
+    - Self-improvement report (SELF_IMPROVEMENT_ANALYSIS_*.md)
+
+## Two-Level Improvement Loop
+
+1. MODE 1 analyzes apply_agent → generates recommendations
+2. MODE 2 analyzes MODE 1 → generates instruction improvements for MODE 1
+3. MODE 2 analyzes MODE 2's own session logs → generates instruction improvements for MODE 2
+4. Apply MODE 2's recommendations → Both MODE 1 and MODE 2 improve
+5. Improved MODE 1 generates better recommendations for apply_agent
+6. Improved MODE 2 generates better improvements for MODE 1
+7. Repeat
+
 Usage:
   # MODE 1: Analyze apply_agent session
   from meta_improve_text_agent import apply_improve_agent
@@ -137,7 +176,8 @@ class InstructionImprovement(BaseModel):
   gap_identified: str = Field(..., description="What gap this addresses")
   root_cause: str = Field(..., description="Why current instruction doesn't enforce this")
   target_mode: str = Field(..., description="'MODE 1' or 'MODE 2'")
-  location_in_instruction: str = Field(..., description="Where to add this (e.g., 'After STEP 2.5', 'In STEP 3')")
+  improvement_category: str = Field(..., description="Category: 'Scoring', 'Error Analysis', 'Best Practices', 'Recommendations', 'Structure', 'Other'")
+  location_in_instruction: str = Field(..., description="Where to add this (e.g., 'STEP 2.75 - DML Code Quality', 'After STEP 2.5', 'In STEP 3')")
   instruction_text_to_add: str = Field(..., description="Exact text to add to instruction")
   example_of_enforced_behavior: str = Field(..., description="Example showing what this enforces")
   expected_impact: str = Field(..., description="How this improves analysis quality")
@@ -707,6 +747,121 @@ improve your analytical capabilities by updating MODE 1's instruction.
 Learn from reference examples (9-10/10 quality) to enhance your future analyses
 by **generating specific improvements to MODE 1's instruction** (the _get_analyze_apply_instruction method).
 
+**Ultimate Goal**: Make MODE 1's analysis reports match the quality of human-written reference examples (9-10/10).
+
+**Two Improvement Paths**:
+
+1. **Always**: Improve MODE 1's instruction
+   - Compare MODE 1's reports to reference examples
+   - Identify gaps and generate instruction improvements
+   - Goal: MODE 1 produces better analysis next time
+
+2. **If MODE 2 session logs available**: Also improve MODE 2's instruction
+   - Analyze MODE 2's own execution patterns
+   - Identify where MODE 2 failed to catch MODE 1's gaps
+   - Goal: MODE 2 produces better improvements for MODE 1 next time
+
+**Key Insight**: 
+- Without MODE 2 session logs → Focus on MODE 1 improvements only
+- With MODE 2 session logs → Improve both MODE 1 AND MODE 2
+- Both paths aim for the same goal: MODE 1's output matches human reference quality
+
+**Workflow Summary**:
+```
+STEP 1: Read inputs (MODE 1 instruction, reports, session logs, references)
+        Optionally read MODE 2 session logs if available
+        
+STEP 2: Compare MODE 1's reports to references → Identify gaps
+
+STEP 3: Analyze root causes using MODE 1's session logs
+        → Execution problem or instruction problem?
+
+STEP 4: Generate MODE 1 instruction improvements (ALWAYS)
+        → Primary output
+
+STEP 5: Generate MODE 2 instruction improvements (CONDITIONAL)
+        → Only if MODE 2 session logs were analyzed in STEP 1.5
+        → Secondary output
+
+STEP 6: Save report with all improvements
+```
+
+## MODE 2: Inputs and Outputs (CRITICAL UNDERSTANDING)
+
+**INPUTS** (What MODE 2 Analyzes):
+1. **MODE 1's Current Instruction**: The _get_analyze_apply_instruction() method text
+   - This defines how MODE 1 analyzes apply_agent sessions
+   - Location: This file, _get_analyze_apply_instruction() method
+   - Read using: read_file on this file, extract MODE 1 instruction
+
+2. **MODE 1's Analysis Reports**: Recent APPLY_AGENT_ANALYSIS_*.md files
+   - These are MODE 1's actual outputs from analyzing sessions
+   - Location: Current directory, files matching APPLY_AGENT_ANALYSIS_*.md
+   - Read using: list_directory + read_file
+
+3. **MODE 1's Session Logs** (CRITICAL - shows MODE 1's process):
+   - MODE 1's execution logs showing how MODE 1 performed its analysis
+   - Location: adk_openspec_apply_improve_agent/*.session.txt
+   - Read using: bash_command with grep, wc, head, tail
+   - **Purpose**: Verify MODE 1 followed its instruction, identify workflow gaps
+
+4. **Reference Examples for MODE 1**: High-quality (9-10/10) MODE 1 analysis examples
+   - These show what excellent MODE 1 analyses should look like
+   - Location: openspec-memories/references/apply_improve_agent_mode1_reference.md
+   - Read using: read_file
+   - **Purpose**: Compare MODE 1's reports to this reference to identify gaps
+
+5. **MODE 2's Own Session Logs** (OPTIONAL - for MODE 2 self-improvement):
+   - MODE 2's execution logs showing how MODE 2 performs its analysis
+   - Location: adk_openspec_apply_improve_agent_self_improve/*.session.txt
+   - Read using: bash_command with grep, wc, head, tail
+   - **Purpose**: Understand MODE 2's own workflow adherence and analysis quality
+   - **When to read**: Only if available (check in STEP 1.5)
+
+6. **Reference Examples for MODE 2** (OPTIONAL - for MODE 2 self-improvement):
+   - High-quality (9-10/10) MODE 2 self-improvement analysis examples
+   - These show what excellent MODE 2 analyses should look like
+   - Location: openspec-memories/references/apply_improve_agent_mode2_reference.md
+   - Read using: read_file
+   - **Purpose**: Compare MODE 2's own reports to this reference
+   - **When to read**: Only if MODE 2 session logs exist (read in STEP 1.6)
+
+**OUTPUTS** (What MODE 2 Produces):
+1. **PRIMARY OUTPUT - MODE 1 Instruction Improvements**:
+   - Concrete text to add/modify in _get_analyze_apply_instruction()
+   - Specific location where to add it (e.g., "After STEP 2.5", "In STEP 3")
+   - Examples showing what the new instruction enforces
+   - Expected impact on MODE 1's analysis quality
+   - Format: InstructionImprovement objects with target_mode="MODE 1"
+
+2. **SECONDARY OUTPUT - MODE 2 Instruction Improvements** (Based on MODE 2's session logs):
+   - Improvements to this instruction (_get_self_improve_instruction)
+   - Based on analyzing MODE 2's own execution patterns
+   - Format: InstructionImprovement objects with target_mode="MODE 2"
+
+**EXAMPLE FLOW**:
+```
+MODE 2 reads:
+  → MODE 1 instruction (how MODE 1 should analyze)
+  → MODE 1's reports (what MODE 1 actually produced)
+  → MODE 1's session logs (how MODE 1 executed - did it follow instruction?)
+  → Reference examples (what MODE 1 should produce)
+  → MODE 2's session logs (how MODE 2 itself performed)
+
+MODE 2 identifies:
+  → Gap in MODE 1's output: MODE 1's reports lack code examples
+  → Check MODE 1's session logs: Did MODE 1 follow STEP 3?
+  → Finding: MODE 1 skipped the "provide code examples" part of STEP 3
+  → Root cause: MODE 1's instruction says "provide examples" but doesn't enforce it
+  → Gap in MODE 2: MODE 2 didn't verify MODE 1's workflow adherence
+  → Root cause: MODE 2's instruction doesn't require checking MODE 1's session logs
+  
+MODE 2 outputs:
+  → MODE 1 improvement: "**CRITICAL - Code Examples Required**: For every recommendation..."
+  → MODE 2 improvement: "**STEP 1.3: Verify MODE 1 Workflow Adherence**: Check session logs..."
+  → Impact: MODE 1 becomes more actionable, MODE 2 becomes more thorough
+```
+
 ## CRITICAL: Your Output Improves MODE 1's Instruction
 
 MODE 2's purpose is to improve MODE 1 by:
@@ -720,64 +875,376 @@ MODE 2's purpose is to improve MODE 1 by:
 
 ## Workflow - Follow Every Step
 
-**STEP 1: Read Reference Examples (Start Here)**
+**STEP 1: Read All Inputs (Start Here)**
 
-1. Use list_directory on "openspec-memories/references" to see available references
-2. Use read_file to read "openspec-memories/references/00_REFERENCE_GUIDE.md"
-3. Use read_file to read "openspec-memories/references/apply_improve_agent_reference_example.md"
-4. Understand what a 9-10/10 quality analysis looks like
+1. **Read MODE 1's Current Instruction**:
+   - Use read_file on this file (meta_improve_text_agent.py)
+   - Extract the _get_analyze_apply_instruction() method
+   - Understand what MODE 1 is currently instructed to do
 
-**STEP 2: Read Your Own Recent Analysis Reports**
+2. **Read Reference Examples for MODE 1**:
+   - Use list_directory on "openspec-memories/references"
+   - Use read_file to read "openspec-memories/references/00_REFERENCE_GUIDE.md"
+   - Use read_file to read "openspec-memories/references/apply_improve_agent_mode1_reference.md"
+   - Understand what a 9-10/10 quality MODE 1 analysis looks like
 
-1. Use list_directory to find your recent APPLY_AGENT_ANALYSIS_*.md reports
-2. Use read_file to read 1-2 of your most recent reports
-3. Identify which report to use for comparison
+3. **Read MODE 1's Recent Analysis Reports**:
+   - Use list_directory to find APPLY_AGENT_ANALYSIS_*.md files
+   - Use read_file to read 1-2 of the most recent reports
+   - Understand what MODE 1 actually produced
 
-**STEP 3: Compare Your Work to Reference (Gap Analysis)**
+4. **Read MODE 1's Session Logs** (CRITICAL - verify workflow adherence):
+   - Use list_directory to find MODE 1's session logs
+   - Location: adk_openspec_apply_improve_agent/*.session.txt
+   - Use bash_command to analyze MODE 1's workflow adherence:
+   
+   ```bash
+   # Find MODE 1's most recent session
+   bash_command("ls -lt adk_openspec_apply_improve_agent/*.session.txt | head -1")
+   
+   # Check if MODE 1 followed its workflow steps
+   bash_command("grep -E 'STEP 1|STEP 2|STEP 3|STEP 4|STEP 5' mode1_session.txt")
+   
+   # Check if MODE 1 read required context files
+   bash_command("grep -E 'read_file.*apply_agent_instruction|list_directory.*openspec-memories' mode1_session.txt")
+   
+   # Check if MODE 1 analyzed session data using bash tools
+   bash_command("grep -c 'bash_command.*grep|bash_command.*wc' mode1_session.txt")
+   
+   # Check if MODE 1 performed scoring (STEP 2.75)
+   bash_command("grep -E 'STEP 2.75|apply_agent_score|ApplyAgentScore' mode1_session.txt")
+   
+   # Check if MODE 1 saved analysis report
+   bash_command("grep 'write_file.*APPLY_AGENT_ANALYSIS' mode1_session.txt")
+   ```
+   
+   **Purpose**: Determine if gaps in MODE 1's output are due to:
+   - **Execution problem**: MODE 1 didn't follow its instruction
+   - **Instruction problem**: MODE 1 followed instruction but it's inadequate
+   
+   **Key Questions to Answer**:
+   - Did MODE 1 skip any workflow steps?
+   - Did MODE 1 read all required context files?
+   - Did MODE 1 use bash tools to analyze session data?
+   - Did MODE 1 perform comprehensive scoring?
+   - If MODE 1 skipped steps, why? Was the instruction unclear?
 
-Perform comparison across these 6 dimensions (100 points total):
+5. **Read MODE 2's Own Session Logs** (OPTIONAL - for MODE 2 self-improvement):
+   - **Check if MODE 2 session logs exist first**:
+   ```bash
+   bash_command("ls adk_openspec_apply_improve_agent_self_improve/*.session.txt 2>/dev/null | wc -l")
+   ```
+   
+   - **If session logs exist** (count > 0):
+     * Use list_directory to find MODE 2's session logs
+     * Location: adk_openspec_apply_improve_agent_self_improve/*.session.txt
+     * Use bash_command to analyze MODE 2's workflow adherence:
+     
+     ```bash
+     # Find MODE 2's most recent session
+     bash_command("ls -lt adk_openspec_apply_improve_agent_self_improve/*.session.txt | head -1")
+     
+     # Check if MODE 2 followed its workflow steps
+     bash_command("grep -E 'STEP 1|STEP 2|STEP 3|STEP 4|STEP 5|STEP 6' mode2_session.txt")
+     
+     # Check if MODE 2 read all required inputs
+     bash_command("grep -E 'read_file.*meta_improve_text_agent|read_file.*reference|read_file.*APPLY_AGENT_ANALYSIS' mode2_session.txt")
+     
+     # Check if MODE 2 performed gap analysis
+     bash_command("grep -c 'gap\|dimension\|score' mode2_session.txt")
+     
+     # Check if MODE 2 generated instruction improvements
+     bash_command("grep -c 'InstructionImprovement\|instruction_text_to_add' mode2_session.txt")
+     
+     # Check MODE 2's execution time
+     bash_command("head -1 mode2_session.txt && tail -1 mode2_session.txt")
+     ```
+     
+     **Purpose**: Understand if MODE 2 itself follows its own instruction properly
+     **Result**: You will generate MODE 2 instruction improvements in STEP 5
+   
+   - **If session logs don't exist** (count = 0):
+     * Skip this step and STEP 1.6
+     * Focus only on MODE 1 improvements
+     * STEP 5 will not generate MODE 2 improvements
+
+6. **Read Reference Examples for MODE 2** (CONDITIONAL - only if STEP 1.5 found MODE 2 session logs):
+   - **Only read if MODE 2 session logs exist**
+   - Use read_file to read "openspec-memories/references/apply_improve_agent_mode2_reference.md"
+   - Understand what a 9-10/10 quality MODE 2 self-improvement analysis looks like
+   - **Purpose**: Compare MODE 2's own SELF_IMPROVEMENT_ANALYSIS_*.md reports to this reference
+   - This reference shows:
+     * How MODE 2 should analyze MODE 1's gaps
+     * How MODE 2 should generate instruction improvements
+     * What quality of instruction improvements MODE 2 should produce
+     * How MODE 2 should analyze its own workflow adherence
+
+**STEP 2: Compare Your Work to Reference (Gap Analysis)**
+
+Perform comparison across these 7 dimensions (100 points total):
+
+**CRITICAL**: For each dimension, identify the **instruction gap** - what's missing 
+or unclear in MODE 1's instruction that causes this gap.
 
 **A. Structure & Organization (10 points)**
-- How is reference structured vs. your work?
-- What structural elements are missing?
-- **Instruction Gap**: What instructions would enforce better structure?
+- How is reference structured vs. MODE 1's reports?
+- What structural elements are missing in MODE 1's reports?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce better structure?
 
-**B. Depth of Error Analysis (20 points)**
-- How deeply does reference analyze errors vs. you?
-- Do you trace to root causes or just list symptoms?
-- **Instruction Gap**: What instructions would enforce deeper analysis?
+**B. Depth of Error Analysis (15 points)**
+- How deeply does reference analyze errors vs. MODE 1's reports?
+- Does MODE 1 trace to root causes or just list symptoms?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce deeper analysis?
 
-**C. Best Practices Compliance Analysis (20 points)**
+**C. Best Practices Compliance Analysis (15 points)**
 - Does reference map fixes to best practice docs?
-- Did you analyze compliance thoroughly?
-- **Instruction Gap**: What instructions would enforce compliance checking?
+- Did MODE 1 analyze compliance thoroughly?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce compliance checking?
 
-**D. Actionability of Recommendations (20 points)**
-- How specific are reference recommendations vs. yours?
-- Do you provide exact text and code examples?
-- **Instruction Gap**: What instructions would enforce actionable recommendations?
+**D. Scoring Quality & Accuracy (20 points)**
+- **Scoring Methodology**: Does reference show clear scoring methodology vs. MODE 1?
+- **Score Justification**: Are scores well-justified with evidence?
+- **Score Calibration**: Are scores consistent and not inflated/deflated?
+- **Scoring Examples**: Does reference provide concrete scoring examples?
+- **Instruction Gap**: What's missing in MODE 1's STEP 2.75 (scoring instruction) that would improve scoring quality?
 
-**E. Quantification & Metrics (15 points)**
+**E. Actionability of Recommendations (15 points)**
+- How specific are reference recommendations vs. MODE 1's?
+- Does MODE 1 provide exact text and code examples?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce actionable recommendations?
+
+**F. Quantification & Metrics (15 points)**
 - Does reference quantify impact?
-- Do you provide time savings estimates?
-- **Instruction Gap**: What instructions would enforce quantification?
+- Does MODE 1 provide time savings estimates?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce quantification?
 
-**F. Code Examples & Specificity (15 points)**
+**G. Code Examples & Specificity (10 points)**
 - Does reference show before/after code?
-- Do you include concrete examples?
-- **Instruction Gap**: What instructions would enforce code examples?
+- Does MODE 1 include concrete examples?
+- **Instruction Gap**: What's missing in MODE 1's instruction that would enforce code examples?
 
-**STEP 4: Identify Root Causes of Gaps**
+**STEP 3: Identify Root Causes of Gaps**
 
-For each gap, analyze WHY it exists:
-- **Instruction Gap**: Is MODE 1's instruction missing guidance?
-- **Instruction Clarity**: Is MODE 1's instruction unclear?
-- **Instruction Enforcement**: Does MODE 1's instruction lack mandatory requirements?
-- **Instruction Examples**: Does MODE 1's instruction lack examples?
+For each gap identified in STEP 2, analyze WHY it exists by examining MODE 1's instruction AND MODE 1's session logs:
 
-**STEP 5: Generate Specific Instruction Improvements**
+**Two Types of Root Causes**:
 
-For each gap, create **concrete instruction text** to add to MODE 1:
+1. **Execution Problem** (MODE 1 didn't follow instruction):
+   - Check MODE 1's session logs: Did MODE 1 skip steps?
+   - Evidence: Session log shows MODE 1 didn't execute certain steps
+   - Fix: Make instruction more explicit, add verification steps
+
+2. **Instruction Problem** (MODE 1 followed instruction but it's inadequate):
+   - Check MODE 1's session logs: Did MODE 1 follow all steps?
+   - Evidence: Session log shows MODE 1 executed steps but output is still poor
+   - Fix: Improve instruction content, add requirements, examples
+
+**Root Cause Analysis Process**:
+
+1. **Identify the gap** (from STEP 2)
+2. **Check MODE 1's session logs**: Did MODE 1 follow the relevant instruction step?
+3. **Determine root cause type**:
+   - If MODE 1 skipped the step → Execution problem
+   - If MODE 1 followed the step → Instruction problem
+4. **Propose appropriate fix**:
+   - Execution problem → Make step more explicit, add "CRITICAL", add verification
+   - Instruction problem → Add concrete guidance, examples, requirements
+
+**Example Root Cause Analysis (with session log evidence)**:
+```
+Gap: MODE 1's reports lack before/after code examples (Score: 6/15)
+
+Check MODE 1's Session Logs:
+- bash_command("grep 'STEP 3' mode1_session.txt")
+- Result: MODE 1 executed STEP 3 (provide recommendations)
+- bash_command("grep 'code example\|before.*after' mode1_session.txt")
+- Result: No mentions of code examples in session
+
+Root Cause Analysis:
+- MODE 1 DID follow STEP 3 (executed the step)
+- MODE 1 DID NOT provide code examples (output gap)
+- MODE 1's instruction (STEP 3) says: "Provide specific improvement recommendations"
+- This is too vague - doesn't require code examples
+- No examples shown of what "specific" means
+- Not marked as CRITICAL or REQUIRED
+- No format template provided
+
+Root Cause Type: **Instruction Problem**
+- MODE 1 followed the instruction but instruction is inadequate
+
+Conclusion: Instruction gap - needs explicit requirement with format template
+
+Proposed Fix:
+- Add to STEP 3: "**CRITICAL - Code Examples Required**: For every recommendation..."
+- Add format template showing before/after code structure
+- Add examples of good vs bad recommendations
+```
+
+**Example Root Cause Analysis (execution problem)**:
+```
+Gap: MODE 1 didn't analyze best practices compliance (Score: 3/15)
+
+Check MODE 1's Session Logs:
+- bash_command("grep 'STEP 2.5' mode1_session.txt")
+- Result: No mentions of STEP 2.5 in session
+- bash_command("grep 'best practice\|compliance' mode1_session.txt")
+- Result: Only 2 mentions, no systematic analysis
+
+Root Cause Analysis:
+- MODE 1 DID NOT follow STEP 2.5 (skipped the step)
+- MODE 1's instruction has STEP 2.5: "Best Practices Compliance Analysis"
+- Step exists but MODE 1 skipped it
+
+Root Cause Type: **Execution Problem**
+- MODE 1 didn't follow the instruction
+
+Conclusion: Instruction not enforced - MODE 1 skipped optional-seeming step
+
+Proposed Fix:
+- Make STEP 2.5 mandatory: "**STEP 2.5: Best Practices Compliance Analysis (REQUIRED)**"
+- Add verification: "Before proceeding to STEP 3, verify you completed STEP 2.5"
+- Add output requirement: "Your analysis MUST include compliance analysis"
+```
+
+**SPECIAL: Analyzing Scoring Instruction Gaps (Dimension D)**
+
+When analyzing scoring quality gaps, examine MODE 1's STEP 2.75 specifically:
+
+**Common Scoring Instruction Issues**:
+
+1. **Vague Scoring Criteria**:
+   - Problem: "Score based on quality" without defining quality
+   - Root Cause: Scoring guides lack concrete examples
+   - Fix: Add specific examples for each score range (0-3, 4-6, 7-9, 10-12, 13-15)
+
+2. **Missing Measurement Methods**:
+   - Problem: Tells WHAT to score but not HOW to measure it
+   - Root Cause: No bash commands or extraction methods provided
+   - Fix: Add specific bash commands to extract scoring data from session logs
+
+3. **No Calibration Guidance**:
+   - Problem: Scores are inconsistent or inflated
+   - Root Cause: No calibration step or consistency checks
+   - Fix: Add calibration checklist before finalizing scores
+
+4. **Weak Justification Requirements**:
+   - Problem: Justifications are vague ("code is good")
+   - Root Cause: No examples of strong vs weak justifications
+   - Fix: Add justification templates with required evidence
+
+5. **Missing Score Dependencies**:
+   - Problem: High functionality score despite broken code
+   - Root Cause: No rules about how scores should relate
+   - Fix: Add dependency rules (e.g., "If Functionality < 8, cap Result Quality at 30")
+
+6. **Insufficient Examples**:
+   - Problem: Only one scoring example provided
+   - Root Cause: No examples showing full score range
+   - Fix: Add examples for excellent (80+), good (65-79), adequate (50-64), poor (<50)
+
+7. **No Context for Scoring**:
+   - Problem: Scoring 8 builds as "good" without baseline
+   - Root Cause: No baseline or typical session metrics provided
+   - Fix: Add baseline comparisons (typical: 4-6 builds, good: 2-3, excellent: 1-2)
+
+**How to Generate Scoring Instruction Improvements**:
+
+1. **Identify the specific scoring component** (e.g., DML Code Quality, Efficiency)
+2. **Find the gap** (e.g., vague criteria, no measurement method)
+3. **Locate in MODE 1's instruction** (e.g., "STEP 2.75, DML Code Quality section")
+4. **Propose concrete addition**:
+   - Add measurement bash commands
+   - Add calibration checks
+   - Add more examples
+   - Add dependency rules
+   - Add justification templates
+
+**Example Scoring Instruction Improvement**:
+```
+### Improvement: Add Measurement Methods for DML Code Quality
+
+**Gap Identified**: MODE 1's scoring for DML Code Quality lacks concrete measurement methods
+
+**Root Cause**: 
+- STEP 2.75 says "Score correctness (0-5)" but doesn't explain HOW to measure correctness
+- No bash commands provided to extract relevant data
+- Scorer must guess what "correct" means
+
+**Proposed Instruction Addition**:
+
+Location: In STEP 2.75, after "DML Code Quality (0-15 points)" header, before scoring guide
+
+Text to Add:
+```
+**How to Measure DML Code Quality**:
+
+**Correctness (0-5) - Measurement**:
+```bash
+# Count compilation errors in final build
+bash_command("tail -500 session.txt | grep 'build_simics_project' -A 100 | grep -c 'error:'")
+
+# Check if final build succeeded
+bash_command("tail -200 session.txt | grep -E 'Build successful|All tests passed'")
+
+# Count how many builds had errors
+bash_command("grep 'build_simics_project' session.txt | wc -l")
+```
+
+Scoring:
+- 5/5: Final build has 0 errors, builds succeeded
+- 4/5: Final build has 1-2 minor errors, mostly works
+- 3/5: Final build has 3-5 errors, partially works
+- 2/5: Final build has 6-10 errors, barely works
+- 0-1/5: Final build has 10+ errors or doesn't compile
+
+**Idioms (0-5) - Measurement**:
+```bash
+# Check for common anti-patterns
+bash_command("grep -i 'bank\\.' session.txt | grep -v 'WatchdogRegisters' | head -5")
+bash_command("grep 'unknown identifier' session.txt | wc -l")
+```
+
+Scoring:
+- 5/5: No anti-patterns, follows all best practices
+- 4/5: 1-2 minor pattern violations
+- 3/5: 3-5 pattern violations
+- 2/5: 6-10 pattern violations
+- 0-1/5: 10+ violations or major anti-patterns
+```
+
+**Example of What This Enforces**:
+MODE 1's output will include:
+```
+DML Code Quality: 8/15
+- Correctness: 4/5 (Final build: 2 errors, mostly works)
+  * Measured: tail -500 session.txt | grep 'error:' → 2 errors
+  * Final build succeeded with warnings
+- Idioms: 2/5 (12 'unknown identifier' errors)
+  * Measured: grep 'unknown identifier' → 12 occurrences
+  * Used 'bank' keyword incorrectly 5 times
+- Maintainability: 2/5 (code structure improved but still has issues)
+```
+
+**Expected Impact**:
+- Scoring becomes objective and measurable
+- Scores are consistent across different sessions
+- Justifications cite concrete evidence
+- Gap score improvement: 60/100 → 75/100 (Scoring Quality dimension)
+
+**Priority**: High
+```
+```
+
+**STEP 4: Generate Specific Instruction Improvements for MODE 1**
+
+This is your PRIMARY OUTPUT. For each gap, create **concrete instruction text** 
+to add to MODE 1's _get_analyze_apply_instruction() method.
+
+**CRITICAL - Prioritize Scoring Improvements**:
+If Dimension D (Scoring Quality) has gaps, these are HIGH PRIORITY because:
+- Scoring is the foundation of MODE 1's analysis
+- Poor scoring leads to poor recommendations
+- Scoring improvements have cascading benefits
 
 **Format for Each Improvement**:
 ```
@@ -787,9 +1254,11 @@ For each gap, create **concrete instruction text** to add to MODE 1:
 
 **Root Cause**: [Why MODE 1's instruction doesn't enforce this]
 
+**Category**: [Scoring | Error Analysis | Best Practices | Recommendations | Structure | Other]
+
 **Proposed Instruction Addition** (add to MODE 1's _get_analyze_apply_instruction):
 
-Location: [Where in MODE 1's instruction to add this - e.g., "After STEP 2.5", "In STEP 3", "New STEP 2.8"]
+Location: [Where in MODE 1's instruction to add this - e.g., "STEP 2.75 - DML Code Quality section", "After STEP 2.5", "In STEP 3", "New STEP 2.8"]
 
 Text to Add:
 ```
@@ -806,33 +1275,202 @@ Text to Add:
 **Priority**: High/Medium/Low
 ```
 
-**STEP 6: Optionally Improve MODE 2's Own Instruction**
+**Special Guidance for Scoring Improvements**:
 
-If you identify gaps in MODE 2's instruction (this instruction you're reading now):
+When improving MODE 1's scoring instruction (STEP 2.75), focus on:
 
+1. **Measurement Methods**: Add bash commands to extract scoring data
+   - Example: "Add bash command to count errors for Correctness score"
+
+2. **Calibration Steps**: Add consistency checks
+   - Example: "Add calibration checklist before finalizing scores"
+
+3. **Score Dependencies**: Add rules about how scores relate
+   - Example: "If Functionality < 8, cap Result Quality at 30"
+
+4. **Concrete Examples**: Add examples for each score range
+   - Example: "Add examples for 0-3, 4-6, 7-9, 10-12, 13-15 ranges"
+
+5. **Justification Templates**: Add required evidence format
+   - Example: "Justifications must cite specific session data"
+
+6. **Baseline Context**: Add typical session metrics for comparison
+   - Example: "Typical: 4-6 builds, Good: 2-3, Excellent: 1-2"
+
+**STEP 5: Conditionally Improve MODE 2's Own Instruction**
+
+**Decision Point**: Did you read MODE 2's session logs in STEP 1.5?
+
+**IF YES** (MODE 2 session logs exist and were analyzed):
+  → You MUST generate improvements for MODE 2 based on session log analysis
+  → Follow the guidance below
+
+**IF NO** (MODE 2 session logs don't exist or weren't analyzed):
+  → Skip MODE 2 improvements
+  → Focus only on MODE 1 improvements from STEP 4
+  → Proceed directly to STEP 6
+  → In set_model_response, set mode2_instruction_improvements to None or empty list
+
+**When MODE 2 Session Logs Were Analyzed**:
+
+Analyze MODE 2's workflow adherence based on session logs AND compare to MODE 2's reference:
+
+1. **Compare MODE 2's Output to Reference**:
+   - Read MODE 2's previous SELF_IMPROVEMENT_ANALYSIS_*.md report
+   - Compare to MODE 2's reference (apply_improve_agent_mode2_reference.md)
+   - Identify gaps in MODE 2's own analysis quality
+
+2. **Analyze MODE 2's Workflow Adherence**:
+1. **Did MODE 2 follow all steps?**
+   - Check session logs: Were STEP 1, 2, 3, 4, 5, 6 executed?
+   - Missing steps indicate instruction gaps
+
+2. **Did MODE 2 read all required inputs?**
+   - Check session logs: Did MODE 2 read MODE 1 instruction, reports, references?
+   - Skipped inputs indicate unclear requirements
+
+3. **Did MODE 2 perform thorough gap analysis?**
+   - Check session logs: How many dimensions analyzed? How many gaps identified?
+   - Shallow analysis indicates insufficient guidance
+
+4. **Did MODE 2 generate actionable improvements?**
+   - Check session logs: How many InstructionImprovement objects created?
+   - Few improvements indicate unclear output requirements
+
+5. **Did MODE 2 complete efficiently?**
+   - Check session logs: How long did MODE 2 take?
+   - Excessive time indicates workflow inefficiency
+
+**Common MODE 2 Instruction Issues** (based on session log analysis):
+
+1. **Skipped Workflow Steps**:
+   - Problem: MODE 2 didn't follow STEP 1.4 (read MODE 2 session logs)
+   - Root Cause: STEP 1.4 says "CRITICAL" but doesn't enforce it
+   - Fix: Make STEP 1.4 mandatory with verification
+
+2. **Incomplete Gap Analysis**:
+   - Problem: MODE 2 only analyzed 3 of 7 dimensions
+   - Root Cause: Dimension descriptions are too vague
+   - Fix: Add concrete examples for each dimension
+
+3. **Vague Instruction Improvements**:
+   - Problem: MODE 2's improvements lack concrete text
+   - Root Cause: STEP 4 format is shown but not enforced
+   - Fix: Add validation requirements for instruction_text_to_add
+
+4. **No Self-Analysis**:
+   - Problem: MODE 2 didn't analyze its own session logs
+   - Root Cause: STEP 1.4 is buried in the workflow
+   - Fix: Make self-analysis a separate, prominent step
+
+**When to improve MODE 2**:
+- MODE 2's workflow is unclear or incomplete (check session logs)
+- MODE 2's gap analysis dimensions are insufficient (check output quality)
+- MODE 2's output format needs enhancement (check InstructionImprovement quality)
+- MODE 2's instruction lacks examples or clarity (check if MODE 2 struggled)
+- **MODE 2 didn't follow its own instruction** (check session logs for skipped steps)
+
+**Format for MODE 2 Improvements**:
 ```
 ### MODE 2 Self-Improvement: [Name]
 
-**Gap in MODE 2**: [What MODE 2 doesn't do well]
+**Gap in MODE 2**: [What MODE 2 doesn't do well - cite session log evidence]
+
+**Root Cause**: [Why MODE 2's instruction doesn't enforce this]
+
+**Evidence from Session Logs**:
+[Cite specific evidence from MODE 2's session logs showing the gap]
 
 **Proposed MODE 2 Instruction Update**:
-[Specific text to add/modify in _get_self_improve_instruction]
 
-**Expected Impact**: [How this improves MODE 2's self-improvement capability]
+Location: [Where in _get_self_improve_instruction to add/modify]
+
+Text to Add/Modify:
+```
+[EXACT TEXT]
 ```
 
-**STEP 7: Save Self-Improvement Report**
+**Example of What This Enforces**:
+[Show what MODE 2's behavior should look like after this change]
+
+**Expected Impact**: [How this improves MODE 2's self-improvement capability]
+
+**Priority**: High/Medium/Low
+```
+
+**Example MODE 2 Self-Improvement**:
+```
+### MODE 2 Self-Improvement: Enforce Self-Analysis
+
+**Gap in MODE 2**: MODE 2 didn't analyze its own session logs
+
+**Root Cause**: STEP 1.4 says "CRITICAL" but is optional in practice
+
+**Evidence from Session Logs**:
+- Session log shows no grep commands for MODE 2's own session file
+- No analysis of MODE 2's workflow adherence
+- MODE 2 only analyzed MODE 1, not itself
+
+**Proposed MODE 2 Instruction Update**:
+
+Location: After STEP 1, add new STEP 1.5
+
+Text to Add:
+```
+**STEP 1.5: Verify You Followed Your Own Workflow (MANDATORY)**
+
+Before proceeding to STEP 2, verify you completed STEP 1 properly:
+
+```bash
+# Check if you read MODE 1 instruction
+bash_command("grep 'read_file.*meta_improve_text_agent' <your_session_file>")
+
+# Check if you read references
+bash_command("grep 'read_file.*reference' <your_session_file>")
+
+# Check if you read MODE 1 reports
+bash_command("grep 'read_file.*APPLY_AGENT_ANALYSIS' <your_session_file>")
+```
+
+If any check fails, STOP and complete the missing step before continuing.
+This ensures you have all required context for gap analysis.
+```
+
+**Example of What This Enforces**:
+MODE 2 will verify it read all inputs before starting gap analysis,
+preventing incomplete analysis due to missing context.
+
+**Expected Impact**: 
+- MODE 2 follows its own workflow consistently
+- Gap analysis is based on complete information
+- Fewer low-quality instruction improvements
+
+**Priority**: High
+```
+
+**STEP 6: Save Self-Improvement Report**
 
 1. Get current directory: `bash_command("pwd")`
 2. Save as `SELF_IMPROVEMENT_ANALYSIS_YYYYMMDD_HHMMSS.md` using write_file
 3. Include: 
-   - Reference Summary
-   - Your Work Summary
-   - Gap Analysis (6 dimensions)
-   - Root Causes
-   - **Concrete Instruction Improvements for MODE 1** (PRIMARY)
-   - Optional: Instruction improvements for MODE 2
-4. Call set_model_response with SelfImprovementAnalysis including file path
+   - **Inputs Summary**: MODE 1 instruction version, reports analyzed, references used
+   - Reference Summary: What makes it excellent (9-10/10)
+   - MODE 1 Reports Summary: Strengths and weaknesses
+   - Gap Analysis: Detailed comparison across 6 dimensions with scores
+   - Root Causes: Why gaps exist (focus on instruction gaps)
+   - **MODE 1 Instruction Improvements** (PRIMARY OUTPUT):
+     * Concrete instruction text to add
+     * Location where to add it
+     * Examples of enforced behavior
+     * Expected impact
+   - Optional: MODE 2 Instruction Improvements
+   - Implementation Plan: How to apply these improvements
+4. Call set_model_response with SelfImprovementAnalysis including:
+   - All gap analyses with scores
+   - All improvement actions
+   - **mode1_instruction_improvements** (REQUIRED - primary output)
+   - mode2_instruction_improvements (optional)
+   - Full absolute file path to saved report
 
 ## Output Structure
 
