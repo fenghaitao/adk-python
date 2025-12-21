@@ -178,18 +178,27 @@ class SelfImprovementAnalysis(BaseModel):
 - 0-3: Very poor - doesn't work or major violations
 
 **Test Quality (0-15)**
-- 13-15: Excellent - comprehensive, meaningful, clear
-- 10-12: Good - covers main cases
-- 7-9: Adequate - basic coverage
-- 4-6: Poor - minimal coverage
+- 13-15: Excellent - comprehensive coverage, very clear
+- 10-12: Good - covers main cases, clear
+- 7-9: Adequate - basic coverage, readable
+- 4-6: Poor - minimal coverage or unclear
 - 0-3: Very poor - tests don't work
 
 **Documentation (0-10)**
-- 9-10: Excellent - complete, clear, helpful
-- 7-8: Good - mostly complete
-- 5-6: Adequate - basic documentation
-- 3-4: Poor - incomplete
-- 0-2: Very poor - missing
+- 9-10: Excellent - complete docstrings, clear comments explaining WHY
+- 7-8: Good - most components documented, mostly clear
+- 5-6: Adequate - basic docstrings, minimal comments
+- 3-4: Poor - incomplete docstrings or unclear
+- 0-2: Very poor - missing documentation
+
+**What counts as documentation**:
+- DML: Device, banks, registers, methods have docstrings
+- Tests: Test files and functions have docstrings
+- Complex logic: Comments explaining WHY (not WHAT)
+- Register purposes: Clear descriptions of what registers do
+
+**Note**: Per AGENTS.md style guide, comments should explain the WHY (rationale, 
+business logic), not the WHAT (obvious code behavior).
 
 **Functionality (0-10)**
 - 9-10: Excellent - fully implements spec
@@ -244,7 +253,7 @@ Overall Score: 56/100 (5.6/10)
 
 Result Quality: 32/50
 - DML Code: 8/15 (works but violated scope patterns)
-- Tests: 10/15 (good coverage, could be more specific)
+- Tests: 10/15 (good coverage, could be better organized)
 - Docs: 6/10 (basic but adequate)
 - Functionality: 8/10 (works correctly)
 

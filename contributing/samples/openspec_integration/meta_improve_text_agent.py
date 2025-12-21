@@ -360,27 +360,36 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - 0-3: Very poor - doesn't work or major violations
 
 2. **Test Quality (0-15 points)**
-   - Coverage: Do tests cover key functionality? (0-5)
-   - Assertions: Are assertions meaningful and correct? (0-5)
-   - Clarity: Are tests clear and maintainable? (0-5)
+   - Coverage: Do tests cover key functionality? (0-8)
+   - Clarity: Are tests clear and maintainable? (0-7)
    
    **Scoring Guide**:
-   - 13-15: Excellent - comprehensive, meaningful, clear
-   - 10-12: Good - covers main cases, good assertions
-   - 7-9: Adequate - basic coverage, some assertions
-   - 4-6: Poor - minimal coverage or weak assertions
+   - 13-15: Excellent - comprehensive coverage, very clear
+   - 10-12: Good - covers main cases, clear
+   - 7-9: Adequate - basic coverage, readable
+   - 4-6: Poor - minimal coverage or unclear
    - 0-3: Very poor - tests don't work or missing
 
 3. **Documentation Quality (0-10 points)**
    - Completeness: Are all components documented? (0-5)
+     * DML: Device, banks, registers, methods have docstrings
+     * Tests: Test files and functions have docstrings
+     * Complex logic has explanatory comments (WHY, not WHAT)
    - Clarity: Is documentation clear and helpful? (0-5)
+     * Descriptions are accurate and understandable
+     * Examples provided where helpful
+     * Register purposes explained
    
    **Scoring Guide**:
-   - 9-10: Excellent - complete, clear, helpful
-   - 7-8: Good - mostly complete, clear
-   - 5-6: Adequate - basic documentation
-   - 3-4: Poor - incomplete or unclear
-   - 0-2: Very poor - missing or unhelpful
+   - 9-10: Excellent - complete docstrings, clear comments, helpful
+   - 7-8: Good - most components documented, mostly clear
+   - 5-6: Adequate - basic docstrings, minimal comments
+   - 3-4: Poor - incomplete docstrings or unclear
+   - 0-2: Very poor - missing or unhelpful documentation
+   
+   **Note**: Focus on docstrings and explanatory comments for complex logic.
+   Avoid penalizing for lack of obvious comments (e.g., "increment counter").
+   Per AGENTS.md: "Comments should explain WHY, not WHAT."
 
 4. **Functionality Score (0-10 points)**
    - Spec compliance: Implements all required features? (0-5)
@@ -479,11 +488,10 @@ Used 'bank' keyword as variable (anti-pattern). Didn't consult 07_DML_Register_A
 before implementing, leading to 12 scope errors."
 
 Test Quality: 10/15
-- Coverage: 4/5 (covers main functionality, missing edge cases)
-- Assertions: 3/5 (basic assertions, could be more specific)
-- Clarity: 3/5 (tests are readable but could be better organized)
+- Coverage: 6/8 (covers main functionality, missing some edge cases)
+- Clarity: 4/7 (tests are readable but could be better organized)
 Justification: "Tests cover core functionality and use correct register access patterns. 
-However, missing edge case coverage and assertions could be more specific about expected behavior."
+However, missing edge case coverage and tests could be better organized with clearer naming."
 
 Documentation: 6/10
 - Completeness: 3/5 (basic docs, missing some details)
