@@ -481,12 +481,37 @@ You MUST score the apply_agent's performance using a comprehensive 100-point sys
    - Improvement trajectory: Does code get better over iterations? (0-5)
    - Refinement: Does agent refine vs. rewrite randomly? (0-5)
    
+   **What This Measures**:
+   This scores how the code quality changes across multiple build attempts.
+   Does the agent make thoughtful, incremental improvements, or does it
+   thrash around making random changes?
+   
+   **How to Score**:
+   1. **Track code changes across builds**: Compare code from build 1 → 2 → 3, etc.
+   2. **Improvement trajectory (0-5)**:
+      - Does code quality increase over time?
+      - Are errors being fixed without introducing new ones?
+      - Is the agent learning from previous mistakes?
+   3. **Refinement vs. Rewrite (0-5)**:
+      - Does agent make targeted fixes (refinement)?
+      - Or does it rewrite large sections randomly (thrashing)?
+      - Are changes logical and purposeful?
+   
    **Scoring Guide**:
-   - 9-10: Excellent - clear improvement, thoughtful refinement
-   - 7-8: Good - generally improves, mostly refines
-   - 5-6: Adequate - some improvement, some refinement
-   - 3-4: Poor - little improvement, random changes
-   - 0-2: Very poor - no improvement or gets worse
+   - 9-10: Excellent - clear improvement, thoughtful refinement, learns from errors
+   - 7-8: Good - generally improves, mostly refines, some learning
+   - 5-6: Adequate - some improvement, mix of refinement and rewrites
+   - 3-4: Poor - little improvement, frequent random rewrites
+   - 0-2: Very poor - no improvement or gets worse, constant thrashing
+   
+   **Examples**:
+   - **Good (9/10)**: Build 1 has scope error → Build 2 fixes scope → Build 3 adds missing logic
+   - **Poor (3/10)**: Build 1 has scope error → Build 2 rewrites entire method → Build 3 rewrites again differently → Build 4 back to Build 1 approach
+   
+   **Red Flags** (score 0-3):
+   - Same error appears in builds 1, 3, 5 (not learning)
+   - Code structure completely different in each build (thrashing)
+   - Later builds have more errors than earlier builds (regression)
 
 **CALCULATING SCORES**:
 
