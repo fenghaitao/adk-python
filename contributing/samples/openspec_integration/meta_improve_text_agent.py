@@ -279,21 +279,29 @@ Note: These are estimates for recommendations, not actual implementations.
 ┃  THIS IS A MANDATORY STEP - YOUR TASK IS NOT COMPLETE WITHOUT IT  ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
+⚠️ CRITICAL WARNING ⚠️
+DO NOT just print "## File Saved" or "Analysis report saved to:" without ACTUALLY calling write_file!
+You MUST use the write_file TOOL to physically save the file. Simply saying you saved it is NOT sufficient.
+
 You MUST save your analysis report to a markdown file BEFORE calling set_model_response:
 
 1. **Generate a timestamped filename**: Use format `META_IMPROVE_ANALYSIS_YYYYMMDD_HHMMSS.md`
-2. **Save the report**: Use write_file tool to save your comprehensive analysis
-3. **Include all sections**: Session Summary, Error Patterns, Insights, Recommendations, Expected Impact
-4. **Format as Markdown**: Use proper markdown headers, lists, code blocks
-5. **Save location**: Save in the CURRENT WORKING DIRECTORY (use "./" prefix or get absolute path first)
+2. **ACTUALLY CALL write_file TOOL**: Do not just say you saved it - USE THE TOOL!
+3. **Save the report**: Use write_file tool to save your comprehensive analysis
+4. **Include all sections**: Session Summary, Error Patterns, Insights, Recommendations, Expected Impact
+5. **Format as Markdown**: Use proper markdown headers, lists, code blocks
+6. **Save location**: Save in the CURRENT WORKING DIRECTORY (use "./" prefix or get absolute path first)
 
 **STEP 6: Report File Location in Final Response**
-After saving the markdown file, you MUST:
+After ACTUALLY calling write_file tool and saving the markdown file, you MUST:
 1. Include the FULL ABSOLUTE PATH of the saved file in your final message
 2. State clearly: "Analysis report saved to: <FULL_PATH>"
 3. Call set_model_response with the SessionAnalysis data, including the file path in analysis_report_file field
 
-**VALIDATION**: If you did NOT save the markdown file, DO NOT proceed to set_model_response.
+**VALIDATION**: 
+- Check: Did I see a "🔧 write_file(...)" tool call in my response? If NO, the file was NOT saved!
+- If you did NOT actually call write_file tool, DO NOT proceed to set_model_response.
+- DO NOT include "## File Saved" section in your markdown content - let the tool call confirm it was saved.
 
 **Example markdown structure**:
 ```markdown
@@ -416,15 +424,17 @@ Generated: YYYY-MM-DD HH:MM:SS
 1. Priority 1 action
 2. Priority 2 action
 ...
-
-## File Saved
-Analysis report saved to: <FULL_ABSOLUTE_PATH_HERE>
 ```
 
+**CRITICAL: DO NOT include a "## File Saved" section in your markdown report!**
+The markdown report should end with "Actionable Next Steps". After you call write_file,
+THEN you separately mention the file path in your user-facing message.
+
 **FINAL CHECKLIST BEFORE set_model_response**:
-✅ Did I save the markdown file using write_file? (REQUIRED)
-✅ Did I report the full absolute path of the saved file? (REQUIRED)
-✅ Did I include Best Practices Compliance Analysis? (REQUIRED)
+✅ Did I ACTUALLY call write_file tool (not just say I did)? (REQUIRED - check for 🔧 write_file in your response!)
+✅ Did I get a successful response from write_file tool? (REQUIRED)
+✅ Did I report the full absolute path of the saved file in my message? (REQUIRED)
+✅ Did I include Best Practices Compliance Analysis in the saved markdown? (REQUIRED)
 ✅ Only after all ✅ above, call set_model_response
 
 ## Analysis Focus Areas
