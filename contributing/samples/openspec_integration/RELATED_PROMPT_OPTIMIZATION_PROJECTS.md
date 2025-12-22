@@ -2,6 +2,24 @@
 
 This document lists open-source projects related to prompt optimization, fine-tuning, and iterative improvement. Our ApplyImproveAgent (MODE 1 + MODE 2) implements a novel multi-level meta-learning approach for prompt optimization.
 
+## Context: ADK-Python and PromptFlow
+
+**Important Note**: ADK-Python (our framework) and Microsoft's PromptFlow are comparable frameworks for building LLM applications. Both provide:
+- Agent/flow orchestration
+- Evaluation and testing tools
+- Deployment capabilities
+- Multi-LLM support
+
+**Key Difference**:
+- ADK: Google/Gemini-focused, code-first, agent-centric
+- PromptFlow: Microsoft/Azure-focused, visual-first, flow-centric
+
+**Our Contribution**: We built a meta-learning system (MODE 1 + MODE 2) **on top of ADK** that enables autonomous prompt optimization. This meta-learning approach could theoretically be implemented on any framework (ADK, PromptFlow, LangChain, etc.).
+
+See the [ADK-Python vs PromptFlow comparison](#adk-python-vs-promptflow-framework-comparison) section below for details.
+
+---
+
 ## 1. DSPy (Stanford NLP)
 
 **Repository**: https://github.com/stanfordnlp/dspy
@@ -82,7 +100,7 @@ This document lists open-source projects related to prompt optimization, fine-tu
 
 ---
 
-## 4. Prompt Flow (Microsoft)
+## 4. Prompt Flow (Microsoft) - Similar to ADK
 
 **Repository**: https://github.com/microsoft/promptflow
 
@@ -93,19 +111,39 @@ This document lists open-source projects related to prompt optimization, fine-tu
 - Evaluation and metrics
 - Deployment and monitoring
 - Integration with Azure AI
+- Flow-based orchestration
+- Testing and debugging tools
+
+**Similarity to ADK-Python**:
+- **Both are frameworks for building LLM applications**
+- Both support agent/flow orchestration
+- Both have evaluation and testing capabilities
+- Both support deployment and monitoring
+- Both are code-first with optional visual tools
+- Both integrate with multiple LLM providers
+- Both support complex multi-step workflows
 
 **Similarity to Our Approach**:
 - Both support iterative prompt improvement
 - Both use evaluation metrics
 - Both track prompt versions
+- Both enable complex agent workflows
 
-**Difference**:
+**Difference from ADK**:
+- Prompt Flow: Microsoft-centric (Azure focus)
+- ADK: Google-centric (Gemini focus) but model-agnostic
+- Prompt Flow: Visual IDE emphasis
+- ADK: Code-first emphasis
+
+**Difference from Our Meta-Learning Approach**:
 - Prompt Flow: Developer-driven workflow
 - Ours: Agent-driven self-improvement
-- Prompt Flow: Visual IDE-based
-- Ours: Code-based with meta-analysis
+- Prompt Flow: Manual prompt optimization
+- Ours: Autonomous meta-learning (MODE 2 → MODE 1)
 
-**Use Case**: When you want a visual IDE for prompt engineering workflows.
+**Use Case**: When you want a visual IDE for prompt engineering workflows, especially in Azure ecosystem.
+
+**Note**: PromptFlow and ADK-Python are comparable frameworks - both enable building, testing, and deploying LLM applications. Our ApplyImproveAgent adds autonomous meta-learning on top of ADK's foundation.
 
 ---
 
@@ -272,15 +310,68 @@ This document lists open-source projects related to prompt optimization, fine-tu
 
 ---
 
+## ADK-Python vs PromptFlow: Framework Comparison
+
+Since both ADK-Python and PromptFlow are comprehensive frameworks for building LLM applications, here's a detailed comparison:
+
+### Similarities
+
+| Feature | ADK-Python | PromptFlow |
+|---------|-----------|------------|
+| **Purpose** | Build, test, deploy LLM apps | Build, test, deploy LLM apps |
+| **Orchestration** | Agent-based workflows | Flow-based workflows |
+| **Evaluation** | Built-in evaluation tools | Built-in evaluation tools |
+| **Testing** | Testing framework | Testing framework |
+| **Deployment** | Deployment support | Deployment support |
+| **Multi-LLM** | Model-agnostic | Model-agnostic |
+| **Code-First** | Yes (Python) | Yes (Python/YAML) |
+| **Visual Tools** | Optional | Emphasized |
+
+### Differences
+
+| Aspect | ADK-Python | PromptFlow |
+|--------|-----------|------------|
+| **Primary Focus** | Google/Gemini ecosystem | Microsoft/Azure ecosystem |
+| **Philosophy** | Code-first, agent-centric | Visual-first, flow-centric |
+| **Orchestration Model** | Agents with tools | Flows with nodes |
+| **Development Style** | Pure Python code | Python + YAML configs |
+| **IDE Integration** | VS Code, any IDE | VS Code extension |
+| **Cloud Integration** | Google Cloud (Vertex AI) | Azure AI |
+| **Open Source** | Fully open-source | Fully open-source |
+
+### Our Meta-Learning Addition
+
+**What we built on top of ADK**:
+- Multi-level meta-learning (MODE 2 → MODE 1 → apply_agent)
+- Autonomous prompt optimization
+- Self-referential improvement
+- Session log analysis for root cause identification
+- Reference-guided quality targets
+
+**Could this be built on PromptFlow?**
+- Yes, the meta-learning approach is framework-agnostic
+- Could be implemented as PromptFlow flows
+- Would use PromptFlow's evaluation tools
+- Would leverage PromptFlow's orchestration
+
+**Why we chose ADK**:
+- Better fit for our Gemini-based workflow
+- Code-first approach aligns with our needs
+- Agent abstraction matches our architecture
+- Easier to implement instruction-as-code pattern
+
+---
+
 ## Comparison Table
 
 | Project | Optimization Type | Automation Level | Self-Improvement | Multi-Level | Session Analysis |
 |---------|------------------|------------------|------------------|-------------|------------------|
 | **Our Approach** | Meta-analysis | Fully Autonomous | Yes (MODE 2) | Yes (3 levels) | Yes |
+| **ADK-Python** | Framework | Manual | No | No | No |
+| **PromptFlow** | Framework | Manual | No | No | No |
 | DSPy | Compilation | Automatic | No | No | No |
 | PromptTools | Testing | Manual | No | No | No |
 | LangSmith | Monitoring | Human-in-loop | No | No | Yes (traces) |
-| Prompt Flow | Workflow | Developer-driven | No | No | No |
 | TextGrad | Gradient-based | Automatic | No | No | No |
 | OPRO | LLM-as-optimizer | Automatic | No | Single-level | No |
 | AutoPrompt | Token search | Automatic | No | No | No |
