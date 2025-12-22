@@ -130,12 +130,12 @@ WORKDIR="$(pwd)"
 
 echo -e "${BLUE}Working directory: $WORKDIR${NC}"
 
-# Copy openspec-memories folder to workdir if it exists
+# Symlink openspec-memories folder to workdir if it exists
 MEMORIES_SRC="$SCRIPT_DIR/../openspec-memories"
 if [[ -d "$MEMORIES_SRC" ]]; then
-  echo -e "${BLUE}📂 Copying openspec-memories to workdir...${NC}"
-  cp -r "$MEMORIES_SRC" "$WORKDIR/"
-  echo -e "${GREEN}✅ openspec-memories copied to $WORKDIR/openspec-memories${NC}"
+  echo -e "${BLUE}📂 Symlinking openspec-memories to workdir...${NC}"
+  ln -sf "$MEMORIES_SRC" "$WORKDIR/openspec-memories"
+  echo -e "${GREEN}✅ openspec-memories symlinked to $WORKDIR/openspec-memories${NC}"
 else
   echo -e "${YELLOW}⚠️  openspec-memories folder not found at $MEMORIES_SRC${NC}"
 fi
@@ -240,7 +240,15 @@ fi
 if [[ "$RUN_APPLY" == true ]]; then
   echo -e "${BLUE}🔧 Running /apply for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$APPLY_DIR" "openspec_integration.apply_agent"
-  
+  # Symlink apply_agent_instruction.md from source to target directory
+  INSTRUCTION_SRC="$SCRIPT_DIR/../contributing/samples/openspec_integration/apply_agent_instruction.md"
+  if [[ -f "$INSTRUCTION_SRC" ]]; then
+    ln -sf "$INSTRUCTION_SRC" "$APPLY_DIR/apply_agent_instruction.md"
+    echo -e "${GREEN}✅ Symlinked apply_agent_instruction.md to $APPLY_DIR${NC}"
+  else
+    echo -e "${YELLOW}⚠️  apply_agent_instruction.md not found at $INSTRUCTION_SRC${NC}"
+  fi  
+
   # Build ADK command with session options
   ADK_APPLY_CMD="$ADK_BIN run $APPLY_DIR"
   if [[ "$SAVE_SESSION" == true ]]; then
