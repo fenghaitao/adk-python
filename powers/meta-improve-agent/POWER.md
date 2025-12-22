@@ -14,6 +14,23 @@ Documentation and guidance for analyzing apply_agent execution sessions to ident
 
 The Meta Improve Agent analyzes session JSON files from apply_agent executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
 
+## ⚠️ CRITICAL: Documentation Verification (NEW)
+
+**Don't assume existing documents cover the error!** The most common analysis mistake is assuming a document covers a topic based on its title, without verifying actual content.
+
+**Example of this mistake:**
+- Error: `reference to unknown object 'WDOGCONTROL.field'`
+- ❌ WRONG: "Agent violated protocol by not reading 07_DML_Register_Access_Scope.md"
+- ✅ CORRECT: "Documentation gap - 07_DML_Register_Access_Scope.md covers register values (`.val`) but not field access (`.FIELDNAME`)"
+
+**Always verify:**
+1. Read the referenced document
+2. Search for keywords related to the error
+3. Confirm the document explains what the agent tried to do
+4. Classify correctly: Protocol Violation vs Documentation Gap vs Missing Document
+
+See **Step 4.5: Verify Documentation Coverage** in the analysis protocol below for detailed guidance.
+
 ## What It Does
 
 - **Session Analysis**: Parses apply_agent session text files to extract build attempts, errors, fixes, and outcomes
@@ -756,6 +773,122 @@ For each error pattern:
 - Check memory documents for relevant information
 - Identify what the agent SHOULD have known but didn't
 
+### Step 4.5: Verify Documentation Coverage (CRITICAL - NEW)
+
+**Don't assume existing documents cover the error!** You must verify that referenced documents actually contain the needed information.
+
+#### Documentation Gap Analysis Process
+
+For each error pattern, follow this verification workflow:
+
+1. **Identify what the agent was trying to do**
+   - Example: "Agent tried to access register fields using `.field` syntax"
+
+2. **Check agent instructions for guidance**
+   - Example: Instructions say "read `07_DML_Register_Access_Scope.md`"
+
+3. **Read the referenced document(s)**
+   - **CRITICAL**: Don't assume the document covers the issue - actually read it!
+   - Example: Read `07_DML_Register_Access_Scope.md` to see what it covers
+
+4. **Verify coverage of the specific error pattern**
+   - Does the document explain how to do what the agent tried?
+   - Example: Document covers register VALUE access (`.val`) but NOT field access (`.FIELDNAME`)
+
+5. **Classify the root cause**:
+   - **Protocol Violation**: Document exists and covers the issue, but agent didn't read it
+   - **Documentation Gap**: Document exists but doesn't cover the specific issue
+   - **Missing Document**: No document exists for this topic
+
+#### Example: Field Access Error Analysis
+
+**Error Pattern:**
+```
+error: reference to unknown object 'WatchdogRegisters.WDOGCONTROL.field'
+```
+
+**Step-by-step verification:**
+
+1. **What agent tried:** Access register fields using `.field` syntax
+2. **Instruction guidance:** "Read `07_DML_Register_Access_Scope.md` for ANY DML implementation"
+3. **Read the document:** Check what `07_DML_Register_Access_Scope.md` actually covers
+4. **Verify coverage:**
+   ```bash
+   # Search for field-related content
+   grep -i "field" openspec-memories/07_DML_Register_Access_Scope.md
+   # Result: Document only mentions "field" in context of bank/register hierarchy
+   # Does NOT explain how to access fields within registers
+   ```
+5. **Classification:** **Documentation Gap** - Document covers register access but not field access
+
+**Correct diagnosis:**
+- ❌ WRONG: "Agent violated protocol by not reading 07_DML_Register_Access_Scope.md"
+- ✅ CORRECT: "Document gap - 07_DML_Register_Access_Scope.md doesn't cover field access patterns"
+
+**Correct recommendation:**
+- ❌ WRONG: "Strengthen instruction to read existing document"
+- ✅ CORRECT: "Create new document `08_DML_Register_Field_Access.md` covering field access patterns"
+
+#### Verification Commands
+
+Use these commands to verify documentation coverage:
+
+```bash
+# Search for specific concepts in a document
+grep -i "field" openspec-memories/07_DML_Register_Access_Scope.md
+grep -i "\.INTEN\|\.RESEN" openspec-memories/*.md
+
+# Check if document covers the error pattern
+grep -i "unknown object" openspec-memories/05_DML_Troubleshooting.md
+
+# List all documents that might be relevant
+ls openspec-memories/ | grep -i "register\|field\|access"
+
+# Search across all memory documents
+grep -r "field access" openspec-memories/
+```
+
+#### Common Verification Mistakes
+
+**Mistake 1: Assuming document title = complete coverage**
+- Document titled "Register Access" might only cover register values, not fields
+- Always read the document to verify actual coverage
+
+**Mistake 2: Confusing similar concepts**
+- "Register access" (accessing whole register value) ≠ "Field access" (accessing bits within register)
+- "Register scope" (device/bank/register level) ≠ "Field syntax" (how to reference fields)
+
+**Mistake 3: Not distinguishing protocol violation vs documentation gap**
+- Protocol violation: Agent should have read existing doc but didn't
+- Documentation gap: Agent read the doc but it didn't cover the issue
+- These require DIFFERENT solutions!
+
+#### Decision Tree for Root Cause
+
+```
+Error Pattern Found
+    ↓
+Does agent instruction reference a document?
+    ↓ YES                           ↓ NO
+Read the document              → Missing Document
+    ↓                              (Create new doc)
+Does it cover this error?
+    ↓ YES              ↓ NO
+Protocol Violation   Documentation Gap
+(Strengthen         (Expand existing doc
+ instruction)        or create new doc)
+```
+
+#### Impact on Recommendations
+
+Your recommendations must match the root cause:
+
+| Root Cause | Recommendation Type | Example |
+|------------|-------------------|---------|
+| **Protocol Violation** | Strengthen instruction emphasis | "Add checklist to ensure agent reads doc before implementing" |
+| **Documentation Gap** | Expand or create documentation | "Add field access section to existing doc" or "Create new doc for field access" |
+| **Missing Document** | Create new documentation | "Create `08_DML_Register_Field_Access.md`" |
+
 ### Step 5: Generate Specific Improvements
 For each significant error pattern (3+ occurrences):
 - Exact text to add to agent instructions
@@ -1023,6 +1156,42 @@ REGISTER at bank level, this at register level'"
 - Time spent on rework
 - Total impact in minutes
 
+### Pitfall 6: Assuming Documentation Coverage (NEW - CRITICAL)
+**Symptom**: Analysis says "agent should have read document X" but document X doesn't actually cover the error
+
+**Problem**: Assuming a document covers a topic based on its title, without verifying actual content
+
+**Example:**
+- Error: `reference to unknown object 'WDOGCONTROL.field'`
+- Analysis says: "Agent violated protocol by not reading 07_DML_Register_Access_Scope.md"
+- Reality: That document covers register VALUE access (`.val`) but NOT field access (`.FIELDNAME`)
+- Correct diagnosis: Documentation gap, not protocol violation
+
+**Solution**: Always verify documentation coverage:
+```bash
+# Read the referenced document
+cat openspec-memories/07_DML_Register_Access_Scope.md
+
+# Search for relevant keywords
+grep -i "field" openspec-memories/07_DML_Register_Access_Scope.md
+grep -i "\.INTEN\|\.RESEN" openspec-memories/*.md
+
+# Verify the document explains what the agent tried to do
+```
+
+**Impact of this mistake:**
+- Wrong root cause diagnosis (protocol violation vs documentation gap)
+- Wrong recommendation (strengthen instruction vs create new doc)
+- Wasted effort (agent will still fail because doc doesn't help)
+
+**Correct approach:**
+1. Identify what agent tried to do: "Access register fields"
+2. Check instruction guidance: "Read 07_DML_Register_Access_Scope.md"
+3. **Read the document**: Verify it covers field access
+4. **Verify coverage**: Document covers `.val` but not `.FIELDNAME`
+5. **Correct diagnosis**: Documentation gap - need new section or document
+6. **Correct recommendation**: Create `08_DML_Register_Field_Access.md`
+
 ## Analysis Quality Checklist
 
 Before submitting analysis, verify:
@@ -1038,11 +1207,20 @@ Before submitting analysis, verify:
 - [ ] Extracted actual error messages (not just counted error lines)
 - [ ] Counted unique error occurrences correctly
 - [ ] Identified root cause for each major error pattern
+- [ ] **Verified documentation coverage (CRITICAL - NEW)**
+  - [ ] Read referenced memory documents to verify they cover the error pattern
+  - [ ] Distinguished between protocol violation vs documentation gap
+  - [ ] Used grep/search to confirm document content matches error needs
+  - [ ] Classified root cause correctly: Protocol Violation / Documentation Gap / Missing Document
 - [ ] Provided EXACT text for instruction updates (not generic advice)
 - [ ] Calculated quantified before/after metrics including score improvement
 - [ ] Focused on patterns (3+ occurrences), not one-off issues
 - [ ] Checked agent instructions and memory docs for gaps
 - [ ] Provided specific file paths for all recommendations
+- [ ] **Matched recommendations to root cause type**
+  - [ ] Protocol Violation → Strengthen instructions
+  - [ ] Documentation Gap → Expand existing doc or create new section
+  - [ ] Missing Document → Create new document with full content outline
 
 ## Troubleshooting
 
