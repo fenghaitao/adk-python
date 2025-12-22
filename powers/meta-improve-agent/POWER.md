@@ -12,11 +12,11 @@ Documentation and guidance for analyzing apply_agent execution sessions to ident
 
 ## Overview
 
-The Meta Improve Agent analyzes session JSON files from apply_agent executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
+The Meta Improve Agent analyzes session text files from apply_agent executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
 
 ## What It Does
 
-- **Session Analysis**: Parses apply_agent session JSON files to extract build attempts, errors, fixes, and outcomes
+- **Session Analysis**: Parses apply_agent session text files to extract build attempts, errors, fixes, and outcomes
 - **Pattern Recognition**: Groups errors by type and identifies recurring issues
 - **Learning Extraction**: Tracks which fixes work consistently and which fail
 - **Autonomous Improvement**: Generates specific updates to agent instructions and memory documents
@@ -28,13 +28,13 @@ The Meta Improve Agent analyzes session JSON files from apply_agent executions t
 
 ## Available Steering Files
 
-- **getting-started.md** - Step-by-step guide for analyzing sessions and applying improvements
+None - All documentation is contained in this POWER.md file.
 
 ## How to Use
 
 The agent analyzes three types of files:
 
-1. **Session JSON files** (`adk_openspec_apply_agent/*.session.json`) - Contains execution logs with all attempts, errors, and fixes
+1. **Session text files** (`adk_openspec_apply_agent/*.session.txt`) - Contains execution logs with all attempts, errors, and fixes
 2. **Agent instructions** (`adk_openspec_apply_agent/apply_agent_instruction.md`) - Current agent capabilities and instructions
 3. **Memory documents** (`openspec-memories/*.md`) - Existing knowledge base
 
@@ -43,12 +43,12 @@ The agent analyzes three types of files:
 Just ask your AI assistant to analyze a session:
 
 ```
-Analyze the session file adk_openspec_apply_agent/apply_implement-wdt-initial_20251214_161520.session.json 
+Analyze the session file adk_openspec_apply_agent/apply_implement-wdt-initial_20251214_161520.session.txt 
 and tell me what improvements should be made to the agent instructions and memory documents.
 ```
 
 The assistant will:
-1. Read the session JSON file to understand what happened
+1. Read the session text file to understand what happened
 2. Read the agent instruction file to see current capabilities
 3. Read relevant memory documents to identify gaps
 4. Provide specific recommendations for improvements
@@ -56,7 +56,7 @@ The assistant will:
 ### What Files to Provide
 
 Point the assistant to:
-- **Session file**: `adk_openspec_apply_agent/*.session.json` (the execution log)
+- **Session file**: `adk_openspec_apply_agent/*.session.txt` (the execution log)
 - **Instruction file**: `adk_openspec_apply_agent/apply_agent_instruction.md` (agent's current instructions)
 - **Memory directory**: `openspec-memories/` (existing knowledge base)
 
@@ -64,22 +64,22 @@ Point the assistant to:
 
 **Post-Implementation Review:**
 ```
-Analyze the latest session JSON in adk_openspec_apply_agent/ and tell me what could be improved
+Analyze the latest session.txt in adk_openspec_apply_agent/ and tell me what could be improved
 ```
 
 **Pattern Discovery:**
 ```
-Look at the session file and identify the top 3 most common error patterns
+Look at the session.txt file and identify the top 3 most common error patterns
 ```
 
 **Documentation Gap Analysis:**
 ```
-Review the session and tell me what memory documents are missing or need updates
+Review the session.txt and tell me what memory documents are missing or need updates
 ```
 
 **Comparative Analysis:**
 ```
-Compare these two session files and tell me if the agent is improving over time
+Compare these two session.txt files and tell me if the agent is improving over time
 ```
 
 ## What You Get (Required Output Format)
@@ -143,7 +143,7 @@ Time wasted: ~X minutes on [what activity]
 
 **CRITICAL**: Provide EXACT text, not generic advice like "improve error handling".
 
-### 5. Before/After Metrics (Required)
+### 4. Before/After Metrics (Required)
 ```
 📉 Expected Results After Improvements
 
@@ -180,12 +180,13 @@ Add to agent instructions:
 Here's an actual analysis from a WDT device implementation session:
 
 ```
-Session: apply_implement-wdt-initial_20251214_235424.session.json (318KB)
+Session: apply_implement-wdt-initial_20251214_235424.session.txt
 Task: Implement Simics Watchdog Timer device
 
 Summary:
 - Duration: 8.4 minutes (07:54:30 → 08:02:55 UTC)
-- Build attempts: 6 (first failed, then 5 successful)
+- Build attempts: 6 (counted via `grep -c "TOOL_CALL.*build_simics_project"`)
+- First build failed, then 5 successful
 - Test runs: 6 (all tests failed - implementation incomplete)
 - Final status: Build ✅ | Tests ❌
 
@@ -279,7 +280,7 @@ Compare sessions before/after improvements:
 ```
 Compare these two sessions:
 - BEFORE: apply_implement-wdt_20251214.session.txt (before improvements)
-- AFTER: apply_implement-uart_20251215.session.txt (after improvements)
+- AFTER: apply_implement-wdt_20251215.session.txt (after improvements)
 
 Metrics to compare:
 - Build attempts to success
@@ -328,8 +329,8 @@ Keep it under 5 lines.
 
 The analysis process follows these steps:
 
-1. **Read Context Files**: Uses file reading tools to access session JSON, instructions, and memory docs
-2. **Parse Session Data**: Extracts events, timestamps, build attempts, errors, and fixes from JSON
+1. **Read Context Files**: Uses file reading tools to access session text files, instructions, and memory docs
+2. **Parse Session Data**: Extracts events, timestamps, build attempts, errors, and fixes from text logs
 3. **Identify Patterns**: Groups similar errors and tracks fix success rates
 4. **Analyze Gaps**: Compares errors against existing memory to find knowledge gaps
 5. **Generate Recommendations**: Proposes specific improvements with expected impact
@@ -344,9 +345,12 @@ Follow these steps for consistent, thorough analysis:
 grep "👤 \[user\]" session.txt | head -1  # Start time
 tail -100 session.txt | grep "🤖" | tail -1  # End time
 
-# Count attempts
-grep -c "build_simics_project" session.txt
-grep -c "run_simics_test" session.txt
+# Count attempts - IMPORTANT: Count TOOL_CALL, not just function name
+grep -c "TOOL_CALL.*build_simics_project" session.txt  # Actual build invocations
+grep -c "TOOL_CALL.*run_simics_test" session.txt      # Actual test invocations
+
+# DON'T do this (counts all mentions, not just invocations):
+# grep -c "build_simics_project" session.txt  # ❌ WRONG - counts results too
 
 # Check final status
 tail -50 session.txt | grep -E "success|failed|completed"
@@ -392,24 +396,20 @@ For each significant error pattern (3+ occurrences):
 - Error frequency: X → Y (Z% reduction)
 - Success rate: X% → Y% (Z% improvement)
 
-### Handling Large Session Files
+### Working with Session Files
 
-Session JSON files can be very large (100KB-300KB+). You have two options:
-
-#### Option 1: Analyze the .session.txt File (Recommended)
-
-Most sessions also generate a human-readable `.session.txt` file that's easier to parse:
+Session text files (`.session.txt`) are human-readable logs that are easy to parse:
 
 **Advantages:**
-- Plain text format, easier to grep and search
-- Contains the same information as JSON
+- Plain text format, easy to grep and search
+- Contains all execution information
 - Can use standard text tools (grep, sed, awk)
-- No JSON parsing issues with large files
+- Typically 100KB-300KB in size
 
 **Example analysis approach:**
 ```bash
-# Count build attempts
-grep -c "build_simics_project" session.txt
+# Count build attempts - IMPORTANT: Count TOOL_CALL only
+grep -c "TOOL_CALL.*build_simics_project" session.txt  # Actual invocations
 
 # Extract error patterns
 grep "error: unknown identifier" session.txt | sort | uniq -c
@@ -423,55 +423,28 @@ tail -100 session.txt | grep "🤖" | tail -1  # End time
 ```
 Analyze the session.txt file and extract:
 1. Start and end timestamps to calculate duration
-2. Count of build_simics_project calls
+2. Count of build_simics_project calls (use TOOL_CALL lines only)
 3. All "error:" patterns with frequency
 4. Test results (pass/fail counts)
 Then provide improvement recommendations.
 ```
 
-#### Option 2: Chunked JSON Reading
+### Example Prompt
 
-If you need to analyze the JSON directly:
-
-1. **Use chunked reading**: Read the file in chunks using `read_file_range` or similar tools
-   - Start with offset=0, length=65536 (64KB chunks)
-   - Continue reading subsequent chunks if needed
-   - Example: "Read the session JSON file in 64KB chunks starting from offset 0"
-
-2. **Focus on key sections**: You don't need to read the entire file
-   - Start with the first chunk to understand structure
-   - Look for error patterns in events
-   - Sample middle and end sections if needed
-
-3. **Incremental analysis**: Build understanding progressively
-   - Parse events as you read each chunk
-   - Track error counts and patterns
-   - Summarize findings after each chunk
-
-### Example Prompts
-
-**For .txt files (easier):**
 ```
 Analyze /tmp/project/adk_openspec_apply_agent/apply_*.session.txt:
 - Extract start/end times and calculate duration
-- Count build attempts and test runs
+- Count build attempts using TOOL_CALL lines
 - Find all error patterns with grep
 - Identify the top 3 most frequent errors
 - Recommend specific improvements
 ```
 
-**For .json files (when needed):**
-```
-Read the session file adk_openspec_apply_agent/*.session.json in 64KB chunks.
-For each chunk, extract error events and build attempts. 
-After reading all chunks, summarize the top 3 error patterns and recommend improvements.
-```
-
 ## No Installation Required
 
 This is a **documentation-only power** that guides you in analyzing session files. Your AI assistant can:
-- Read JSON session files directly (in chunks if large)
-- Parse and analyze the data structure incrementally
+- Read session text files directly
+- Parse and analyze the execution logs
 - Compare against instruction and memory files
 - Generate improvement recommendations
 
@@ -482,8 +455,8 @@ No ADK installation or Python dependencies needed - just point your assistant to
 ### Continuous Improvement Cycle
 
 ```
-1. Implement → Run apply_agent (creates session JSON file)
-2. Analyze → Ask AI to analyze the session JSON
+1. Implement → Run apply_agent (creates session.txt file)
+2. Analyze → Ask AI to analyze the session.txt
 3. Improve → Apply proposed changes to instructions/memory docs
 4. Test → Run apply_agent on new task
 5. Measure → Compare sessions to quantify improvement
@@ -494,7 +467,7 @@ No ADK installation or Python dependencies needed - just point your assistant to
 
 After each apply_agent execution:
 
-1. Locate the session JSON file in `adk_openspec_apply_agent/`
+1. Locate the session.txt file in `adk_openspec_apply_agent/`
 2. Ask your AI assistant: "Analyze this session and recommend improvements"
 3. Review the recommendations
 4. Update instruction and memory files as suggested
@@ -507,11 +480,10 @@ Based on real usage, here's the most effective workflow:
 ### Step 1: Locate Session Files
 ```bash
 # Find session files
-ls -lh /path/to/project/adk_openspec_apply_agent/*.session.*
+ls -lh /path/to/project/adk_openspec_apply_agent/*.session.txt
 
 # Check file sizes
-wc -c *.session.json  # JSON files (100-300KB typical)
-wc -l *.session.txt   # Text files (easier to analyze)
+wc -l *.session.txt   # Text files (typically 2000-5000 lines)
 ```
 
 ### Step 2: Quick Analysis with Text Tools
@@ -520,9 +492,12 @@ wc -l *.session.txt   # Text files (easier to analyze)
 grep "👤 \[user\]" session.txt  # Start time
 tail -100 session.txt | grep "🤖" | tail -1  # End time
 
-# Count attempts
-grep -c "build_simics_project" session.txt
-grep -c "run_simics_test" session.txt
+# Count attempts - CRITICAL: Use TOOL_CALL to count actual invocations
+grep -c "TOOL_CALL.*build_simics_project" session.txt  # Actual build attempts
+grep -c "TOOL_CALL.*run_simics_test" session.txt      # Actual test attempts
+
+# Common mistake: Don't count all mentions
+# grep -c "build_simics_project" session.txt  # ❌ WRONG - includes TOOL_RESULT lines
 
 # Find error patterns
 grep "error:" session.txt | grep -o "error: [^\\]*" | sort | uniq -c | sort -rn
@@ -566,7 +541,7 @@ Compare before/after metrics:
 
 ## Tips for Best Results
 
-1. **Use .txt files when possible**: Easier to analyze than JSON, same information
+1. **Use session.txt files**: Easy to analyze with standard text tools
 2. **Focus on Patterns**: Look for recurring issues (3+ occurrences), not one-off errors
 3. **Review Before Applying**: Always verify recommendations match your context
 4. **Iterate Regularly**: Run analysis after every 2-3 sessions to catch patterns early
@@ -579,17 +554,40 @@ After using meta_improve_agent to improve your apply_agent:
 
 - **Build attempts**: 8 → 2-3 (62-75% reduction)
 - **Time to success**: 10.4 min → 3-4 min (65-70% reduction)
+- **Error reduction**: 90-100% fewer repeated errors
 - **Success rate**: 12.5% → 60-70% (55% improvement)
 
 ## Common Analysis Pitfalls
 
+### Pitfall 0: Miscounting Build Attempts (MOST COMMON)
+**Symptom**: Analysis reports 27 build attempts when there were actually only 9
+
+**Problem**: Searching for function name counts ALL occurrences, including:
+- `[TOOL_CALL] build_simics_project(...)` - the actual invocation
+- `[TOOL_RESULT] build_simics_project -> {...}` - the result (appears twice in logs)
+- Other mentions in text
+
+**Solution**: Count TOOL_CALL lines only:
+```bash
+# ✅ CORRECT - counts actual invocations
+grep -c "TOOL_CALL.*build_simics_project" session.txt
+
+# ❌ WRONG - counts invocations + results + mentions
+grep -c "build_simics_project" session.txt
+```
+
+**Example**:
+- One build attempt creates 3 lines: 1 TOOL_CALL + 2 TOOL_RESULT lines
+- 9 actual builds = 27 total mentions
+- Always use `TOOL_CALL` to get the correct count
+
 ### Pitfall 1: Missing Compilation Errors
 **Symptom**: Analysis says "no errors found" but build failed
 
-**Solution**: Compilation errors are embedded in JSON strings. Search for:
+**Solution**: Compilation errors are embedded in TOOL_RESULT lines. Search for:
 - `"error":` in the session file
 - `build_simics_project → {'content': [{'type': 'text', 'text': '{"success": false`
-- Extract the actual error messages from the JSON payload
+- Extract the actual error messages from the result payload
 
 ### Pitfall 2: Undercounting Errors
 **Symptom**: Report says "1 error" but there were actually 12
@@ -642,6 +640,9 @@ REGISTER at bank level, this at register level'"
 
 Before submitting analysis, verify:
 
+- [ ] **Counted build attempts correctly using TOOL_CALL**
+  - [ ] Used `grep -c "TOOL_CALL.*build_simics_project"` not `grep -c "build_simics_project"`
+  - [ ] Verified count makes sense (typically 2-15 builds, not 20+)
 - [ ] Extracted actual error messages (not just counted error lines)
 - [ ] Counted unique error occurrences correctly
 - [ ] Identified root cause for each major error pattern
@@ -653,14 +654,17 @@ Before submitting analysis, verify:
 
 ## Troubleshooting
 
-### Issue: JSON file too large to parse
+### Issue: Session file too large to read
 
-**Symptom**: JSON parsing errors, truncated output, or timeout
+**Symptom**: File reading errors, truncated output, or timeout
 
-**Solution**: Use the `.session.txt` file instead:
-```
-Analyze the .session.txt file instead of .json - it contains 
-the same information in a more readable format
+**Solution**: Use grep and text tools to extract specific sections:
+```bash
+# Extract just the error lines
+grep "error:" session.txt > errors.txt
+
+# Extract just build attempts
+grep "TOOL_CALL.*build_simics_project" session.txt
 ```
 
 ### Issue: Can't calculate duration from timestamps
@@ -696,18 +700,17 @@ The agent has access to memory documents in openspec-memories/.
 
 ### Issue: Can't find session files
 
-**Symptom**: No .session.json or .session.txt files
+**Symptom**: No .session.txt files
 
 **Solution**: Check the agent's output directory:
 ```bash
 # Common locations
-ls -la adk_openspec_apply_agent/*.session.*
-ls -la /tmp/*/adk_openspec_apply_agent/*.session.*
+ls -la adk_openspec_apply_agent/*.session.txt
+ls -la /tmp/*/adk_openspec_apply_agent/*.session.txt
 ```
 
 ## See Also
 
-- Getting Started Guide: See `steering/getting-started.md`
 - ADK Documentation: https://github.com/google/adk-python
 - OpenSpec Integration Sample: `contributing/samples/openspec_integration/`
 - Real Analysis Example: See "Real-World Example Analysis" section above
