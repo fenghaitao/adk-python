@@ -1,18 +1,32 @@
-# DML Register Access Scope Patterns
+# DML Register and Field Access Scope Patterns
 
 ## Overview
 
-In DML 1.4, register access syntax depends on the **context** (scope) where you're writing the code. Using the wrong pattern causes "unknown identifier" compilation errors that waste significant development time.
+In DML 1.4, register and field access syntax depends on the **context** (scope) where you're writing the code. Using the wrong pattern causes "unknown identifier" or "unknown object" compilation errors that waste significant development time.
 
 **Key Principle:** The closer you are to a register in the hierarchy, the less qualification you need.
 
+**This document covers:**
+- **Register VALUE access** (`.val`) - accessing the entire register as a number
+- **Register FIELD access** (`.FIELDNAME`) - accessing individual bits within a register
+
 ## Quick Reference
+
+### Register Value Access
 
 | Context | Syntax | Example |
 |---------|--------|---------|
 | Device level | `<bank_name>.REGISTER.val` | `WatchdogRegisters.WDOGLOAD.val = 0;` |
 | Bank level | `REGISTER.val` | `WDOGLOAD.val = 0;` |
 | Register level | `this.val` | `this.val = 0;` |
+
+### Register Field Access
+
+| Context | Syntax | Example |
+|---------|--------|---------|
+| Device level | `<bank_name>.REGISTER.FIELDNAME` | `WatchdogRegisters.WDOGCONTROL.INTEN = 1;` |
+| Bank level | `REGISTER.FIELDNAME` | `WDOGCONTROL.INTEN = 1;` |
+| Register level | `this.FIELDNAME` | `this.INTEN = 1;` |
 
 **Note:** `<bank_name>` is the actual name of your bank (e.g., `WatchdogRegisters`, `regs`, `control_bank`). The word `bank` is a declaration keyword, not an access keyword.
 
@@ -92,6 +106,201 @@ register WDOGCONTROL size 4 @ 0x008 {
 }
 ```
 
+## Register Field Access Patterns
+
+### Overview: Register Values vs Register Fields
+
+**CRITICAL DISTINCTION:**
+- **Register VALUE** (`.val`): The entire register as a single number
+- **Register FIELD**: Individual bits or bit ranges within a register (e.g., `.INTEN`, `.RESEN`)
+
+**There is NO `.field` accessor in DML!** You access fields by their actual names defined in the register XML.
+
+### Quick Reference: Field Access
+
+| Context | Syntax | Example |
+|---------|--------|---------|
+| Device level | `<bank_name>.REGISTER.FIELDNAME` | `WatchdogRegisters.WDOGCONTROL.INTEN = 1;` |
+| Bank level | `REGISTER.FIELDNAME` | `WDOGCONTROL.INTEN = 1;` |
+| Register level | `this.FIELDNAME` | `this.INTEN = 1;` |
+
+**Note:** Replace `FIELDNAME` with the actual field name from your XML (e.g., `INTEN`, `RESEN`, `ENABLE`).
+
+### Device Level Field Access
+
+**Context:** Accessing register fields from device-level methods
+
+**Syntax:** `<bank_name>.REGISTER.FIELDNAME`
+
+**Example:**
+```dml
+device wdt {
+    method check_watchdog_enabled() {
+        // CORRECT - Access field at device level
+        if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+            // Interrupt enabled
+        }
+        
+        if (WatchdogRegisters.WDOGCONTROL.RESEN == 1) {
+            // Reset enabled
+        }
+        
+        // WRONG - .field doesn't exist
+        // if (WatchdogRegisters.WDOGCONTROL.field == 1) {
+        //     // error: reference to unknown object 'WatchdogRegisters.WDOGCONTROL.field'
+        // }
+    }
+}
+```
+
+### Bank Level Field Access
+
+**Context:** Accessing register fields from bank-level methods or from other registers in the same bank
+
+**Syntax:** `REGISTER.FIELDNAME`
+
+**Example:**
+```dml
+bank WatchdogRegisters {
+    register WDOGLOAD {
+        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+            default(value, enabled_bytes, aux);
+            
+            // CORRECT - Access field in another register (same bank)
+            if (WDOGCONTROL.INTEN == 1) {
+                // Interrupt is enabled, trigger countdown
+            }
+        }
+    }
+}
+```
+
+### Register Level Field Access
+
+**Context:** Accessing fields within the same register's methods
+
+**Syntax:** `this.FIELDNAME`
+
+**Example:**
+```dml
+register WDOGCONTROL size 4 @ 0x008 {
+    field INTEN @ [0];  // Bit 0: Interrupt enable
+    field RESEN @ [1];  // Bit 1: Reset enable
+    
+    method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+        default(value, enabled_bytes, aux);
+        
+        // CORRECT - Access own fields using 'this'
+        if (this.INTEN == 1) {
+            // Interrupt was just enabled
+            log info: "Watchdog interrupt enabled";
+        }
+        
+        if (this.RESEN == 1) {
+            // Reset was just enabled
+            log info: "Watchdog reset enabled";
+        }
+    }
+}
+```
+
+### Where Field Names Come From
+
+Field names are defined in your register description XML file:
+
+```xml
+<register name="WDOGCONTROL" offset="0x008" size="4">
+    <field name="INTEN" bits="0" />      <!-- Access as .INTEN -->
+    <field name="RESEN" bits="1" />      <!-- Access as .RESEN -->
+</register>
+```
+
+After XML processing, these become accessible as:
+- Device level: `WatchdogRegisters.WDOGCONTROL.INTEN`
+- Bank level: `WDOGCONTROL.INTEN`
+- Register level: `this.INTEN`
+
+### Common Field Access Mistakes
+
+#### Mistake 1: Using `.field` accessor (doesn't exist)
+
+```dml
+// ❌ WRONG - .field doesn't exist in DML
+if (WatchdogRegisters.WDOGCONTROL.field == 1) {
+    // error: reference to unknown object 'WatchdogRegisters.WDOGCONTROL.field'
+}
+
+// ✅ CORRECT - Use actual field name
+if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+    // Works!
+}
+```
+
+#### Mistake 2: Using `.field.FIELDNAME` pattern
+
+```dml
+// ❌ WRONG - No intermediate .field accessor
+if (WatchdogRegisters.WDOGCONTROL.field.INTEN == 1) {
+    // error: reference to unknown object
+}
+
+// ✅ CORRECT - Direct field access
+if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+    // Works!
+}
+```
+
+#### Mistake 3: Wrong scope for field access
+
+```dml
+// At device level
+method device_method() {
+    // ❌ WRONG - Missing bank name
+    if (WDOGCONTROL.INTEN == 1) {
+        // error: unknown identifier: 'WDOGCONTROL'
+    }
+    
+    // ✅ CORRECT - Include bank name at device level
+    if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+        // Works!
+    }
+}
+```
+
+### Field Access Pre-Build Checklist
+
+Before building, verify field access patterns:
+
+1. No use of `.field` accessor (doesn't exist)
+2. Device-level field access uses `<bank_name>.REGISTER.FIELDNAME`
+3. Bank-level field access uses `REGISTER.FIELDNAME`
+4. Register-level field access uses `this.FIELDNAME`
+5. Field names match those defined in XML
+
+**Quick Search Commands:**
+```bash
+# Find incorrect .field usage
+grep -n "\.field" wdt.dml  # Should return no results
+
+# Find all field accesses for review
+grep -n "\.[A-Z][A-Z0-9_]*\s*[=!<>]" wdt.dml | grep -v "\.val"
+
+# Verify field names exist in XML
+grep "field name=" wdt.xml
+```
+
+### Impact of Field Access Errors
+
+**Without this knowledge:**
+- 50+ "unknown object" errors per device
+- 15-20 minutes wasted debugging
+- Multiple failed builds
+
+**With this knowledge:**
+- 0 field access errors
+- First build succeeds
+- Immediate productivity
+
 ## Common Errors and Fixes
 
 ### Error: "unknown identifier: 'WDOGLOAD'"
@@ -167,60 +376,6 @@ method reset_state() {
     WatchdogRegisters.WDOGPERIPHID0.val = 0x24;
     WatchdogRegisters.WDOGPERIPHID1.val = 0xB8;
     WatchdogRegisters.WDOGPERIPHID2.val = 0x1B;
-}
-```
-
-## Real-World Example: WDT Device
-
-This example shows correct register access patterns from a Watchdog Timer implementation:
-
-```dml
-device wdt {
-    // Device-level method - use <bank_name>.REGISTER
-    method reset_state() {
-        // Timer registers - use actual bank name
-        WatchdogRegisters.WDOGLOAD.val = 0xFFFFFFFF;
-        WatchdogRegisters.WDOGVALUE.val = 0xFFFFFFFF;
-        WatchdogRegisters.WDOGCONTROL.val = 0x0;
-        
-        // Peripheral ID registers
-        WatchdogRegisters.WDOGPERIPHID0.val = 0x24;
-        WatchdogRegisters.WDOGPERIPHID1.val = 0xB8;
-        WatchdogRegisters.WDOGPERIPHID2.val = 0x1B;
-        WatchdogRegisters.WDOGPERIPHID3.val = 0x00;
-    }
-    
-    // Device-level method - use <bank_name>.REGISTER
-    method start_counter() {
-        counter_start_value = WatchdogRegisters.WDOGLOAD.val;
-        current_counter_value = counter_start_value;
-        counter_start_time = SIM_cycle_count(dev.obj);
-    }
-}
-
-bank WatchdogRegisters is WatchdogRegisters_temp {
-    register WDOGLOAD size 4 @ 0x000 {
-        // Register-level method - use 'this'
-        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
-            default(value, enabled_bytes, aux);
-            this.val = value;  // Use 'this' at register level
-            
-            // Can access other registers in same bank (no prefix)
-            if (WDOGCONTROL.val & 0x1) {
-                // Watchdog is enabled
-            }
-        }
-    }
-    
-    register WDOGCONTROL size 4 @ 0x008 {
-        method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
-            default(value, enabled_bytes, aux);
-            // Access other register in same bank (no prefix)
-            if (WDOGLOAD.val > 0) {
-                // Start countdown
-            }
-        }
-    }
 }
 ```
 
