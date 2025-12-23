@@ -1,19 +1,18 @@
-Meta Improve Agent Power Package
-=================================
+OpenSpec Improve Apply Power Package
+=====================================
 
 This is a Kiro Power that provides documentation and guidance for analyzing
-apply_agent session files to improve agent performance over time.
+OpenSpec apply session files to improve agent performance over time.
 
 Structure:
 ----------
-powers/meta-improve-agent/
+powers/openspec-improve-apply/
 ├── POWER.md                    # Main documentation (with YAML frontmatter)
-└── steering/
-    └── getting-started.md      # Getting started guide
+└── README.txt                  # This file
 
 What This Power Does:
 --------------------
-This power provides documentation for analyzing apply_agent execution sessions.
+This power provides documentation for analyzing OpenSpec apply execution sessions.
 It guides your AI assistant to:
 
 1. Read session JSON files from adk_openspec_apply_agent/

@@ -1,22 +1,22 @@
 ---
-name: "meta-improve-agent"
-displayName: "Meta Improve Agent"
-description: "Analyze apply_agent sessions to identify error patterns and autonomously improve agent instructions and memory documents"
-keywords: ["meta-learning", "agent-improvement", "session-analysis", "error-patterns", "autonomous-improvement", "simics", "dml", "compilation-errors"]
+name: "openspec-improve-apply"
+displayName: "OpenSpec Improve Apply"
+description: "Analyze OpenSpec apply sessions to identify error patterns and autonomously improve agent instructions and memory documents"
+keywords: ["openspec", "improve", "apply", "session-analysis", "error-patterns", "autonomous-improvement", "simics", "dml", "compilation-errors"]
 author: "ADK Team"
 ---
 
-# Meta Improve Agent
+# OpenSpec Improve Apply Power
 
-Documentation and guidance for analyzing apply_agent execution sessions to identify patterns and autonomously improve agent instructions and memory documents.
+Documentation and guidance for analyzing OpenSpec apply execution sessions to identify patterns and autonomously improve agent instructions and memory documents.
 
 ## Overview
 
-The Meta Improve Agent analyzes session text files from apply_agent executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
+The OpenSpec Improve Apply power analyzes session text files from OpenSpec apply executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
 
 ## What It Does
 
-- **Session Analysis**: Parses apply_agent session text files to extract build attempts, errors, fixes, and outcomes
+- **Session Analysis**: Parses OpenSpec apply session text files to extract build attempts, errors, fixes, and outcomes
 - **Pattern Recognition**: Groups errors by type and identifies recurring issues
 - **Learning Extraction**: Tracks which fixes work consistently and which fail
 - **Autonomous Improvement**: Generates specific updates to agent instructions and memory documents
