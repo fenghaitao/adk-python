@@ -1,14 +1,14 @@
 ---
-name: "simics-dml-dev"
-displayName: "Simics DML Development"
-description: "Complete OpenSpec workflow for Simics DML device implementation with domain knowledge and build/test tools"
-keywords: ["simics", "dml", "device-modeling", "hardware-simulation", "python-tests", "register-access", "timer-devices", "watchdog", "uart", "openspec", "apply"]
+name: "openspec-apply"
+displayName: "OpenSpec Apply"
+description: "Complete OpenSpec apply workflow for Simics DML device implementation with domain knowledge and build/test tools"
+keywords: ["openspec", "apply", "simics", "dml", "device-modeling", "hardware-simulation", "python-tests", "register-access", "timer-devices", "watchdog", "uart"]
 author: "ADK Team"
 ---
 
-# Simics DML Development Power
+# OpenSpec Apply Power
 
-This power provides complete OpenSpec workflow execution for Simics DML device implementation, including domain knowledge and build/test tools.
+This power provides complete OpenSpec apply workflow execution for Simics DML device implementation, including domain knowledge and build/test tools.
 
 ## What This Power Provides
 

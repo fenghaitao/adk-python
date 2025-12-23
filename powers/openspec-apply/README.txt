@@ -1,12 +1,12 @@
-Simics DML Development Power Package
-=====================================
+OpenSpec Apply Power Package
+============================
 
-This is a Kiro Power that provides complete OpenSpec workflow execution for
+This is a Kiro Power that provides complete OpenSpec apply workflow execution for
 Simics DML device implementation with domain knowledge and build/test tools.
 
 This power is a STANDALONE alternative to apply_agent:
 - apply_agent: Runs with ADK (adk-python)
-- simics-dml-dev power: Runs with Kiro IDE
+- openspec-apply power: Runs with Kiro IDE
 
 Both provide the same OpenSpec workflow capabilities for Simics development.
 
@@ -25,7 +25,7 @@ Complete OpenSpec Apply phase execution including:
 
 Structure:
 ----------
-powers/simics-dml-dev/
+powers/openspec-apply/
 ├── POWER.md                    # Complete workflow + domain knowledge
 ├── README.txt                  # This file
 └── mcp.json                    # MCP server configuration
