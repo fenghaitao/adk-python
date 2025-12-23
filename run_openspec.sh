@@ -192,6 +192,22 @@ cleanup() {
     fi
 }
 
+# Function to create .gitkeep files in openspec directories
+create_openspec_gitkeep() {
+    echo -e "${BLUE}Creating .gitkeep files for openspec directories...${NC}"
+    mkdir -p openspec/changes/archive
+    mkdir -p openspec/specs
+    cat > openspec/changes/archive/.gitkeep << 'GITKEEP_EOF'
+# This file ensures the archive directory is tracked by git
+# Archived changes are stored here when they are completed or abandoned
+GITKEEP_EOF
+    cat > openspec/specs/.gitkeep << 'GITKEEP_EOF'
+# This file ensures the specs directory is tracked by git
+# Specification documents are stored here
+GITKEEP_EOF
+    echo -e "${GREEN}✅ .gitkeep files created in openspec directories${NC}"
+}
+
 # Set up trap to cleanup on script exit
 trap cleanup EXIT
 
@@ -563,20 +579,29 @@ if [ ! -d "$PROJECT_NAME" ]; then
     fi
 
     echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+    
+    # Create .gitkeep files in openspec directories
+    cd "$PROJECT_NAME"
+    create_openspec_gitkeep
+    cd ..
 elif [ "$NO_PROMPT" = false ] && [ "$SKIP_SPECIFY" = false ]; then
     # Directory exists, but not in interactive mode and not skipping specify
     # Initialize in existing directory (e.g., after spec-kit init)
     echo -e "${BLUE}Initializing OpenSpec in existing project directory...${NC}"
     cd "$PROJECT_NAME"
     $OPENSPEC_CMD init . --tools none
-    cd ..
 
     if [ $? -ne 0 ]; then
+        cd ..
         echo -e "${RED}Failed to initialize OpenSpec project${NC}"
         exit 1
     fi
 
     echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
+    
+    # Create .gitkeep files in openspec directories
+    create_openspec_gitkeep
+    cd ..
 else
     # Directory exists and we're in interactive mode or skipping specify
     echo -e "${BLUE}Using existing project directory: $PROJECT_NAME${NC}"
