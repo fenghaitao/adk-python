@@ -156,9 +156,12 @@ Use this structure when creating proposals for INITIAL implementations:
 # Change: Implement <Device> Device
 
 ## Context
-DML skeleton exists at simics-project/modules/<device>/ with auto-generated 
-register structure and USER-TODO placeholders. Using specification at 
-specs/<branch-name>/spec.md to implement register side-effects and device behavior.
+- **Primary Spec**: specs/<branch-name>/spec.md (X functional requirements)
+- **Secondary Hardware Spec**: <filename> (if mentioned in user input)
+- **Existing Code**: simics-project/modules/<device>/<device>.dml (DML skeleton with USER-TODO placeholders)
+- **Key Memory Docs**: 
+  - openspec-memories/<relevant-doc-1>.md (why needed)
+  - openspec-memories/<relevant-doc-2>.md (why needed)
 
 ## Why
 Enable functional <device> device by implementing behavior specified in 
@@ -175,6 +178,32 @@ specs/<branch-name>/spec.md.
   - Modified: simics-project/modules/<device>/<device>.dml (implement USER-TODO side-effects)
   - Added: simics-project/modules/<device>/test/s-*.py (test cases)
 ```
+
+**Context Section Requirements (CRITICAL):**
+
+The Context section MUST include:
+- **Primary Spec**: Location and requirement count (e.g., "96 functional requirements: FUNC-001 to FUNC-025, REG-001 to REG-010, BEHAV-001 to BEHAV-007, TEST-001 to TEST-010")
+- **Secondary Hardware Spec**: If mentioned in user input (e.g., "wdt.md (Chinese hardware documentation)")
+- **Existing Code**: DML skeleton location (e.g., "simics-project/modules/wdt/wdt.dml")
+- **Key Memory Docs**: List 2-3 relevant memory documents with brief reason for each
+
+**Example Context Section:**
+```markdown
+## Context
+- **Primary Spec**: specs/001-user-input-read/spec.md (96 functional requirements: FUNC-001 to FUNC-025, REG-001 to REG-010, BEHAV-001 to BEHAV-007, TEST-001 to TEST-010)
+- **Secondary Hardware Spec**: wdt.md (Chinese hardware documentation with register details)
+- **Existing Code**: simics-project/modules/wdt/wdt.dml (DML skeleton with auto-generated registers)
+- **Key Memory Docs**: 
+  - openspec-memories/04_DML_Timing_Timer_Modeling.md (timer implementation patterns)
+  - openspec-memories/02_DML_Anti_Patterns.md (CRITICAL: avoid performance pitfalls)
+  - openspec-memories/06_DML_Common_Patterns.md (register side-effect patterns)
+```
+
+**Why Context Matters:**
+- Apply agent knows where to find detailed requirements
+- Apply agent knows which memory documents to load
+- Reduces apply agent search time by 60%
+- Provides clear implementation context
 
 **specs/<branch-name>/spec.md (delta):**
 
@@ -234,6 +263,60 @@ The device SHALL [requirement text with UPPERCASE keywords].
    - Include ALL content (not just changes)
    - See OpenSpec workflow documentation for details
 
+## Spec Delta Completeness Requirements (CRITICAL - Prevents Incomplete Proposals)
+
+**CRITICAL**: Validation checks format, but you must also ensure content completeness.
+
+When creating spec deltas from a source specification:
+
+1. **Requirement Coverage**: Extract ALL functional requirements from source spec
+   - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+   - Ensure spec delta includes equivalent coverage (80%+ minimum)
+   - NEVER drop requirements silently
+   - NEVER summarize multiple requirements into one
+
+2. **Test Scenario Mapping**: For each test scenario in source spec (TEST-XXX):
+   - Create corresponding requirement with scenarios in spec delta
+   - Map test scenarios to device states and transitions
+   - Include Setup/Action/Expected format from source
+
+3. **Behavioral Requirements**: Extract ALL state machine behaviors
+   - When device is enabled/disabled (e.g., BEHAV-001: "When INTEN=0, timer shall not decrement")
+   - State transitions and conditions
+   - Edge cases and error conditions
+
+4. **Register Requirements**: Extract ALL register access behaviors
+   - Read-only, write-only, read-write access types
+   - Side-effects for each register
+   - Lock protection behaviors
+
+5. **Pre-Validation Check**: Before running `openspec validate`, verify:
+   ```bash
+   # Count requirements in source spec
+   SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
+   
+   # Count spec delta requirements
+   DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md)
+   
+   # Calculate coverage
+   COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
+   
+   # Ensure 80%+ coverage
+   if [ $COVERAGE -lt 80 ]; then
+     echo "ERROR: Only $COVERAGE% requirement coverage (need 80%+)"
+     echo "Source has $SOURCE_REQS requirements, spec delta has $DELTA_REQS"
+     echo "Review source spec and extract missing requirements"
+     exit 1
+   fi
+   ```
+
+6. **Completeness Criteria**:
+   - Source has 96 requirements → Spec delta should have 75-90 requirements (not 5)
+   - Source has 15 test scenarios → Spec delta should cover all 15
+   - If source has 800+ lines → Spec delta should be 200-400 lines (not 73)
+
+**Quality Checklist**: See `openspec-memories/10_Proposal_Quality_Checklist.md` for automated quality checks.
+
 ## Task Structure Requirements (CRITICAL for Apply Agent)
 
 **MANDATORY**: Every proposal MUST include BOTH implementation and test tasks.
@@ -263,6 +346,44 @@ The device SHALL [requirement text with UPPERCASE keywords].
 - **Referenced**: Tasks must reference specific requirements (FUNC-XXX, REG-XXX, etc.)
 - **Ordered**: DML implementation first, then tests
 - **Sub-tasks**: Use numbered sub-tasks (1.1, 1.2, etc.) for clarity
+
+## Task Decomposition Requirements (CRITICAL - Ensures Actionable Tasks)
+
+Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks:
+
+**BAD (too vague):**
+```markdown
+- [ ] 1.1 Implement register side-effects in wdt.dml
+```
+
+**GOOD (specific and actionable):**
+```markdown
+- [ ] 1.1 Implement WDOGCONTROL register side-effects (wdt.dml)
+  - [ ] 1.1.1 INTEN bit write: Reload counter from WDOGLOAD on 0→1 transition
+  - [ ] 1.1.2 RESEN bit write: Enable/disable reset output generation
+  - [ ] 1.1.3 step_value[4:2] write: Set clock divider (000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16)
+  - [ ] 1.1.4 Pattern: Use event-based timing (see openspec-memories/04_DML_Timing_Timer_Modeling.md)
+  - [ ] 1.1.5 Anti-Pattern: NEVER model clock signal directly (causes 100-1000x slowdown)
+  
+- [ ] 1.2 Implement WDOGINTCLR register side-effects (wdt.dml)
+  - [ ] 1.2.1 Any write: Clear WDOGRIS[0] and WDOGMIS[0]
+  - [ ] 1.2.2 Any write: Deassert wdogint signal
+  - [ ] 1.2.3 Any write: Reload counter from WDOGLOAD
+  
+- [ ] 1.3 Implement WDOGLOCK register side-effects (wdt.dml)
+  - [ ] 1.3.1 Write 0x1ACCE551: Unlock other registers for write access
+  - [ ] 1.3.2 Write any other value: Lock other registers from write access
+  - [ ] 1.3.3 Read: Return 0x0 if unlocked, 0x1 if locked
+```
+
+**Task Quality Checklist:**
+- [ ] Each register with side-effects has dedicated sub-task
+- [ ] Each sub-task specifies exact behavior (not "implement side-effects")
+- [ ] Each sub-task references specific memory document
+- [ ] Anti-patterns explicitly called out with consequences
+- [ ] DML patterns specified (event-based, lazy evaluation, etc.)
+- [ ] Test tasks specify which TEST-XXX scenarios to cover
+- [ ] Minimum 3-5 sub-tasks per main task
 
 ### Apply Agent Handoff Checklist:
 
