@@ -1,0 +1,1303 @@
+---
+name: "openspec-improve-propose"
+displayName: "OpenSpec Improve Propose"
+description: "Analyze OpenSpec proposal sessions to identify error patterns and autonomously improve agent instructions and memory documents"
+keywords: ["openspec", "improve", "propose", "proposal", "session-analysis", "error-patterns", "autonomous-improvement", "validation-errors", "spec-format"]
+author: "ADK Team"
+---
+
+# OpenSpec Improve Propose Power
+
+Documentation and guidance for analyzing OpenSpec proposal creation sessions to identify patterns and autonomously improve agent instructions and memory documents.
+
+## Overview
+
+The OpenSpec Improve Propose power analyzes session text files from OpenSpec proposal executions to make your agent smarter over time. It works by reading session logs, agent instructions, and memory documents directly - **no ADK installation required**.
+
+**CRITICAL INSIGHT**: This power analyzes TWO types of issues:
+
+1. **Validation Errors** (Format Issues): Lowercase keywords, missing scenarios, invalid structure
+   - Detected during `openspec validate` command
+   - Cause validation failures and rework
+   - Fixed by adding format rules to agent instructions
+
+2. **Content Quality Issues** (Completeness Issues): Missing requirements, vague tasks, incomplete context
+   - **NOT detected by validation** - validation can pass with incomplete content
+   - Cause apply agent failures and incomplete implementations
+   - Fixed by adding completeness requirements to agent instructions
+
+**Key Rule**: Validation success ≠ quality success. Always analyze content completeness, not just validation status.
+
+## What It Does
+
+- **Session Analysis**: Parses OpenSpec proposal session text files to extract validation attempts, errors, fixes, and outcomes
+- **Pattern Recognition**: Groups errors by type and identifies recurring issues
+- **Learning Extraction**: Tracks which proposal patterns work consistently and which fail
+- **Autonomous Improvement**: Generates specific updates to agent instructions and memory documents
+- **Impact Measurement**: Estimates time savings and reduction in validation attempts
+
+## Available MCP Servers
+
+**None** - This is a Knowledge Base Power that provides documentation and guidance. No MCP servers required.
+
+## Available Steering Files
+
+None - All documentation is contained in this POWER.md file.
+
+## How to Use
+
+The agent analyzes three types of files:
+
+1. **Session text files** (`adk_openspec_proposal_initial_agent/*.session.txt`) - Contains execution logs with all attempts, errors, and fixes
+2. **Agent instructions** (`adk_openspec_proposal_initial_agent/proposal_initial_agent_instruction.md`) - Current agent capabilities and instructions
+3. **Memory documents** (`openspec-memories/*.md`) - Existing knowledge base
+
+### Simple Usage
+
+Just ask your AI assistant to analyze a session:
+
+```
+Analyze the session file adk_openspec_proposal_initial_agent/proposal_implement-wdt_20251214_161520.session.txt 
+and tell me what improvements should be made to the agent instructions and memory documents.
+```
+
+The assistant will:
+1. Read the session text file to understand what happened
+2. Read the agent instruction file to see current capabilities
+3. Read relevant memory documents to identify gaps
+4. Provide specific recommendations for improvements
+5. **Generate a markdown analysis report** in the session directory
+
+### Output
+
+The analysis will be saved as a markdown file:
+```
+adk_openspec_proposal_initial_agent/analysis_<timestamp>.md
+```
+
+This document includes:
+- Session summary with metrics
+- Content quality analysis
+- Problems identified with evidence
+- Specific improvements with exact text
+- Expected results with before/after metrics
+- Action items
+
+### What Files to Provide
+
+Point the assistant to:
+- **Session file**: `adk_openspec_proposal_initial_agent/*.session.txt` (the execution log)
+- **Instruction file**: `adk_openspec_proposal_initial_agent/proposal_initial_agent_instruction.md` (agent's current instructions)
+- **Memory directory**: `openspec-memories/` (existing knowledge base)
+
+### Example Prompts
+
+**Post-Proposal Review:**
+```
+Analyze the latest session.txt in adk_openspec_proposal_initial_agent/ and tell me what could be improved
+```
+
+**Pattern Discovery:**
+```
+Look at the session.txt file and identify the top 3 most common validation error patterns
+```
+
+**Documentation Gap Analysis:**
+```
+Review the session.txt and tell me what memory documents are missing or need updates
+```
+
+**Comparative Analysis:**
+```
+Compare these two session.txt files and tell me if the agent is improving over time
+```
+
+## What You Get (Required Output Format)
+
+Every analysis MUST include these sections:
+
+**CRITICAL**: After completing the analysis, generate a markdown document with all findings and save it to the session directory.
+
+### Output File Location
+
+Save the analysis report as:
+```
+<session-directory>/analysis_<timestamp>.md
+```
+
+Example: `adk_openspec_proposal_initial_agent/analysis_20251223_120000.md`
+
+### Required Sections in Output Document
+
+### 1. Session Summary (Required)
+```
+📊 Session Summary
+- Duration: X.X minutes (HH:MM:SS → HH:MM:SS UTC)
+- Validation attempts: X (Y failed, Z successful)
+- Spec delta creation: ✅/❌
+- Final status: Validation ✅/❌ (format correct, content adequate/inadequate)
+- Total events: X
+```
+
+**CRITICAL**: Validation success ≠ quality success. A proposal can pass validation but still be incomplete or vague.
+
+### 2. Content Quality Analysis (Required - ALWAYS CHECK)
+
+**CRITICAL**: Even if validation passes, you MUST analyze content quality by comparing:
+- Source spec vs. generated spec delta (requirement coverage)
+- Generated tasks.md (specificity and actionability)
+- Generated proposal.md (context completeness)
+
+```
+📏 Content Quality Metrics
+
+Source Spec Analysis:
+- Total requirements in source: X (FUNC-XXX: Y, REG-XXX: Z, BEHAV-XXX: W, TEST-XXX: V)
+- Source spec size: X lines
+- Test scenarios in source: X
+
+Generated Spec Delta Analysis:
+- Requirements in spec delta: X (Y% coverage)
+- Spec delta size: X lines (Y% of source)
+- Test scenarios covered: X/Y (Z% coverage)
+
+Quality Assessment: ✅ COMPLETE / ⚠️ INCOMPLETE / ❌ SEVERELY INCOMPLETE
+```
+
+**How to Check:**
+```bash
+# Count requirements in source spec
+grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l
+
+# Count requirements in spec delta
+grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md
+
+# Compare line counts
+wc -l specs/<branch>/spec.md openspec/changes/<id>/specs/*/spec.md
+```
+
+**Quality Thresholds:**
+- ✅ COMPLETE: 80%+ requirement coverage, 30%+ line count ratio, all test scenarios covered
+- ⚠️ INCOMPLETE: 50-80% requirement coverage, 15-30% line count ratio, some test scenarios missing
+- ❌ SEVERELY INCOMPLETE: <50% requirement coverage, <15% line count ratio, most test scenarios missing
+
+### 3. Top Error Patterns (Required - Extract Actual Errors)
+```
+🔴 Top Error Pattern: "error type" (X occurrences)
+
+Affected files/sections:
+- file1 (Xx)
+- file2 (Xx)
+
+Root cause: [Explain WHY this happened]
+
+Time wasted: ~X minutes on [what activity]
+```
+
+**CRITICAL**: Count ACTUAL errors, not error lines. Use grep to extract specific error messages.
+
+**Example**: If you see one validation failure with "lowercase keyword 'shall', 'must', 'should'..." that's 3+ errors, not 1 error.
+
+**Note**: If validation passed on first try, this section may show "No validation errors" but you MUST still analyze content quality in section 2.
+
+### 4. What Went Well / What Caused Problems (Required)
+```
+✅ What Went Well
+- [Specific thing agent did correctly]
+- [Another success]
+
+❌ What Caused Problems
+1. [Error pattern name OR content quality issue] (X errors OR Y% information loss)
+   - Pattern: [What the agent did wrong]
+   - Impact: [Time wasted, validations failed, OR incomplete guidance for apply agent]
+   - Knowledge gap: [What the agent should have known]
+```
+
+**CRITICAL**: Include BOTH validation errors AND content quality issues:
+- Validation errors: lowercase keywords, missing scenarios, structure issues
+- Content quality issues: missing requirements, vague tasks, incomplete context
+
+### 5. Proposed Improvements (Required - Must Be Specific)
+```
+🎯 Proposed Improvements
+
+1. Add to [specific file path]:
+   ```
+   [EXACT TEXT TO ADD]
+   ```
+   Expected Impact: [Quantified improvement]
+
+2. Create [specific file path]:
+   [Content outline with examples]
+   Expected Impact: [Quantified improvement]
+```
+
+**CRITICAL**: Provide EXACT text, not generic advice like "improve validation handling".
+
+**Types of Improvements:**
+
+**A. For Validation Errors:**
+- Add format rules to agent instructions
+- Add pre-validation checks
+- Create memory documents with examples
+
+**B. For Content Quality Issues:**
+- Add completeness requirements to agent instructions
+- Add requirement coverage checks
+- Add task decomposition guidelines
+- Add context provision requirements
+
+**Example - Content Quality Improvement:**
+```markdown
+Add to proposal_initial_agent_instruction.md after "Spec Format Requirements":
+
+## Spec Delta Completeness Requirements (CRITICAL)
+
+When creating spec deltas from a source specification:
+
+1. **Requirement Coverage**: Extract ALL functional requirements from source spec
+   - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+   - Ensure spec delta includes equivalent coverage (80%+ minimum)
+   - NEVER drop requirements silently
+
+2. **Pre-Validation Check**: Before running `openspec validate`, verify:
+   ```bash
+   # Count requirements in source spec
+   grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l
+   
+   # Count spec delta requirements
+   grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md
+   
+   # Ensure 80%+ coverage
+   ```
+
+Expected Impact: Prevent 80% information loss, ensure complete implementation guidance
+```
+
+### 6. Before/After Metrics (Required)
+```
+📉 Expected Results After Improvements
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Validation attempts | X | Y | Z% reduction |
+| Time to completion | X min | Y min | Z% faster |
+| [Error type] errors | X | Y | Z% reduction |
+| Requirement coverage | X% | Y% | Z% increase |
+| Task specificity | X/10 | Y/10 | Z% increase |
+```
+
+**CRITICAL**: Include BOTH validation metrics AND content quality metrics:
+- Validation metrics: attempts, errors, time
+- Content quality metrics: requirement coverage, task specificity, context completeness
+
+## Common Proposal Error Patterns
+
+### VALIDATION ERROR PATTERNS (Format Issues)
+
+### Pattern 1: Lowercase Keywords
+**Symptom**: Validation fails with "lowercase keyword" errors
+
+**Root Cause**: Agent used "shall", "must", "should" instead of "SHALL", "MUST", "SHOULD"
+
+**Fix**: Add to instructions:
+```
+CRITICAL: ALL requirement keywords MUST be UPPERCASE:
+- SHALL, SHOULD, MAY, MUST, MUST NOT (never lowercase)
+```
+
+### Pattern 2: Missing Scenarios
+**Symptom**: Validation fails with "requirement missing scenario" errors
+
+**Root Cause**: Requirements don't have `#### Scenario:` subsections
+
+**Fix**: Add to instructions:
+```
+Each requirement MUST have at least one #### Scenario: subsection
+```
+
+### Pattern 3: Invalid Spec Structure
+**Symptom**: Validation fails with structure errors
+
+**Root Cause**: Wrong section headers or missing required sections
+
+**Fix**: Add to instructions:
+```
+Spec delta format:
+- ## ADDED Requirements
+- ## MODIFIED Requirements
+- ## REMOVED Requirements
+```
+
+### Pattern 4: Incomplete Tasks
+**Symptom**: Apply agent struggles with vague tasks
+
+**Root Cause**: tasks.md lacks specific sub-tasks and implementation details
+
+**Fix**: Add to instructions:
+```
+Tasks must include:
+- Specific sub-tasks (1.1, 1.2, etc.)
+- DML patterns to use
+- Anti-patterns to avoid
+- Test coverage requirements
+```
+
+### Pattern 5: Missing Context
+**Symptom**: Proposal lacks sufficient implementation context
+
+**Root Cause**: Didn't reference hardware spec or existing skeleton
+
+**Fix**: Add to instructions:
+```
+Context section must include:
+- What exists (DML skeleton location)
+- What spec to use (specs/<branch>/spec.md)
+- Secondary hardware spec (if applicable)
+```
+
+---
+
+### CONTENT QUALITY PATTERNS (Completeness Issues)
+
+**CRITICAL**: These patterns occur even when validation passes. They cause apply agent failures and incomplete implementations.
+
+### Pattern 6: Massive Information Loss
+**Symptom**: Spec delta has <50% of source spec requirements
+
+**Detection**:
+```bash
+# Count source requirements
+SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
+
+# Count spec delta requirements
+DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md)
+
+# Calculate coverage
+COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
+
+# If COVERAGE < 80%, this is a problem
+```
+
+**Root Cause**: Agent summarized instead of extracting all requirements
+
+**Impact**: 
+- Apply agent lacks guidance for 50%+ of functionality
+- Missing test scenarios (0/10 test scenarios extracted)
+- Critical behaviors undefined (e.g., "When INTEN=0, timer shall not decrement")
+
+**Fix**: Add to instructions:
+```markdown
+## Spec Delta Completeness Requirements (CRITICAL)
+
+When creating spec deltas from a source specification:
+
+1. **Requirement Coverage**: Extract ALL functional requirements from source spec
+   - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+   - Ensure spec delta includes equivalent coverage (80%+ minimum)
+   - NEVER drop requirements silently
+
+2. **Test Scenario Mapping**: For each test scenario in source spec (TEST-XXX):
+   - Create corresponding requirement with scenarios in spec delta
+   - Map test scenarios to device states and transitions
+   - Include Setup/Action/Expected format
+
+3. **Behavioral Requirements**: Extract state machine behaviors
+   - When device is enabled/disabled
+   - State transitions and conditions
+   - Edge cases and error conditions
+
+4. **Pre-Validation Check**: Before running `openspec validate`, verify:
+   ```bash
+   # Count requirements in source spec
+   SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
+   
+   # Count spec delta requirements
+   DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md)
+   
+   # Calculate coverage
+   COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
+   
+   # Ensure 80%+ coverage
+   if [ $COVERAGE -lt 80 ]; then
+     echo "ERROR: Only $COVERAGE% requirement coverage (need 80%+)"
+     echo "Source has $SOURCE_REQS requirements, spec delta has $DELTA_REQS"
+     exit 1
+   fi
+   ```
+
+5. **Completeness Criteria**:
+   - Source has 25 requirements → Spec delta should have 20-25 requirements
+   - Source has 10 test scenarios → Spec delta should cover all 10
+   - If source has 800+ lines → Spec delta should be 200-400 lines (not 73)
+```
+
+**Expected Impact**: Prevent 80% information loss, ensure complete implementation guidance
+
+### Pattern 7: Vague Tasks (Not Actionable)
+**Symptom**: Tasks like "Implement register side-effects" without specifics
+
+**Detection**: Check tasks.md for:
+- Tasks without sub-tasks (1.1, 1.2, etc.)
+- No mention of specific registers, patterns, or anti-patterns
+- No references to memory documents
+
+**Root Cause**: Agent created high-level tasks without decomposition
+
+**Impact**:
+- Apply agent must guess implementation details
+- No guidance on DML patterns to use
+- Anti-patterns not called out (causes performance issues)
+- 70% increase in apply agent confusion and rework
+
+**Fix**: Add to instructions:
+```markdown
+## Task Decomposition Requirements (CRITICAL)
+
+Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks:
+
+**BAD (too vague):**
+```markdown
+- [ ] 1.1 Implement register side-effects in wdt.dml
+```
+
+**GOOD (specific and actionable):**
+```markdown
+- [ ] 1.1 Implement WDOGCONTROL register side-effects (wdt.dml)
+  - [ ] 1.1.1 INTEN bit write: Reload counter from WDOGLOAD on 0→1 transition
+  - [ ] 1.1.2 RESEN bit write: Enable/disable reset output generation
+  - [ ] 1.1.3 step_value[4:2] write: Set clock divider (000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16)
+  - [ ] 1.1.4 Pattern: Use event-based timing (see openspec-memories/04_DML_Timing_Timer_Modeling.md)
+  - [ ] 1.1.5 Anti-Pattern: NEVER model clock signal directly (causes 100-1000x slowdown)
+  
+- [ ] 1.2 Implement WDOGINTCLR register side-effects (wdt.dml)
+  - [ ] 1.2.1 Any write: Clear WDOGRIS[0] and WDOGMIS[0]
+  - [ ] 1.2.2 Any write: Deassert wdogint signal
+  - [ ] 1.2.3 Any write: Reload counter from WDOGLOAD
+  
+- [ ] 1.3 Implement WDOGLOCK register side-effects (wdt.dml)
+  - [ ] 1.3.1 Write 0x1ACCE551: Unlock other registers for write access
+  - [ ] 1.3.2 Write any other value: Lock other registers from write access
+  - [ ] 1.3.3 Read: Return 0x0 if unlocked, 0x1 if locked
+```
+
+**Task Quality Checklist:**
+- [ ] Each register with side-effects has dedicated sub-task
+- [ ] Each sub-task specifies exact behavior (not "implement side-effects")
+- [ ] Each sub-task references specific memory document
+- [ ] Anti-patterns explicitly called out with consequences
+- [ ] DML patterns specified (event-based, lazy evaluation, etc.)
+- [ ] Test tasks specify which scenarios to cover
+```
+
+**Expected Impact**: Reduce apply agent confusion by 70%, prevent implementation mistakes
+
+### Pattern 8: Missing Context in proposal.md
+**Symptom**: proposal.md doesn't reference source spec, existing code, or memory docs
+
+**Detection**: Check proposal.md for:
+- No mention of `specs/<branch>/spec.md` location
+- No mention of secondary hardware spec (if applicable)
+- No mention of existing DML skeleton location
+- No list of relevant memory documents
+
+**Root Cause**: Agent focused on "Why" and "What Changes" but not "Context"
+
+**Impact**:
+- Apply agent doesn't know where to find detailed requirements
+- Apply agent doesn't know which memory documents to load
+- 40% increase in apply agent time (searching for context)
+
+**Fix**: Add to instructions:
+```markdown
+## Proposal Context Requirements (CRITICAL)
+
+proposal.md MUST include a Context section with:
+
+```markdown
+## Context
+- **Primary Spec**: specs/<branch-name>/spec.md (X functional requirements)
+- **Secondary Hardware Spec**: <filename> (if mentioned in user input)
+- **Existing Code**: simics-project/modules/<device>/<device>.dml (DML skeleton with USER-TODO placeholders)
+- **Key Memory Docs**: 
+  - openspec-memories/<relevant-doc-1>.md (why needed)
+  - openspec-memories/<relevant-doc-2>.md (why needed)
+```
+
+**Example:**
+```markdown
+## Context
+- **Primary Spec**: specs/001-user-input-read/spec.md (25 functional requirements: FUNC-001 to FUNC-025)
+- **Secondary Hardware Spec**: wdt.md (Chinese hardware documentation with register details)
+- **Existing Code**: simics-project/modules/wdt/wdt.dml (DML skeleton with auto-generated registers)
+- **Key Memory Docs**: 
+  - openspec-memories/04_DML_Timing_Timer_Modeling.md (timer implementation patterns)
+  - openspec-memories/02_DML_Anti_Patterns.md (CRITICAL: avoid performance pitfalls)
+  - openspec-memories/06_DML_Common_Patterns.md (register side-effect patterns)
+```
+```
+
+**Expected Impact**: Reduce apply agent search time by 60%, ensure correct memory document loading
+
+### Pattern 9: Missing Test Scenario Coverage
+**Symptom**: Source spec has 10 test scenarios (TEST-001 to TEST-010), spec delta has 0
+
+**Detection**:
+```bash
+# Count test scenarios in source
+grep -c "^\*\*TEST-" specs/<branch>/spec.md
+
+# Count test scenarios in spec delta (should have requirements covering these)
+grep -c "#### Scenario:" openspec/changes/<id>/specs/*/spec.md
+```
+
+**Root Cause**: Agent extracted functional requirements but ignored test scenarios
+
+**Impact**:
+- Test tasks in tasks.md are vague ("Create basic functionality test")
+- No clear test coverage criteria
+- Apply agent must invent test scenarios (50% chance of missing edge cases)
+
+**Fix**: Add to instructions:
+```markdown
+## Test Scenario Extraction (CRITICAL)
+
+For each TEST-XXX scenario in source spec, create a corresponding requirement:
+
+**Source Spec TEST-003:**
+```
+**TEST-003**: Verify lock protection mechanism.
+- Setup: Write 0x1ACCE551 to LOCK to unlock
+- Action: Write to LOAD (should succeed), then lock, then try again
+- Expected: First write succeeds, second write fails
+```
+
+**Spec Delta Requirement:**
+```markdown
+### Requirement: Lock Protection Mechanism
+The LOCK register SHALL control write access to all other registers. Writing 0x1ACCE551 
+to LOCK SHALL unlock write access. Writing any other value SHALL lock write access.
+
+#### Scenario: Unlock Registers
+- **WHEN** 0x1ACCE551 is written to LOCK
+- **THEN** write access to all other registers SHALL be enabled
+- **AND** subsequent register writes SHALL succeed
+
+#### Scenario: Lock Registers  
+- **WHEN** any value other than 0x1ACCE551 is written to LOCK
+- **THEN** write access to all other registers SHALL be disabled
+- **AND** subsequent register writes SHALL be ignored
+
+#### Scenario: Write Protection When Locked
+- **WHEN** device is in locked state and a write is attempted to any register except LOCK
+- **THEN** the write operation SHALL be ignored
+- **AND** register value SHALL remain unchanged
+```
+
+**Mapping Rule**: Each TEST-XXX → 1 Requirement with 2-4 Scenarios covering the test cases
+```
+
+**Expected Impact**: Ensure 100% test scenario coverage, clear test implementation guidance
+
+## Step-by-Step Analysis Protocol
+
+Follow these steps for consistent, thorough analysis:
+
+### Step 1: Extract Basic Metrics
+```bash
+# Session duration
+grep "👤 \[user\]" session.txt | head -1  # Start time
+tail -100 session.txt | grep "🤖" | tail -1  # End time
+
+# Count validation attempts - IMPORTANT: Count TOOL_CALL or command executions
+grep -c "openspec validate" session.txt  # Validation invocations
+
+# Check final status
+tail -50 session.txt | grep -E "success|failed|completed|validation"
+```
+
+### Step 2: Analyze Content Quality (CRITICAL - DO THIS EVEN IF VALIDATION PASSED)
+
+**CRITICAL**: Validation success ≠ quality success. Always check content completeness.
+
+```bash
+# Find the change ID from session
+CHANGE_ID=$(grep "openspec validate" session.txt | head -1 | awk '{print $3}')
+
+# Find the source spec branch
+SOURCE_SPEC=$(grep "specs/" session.txt | grep "spec.md" | head -1 | sed 's/.*\(specs\/[^\/]*\/spec.md\).*/\1/')
+
+# Count requirements in source spec
+SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" $SOURCE_SPEC | wc -l)
+SOURCE_TESTS=$(grep -c "^\*\*TEST-" $SOURCE_SPEC)
+SOURCE_LINES=$(wc -l < $SOURCE_SPEC)
+
+# Count requirements in spec delta
+DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/$CHANGE_ID/specs/*/spec.md)
+DELTA_SCENARIOS=$(grep -c "^#### Scenario:" openspec/changes/$CHANGE_ID/specs/*/spec.md)
+DELTA_LINES=$(wc -l < openspec/changes/$CHANGE_ID/specs/*/spec.md)
+
+# Calculate coverage
+REQ_COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
+LINE_RATIO=$((DELTA_LINES * 100 / SOURCE_LINES))
+
+# Quality assessment
+if [ $REQ_COVERAGE -ge 80 ] && [ $LINE_RATIO -ge 30 ]; then
+  echo "✅ COMPLETE: ${REQ_COVERAGE}% requirement coverage, ${LINE_RATIO}% line ratio"
+elif [ $REQ_COVERAGE -ge 50 ] && [ $LINE_RATIO -ge 15 ]; then
+  echo "⚠️ INCOMPLETE: ${REQ_COVERAGE}% requirement coverage, ${LINE_RATIO}% line ratio"
+else
+  echo "❌ SEVERELY INCOMPLETE: ${REQ_COVERAGE}% requirement coverage, ${LINE_RATIO}% line ratio"
+fi
+```
+
+**Quality Thresholds:**
+- ✅ COMPLETE: 80%+ requirement coverage, 30%+ line ratio, all test scenarios covered
+- ⚠️ INCOMPLETE: 50-80% requirement coverage, 15-30% line ratio, some test scenarios missing
+- ❌ SEVERELY INCOMPLETE: <50% requirement coverage, <15% line ratio, most test scenarios missing
+
+### Step 3: Extract ALL Error Patterns (CRITICAL)
+```bash
+# Find validation errors
+grep -i "error\|failed\|invalid" session.txt | head -50
+
+# Count specific error types
+grep "lowercase keyword" session.txt | grep -o "'[a-z]*'" | sort | uniq -c | sort -rn
+grep "missing scenario" session.txt | wc -l
+grep "invalid structure" session.txt | wc -l
+```
+
+**CRITICAL**: Don't just count error lines - extract the ACTUAL error messages and affected items.
+
+**Note**: If validation passed on first try, this section may show "No validation errors" but you MUST still report content quality issues from Step 2.
+
+### Step 4: Analyze Tasks Quality
+
+Check tasks.md for specificity:
+
+```bash
+# Count tasks with sub-tasks
+grep -c "^  - \[ \]" openspec/changes/$CHANGE_ID/tasks.md
+
+# Check for memory document references
+grep -c "openspec-memories" openspec/changes/$CHANGE_ID/tasks.md
+
+# Check for anti-pattern warnings
+grep -c -i "anti-pattern\|avoid\|never" openspec/changes/$CHANGE_ID/tasks.md
+```
+
+**Quality Criteria:**
+- ✅ GOOD: 3-5 sub-tasks per main task, memory doc references, anti-pattern warnings
+- ⚠️ FAIR: 1-2 sub-tasks per main task, some references
+- ❌ POOR: No sub-tasks, no references, vague descriptions
+
+### Step 5: Analyze Proposal Context
+
+Check proposal.md for context completeness:
+
+```bash
+# Check for required context elements
+grep -q "Primary Spec:" openspec/changes/$CHANGE_ID/proposal.md && echo "✅ Primary spec referenced" || echo "❌ Primary spec missing"
+grep -q "Existing Code:" openspec/changes/$CHANGE_ID/proposal.md && echo "✅ Existing code referenced" || echo "❌ Existing code missing"
+grep -q "Memory Doc" openspec/changes/$CHANGE_ID/proposal.md && echo "✅ Memory docs referenced" || echo "❌ Memory docs missing"
+```
+
+### Step 6: Identify Root Causes
+For each error pattern OR content quality issue:
+- What was the agent trying to do?
+- Why did it fail? (format, structure, missing knowledge, OR incomplete extraction)
+- How did the agent fix it? (for validation errors)
+- How long did it take to fix? (for validation errors)
+- What guidance is missing from instructions? (for content quality issues)
+
+### Step 7: Check Knowledge Gaps
+- Read agent instruction file to see what guidance exists
+- Check memory documents for relevant information
+- Identify what the agent SHOULD have known but didn't
+- **NEW**: Identify what completeness checks are missing
+
+### Step 8: Generate Specific Improvements
+For each significant error pattern (2+ occurrences) OR content quality issue:
+- Exact text to add to agent instructions
+- New memory document to create (with outline)
+- Pre-validation check to add
+- **NEW**: Completeness check to add (requirement coverage, task specificity, context provision)
+- Quantified expected impact
+
+### Step 9: Calculate Before/After Metrics
+- Validation attempts: X → Y (Z% reduction)
+- Time to success: X min → Y min (Z% reduction)
+- Error frequency: X → Y (Z% reduction)
+- Success rate: X% → Y% (Z% improvement)
+- **NEW**: Requirement coverage: X% → Y% (Z% improvement)
+- **NEW**: Task specificity: X/10 → Y/10 (Z% improvement)
+- **NEW**: Apply agent success rate: X% → Y% (Z% improvement)
+
+## Real-World Example Analysis
+
+### Example 1: Session with Validation Errors (Before Improvements)
+
+Here's an actual analysis from a WDT device proposal session with validation errors:
+
+```
+Session: proposal_implement-wdt_20251214_161520.session.txt
+Task: Create proposal for Simics Watchdog Timer device
+
+Summary:
+- Duration: 6.2 minutes (08:15:30 → 08:21:45 UTC)
+- Validation attempts: 4
+- First 3 validations failed, 4th successful
+- Final status: Validation ✅
+
+Top Error Pattern: "lowercase keyword" (8 occurrences in first validation)
+- "shall", "must", "should" in requirements
+- Root cause: Agent didn't know keywords must be UPPERCASE
+- Time wasted: ~3 minutes on validation errors
+
+What Went Well:
+✓ Followed protocol (read AGENTS.md first)
+✓ Loaded memory indices correctly
+✓ Created complete proposal structure
+✓ Fixed errors systematically
+
+What Caused Problems:
+✗ Missing knowledge: Spec format requires UPPERCASE keywords
+✗ Impact: 8 validation errors, 3 minutes wasted
+✗ Pattern: Agent used natural language case instead of spec format
+
+Proposed Improvements:
+
+1. Add to proposal_initial_agent_instruction.md:
+   "Spec Format Requirements (CRITICAL):
+    - ALL requirement keywords MUST be UPPERCASE: SHALL, SHOULD, MAY, MUST, MUST NOT
+    - NEVER use lowercase: shall, should, may, must, must not
+    - Each requirement MUST have at least one #### Scenario: subsection"
+   
+   Expected Impact: Prevent 100% of keyword case errors, save 2-3 min
+
+2. Add pre-validation check:
+   "Before running openspec validate, search proposal for lowercase keywords:
+    grep -i 'shall\|must\|should\|may' changes/<id>/spec-deltas/*.md"
+   
+   Expected Impact: Catch 90% of errors before validation
+
+Results After Improvements:
+- Validation attempts: 4 → 1 (75% reduction)
+- Time to validation: 6.2 min → 3 min (52% reduction)
+- Keyword errors: 8 → 0 (100% reduction)
+```
+
+### Example 2: Session with Content Quality Issues (Validation Passed!)
+
+Here's an analysis from a WDT device proposal session where validation passed but content was incomplete:
+
+```
+Session: proposal_implement-wdt_20251223_195750.session.txt
+Task: Create proposal for Simics Watchdog Timer device
+
+📊 Session Summary:
+- Duration: 50.9 seconds (11:57:55 → 11:58:46 UTC)
+- Validation attempts: 1 (0 failed, 1 successful)
+- Spec delta creation: ✅ (but INCOMPLETE)
+- Final status: Validation ✅ (format correct, content inadequate)
+- Total events: 42
+
+📏 Content Quality Metrics:
+
+Source Spec Analysis:
+- Total requirements in source: 25 (FUNC-001 to FUNC-025)
+- Source spec size: 812 lines
+- Test scenarios in source: 10 (TEST-001 to TEST-010)
+
+Generated Spec Delta Analysis:
+- Requirements in spec delta: 5 (20% coverage)
+- Spec delta size: 73 lines (9% of source)
+- Test scenarios covered: 0/10 (0% coverage)
+
+Quality Assessment: ❌ SEVERELY INCOMPLETE
+
+✅ What Went Well:
+- Perfect protocol adherence (read AGENTS.md first)
+- Efficient memory loading (loaded anti-patterns, timer patterns)
+- Correct spec format (UPPERCASE keywords, scenarios)
+- First-try validation success (no format errors)
+- Fast execution (under 1 minute)
+
+❌ What Caused Problems:
+
+1. Massive Information Loss (80% requirements missing)
+   - Pattern: Agent summarized instead of extracting all requirements
+   - Impact: Apply agent will lack guidance for 20/25 requirements
+   - Missing: 10 test scenarios, 7 behavioral requirements, 10 register requirements
+   - Knowledge gap: No completeness requirements in agent instructions
+
+2. Vague Tasks (not actionable)
+   - Pattern: "Implement register side-effects" without specifics
+   - Impact: Apply agent must guess which registers, what side-effects
+   - Missing: No sub-tasks, no memory doc references, no anti-pattern warnings
+   - Knowledge gap: No task decomposition guidelines in agent instructions
+
+3. Missing Context in proposal.md
+   - Pattern: No reference to source spec location or memory docs
+   - Impact: Apply agent doesn't know where to find detailed requirements
+   - Missing: Primary spec path, existing code location, memory doc list
+   - Knowledge gap: No context provision requirements in agent instructions
+
+🎯 Proposed Improvements:
+
+1. Add to proposal_initial_agent_instruction.md (after "Spec Format Requirements"):
+
+```markdown
+## Spec Delta Completeness Requirements (CRITICAL)
+
+When creating spec deltas from a source specification:
+
+1. **Requirement Coverage**: Extract ALL functional requirements from source spec
+   - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+   - Ensure spec delta includes equivalent coverage (80%+ minimum)
+   - NEVER drop requirements silently
+
+2. **Test Scenario Mapping**: For each test scenario in source spec (TEST-XXX):
+   - Create corresponding requirement with scenarios in spec delta
+   - Map test scenarios to device states and transitions
+
+3. **Pre-Validation Check**: Before running `openspec validate`, verify:
+   ```bash
+   SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
+   DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md)
+   COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
+   
+   if [ $COVERAGE -lt 80 ]; then
+     echo "ERROR: Only $COVERAGE% requirement coverage (need 80%+)"
+     exit 1
+   fi
+   ```
+```
+
+Expected Impact: Prevent 80% information loss, ensure complete implementation guidance
+
+2. Add to proposal_initial_agent_instruction.md (in "Apply Agent Handoff"):
+
+```markdown
+## Task Decomposition Requirements (CRITICAL)
+
+Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks:
+
+**BAD:** - [ ] 1.1 Implement register side-effects in wdt.dml
+
+**GOOD:** 
+- [ ] 1.1 Implement WDOGCONTROL register side-effects (wdt.dml)
+  - [ ] 1.1.1 INTEN bit: Reload counter from WDOGLOAD on 0→1 transition
+  - [ ] 1.1.2 RESEN bit: Enable/disable reset output generation
+  - [ ] 1.1.3 Pattern: Use event-based timing (openspec-memories/04_DML_Timing_Timer_Modeling.md)
+  - [ ] 1.1.4 Anti-Pattern: NEVER model clock signal directly (100-1000x slowdown)
+```
+
+Expected Impact: Reduce apply agent confusion by 70%, prevent implementation mistakes
+
+3. Create openspec-memories/10_Proposal_Quality_Checklist.md:
+
+```markdown
+# Proposal Quality Checklist
+
+## Spec Delta Completeness
+- [ ] Requirement count: 80%+ of source spec requirements
+- [ ] Test scenario coverage: All TEST-XXX scenarios covered
+- [ ] Line count: 200-400 lines for complex devices (not 73)
+
+## Tasks.md Quality
+- [ ] Specific sub-tasks: Each task has 3-5 actionable sub-tasks
+- [ ] Memory doc references: Tasks reference specific openspec-memories/*.md
+- [ ] Anti-pattern warnings: Critical anti-patterns called out
+
+## Proposal.md Context
+- [ ] Source spec location: Primary spec path included
+- [ ] Existing code location: DML skeleton path specified
+- [ ] Memory document list: Key memory docs listed
+```
+
+Expected Impact: Catch 90% of quality issues before validation
+
+📉 Expected Results After Improvements:
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Validation attempts | 1 | 1 | No change (already optimal) |
+| Requirements captured | 5/25 (20%) | 23/25 (92%) | +360% |
+| Test scenarios included | 0/10 (0%) | 9/10 (90%) | +∞ |
+| Task specificity | 2/10 | 8/10 | +300% |
+| Spec delta completeness | 73 lines (9%) | 300 lines (37%) | +311% |
+| Apply agent success rate | ~40% | ~85% | +112% |
+| Time to working code | 30-60 min | 15-20 min | 60% faster |
+
+Key Insight: Validation passed, but content was severely incomplete. This demonstrates 
+that validation success ≠ quality success. Always analyze content completeness, not 
+just validation status.
+```
+
+## Use Cases
+
+### 1. Post-Proposal Review (Most Common)
+
+After creating a proposal:
+
+```
+Analyze adk_openspec_proposal_initial_agent/proposal_implement-wdt_*.session.txt
+
+Extract:
+- Duration and validation attempt count
+- Top 3 error patterns with frequency
+- What knowledge was missing from agent instructions
+- Specific improvements to make
+
+Provide concrete text to add to proposal_initial_agent_instruction.md
+```
+
+**When to use**: After every proposal creation session
+
+### 2. Error Pattern Discovery
+
+Find recurring issues across multiple sessions:
+
+```
+Analyze all .session.txt files in adk_openspec_proposal_initial_agent/ from this week.
+
+Identify:
+- Which errors appear in multiple sessions
+- Which errors take the most time to resolve
+- Common root causes
+
+Focus on patterns that occur 2+ times across sessions.
+```
+
+**When to use**: Weekly or after 5-10 sessions to identify systemic issues
+
+### 3. Comparative Analysis (Measure Improvement)
+
+Compare sessions before/after improvements:
+
+```
+Compare these two sessions:
+- BEFORE: proposal_implement-wdt_20251214.session.txt (before improvements)
+- AFTER: proposal_implement-wdt_20251215.session.txt (after improvements)
+
+Metrics to compare:
+- Validation attempts to success
+- Time to completion
+- Error frequency
+- Types of errors
+
+Did the improvements work? What's still problematic?
+```
+
+**When to use**: After applying improvements to validate they work
+
+### 4. Documentation Gap Analysis
+
+Find missing or incomplete memory documents:
+
+```
+Review session proposal_implement-wdt_*.session.txt
+
+For each error pattern:
+- Check if openspec-memories/ has relevant documentation
+- Identify gaps where agent should have known the answer
+- Recommend new memory documents to create
+
+List specific document titles and content outlines.
+```
+
+**When to use**: When agent repeatedly struggles with same issue type
+
+### 5. Quick Health Check
+
+Fast analysis for immediate feedback:
+
+```
+Quick analysis of latest session:
+- Did it succeed? How many validation attempts?
+- What was the #1 error?
+- One-sentence recommendation
+
+Keep it under 5 lines.
+```
+
+**When to use**: After each session for quick feedback loop
+
+## Common Analysis Pitfalls
+
+### Pitfall 1: Miscounting Validation Attempts
+**Symptom**: Analysis reports wrong number of validation attempts
+
+**Solution**: Count actual command executions:
+```bash
+# ✅ CORRECT - counts actual validations
+grep -c "openspec validate" session.txt
+```
+
+### Pitfall 2: Undercounting Errors
+**Symptom**: Report says "1 error" but there were actually 8
+
+**Solution**: One validation failure may contain multiple errors. Extract all:
+```bash
+# Extract all error types
+grep "lowercase keyword" session.txt | grep -o "'[a-z]*'" | sort | uniq -c
+```
+
+### Pitfall 3: Generic Recommendations
+**Symptom**: Recommendations like "improve validation" without specifics
+
+**Solution**: Provide EXACT text to add:
+```markdown
+❌ BAD: "Add better spec format documentation"
+
+✅ GOOD: "Add to agent instructions:
+'CRITICAL: ALL keywords MUST be UPPERCASE: SHALL, MUST, SHOULD'"
+```
+
+### Pitfall 4: Ignoring Time Impact
+**Symptom**: Listing errors without calculating time wasted
+
+**Solution**: For each error pattern, estimate:
+- Time spent on failed validations
+- Time spent fixing errors
+- Total impact in minutes
+
+## Analysis Quality Checklist
+
+Before submitting analysis, verify:
+
+**Basic Metrics:**
+- [ ] Counted validation attempts correctly
+- [ ] Extracted actual error messages (not just counted error lines)
+- [ ] Counted unique error occurrences correctly
+- [ ] Identified root cause for each major error pattern
+
+**Content Quality Analysis (CRITICAL - ALWAYS DO THIS):**
+- [ ] Compared source spec vs. spec delta (requirement count, line count)
+- [ ] Calculated requirement coverage percentage
+- [ ] Identified missing requirement categories (FUNC, REG, BEHAV, TEST)
+- [ ] Checked test scenario coverage (source vs. spec delta)
+- [ ] Analyzed tasks.md for specificity (sub-tasks, memory refs, anti-patterns)
+- [ ] Analyzed proposal.md for context completeness (spec location, existing code, memory docs)
+- [ ] Assessed overall quality: ✅ COMPLETE / ⚠️ INCOMPLETE / ❌ SEVERELY INCOMPLETE
+
+**Improvement Recommendations:**
+- [ ] Provided EXACT text for instruction updates (not generic advice)
+- [ ] Focused on patterns (2+ occurrences OR systemic issues), not one-off issues
+- [ ] Checked agent instructions and memory docs for gaps
+- [ ] Provided specific file paths for all recommendations
+- [ ] Included completeness checks (requirement coverage, task specificity, context provision)
+
+**Metrics:**
+- [ ] Calculated quantified before/after metrics
+- [ ] Included both validation metrics AND content quality metrics
+- [ ] Estimated time savings and error reduction
+- [ ] Estimated apply agent success rate improvement
+
+**Critical Rule:**
+- [ ] Did NOT assume validation success = quality success
+- [ ] Analyzed content quality even when validation passed on first try
+
+**Output Document:**
+- [ ] Generated markdown analysis report using the template
+- [ ] Saved report to session directory as `analysis_<timestamp>.md`
+- [ ] Included all required sections (summary, metrics, problems, improvements, results)
+- [ ] Provided exact text for all improvements (not generic advice)
+
+## No Installation Required
+
+This is a **documentation-only power** that guides you in analyzing session files. Your AI assistant can:
+- Read session text files directly
+- Parse and analyze the execution logs
+- Compare against instruction and memory files
+- Generate improvement recommendations
+- **Generate a markdown analysis report**
+
+No ADK installation or Python dependencies needed - just point your assistant to the files!
+
+## Output Document Template
+
+After completing the analysis, generate a markdown document with this structure:
+
+```markdown
+# OpenSpec Proposal Session Analysis Report
+
+**Session**: `<session-filename>`  
+**Task**: <task-description>  
+**Analyzed**: <date> using openspec-improve-propose power
+
+---
+
+## 📊 Session Summary
+
+\`\`\`
+Duration: X.X seconds (HH:MM:SS → HH:MM:SS UTC)
+Validation attempts: X (Y failed, Z successful)
+Spec delta creation: ✅/❌ (but COMPLETE/INCOMPLETE/SEVERELY INCOMPLETE)
+Final status: Validation ✅/❌ (format correct, content adequate/inadequate)
+Total events: X
+\`\`\`
+
+---
+
+## 📏 Content Quality Metrics
+
+### Source Spec Analysis
+- **Total requirements in source**: X (FUNC-XXX: Y, REG-XXX: Z, BEHAV-XXX: W, TEST-XXX: V)
+- **Source spec size**: X lines
+- **Test scenarios in source**: X
+
+### Generated Spec Delta Analysis
+- **Requirements in spec delta**: X (Y% coverage)
+- **Spec delta size**: X lines (Y% of source)
+- **Test scenarios covered**: X/Y (Z% coverage)
+
+### Quality Assessment: ✅ COMPLETE / ⚠️ INCOMPLETE / ❌ SEVERELY INCOMPLETE
+
+---
+
+## ✅ What Went Well
+
+1. <specific thing agent did correctly>
+2. <another success>
+3. <another success>
+
+---
+
+## ❌ What Caused Problems
+
+### Problem 1: <Problem Name> (<X% information loss OR X errors>)
+
+**Pattern**: <What the agent did wrong>
+
+**Evidence**:
+- <specific evidence from session>
+- <metrics or counts>
+
+**Impact**:
+- <time wasted, validations failed, OR incomplete guidance>
+- <specific consequences>
+
+**Knowledge Gap**: <What the agent should have known but didn't>
+
+---
+
+### Problem 2: <Problem Name>
+
+[Same structure as Problem 1]
+
+---
+
+## 🎯 Proposed Improvements
+
+### 1. Add to `<specific-file-path>`
+
+**Location**: <where in the file>
+
+\`\`\`markdown
+<EXACT TEXT TO ADD>
+\`\`\`
+
+**Expected Impact**: <quantified improvement>
+
+---
+
+### 2. Create `<specific-file-path>`
+
+**Content**:
+\`\`\`markdown
+<content outline with examples>
+\`\`\`
+
+**Expected Impact**: <quantified improvement>
+
+---
+
+## 📉 Expected Results After Improvements
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Validation attempts | X | Y | Z% reduction |
+| Requirements captured | X/Y (Z%) | A/B (C%) | +D% |
+| Test scenarios included | X/Y (Z%) | A/B (C%) | +D% |
+| Task specificity | X/10 | Y/10 | +Z% |
+| Spec delta completeness | X lines (Y%) | A lines (B%) | +C% |
+| Apply agent success rate | X% | Y% | +Z% |
+| Time to working code | X min | Y min | Z% faster |
+
+---
+
+## 🔑 Key Insights
+
+1. <critical insight from analysis>
+2. <another key finding>
+3. <pattern or trend identified>
+
+---
+
+## ✅ Action Items
+
+1. **Immediate**: <action to take>
+2. **Immediate**: <action to take>
+3. **Next Session**: <action to take>
+
+---
+
+**Analysis Complete** | Generated using openspec-improve-propose power v2.0
+\`\`\`
+
+Save this document to: `<session-directory>/analysis_<timestamp>.md`
+
+## Integration with Your Workflow
+
+### Continuous Improvement Cycle
+
+```
+1. Propose → Run proposal agent (creates session.txt file)
+2. Analyze → Ask AI to analyze the session.txt
+3. Improve → Apply proposed changes to instructions/memory docs
+4. Test → Run proposal agent on new task
+5. Measure → Compare sessions to quantify improvement
+6. Repeat → Keep iterating
+```
+
+### Regular Analysis
+
+After each proposal creation:
+
+1. Locate the session.txt file in `adk_openspec_proposal_initial_agent/`
+2. Ask your AI assistant: "Analyze this session and recommend improvements"
+3. Review the recommendations
+4. Update instruction and memory files as suggested
+5. Test with a new proposal to measure improvement
+
+## Expected Impact
+
+After using openspec-improve-propose to improve your proposal agent:
+
+**Validation Improvements:**
+- **Validation attempts**: 4 → 1 (75% reduction)
+- **Time to validation success**: 6 min → 3 min (50% reduction)
+- **Format error reduction**: 90-100% fewer repeated errors
+- **Validation success rate**: 25% → 80-90% (65% improvement)
+
+**Content Quality Improvements (CRITICAL):**
+- **Requirement coverage**: 20% → 90% (350% increase)
+- **Test scenario coverage**: 0% → 90% (complete coverage)
+- **Task specificity**: 2/10 → 8/10 (300% improvement)
+- **Spec delta completeness**: 73 lines → 300 lines (311% increase)
+- **Apply agent success rate**: 40% → 85% (112% improvement)
+- **Time to working code**: 30-60 min → 15-20 min (60% faster)
+
+**Overall Impact:**
+- Fewer validation errors (format issues)
+- More complete proposals (content issues)
+- Better apply agent guidance (actionable tasks)
+- Faster time to working implementation (less rework)
+
+## See Also
+
+- ADK Documentation: https://github.com/google/adk-python
+- OpenSpec Integration Sample: `contributing/samples/openspec_integration/`
+- Related Power: openspec-improve-apply (for implementation sessions)
