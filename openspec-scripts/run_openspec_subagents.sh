@@ -149,6 +149,20 @@ ARCHIVE_DIR="$WORKDIR/adk_openspec_archive_agent"
 prepare_agent_dir() {
   local target_dir="$1"; local import_path="$2"
   mkdir -p "$target_dir"
+  
+  # Extract the last component (agent name) from import path
+  # E.g., "openspec_integration.apply_agent" -> "apply_agent"
+  local agent_name="${import_path##*.}"
+  
+  # Symlink {agent_name}_instruction.md from source to target directory
+  INSTRUCTION_SRC="$SCRIPT_DIR/../contributing/samples/openspec_integration/${agent_name}_instruction.md"
+  if [[ -f "$INSTRUCTION_SRC" ]]; then
+    ln -sf "$INSTRUCTION_SRC" "$target_dir/$(basename "$INSTRUCTION_SRC")"
+    echo -e "${GREEN}✅ Symlinked instruction file to $target_dir${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Instruction file not found at $INSTRUCTION_SRC${NC}"
+  fi
+
   cat > "$target_dir/agent.py" <<EOF
 import sys, os
 sys.path.insert(0, '$SAMPLES_DIR')
@@ -240,14 +254,6 @@ fi
 if [[ "$RUN_APPLY" == true ]]; then
   echo -e "${BLUE}🔧 Running /apply for ${CHANGE_ID}...${NC}"
   prepare_agent_dir "$APPLY_DIR" "openspec_integration.apply_agent"
-  # Symlink apply_agent_instruction.md from source to target directory
-  INSTRUCTION_SRC="$SCRIPT_DIR/../contributing/samples/openspec_integration/apply_agent_instruction.md"
-  if [[ -f "$INSTRUCTION_SRC" ]]; then
-    ln -sf "$INSTRUCTION_SRC" "$APPLY_DIR/apply_agent_instruction.md"
-    echo -e "${GREEN}✅ Symlinked apply_agent_instruction.md to $APPLY_DIR${NC}"
-  else
-    echo -e "${YELLOW}⚠️  apply_agent_instruction.md not found at $INSTRUCTION_SRC${NC}"
-  fi  
 
   # Build ADK command with session options
   ADK_APPLY_CMD="$ADK_BIN run $APPLY_DIR"
