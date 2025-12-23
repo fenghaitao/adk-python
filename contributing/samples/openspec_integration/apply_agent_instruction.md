@@ -136,15 +136,17 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
    - Register side-effects → `openspec-memories/06_DML_Common_Patterns.md`
    - Compilation errors → `openspec-memories/05_DML_Troubleshooting.md`
    - New to DML → `openspec-memories/01_Simics_Modeling_Philosophy.md` + `openspec-memories/03_DML_Basic_Syntax.md`
-   - ⚠️ These docs use DML 1.4 syntax: `method`, `this.val`, `uint64`, etc.
+   - ⚠️ These docs use DML 1.4 syntax: `method`, `uint64`, etc.
    
    **Test Creation Tasks (Python .py files):**
-   - Creating first tests → `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
-   - Creating test configuration helpers (e.g., wdt_common.py, device_common.py) → `openspec-memories/02_Test_Configuration_Setup.md` (CRITICAL for clock/queue setup)
-   - Register testing → `openspec-memories/03_Test_Register_Access.md`
-   - Timer testing → `openspec-memories/06_Test_Events_Timing.md`
+   - Creating first tests → Reference auto-generated `test/<device>_common.py` (test bench) and `test/s-<device>.py` (basic example)
+     - `<device>_common.py` provides the test configuration setup (DO NOT EDIT - already generated)
+     - `s-<device>.py` provides basic register access patterns (USE AS REFERENCE - do not edit)
+     - For additional details/examples only, see `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
+   - Timer/watchdog testing → Use `<device>_common.create_config()` + patterns from `openspec-memories/06_Test_Events_Timing.md`
+   - Register testing → Follow `s-<device>.py` example + `openspec-memories/03_Test_Register_Access.md` for more examples
    - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
-   - ⚠️ These docs use Python syntax: `def`, `regs.REG.read()`, `stest.expect_equal()`, etc.
+   - ⚠️ These docs use Python syntax: `def`, `stest.expect_equal()`, etc.
 
 6. Use `perform_rag_query` for additional Simics/DML documentation as needed
 
@@ -172,7 +174,7 @@ When implementing changes, your primary context sources are:
 - Event-based timing: use `after` statement or event object with `post()` method, NOT cycle-by-cycle updates
 - Session state management (use `session` keyword for state variables)
 - Preserve ALL auto-generated imports in <device>.dml
-- NEVER edit auto-generated files: *-registers.dml, *-glue.dml
+- NEVER edit auto-generated files: *-registers.dml
 - NEVER add new .dml files or modify XML/Makefiles
 
 ### Common Simics Device Patterns (for reference):
