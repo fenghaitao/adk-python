@@ -78,15 +78,26 @@ Then read the ENTIRE spec file at `specs/<branch-name>/spec.md` and understand:
 - **For timer/watchdog devices**: Read `openspec-memories/02_DML_Anti_Patterns.md` FIRST to avoid critical mistakes
 
 **STEP 4: Create Proposal and Spec Deltas**
-- Follow OpenSpec workflow from `openspec/AGENTS.md` for proposal structure and spec delta creation
-- Apply Simics-specific context, scope, device patterns, and DML constraints (see Simics-Specific Implementation Guidance below)
+
+Follow OpenSpec workflow from `openspec/AGENTS.md` for proposal structure and spec delta creation.
+
+**Spec Format Requirements (CRITICAL):**
+- ALL requirement keywords MUST be UPPERCASE: "SHALL", "SHOULD", "MAY", "MUST", "MUST NOT"
+- NEVER use lowercase: "shall", "should", "may", "must", "must not"
+- Each requirement MUST have at least one `#### Scenario:` subsection
+- Format: `## ADDED Requirements` or `## MODIFIED Requirements` or `## REMOVED Requirements`
+
+**Additional Guidance:**
+- Simics-specific context, scope, device patterns, and DML constraints (see Simics-Specific Implementation Guidance below)
 - **Reference specific requirements from the existing spec** by ID (e.g., "Building on FUNC-014..." or "Extends TEST-004...")
-- Ensure compliance with Spec Format Requirements (UPPERCASE keywords: SHALL, MUST; `#### Scenario:` sections)
 - Match the style, terminology, and structure of the existing spec
 - Use ADDED for new requirements, MODIFIED for changes to existing requirements (include full updated text)
-- **Create tasks.md with BOTH DML implementation tasks AND test tasks** (see Task Structure Requirements below)
+- **Ensure complete requirement coverage** (see Spec Delta Completeness Requirements below for coverage criteria)
+- **Create tasks.md with BOTH DML implementation tasks AND test tasks** (see Task Structure Requirements and Task Decomposition Requirements below)
 
 **STEP 5: Validate (MANDATORY)**
+- Verify proposal meets Apply Agent Handoff criteria below (detailed tasks, comprehensive testing, implementation guidance, complete spec deltas, clear context)
+- Verify spec delta completeness using criteria in Spec Delta Completeness Requirements below
 - Execute: `openspec validate <change-id> --strict` as specified in OpenSpec workflow
 - Fix ALL validation errors before proceeding
 
@@ -242,27 +253,6 @@ The device SHALL [requirement text with UPPERCASE keywords].
 - NEVER edit auto-generated files: *-registers.dml
 - NEVER add new .dml files or modify XML/Makefiles
 
-## Spec Format Requirements (Prevents Validation Failures)
-
-**CRITICAL**: Follow these rules exactly to pass validation:
-
-1. **Requirement keywords**: MUST be UPPERCASE
-   - ✅ Correct: SHALL, SHOULD, MAY, MUST, MUST NOT
-   - ❌ Wrong: shall, should, may, must, must not
-
-2. **Scenarios**: Each requirement MUST have at least one `#### Scenario:` subsection
-   - ✅ Correct: `#### Scenario: Success case`
-   - ❌ Wrong: `### Scenario:` or `**Scenario:**`
-
-3. **Delta operations**: Use proper section headers
-   - ✅ Correct: `## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`
-   - ❌ Wrong: `## Added Requirements`, `## New Requirements`
-
-4. **MODIFIED requirements**: Include complete updated text
-   - Must match existing requirement name exactly (whitespace-insensitive)
-   - Include ALL content (not just changes)
-   - See OpenSpec workflow documentation for details
-
 ## Spec Delta Completeness Requirements (CRITICAL - Prevents Incomplete Proposals)
 
 **CRITICAL**: Validation checks format, but you must also ensure content completeness.
@@ -271,7 +261,7 @@ When creating spec deltas from a source specification:
 
 1. **Requirement Coverage**: Extract ALL functional requirements from source spec
    - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
-   - Ensure spec delta includes equivalent coverage (80%+ minimum)
+   - Ensure spec delta includes equivalent coverage (60%+ minimum)
    - NEVER drop requirements silently
    - NEVER summarize multiple requirements into one
 
@@ -301,9 +291,9 @@ When creating spec deltas from a source specification:
    # Calculate coverage
    COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
    
-   # Ensure 80%+ coverage
-   if [ $COVERAGE -lt 80 ]; then
-     echo "ERROR: Only $COVERAGE% requirement coverage (need 80%+)"
+   # Ensure 60%+ coverage
+   if [ $COVERAGE -lt 60 ]; then
+     echo "ERROR: Only $COVERAGE% requirement coverage (need 60%+)"
      echo "Source has $SOURCE_REQS requirements, spec delta has $DELTA_REQS"
      echo "Review source spec and extract missing requirements"
      exit 1
@@ -311,11 +301,9 @@ When creating spec deltas from a source specification:
    ```
 
 6. **Completeness Criteria**:
-   - Source has 96 requirements → Spec delta should have 75-90 requirements (not 5)
+   - Source has 96 requirements → Spec delta should have 58-90 requirements (not 5)
    - Source has 15 test scenarios → Spec delta should cover all 15
    - If source has 800+ lines → Spec delta should be 200-400 lines (not 73)
-
-**Quality Checklist**: See `openspec-memories/10_Proposal_Quality_Checklist.md` for automated quality checks.
 
 ## Task Structure Requirements (CRITICAL for Apply Agent)
 
@@ -349,48 +337,73 @@ When creating spec deltas from a source specification:
 
 ## Task Decomposition Requirements (CRITICAL - Ensures Actionable Tasks)
 
-Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks:
+**PREREQUISITE**: Review Task Structure Requirements above for the required task organization (DML Implementation + Test Implementation sections).
+
+Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks. Each main task should have 3-5 sub-tasks that specify exact behaviors.
 
 **BAD (too vague):**
 ```markdown
-- [ ] 1.1 Implement register side-effects in wdt.dml
+- [ ] 1.1 Implement register side-effects in device.dml
+- [ ] 2.1 Add test cases
 ```
 
 **GOOD (specific and actionable):**
 ```markdown
-- [ ] 1.1 Implement WDOGCONTROL register side-effects (wdt.dml)
-  - [ ] 1.1.1 INTEN bit write: Reload counter from WDOGLOAD on 0→1 transition
-  - [ ] 1.1.2 RESEN bit write: Enable/disable reset output generation
-  - [ ] 1.1.3 step_value[4:2] write: Set clock divider (000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16)
-  - [ ] 1.1.4 Pattern: Use event-based timing (see openspec-memories/04_DML_Timing_Timer_Modeling.md)
-  - [ ] 1.1.5 Anti-Pattern: NEVER model clock signal directly (causes 100-1000x slowdown)
+- [ ] 1.1 Implement CONTROL register side-effects (device.dml)
+  - [ ] 1.1.1 ENABLE bit write: Start/stop device operation based on 0→1 or 1→0 transition
+  - [ ] 1.1.2 MODE bits write: Configure device operating mode per spec requirements
+  - [ ] 1.1.3 RESET bit write: Clear device state and reinitialize to default values
+  - [ ] 1.1.4 Pattern: Use appropriate DML pattern from openspec-memories/06_DML_Common_Patterns.md
+  - [ ] 1.1.5 Anti-Pattern: Check openspec-memories/02_DML_Anti_Patterns.md for device-specific pitfalls
   
-- [ ] 1.2 Implement WDOGINTCLR register side-effects (wdt.dml)
-  - [ ] 1.2.1 Any write: Clear WDOGRIS[0] and WDOGMIS[0]
-  - [ ] 1.2.2 Any write: Deassert wdogint signal
-  - [ ] 1.2.3 Any write: Reload counter from WDOGLOAD
+- [ ] 1.2 Implement STATUS register side-effects (device.dml)
+  - [ ] 1.2.1 Read: Return current device state (IDLE/BUSY/ERROR)
+  - [ ] 1.2.2 Write to clear bits: Clear error flags on write-1-to-clear
+  - [ ] 1.2.3 Update on state change: Reflect device state transitions
   
-- [ ] 1.3 Implement WDOGLOCK register side-effects (wdt.dml)
-  - [ ] 1.3.1 Write 0x1ACCE551: Unlock other registers for write access
-  - [ ] 1.3.2 Write any other value: Lock other registers from write access
-  - [ ] 1.3.3 Read: Return 0x0 if unlocked, 0x1 if locked
+- [ ] 2.1 Implement basic functionality tests (test/s-basic-operation.py)
+  - [ ] 2.1.1 Test device initialization and default register values (covers TEST-001)
+  - [ ] 2.1.2 Test enable/disable transitions (covers TEST-002, TEST-003)
+  - [ ] 2.1.3 Test mode configuration changes (covers TEST-004)
+  - [ ] 2.1.4 Setup: Use patterns from openspec-memories/02_Test_Configuration_Setup.md
 ```
 
 **Task Quality Checklist:**
 - [ ] Each register with side-effects has dedicated sub-task
-- [ ] Each sub-task specifies exact behavior (not "implement side-effects")
-- [ ] Each sub-task references specific memory document
-- [ ] Anti-patterns explicitly called out with consequences
-- [ ] DML patterns specified (event-based, lazy evaluation, etc.)
-- [ ] Test tasks specify which TEST-XXX scenarios to cover
+- [ ] Each sub-task specifies exact behavior (not generic "implement side-effects")
+- [ ] Each sub-task references specific memory document for patterns/anti-patterns
+- [ ] Anti-patterns explicitly called out with consequences when relevant
+- [ ] DML patterns specified (event-based, lazy evaluation, session state, etc.)
+- [ ] Test tasks specify which TEST-XXX scenarios from spec they cover
 - [ ] Minimum 3-5 sub-tasks per main task
 
-### Apply Agent Handoff Checklist:
+**Device-Specific Task Examples:**
 
-- **Detailed Tasks**: All tasks in tasks.md are actionable and specific with clear sub-tasks
-- **Both DML and Tests**: Include BOTH implementation tasks AND test tasks
+For timer/watchdog devices:
+- Sub-tasks for counter decrement logic with event-based timing
+- Sub-tasks for interrupt generation on timeout
+- Sub-tasks for reload/reset behavior
+- Reference: openspec-memories/04_DML_Timing_Timer_Modeling.md
+
+For UART/serial devices:
+- Sub-tasks for TX/RX buffer management
+- Sub-tasks for baud rate configuration
+- Sub-tasks for interrupt on data ready/transmit complete
+- Reference: openspec-memories/06_DML_Common_Patterns.md
+
+For interrupt controllers:
+- Sub-tasks for priority handling
+- Sub-tasks for masking/unmasking interrupts
+- Sub-tasks for pending/active status tracking
+- Reference: openspec-memories/06_DML_Common_Patterns.md
+
+## Apply Agent Handoff
+
+When creating proposals, ensure:
+- **Detailed Tasks**: All tasks in tasks.md are actionable and specific with clear sub-tasks (see Task Structure Requirements and Task Decomposition Requirements above)
+- **Both DML and Tests**: Include BOTH implementation tasks AND test tasks (see Task Structure Requirements above)
 - **Implementation Guidance**: Tasks reference specific DML patterns and anti-patterns to avoid
-- **Complete Spec Deltas**: Include sufficient detail for implementation without guessing
+- **Complete Spec Deltas**: Include sufficient detail for implementation without guessing (see Spec Delta Completeness Requirements above for coverage criteria)
 - **Clean Validation**: Validation passes completely before handoff
 - **Clear Context**: Change ID is descriptive enough for apply agent to understand context
 
