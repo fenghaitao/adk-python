@@ -43,6 +43,7 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
+  - **If MCP tool fails**, use bash: `cd /absolute/path/to/workspace/simics-project && make <device-name>`
 - When encountering build failures:
   - Check `openspec-memories/05_DML_Troubleshooting.md`
   - Verify register scope patterns (device/bank/register level)
@@ -65,6 +66,7 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 **STEP 3: Test and Validate Quality**
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
+  - **If MCP tool fails**, use bash: `cd /absolute/path/to/workspace/simics-project && ./bin/test-runner`
 - When encountering test failures:
   - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
   - Verify implementation completeness (return to STEP 2.5)
@@ -98,6 +100,83 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
    - For test creation: MUST read `openspec-memories/01_Test_File_Location_Requirements.md` FIRST before creating any test files
      - Wrong location causes test-runner failures
      - Wrong patterns cause test functions not to execute
+
+## Test Configuration Requirements (CRITICAL)
+
+When implementing timer/watchdog devices, test configuration MUST include clock setup:
+
+**Required in `test/<device>_common.py`:**
+
+```python
+import conf
+
+def create_<device>():
+    # Create clock with frequency
+    clk = conf.sim.create_object("clock", "clk", [["freq_mhz", 100]])
+    
+    # Create device
+    dev = conf.sim.create_object("<device>", "dev", [])
+    
+    # CRITICAL: Assign clock's queue to device
+    dev.queue = clk
+    
+    return dev
+```
+
+**Why This Matters:**
+- Timer devices use `SIM_cycle_count()` which requires a valid queue
+- Without clock/queue setup, tests fail with: "object has no valid queue attribute"
+- This is Anti-Pattern #2 from `openspec-memories/02_DML_Anti_Patterns.md`
+
+**Pre-Test Checklist:**
+- [ ] Clock created with `freq_mhz` parameter
+- [ ] Device's `queue` attribute assigned to clock
+- [ ] Test configuration loaded before device operations
+
+**Reference**: See `openspec-memories/02_Test_Configuration_Setup.md` for complete examples
+
+## Signal Interface Safety (CRITICAL)
+
+When implementing signal interfaces (interrupt, reset, etc.), ALWAYS add NULL checks:
+
+**Pattern for DML signal interfaces:**
+
+```dml
+connect wdogint {
+    interface signal;
+    
+    method signal_raise() {
+        // CRITICAL: Check if signal is connected before calling
+        if (this.obj != NULL) {
+            this.signal.signal_raise();
+        }
+    }
+    
+    method signal_lower() {
+        // CRITICAL: Check if signal is connected before calling
+        if (this.obj != NULL) {
+            this.signal.signal_lower();
+        }
+    }
+}
+```
+
+**Why This Matters:**
+- Signal interfaces may not be connected in test configurations
+- Calling signal methods on unconnected interfaces causes segmentation faults
+- NULL checks prevent crashes while allowing tests to run
+
+**Anti-Pattern (causes segfault):**
+```dml
+method signal_raise() {
+    this.signal.signal_raise();  // ❌ No NULL check - crashes if not connected
+}
+```
+
+**When to Use:**
+- ALL signal interface implementations (interrupt, reset, DMA, etc.)
+- Before ANY call to `this.signal.*` methods
+- In both `signal_raise()` and `signal_lower()` methods
 
    - For test configuration helpers (wdt_common.py, etc.): MUST read `openspec-memories/02_Test_Configuration_Setup.md` FIRST
      - Missing clock setup causes "object has no valid queue attribute" runtime crashes
