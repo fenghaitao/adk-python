@@ -260,6 +260,12 @@ if [ "$SKIP_INIT" = false ]; then
         echo -e "${RED}Failed to copy wdt.md${NC}"
         exit 1
     fi
+
+    cp -r "$SCRIPT_DIR/../openspec-memories" .
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to copy openspec-memories folder${NC}"
+        exit 1
+    fi
     echo -e "${GREEN}✅ Specification files copied${NC}"
     echo ""
 else
