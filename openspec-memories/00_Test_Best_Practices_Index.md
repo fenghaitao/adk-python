@@ -37,6 +37,7 @@ Each document focuses on a single testing subject without mixing contexts:
 - **Need to mock interfaces?** → [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md)
 - **Testing DMA?** → [05_Test_DMA_Memory](05_Test_DMA_Memory.md)
 - **Testing timers?** → [06_Test_Events_Timing](06_Test_Events_Timing.md)
+- **Implementing signal interfaces?** → [09_Signal_Interface_Safety](../09_Signal_Interface_Safety.md)
 - **Need common.py template?** → [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md) (see "Complete common.py Template" section)
 
 ### For Troubleshooting
@@ -48,6 +49,7 @@ Common issues and solutions:
 | Test files not found by test-runner | [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md) |
 | "Queue not set" error | [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md) |
 | Segfault on test run | [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md) |
+| Segfault in signal operations | [09_Signal_Interface_Safety](../09_Signal_Interface_Safety.md) |
 | Register access errors | [03_Test_Register_Access](03_Test_Register_Access.md) |
 | Events don't fire | [06_Test_Events_Timing](06_Test_Events_Timing.md) |
 | DMA verification fails | [05_Test_DMA_Memory](05_Test_DMA_Memory.md) |
