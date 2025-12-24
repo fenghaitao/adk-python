@@ -28,102 +28,227 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - This provides the complete OpenSpec workflow conventions and directory structure
 - Focus on the "Implementing Changes" section for apply phase guidance
 
-**STEP 2: Analyze Tasks and Research Required Knowledge (MANDATORY BEFORE ANY CODING)**
+**STEP 2: Analyze Tasks and Separate by Type (MANDATORY BEFORE ANY CODING)**
 
-**CRITICAL PRINCIPLE**: **"Know what you need to learn, THEN learn it, THEN code"**
+**CRITICAL PRINCIPLE**: **"Learn DML → Implement Device → Learn Tests → Implement Tests"**
 
-You MUST complete this 3-phase knowledge discovery workflow BEFORE writing ANY code:
+To avoid context window limitations, you MUST work in TWO separate cycles:
+1. **DML Cycle**: Research DML knowledge → Implement device code
+2. **Test Cycle**: Research Test knowledge → Implement tests
 
 ---
 
-### **Phase 1: Analyze Tasks to Identify Required Knowledge**
+### **Phase 1: Analyze and Separate Tasks**
 
-1. **Read `changes/<id>/tasks.md` completely** to understand ALL tasks you need to implement
+1. **Read `changes/<id>/tasks.md` completely** to understand ALL tasks
 
-2. **For EACH task, identify**:
-   - **Task category**: Is this a DML implementation task or a Test implementation task?
-   - **Technical concepts needed**: What DML/Test concepts does this task require?
+2. **Separate tasks into TWO groups**:
+   - **Group A - DML Implementation Tasks** (Section 1 in tasks.md)
+     - Register declarations
+     - Device behavior/logic
+     - Side-effects and timing
+     - Interrupt/signal handling
+     - State management
    
-3. **Categorize each task and extract knowledge requirements**:
-   - **DML tasks** (device behavior): Identify register patterns, timing/events, interrupts, state management, interfaces
-   - **Test tasks** (verification): Identify test structure, register access, device outputs, timing verification
+   - **Group B - Test Implementation Tasks** (Section 2 in tasks.md)
+     - Test file setup
+     - Register access tests
+     - Behavior validation
+     - Edge case tests
 
-4. **Create your research plan**: List which best practice documents you need for each task
-
----
-
-### **Phase 2: Navigate and Read Required Best Practice Documents**
-
-**For DML Implementation Tasks**:
-1. Read `openspec-memories/00_DML_Best_Practices_Index.md` (navigation index - ALWAYS)
-2. Read `openspec-memories/02_DML_Anti_Patterns.md` (MANDATORY - NO EXCEPTIONS)
-3. Navigate to task-specific docs using the index (01-07 topic docs)
-4. Read `openspec-memories/003-DML-Language/000_overview.md` and relevant DML syntax
-5. Read `openspec-memories/008-code-examples/000_overview.md` and relevant device examples
-6. **Expected load**: 3-5 documents total
-
-**For Test Implementation Tasks**:
-1. Read `openspec-memories/00_Test_Best_Practices_Index.md` (navigation index - ALWAYS)
-2. Navigate to task-specific test docs (01-06 based on your task requirements)
-3. **Expected load**: 2-3 documents total
+3. **Create two separate work plans**:
+   - **DML Work Plan**: List DML tasks + required knowledge docs
+   - **Test Work Plan**: List Test tasks + required knowledge docs
 
 ---
 
-### **Phase 3: Verify Knowledge Sufficiency Before Coding**
+### **Phase 2A: DML Knowledge Research (For Group A Tasks ONLY)**
 
-**MANDATORY Checkpoint - Answer these questions BEFORE writing ANY code**:
+**Research ONLY DML knowledge** - DO NOT read test docs yet:
 
-**For DML tasks, can you answer**:
+**Step 1: Start with DML Index**
+1. **ALWAYS read first**: `openspec-memories/00_DML_Best_Practices_Index.md`
+   - This is your DML knowledge navigation hub
+   - Lists all DML-related documents organized by topic
+   - Use it to find relevant documents for your tasks
+
+**Step 2: Navigate through DML Knowledge (Use the index to find these)**
+2. **MANDATORY**: `openspec-memories/02_DML_Anti_Patterns.md`
+   - Critical mistakes to avoid - NO EXCEPTIONS
+   - Read this for EVERY DML task
+   
+3. **Task-specific DML Best Practices** (Navigate from index):
+   - `01_DML_Register_Side_Effects.md` - Register read/write behaviors
+   - `03_DML_Timing_and_Events.md` - `after`, events, lazy evaluation
+   - `04_DML_Object_Hierarchy.md` - Device/bank/register scope
+   - `06_DML_Simics_Modeling_Philosophy.md` - Functional modeling principles
+   - `07_DML_Register_Access_Scope.md` - Scope resolution patterns
+   - Read 1-3 based on your Group A tasks
+
+4. **DML Language Reference** (Navigate from index):
+   - `003-DML-Language/000_overview.md` - DML 1.4 syntax overview
+   - Navigate to specific DML syntax topics as needed
+
+5. **Code Examples** (Navigate from index):
+   - `008-code-examples/000_overview.md` - Example device index
+   - Find and study relevant device examples
+   - Learn from production patterns
+
+**Expected load**: 3-5 documents total (using index for navigation)
+
+---
+
+### **Phase 2B: DML Knowledge Verification (Before DML Implementation)**
+
+**MANDATORY Checkpoint - Answer these questions BEFORE writing DML code**:
+
 - ✓ What are the critical anti-patterns I MUST avoid for this device type?
 - ✓ How do I correctly access registers at device/bank/register scope?
 - ✓ How do I implement timing (events, `after`, lazy evaluation)?
 - ✓ Do I have a concrete code example showing this device pattern?
 - ✓ What Simics modeling philosophy applies to this implementation?
 
-**For Test tasks, can you answer**:
+**If you CANNOT answer these confidently**: Read more DML documents! Do NOT proceed.
+
+**If you CAN answer all questions**: Proceed to Phase 2C (DML Implementation).
+
+---
+
+### **Phase 2C: Implement DML Device Code (Group A Tasks)**
+
+Now implement ONLY the DML device code:
+
+1. Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
+2. Implement ALL DML tasks from Group A (tasks.md Section 1)
+3. Keep DML best practices and anti-patterns in mind
+4. Build iteratively: `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)`
+5. Fix any DML compilation errors using `openspec-memories/05_DML_Troubleshooting.md`
+6. **Verify behavior implementation** (not just structure):
+   - Register side-effects implemented
+   - Timer logic using `after` or events
+   - Interrupt signals properly raised/lowered
+   - State transitions working
+
+**STOP HERE** - Do NOT write tests yet. Proceed to Phase 3A.
+
+---
+
+### **Phase 3A: Test Knowledge Research (For Group B Tasks ONLY)**
+
+**NOW research Test knowledge** - DML knowledge may fade, that's OK:
+
+**Step 1: Start with Test Index**
+1. **ALWAYS read first**: `openspec-memories/00_Test_Best_Practices_Index.md`
+   - This is your Test knowledge navigation hub
+   - Lists all test-related documents organized by topic
+   - Use it to find relevant documents for your tasks
+
+**Step 2: Navigate through Test Knowledge (Use the index to find these)**
+2. **Test Structure & Setup** (Navigate from index):
+   - `01_Test_File_Location_Requirements.md` - Where test files go, naming conventions
+   - `02_Test_Structure.md` - Test class structure, setup/teardown patterns
+   
+3. **Test Implementation Patterns** (Navigate from index):
+   - `03_Test_Register_Access.md` - How to read/write registers in Python
+   - `04_Test_Verification_Methods.md` - Verifying device outputs, signals, state
+   - `05_Test_Timing_and_Events.md` - Handling time, events in tests
+   - Read 1-2 based on your Group B tasks
+
+4. **Test Troubleshooting** (Navigate from index):
+   - `06_Test_Troubleshooting.md` - Common test errors and solutions
+   - Reference when encountering test failures
+
+**Expected load**: 2-3 documents total (using index for navigation)
+
+**IMPORTANT**: If you need to recall DML patterns while writing tests, quickly re-read relevant DML sections. But keep test focus primary.
+
+---
+
+### **Phase 3B: Test Knowledge Verification (Before Test Implementation)**
+
+**MANDATORY Checkpoint - Answer these questions BEFORE writing test code**:
+
 - ✓ Where exactly do test files go and how should they be named?
 - ✓ How do I access registers in Python tests (not DML syntax)?
 - ✓ How do I verify device outputs (signals, interrupts, state)?
 - ✓ How do I handle timing and events in tests?
 
-**If you CANNOT answer these confidently**: Read more documents! Do NOT proceed to coding.
+**If you CANNOT answer these confidently**: Read more Test documents! Do NOT proceed.
 
-**If you CAN answer all questions**: Proceed to Phase 4 (Implementation).
-
----
-
-### **Phase 4: Implement with Knowledge in Context**
-
-Now that you have researched sufficient knowledge:
-
-- Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
-- Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
-- Follow TDD approach: tests first, then DML implementation
-- Keep best practices and anti-patterns in mind while coding
-- Build iteratively using these Simics MCP tools:
-  - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
-
-**KNOWLEDGE-DRIVEN PRINCIPLE**: 
-**"Research FIRST, Code SECOND"** - Never write code without first understanding the relevant best practices and patterns.
+**If you CAN answer all questions**: Proceed to Phase 3C (Test Implementation).
 
 ---
 
-### **STEP 2 Quick Reference: Mandatory Research Checklist**
+### **Phase 3C: Implement Test Code (Group B Tasks)**
 
-**Before writing ANY code, verify you have read**:
+Now implement ALL test code:
 
-**For DML Implementation Tasks:**
-- [ ] `00_DML_Best_Practices_Index.md` (Index - ALWAYS)
-- [ ] `02_DML_Anti_Patterns.md` (Anti-patterns - MANDATORY)
-- [ ] Task-specific best practice doc(s) (1-2 from 01, 03-07)
-- [ ] `008-code-examples/000_overview.md` (Code examples index)
-- [ ] Relevant device example from 008-code-examples/ (if applicable)
+1. Implement ALL test tasks from Group B (tasks.md Section 2)
+2. Keep Test best practices in mind
+3. Use Python syntax (NOT DML syntax)
+4. Run tests: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
+5. Fix test failures using test troubleshooting docs
 
-**For Test Implementation Tasks:**
-- [ ] `00_Test_Best_Practices_Index.md` (Index - ALWAYS)
-- [ ] Task-specific test doc(s) (1-2 from 01-06)
+---
 
-**Total Expected Research**: 3-5 documents for DML, 2-3 documents for Test
+### **Summary: Two-Cycle Workflow with Index-Based Navigation**
+
+```
+Cycle 1 - DML Implementation:
+  Phase 1: Analyze tasks → Separate DML (Group A) vs Test (Group B)
+  Phase 2A: Research DML knowledge (3-5 docs)
+           → Start with 00_DML_Best_Practices_Index.md
+           → Navigate to relevant DML topic docs
+           → Navigate to DML language reference and examples
+  Phase 2B: Verify DML knowledge
+  Phase 2C: Implement ALL DML code (Group A tasks)
+  
+Cycle 2 - Test Implementation:
+  Phase 3A: Research Test knowledge (2-3 docs)
+           → Start with 00_Test_Best_Practices_Index.md
+           → Navigate to relevant test topic docs
+  Phase 3B: Verify Test knowledge  
+  Phase 3C: Implement ALL test code (Group B tasks)
+```
+
+**Why this works**: 
+- **Minimizes context window pressure**: Separate cycles for DML vs Test knowledge
+- **Keeps relevant knowledge fresh**: Load knowledge right before coding
+- **Allows DML knowledge to fade**: When no longer needed (during testing)
+- **Loads test knowledge when needed**: Fresh in context when writing tests
+- **Index-based navigation**: Efficient discovery via 00_DML/00_Test navigation hubs
+
+---
+
+### **STEP 2 Quick Reference: Two-Cycle Research Checklist**
+
+**Cycle 1 - Before DML Implementation (Group A Tasks):**
+- [ ] Phase 1: Analyzed tasks.md and separated DML vs Test tasks
+- [ ] Phase 2A: Started with `00_DML_Best_Practices_Index.md` (Navigation hub)
+- [ ] Phase 2A: Read `02_DML_Anti_Patterns.md` (MANDATORY - NO EXCEPTIONS)
+- [ ] Phase 2A: Navigated to task-specific DML docs using index (01, 03-07)
+- [ ] Phase 2A: Navigated to DML language reference if needed (003-DML-Language/)
+- [ ] Phase 2A: Navigated to relevant code examples (008-code-examples/)
+- [ ] Phase 2B: Verified DML knowledge (can answer all checkpoint questions)
+- [ ] Phase 2C: Implemented ALL DML code from Group A tasks
+
+**Cycle 2 - Before Test Implementation (Group B Tasks):**
+- [ ] Phase 3A: Started with `00_Test_Best_Practices_Index.md` (Navigation hub)
+- [ ] Phase 3A: Navigated to test structure/setup docs using index (01, 02)
+- [ ] Phase 3A: Navigated to test implementation patterns using index (03, 04, 05)
+- [ ] Phase 3B: Verified Test knowledge (can answer all checkpoint questions)
+- [ ] Phase 3C: Implemented ALL test code from Group B tasks
+
+**Expected Research Load**: 
+- Cycle 1 (DML): 3-5 documents (navigated via 00_DML index)
+- Cycle 2 (Test): 2-3 documents (navigated via 00_Test index)
+- **Total**: 5-8 documents across two separate cycles
+
+**Navigation Pattern**:
+- **Always start with index** (`00_DML_*` or `00_Test_*`)
+- **Use index to find** relevant topic documents
+- **Follow links** from topic docs to detailed content
+- **Index = Map**, **Topic docs = Chapters**, **Detailed docs = Sections**
 
 ---
 
@@ -142,8 +267,8 @@ You will work with TWO completely different programming languages:
 | **MUST READ** | Anti-patterns doc (02) + Code examples | Test index + Topic docs |
 
 **Common Mistakes to AVOID:**
-- ❌ **Writing code before analyzing tasks** - Always understand ALL tasks first
-- ❌ **Skipping the two-level index navigation** - Index → Topic docs → Code examples
+- ❌ **Writing code before analyzing tasks** - Always separate DML vs Test tasks first
+- ❌ **Reading all knowledge at once** - Use two-cycle approach to manage context window
 - ❌ **Not reading anti-patterns doc** - MANDATORY for ALL DML tasks, prevents critical mistakes
 - ❌ **Skipping code examples** - Production examples show proven patterns
 - ❌ **Insufficient research** - Reading only index without diving into topic docs
@@ -154,40 +279,51 @@ You will work with TWO completely different programming languages:
 - ❌ Consulting DML docs (`0*_DML_*.md`) when writing Python tests
 - ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
 - ❌ **Guessing at errors** - If you don't understand an error, research it before attempting fixes
+- ❌ **Implementing tests before DML** - Always complete DML cycle first, then test cycle
 
-**STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
+**STEP 2.5: DML Implementation Completeness Check (End of Cycle 1)**
 
-Before running tests, verify you've implemented BEHAVIOR, not just structure:
+After completing Phase 2C (DML implementation), verify BEHAVIOR before moving to tests:
 
 **Checklist:**
-1. **Review `tasks.md`**: Read each task requirement carefully
-2. **Verify behavior implementation**: For each task, confirm you've implemented the BEHAVIOR (logic/side-effects), not just the structure (declarations/variables)
+1. **Review Group A tasks**: Read each DML task requirement carefully
+2. **Verify behavior implementation**: Confirm you've implemented BEHAVIOR (logic/side-effects), not just structure
 3. **Common missing behaviors** (if specified in tasks.md):
-   - Register writes that should trigger actions (side-effects)
+   - Register writes that trigger actions (side-effects)
    - Timer countdown logic using `after` or event posting
    - Interrupt signal raising/lowering
    - State transitions or mode changes
+4. **Build verification**: `build_simics_project()` succeeds without errors
 
-**Red Flag Detection:**
-- If all tests fail with identical errors across 2+ runs → Missing functionality, not test issues
-- If build succeeds but no behavior → Implemented structure without logic
+**If DML implementation is complete**: Proceed to Cycle 2 (Test Knowledge & Implementation)
 
-**Action if Red Flag:** Stop testing, research missing knowledge, then implement missing functionality.
+**If issues found**: Fix DML code, re-verify, then proceed to Cycle 2
 
-**STEP 3: Test and Validate Quality**
-- Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
-- When encountering test failures (Python test errors):
-  - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
-  - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
-  - These are Python-specific issues - do NOT apply DML patterns
-  - Common Python test issues:
-    * `AttributeError` → Wrong object/method name (check Python API)
-    * `TypeError` → Wrong argument types (Python types, not DML types)
-    * Test not found → Check file location per `01_Test_File_Location_Requirements.md`
-  - Verify implementation completeness (return to STEP 2.5)
-- When encountering build failures (DML compilation errors):
-  - **FIRST**: Determine if this is a knowledge gap - do you understand the error?
-  - **Research if needed**: Read relevant DML best practice and Test best practices docs
+---
+
+**STEP 3: Run Tests and Validate (End of Cycle 2)**
+
+After completing Phase 3C (Test implementation):
+
+1. **Run all tests**: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
+
+2. **When encountering test failures** (Python test errors):
+   - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+   - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
+   - These are Python-specific issues - do NOT apply DML patterns
+   - Common Python test issues:
+     * `AttributeError` → Wrong object/method name (check Python API)
+     * `TypeError` → Wrong argument types (Python types, not DML types)
+     * Test not found → Check file location per `01_Test_File_Location_Requirements.md`
+
+3. **When encountering DML-related test failures** (device not behaving correctly):
+   - This indicates missing DML functionality
+   - May need to return to Cycle 1 (re-read DML docs, fix device code)
+   - **Red Flag**: All tests fail identically → Missing DML functionality
+
+4. **When encountering build failures** (DML compilation errors):
+   - Check `openspec-memories/05_DML_Troubleshooting.md`
+   - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
   - Check `openspec-memories/05_DML_Troubleshooting.md`
   - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
   - Verify register scope patterns (device/bank/register level)
