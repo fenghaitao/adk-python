@@ -180,3 +180,9 @@ else
   echo "3. Validate quality: Check requirement coverage in spec delta"
 fi
 echo ""
+
+# Return the change ID for use by calling scripts
+# Write to stdout on the last line so it can be captured
+if [ -n "$LATEST_CHANGE" ]; then
+  echo "$LATEST_CHANGE"
+fi
