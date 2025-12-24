@@ -18,15 +18,15 @@ In DML 1.4, register and field access syntax depends on the **context** (scope) 
 |---------|--------|---------|
 | Device level | `<bank_name>.REGISTER.val` | `WatchdogRegisters.WDOGLOAD.val = 0;` |
 | Bank level | `REGISTER.val` | `WDOGLOAD.val = 0;` |
-| Register level | `this.val` | `this.val = 0;` |
+| Register level | `this.val` | `this.val = 0;` or `val = 0;` |
 
 ### Register Field Access
 
 | Context | Syntax | Example |
 |---------|--------|---------|
-| Device level | `<bank_name>.REGISTER.FIELDNAME` | `WatchdogRegisters.WDOGCONTROL.INTEN = 1;` |
-| Bank level | `REGISTER.FIELDNAME` | `WDOGCONTROL.INTEN = 1;` |
-| Register level | `this.FIELDNAME` | `this.INTEN = 1;` |
+| Device level | `<bank_name>.REGISTER.FIELDNAME.val` | `WatchdogRegisters.WDOGCONTROL.INTEN.val = 1;` |
+| Bank level | `REGISTER.FIELDNAME.val` | `WDOGCONTROL.INTEN.val = 1;` |
+| Register level | `this.FIELDNAME.val` | `this.INTEN.val = 1;` or `INTEN.val = 1;` |
 
 **Note:** `<bank_name>` is the actual name of your bank (e.g., `WatchdogRegisters`, `regs`, `control_bank`). The word `bank` is a declaration keyword, not an access keyword.
 
@@ -120,9 +120,9 @@ register WDOGCONTROL size 4 @ 0x008 {
 
 | Context | Syntax | Example |
 |---------|--------|---------|
-| Device level | `<bank_name>.REGISTER.FIELDNAME` | `WatchdogRegisters.WDOGCONTROL.INTEN = 1;` |
-| Bank level | `REGISTER.FIELDNAME` | `WDOGCONTROL.INTEN = 1;` |
-| Register level | `this.FIELDNAME` | `this.INTEN = 1;` |
+| Device level | `<bank_name>.REGISTER.FIELDNAME.val` | `WatchdogRegisters.WDOGCONTROL.INTEN.val = 1;` |
+| Bank level | `REGISTER.FIELDNAME.val` | `WDOGCONTROL.INTEN.val = 1;` |
+| Register level | `this.FIELDNAME.val` | `this.INTEN.val = 1;` or `INTEN.val = 1;` |
 
 **Note:** Replace `FIELDNAME` with the actual field name from your XML (e.g., `INTEN`, `RESEN`, `ENABLE`).
 
@@ -130,18 +130,18 @@ register WDOGCONTROL size 4 @ 0x008 {
 
 **Context:** Accessing register fields from device-level methods
 
-**Syntax:** `<bank_name>.REGISTER.FIELDNAME`
+**Syntax:** `<bank_name>.REGISTER.FIELDNAME.val`
 
 **Example:**
 ```dml
 device wdt {
     method check_watchdog_enabled() {
         // CORRECT - Access field at device level
-        if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+        if (WatchdogRegisters.WDOGCONTROL.INTEN.val == 1) {
             // Interrupt enabled
         }
         
-        if (WatchdogRegisters.WDOGCONTROL.RESEN == 1) {
+        if (WatchdogRegisters.WDOGCONTROL.RESEN.val == 1) {
             // Reset enabled
         }
         
@@ -157,7 +157,7 @@ device wdt {
 
 **Context:** Accessing register fields from bank-level methods or from other registers in the same bank
 
-**Syntax:** `REGISTER.FIELDNAME`
+**Syntax:** `REGISTER.FIELDNAME.val`
 
 **Example:**
 ```dml
@@ -167,7 +167,7 @@ bank WatchdogRegisters {
             default(value, enabled_bytes, aux);
             
             // CORRECT - Access field in another register (same bank)
-            if (WDOGCONTROL.INTEN == 1) {
+            if (WDOGCONTROL.INTEN.val == 1) {
                 // Interrupt is enabled, trigger countdown
             }
         }
@@ -179,7 +179,7 @@ bank WatchdogRegisters {
 
 **Context:** Accessing fields within the same register's methods
 
-**Syntax:** `this.FIELDNAME`
+**Syntax:** `this.FIELDNAME.val` or `FIELDNAME.val`
 
 **Example:**
 ```dml
@@ -191,12 +191,12 @@ register WDOGCONTROL size 4 @ 0x008 {
         default(value, enabled_bytes, aux);
         
         // CORRECT - Access own fields using 'this'
-        if (this.INTEN == 1) {
+        if (this.INTEN.val == 1) {
             // Interrupt was just enabled
             log info: "Watchdog interrupt enabled";
         }
         
-        if (this.RESEN == 1) {
+        if (this.RESEN.val == 1) {
             // Reset was just enabled
             log info: "Watchdog reset enabled";
         }
@@ -216,9 +216,9 @@ Field names are defined in your register description XML file:
 ```
 
 After XML processing, these become accessible as:
-- Device level: `WatchdogRegisters.WDOGCONTROL.INTEN`
-- Bank level: `WDOGCONTROL.INTEN`
-- Register level: `this.INTEN`
+- Device level: `WatchdogRegisters.WDOGCONTROL.INTEN.val`
+- Bank level: `WDOGCONTROL.INTEN.val`
+- Register level: `this.INTEN.val` or `INTEN.val`
 
 ### Common Field Access Mistakes
 
@@ -230,8 +230,8 @@ if (WatchdogRegisters.WDOGCONTROL.field == 1) {
     // error: reference to unknown object 'WatchdogRegisters.WDOGCONTROL.field'
 }
 
-// ✅ CORRECT - Use actual field name
-if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+// ✅ CORRECT - Use actual field name with .val
+if (WatchdogRegisters.WDOGCONTROL.INTEN.val == 1) {
     // Works!
 }
 ```
@@ -244,8 +244,8 @@ if (WatchdogRegisters.WDOGCONTROL.field.INTEN == 1) {
     // error: reference to unknown object
 }
 
-// ✅ CORRECT - Direct field access
-if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+// ✅ CORRECT - Direct field access with .val
+if (WatchdogRegisters.WDOGCONTROL.INTEN.val == 1) {
     // Works!
 }
 ```
@@ -256,14 +256,28 @@ if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
 // At device level
 method device_method() {
     // ❌ WRONG - Missing bank name
-    if (WDOGCONTROL.INTEN == 1) {
+    if (WDOGCONTROL.INTEN.val == 1) {
         // error: unknown identifier: 'WDOGCONTROL'
     }
     
     // ✅ CORRECT - Include bank name at device level
-    if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+    if (WatchdogRegisters.WDOGCONTROL.INTEN.val == 1) {
         // Works!
     }
+}
+```
+
+#### Mistake 4: Missing .val on field access
+
+```dml
+// ❌ WRONG - Missing .val on field access
+if (WatchdogRegisters.WDOGCONTROL.INTEN == 1) {
+    // Comparing object reference, not value!
+}
+
+// ✅ CORRECT - Add .val to access field value
+if (WatchdogRegisters.WDOGCONTROL.INTEN.val == 1) {
+    // Works!
 }
 ```
 
@@ -272,10 +286,11 @@ method device_method() {
 Before building, verify field access patterns:
 
 1. No use of `.field` accessor (doesn't exist)
-2. Device-level field access uses `<bank_name>.REGISTER.FIELDNAME`
-3. Bank-level field access uses `REGISTER.FIELDNAME`
-4. Register-level field access uses `this.FIELDNAME`
+2. Device-level field access uses `<bank_name>.REGISTER.FIELDNAME.val`
+3. Bank-level field access uses `REGISTER.FIELDNAME.val`
+4. Register-level field access uses `this.FIELDNAME.val` or `FIELDNAME.val`
 5. Field names match those defined in XML
+6. All field accesses include `.val` at the end
 
 **Quick Search Commands:**
 ```bash
