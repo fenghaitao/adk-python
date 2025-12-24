@@ -35,6 +35,31 @@ if [ ! -d "$WORKDIR_ABS" ]; then
   exit 1
 fi
 
+# Check if openspec-memories exists in workdir, if not create symlink
+MEMORIES_DIR="$WORKDIR_ABS/openspec-memories"
+REPO_MEMORIES="$REPO_ROOT/openspec-memories"
+
+if [ ! -e "$MEMORIES_DIR" ]; then
+  if [ -d "$REPO_MEMORIES" ]; then
+    echo "📚 Creating symlink to openspec-memories..."
+    ln -s "$REPO_MEMORIES" "$MEMORIES_DIR"
+    echo "✅ Symlink created: $MEMORIES_DIR -> $REPO_MEMORIES"
+    echo ""
+  else
+    echo "❌ Error: openspec-memories not found in repo: $REPO_MEMORIES"
+    echo ""
+    echo "The knowledge base is required for the propose agent."
+    echo "Please ensure openspec-memories/ exists in the repository."
+    exit 1
+  fi
+elif [ -L "$MEMORIES_DIR" ]; then
+  echo "✅ openspec-memories symlink already exists"
+  echo ""
+elif [ -d "$MEMORIES_DIR" ]; then
+  echo "✅ openspec-memories directory already exists"
+  echo ""
+fi
+
 # Check if POWER.md exists
 if [ ! -f "$POWER_MD" ]; then
   echo "❌ Error: POWER.md not found: $POWER_MD"
@@ -78,7 +103,7 @@ echo ""
 
 # Run kiro-cli and save session
 kiro-cli chat -a "$PROMPT" <<EOF
-/save kiro-propose/$SESSION_NAME
+/chat save kiro-propose/$SESSION_NAME
 /quit
 EOF
 
@@ -135,8 +160,23 @@ echo "================================"
 echo "✅ Complete!"
 echo "================================"
 echo ""
+
+# Extract change-id from the analysis or openspec/changes directory
+LATEST_CHANGE=$(ls -t "$WORKDIR_ABS/openspec/changes/" 2>/dev/null | head -1)
+
+if [ -n "$LATEST_CHANGE" ]; then
+  echo "📋 Created Change ID: $LATEST_CHANGE"
+  echo ""
+fi
+
 echo "Next steps:"
 echo "1. Review the session: cat $ANALYSIS_FILE"
-echo "2. Check the proposal: ls -la openspec/changes/"
-echo "3. Validate quality: Check requirement coverage in spec delta"
+if [ -n "$LATEST_CHANGE" ]; then
+  echo "2. Check the proposal: ls -la openspec/changes/$LATEST_CHANGE/"
+  echo "3. Validate quality: openspec validate $LATEST_CHANGE --strict"
+  echo "4. Apply the change: ./openspec-scripts/run-kiro-apply.sh $WORKDIR $LATEST_CHANGE"
+else
+  echo "2. Check the proposal: ls -la openspec/changes/"
+  echo "3. Validate quality: Check requirement coverage in spec delta"
+fi
 echo ""
