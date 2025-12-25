@@ -257,11 +257,33 @@ The device SHALL [requirement text with UPPERCASE keywords].
 
 **CRITICAL**: Validation checks format, but you must also ensure content completeness.
 
+### Spec Delta Approach: Requirement Extraction
+
+**Extract ALL requirements from the source spec** as separate spec delta requirements:
+- Use when source spec has detailed requirements (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+- Extract each requirement as a separate spec delta requirement
+- Example: "WDOGLOAD Register SHALL store 32-bit reload value"
+- **Benefit**: Provides complete functional guidance to apply agent
+
+**For implementation patterns** (DML-specific "how to implement"):
+- Apply agent reads `openspec-memories/` for DML patterns and anti-patterns
+- No need to duplicate implementation guidance in spec deltas
+- Focus spec deltas on **what to implement**, not **how to implement**
+
+**Target Coverage**:
+- Extract 70%+ of source requirements (minimum 60% for simple devices)
+- All register requirements (REG-XXX)
+- All functional requirements (FUNC-XXX)
+- All behavioral requirements (BEHAV-XXX)
+- All test scenarios (TEST-XXX)
+
+### Requirement Coverage Requirements
+
 When creating spec deltas from a source specification:
 
 1. **Requirement Coverage**: Extract ALL functional requirements from source spec
    - Count requirements in source (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
-   - Ensure spec delta includes equivalent coverage (60%+ minimum)
+   - **Target 70%+ coverage** (minimum 60% for simple devices)
    - NEVER drop requirements silently
    - NEVER summarize multiple requirements into one
 
@@ -280,7 +302,7 @@ When creating spec deltas from a source specification:
    - Side-effects for each register
    - Lock protection behaviors
 
-5. **Pre-Validation Check**: Before running `openspec validate`, verify:
+5. **Pre-Validation Completeness Check**: Before running `openspec validate`, verify:
    ```bash
    # Count requirements in source spec
    SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
@@ -291,19 +313,85 @@ When creating spec deltas from a source specification:
    # Calculate coverage
    COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
    
-   # Ensure 60%+ coverage
-   if [ $COVERAGE -lt 60 ]; then
-     echo "ERROR: Only $COVERAGE% requirement coverage (need 60%+)"
+   echo "📊 Requirement Coverage: $COVERAGE% ($DELTA_REQS/$SOURCE_REQS)"
+   
+   # Warn if coverage is low
+   if [ $COVERAGE -lt 70 ]; then
+     echo "⚠️  WARNING: Only $COVERAGE% requirement coverage (target: 70%+)"
      echo "Source has $SOURCE_REQS requirements, spec delta has $DELTA_REQS"
-     echo "Review source spec and extract missing requirements"
-     exit 1
+     echo "Consider extracting more detailed requirements from source spec"
+     echo ""
+     echo "Quick check:"
+     echo "  - Did you extract all FUNC-XXX requirements?"
+     echo "  - Did you extract all REG-XXX requirements?"
+     echo "  - Did you extract all BEHAV-XXX requirements?"
+     echo "  - Did you extract all TEST-XXX scenarios?"
+   fi
+   
+   # Also check line count ratio
+   SOURCE_LINES=$(wc -l < specs/<branch>/spec.md)
+   DELTA_LINES=$(wc -l < openspec/changes/<id>/specs/*/spec.md)
+   LINE_RATIO=$((DELTA_LINES * 100 / SOURCE_LINES))
+   
+   echo "📏 Line Count Ratio: $LINE_RATIO% ($DELTA_LINES/$SOURCE_LINES lines)"
+   
+   if [ $LINE_RATIO -lt 25 ]; then
+     echo "⚠️  WARNING: Spec delta is only $LINE_RATIO% of source spec size"
+     echo "For detailed source specs (500+ lines), target 25-40% line ratio"
    fi
    ```
 
 6. **Completeness Criteria**:
-   - Source has 96 requirements → Spec delta should have 58-90 requirements (not 5)
-   - Source has 15 test scenarios → Spec delta should cover all 15
-   - If source has 800+ lines → Spec delta should be 200-400 lines (not 73)
+   - **Coverage Target**: 70%+ requirement coverage (minimum 60% for simple devices)
+   - **Line Ratio Target**: 25-40% of source spec size for detailed specs (500+ lines)
+   - **Quality Check**: Spec delta should extract specific functional requirements, not just implementation patterns
+   
+   **Examples**:
+   - Source has 100 requirements → Spec delta should have 70-100 requirements
+   - Source has 20 test scenarios → Spec delta should cover all 20
+   - Source has 800 lines → Spec delta should be 200-320 lines
+   - Source has 10 registers → Spec delta should cover all 10 register behaviors
+
+### Example: Good vs. Bad Spec Delta
+
+**❌ BAD (only implementation guidance - low coverage):**
+```markdown
+### Requirement: Timer Implementation Pattern
+The device timer SHALL use lazy evaluation and event-based timing.
+
+#### Scenario: Lazy Evaluation
+- **WHEN** counter value is read
+- **THEN** value SHALL be calculated based on elapsed cycles
+```
+**Problem**: Only tells HOW to implement (patterns), not WHAT to implement (functionality).
+
+**✅ GOOD (extract detailed requirements - high coverage):**
+```markdown
+### Requirement: Load Register Functionality
+The LOAD register SHALL store a reload value that determines the device timeout period.
+
+#### Scenario: Write to LOAD Register
+- **WHEN** a value is written to LOAD
+- **THEN** the value SHALL be stored in the register
+- **AND** the current counter SHALL NOT be affected until next reload
+
+### Requirement: Control Register INTEN Bit Functionality
+The INTEN bit in CONTROL register SHALL control interrupt generation on timeout.
+
+#### Scenario: Enable Interrupts
+- **WHEN** INTEN is set to 1
+- **THEN** an interrupt SHALL be generated when counter reaches zero
+- **AND** the interrupt signal SHALL remain asserted until cleared
+
+### Requirement: Control Register RESEN Bit Functionality
+The RESEN bit in CONTROL register SHALL control reset generation on second timeout.
+
+#### Scenario: Enable Reset
+- **WHEN** RESEN is set to 1
+- **THEN** a reset SHALL be generated when counter reaches zero after interrupt
+- **AND** the reset signal SHALL remain asserted for one clock cycle
+```
+**Why it's good**: Extracts specific functional requirements from source spec. Apply agent knows exactly what to implement. For DML patterns, apply agent reads `openspec-memories/` (e.g., `04_DML_Timing_Timer_Modeling.md`, `02_DML_Anti_Patterns.md`).
 
 ## Task Structure Requirements (CRITICAL for Apply Agent)
 
