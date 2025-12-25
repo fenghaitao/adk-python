@@ -417,9 +417,9 @@ echo ""
 echo -e "${BLUE}Step 9: Preparing to run OpenSpec Apply agent for each capability...${NC}"
 
 # Parse capability names from openspec list output
-# Look for pattern: "NNN_capability-name" followed by task count
-# Example: "001_add-wdt-registers 0/28 tasks"
-CAPABILITY_NAMES=$(echo "$OPENSPEC_LIST_OUTPUT" | grep -oE '[0-9]{3}_[a-zA-Z0-9_-]+' | sort -u)
+# Look for pattern: "capability-name" followed by task count
+# Example: "implement-watchdog-timer 0/39 tasks" or "001_add-wdt-registers 0/28 tasks"
+CAPABILITY_NAMES=$(echo "$OPENSPEC_LIST_OUTPUT" | grep -oE '([0-9]{3}_)?[a-zA-Z0-9_-]+\s+[0-9]+/[0-9]+\s+tasks' | grep -oE '^([0-9]{3}_)?[a-zA-Z0-9_-]+' | sort -u)
 
 # Debug: Show what was parsed
 if [ -n "$CAPABILITY_NAMES" ]; then
