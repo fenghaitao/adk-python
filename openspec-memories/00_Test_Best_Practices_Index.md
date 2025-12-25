@@ -18,6 +18,7 @@ Each document focuses on a single testing subject without mixing contexts:
 | [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md) | Mocking interfaces and dependencies | Isolating device under test |
 | [05_Test_DMA_Memory](05_Test_DMA_Memory.md) | DMA and memory testing | Testing DMA operations |
 | [06_Test_Events_Timing](06_Test_Events_Timing.md) | Time-dependent behavior testing | Testing timers and events |
+| [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | ⚠️ **TROUBLESHOOTING** - Common mistakes and debugging | Debugging test failures, avoiding pitfalls |
 
 ## Quick Navigation
 
@@ -38,20 +39,26 @@ Each document focuses on a single testing subject without mixing contexts:
 - **Testing DMA?** → [05_Test_DMA_Memory](05_Test_DMA_Memory.md)
 - **Testing timers?** → [06_Test_Events_Timing](06_Test_Events_Timing.md)
 - **Need common.py template?** → [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md) (see "Complete common.py Template" section)
+- **Debugging test failures?** → [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) - **START HERE** when tests fail
 
 ### For Troubleshooting
 
+⚠️ **When tests fail, start with [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) for quick diagnosis**
+
 Common issues and solutions:
 
-| Problem | Document to Check |
-|---------|-------------------|
-| Test files not found by test-runner | [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md) |
-| "Queue not set" error | [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md) |
-| Segfault on test run | [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md) |
-| Register access errors | [03_Test_Register_Access](03_Test_Register_Access.md) |
-| Events don't fire | [06_Test_Events_Timing](06_Test_Events_Timing.md) |
-| DMA verification fails | [05_Test_DMA_Memory](05_Test_DMA_Memory.md) |
-| Test functions not executing | [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md) (see "s-*.py Test Files" section) |
+| Problem | Primary Document | Quick Reference |
+|---------|------------------|-----------------|
+| **Any test failure** | **[07_Test_Anti_Patterns](07_Test_Anti_Patterns.md)** | **Comprehensive troubleshooting guide** |
+| Test files not found by test-runner | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test location issues |
+| "Queue not set" error | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Configuration errors |
+| Segfault on test run | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing fake objects |
+| Register access errors | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Register access problems |
+| Events don't fire | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Timing issues |
+| DMA verification fails | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | DMA/Memory problems |
+| Test functions not executing | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test location issues |
+| AttributeError on 'bank' | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing .bank. namespace |
+| Clock/timing incorrect | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | freq_mhz configuration |
 
 ## Document Dependencies
 
@@ -65,6 +72,7 @@ Common issues and solutions:
 04_Test_Fake_Objects_Mocking (uses configuration patterns)
 05_Test_DMA_Memory (uses configuration + register access)
 06_Test_Events_Timing (uses configuration + register access)
+07_Test_Anti_Patterns (references ALL documents - troubleshooting guide)
 ```
 
 ## Best Practices Summary
@@ -79,17 +87,29 @@ Common issues and solutions:
 
 ### Common Anti-Patterns to Avoid
 
+**See [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) for comprehensive list with examples**
+
+Top 5 mistakes:
 - ❌ Creating tests in `simics_project/` (underscore) instead of `simics-project/` (hyphen)
 - ❌ Setting clock frequency after `SIM_add_configuration()`
 - ❌ Missing `.bank.` namespace when accessing registers
+- ❌ Not wrapping banks with `dev_util.bank_regs()`
+- ❌ Returning pre-conf objects instead of conf objects from `create_config()`
+
+Additional common mistakes:
 - ❌ Scanning/discovering bank names dynamically instead of reading DML
 - ❌ Defining test functions but forgetting to call them
+- ❌ Missing fake objects for DML connect blocks (causes segfaults)
+- ❌ Not waiting for async operations (DMA, timers) to complete
+- ❌ Testing without assertions (silent failures)
 
 ## Document Status
 
 - **Extracted From**: Test_Best_Practices.md
 - **Split Date**: December 12, 2025
-- **Total Documents**: 6 focused documents + this index
+- **Last Updated**: December 24, 2025
+- **Total Documents**: 7 focused documents + this index
+- **New in v2**: Added 07_Test_Anti_Patterns.md (comprehensive troubleshooting guide)
 - **Tested With**: Simics 7.57.0, Simics Model Builder
 
 ## Using This Documentation
