@@ -201,6 +201,7 @@ else
 fi
 
 # Step 3: Create .github directory and setup agent files
+mkdir -p log
 if [ "$SKIP_INIT" = false ]; then
     echo -e "${BLUE}Step 3: Setting up GitHub Copilot agents...${NC}"
     mkdir -p .github/agents
@@ -246,6 +247,91 @@ else
     echo ""
 fi
 
+# Step 3.5: Configure Copilot MCP server settings
+echo -e "${BLUE}Step 3.5: Configuring Copilot MCP server settings...${NC}"
+MCP_CONFIG_FILE="$HOME/.copilot/mcp-config.json"
+
+# Create config directory if it doesn't exist
+mkdir -p "$HOME/.copilot"
+
+# Check if config file exists
+if [ -f "$MCP_CONFIG_FILE" ]; then
+    # Read existing config and check for simics-mcp-server
+    if grep -q '"simics-mcp-server"' "$MCP_CONFIG_FILE"; then
+        # Extract current port from URL within mcpServers section
+        CURRENT_PORT=$(sed -n '/"mcpServers":/,/^  }/{/"simics-mcp-server":/,/^    }/{/"url":/s/.*localhost:\([0-9]*\).*/\1/p}}' "$MCP_CONFIG_FILE")
+        
+        if [ "$CURRENT_PORT" = "$MCP_PORT" ]; then
+            echo -e "${GREEN}✅ MCP server config already exists with correct port${NC}"
+        else
+            echo -e "${YELLOW}Updating MCP server port from $CURRENT_PORT to $MCP_PORT${NC}"
+            # Replace the port in the URL
+            sed -i "s|localhost:${CURRENT_PORT}/sse|localhost:${MCP_PORT}/sse|g" "$MCP_CONFIG_FILE"
+            echo -e "${GREEN}✅ MCP server config updated${NC}"
+        fi
+    else
+        # Add simics-mcp-server config
+        echo -e "${YELLOW}Adding simics-mcp-server config${NC}"
+        
+        # Check if mcpServers section exists
+        if grep -q '"mcpServers"' "$MCP_CONFIG_FILE"; then
+            # mcpServers exists, add simics-mcp-server inside it
+            # Find the closing brace of mcpServers and insert before it
+            sed -i '/"mcpServers":/,/^  }/ {
+                /^  }/ i\    ,\
+    "simics-mcp-server": {\
+      "url": "http://localhost:'"${MCP_PORT}"'/sse",\
+      "type": "sse"\
+    }
+            }' "$MCP_CONFIG_FILE"
+        else
+            # No mcpServers section, add it
+            if [ -s "$MCP_CONFIG_FILE" ]; then
+                # File has content, add mcpServers section
+                sed -i '$ d' "$MCP_CONFIG_FILE"
+                cat >> "$MCP_CONFIG_FILE" << EOF
+  ,
+  "mcpServers": {
+    "simics-mcp-server": {
+      "url": "http://localhost:${MCP_PORT}/sse",
+      "type": "sse"
+    }
+  }
+}
+EOF
+            else
+                # File is empty, create new config with mcpServers
+                cat > "$MCP_CONFIG_FILE" << EOF
+{
+  "mcpServers": {
+    "simics-mcp-server": {
+      "url": "http://localhost:${MCP_PORT}/sse",
+      "type": "sse"
+    }
+  }
+}
+EOF
+            fi
+        fi
+        echo -e "${GREEN}✅ MCP server config added${NC}"
+    fi
+else
+    # Create new config file
+    echo -e "${YELLOW}Creating new MCP config file${NC}"
+    cat > "$MCP_CONFIG_FILE" << EOF
+{
+  "mcpServers": {
+    "simics-mcp-server": {
+      "url": "http://localhost:${MCP_PORT}/sse",
+      "type": "sse"
+    }
+  }
+}
+EOF
+    echo -e "${GREEN}✅ MCP server config created${NC}"
+fi
+echo ""
+
 # Step 4: Copy specification files
 if [ "$SKIP_INIT" = false ]; then
     echo -e "${BLUE}Step 4: Copying specification files...${NC}"
@@ -279,7 +365,7 @@ if [ "$SKIP_SPECIFY" = false ]; then
     SPECIFY_PROMPT="/specify Read the Simics WDT specification from ./simics-wdt-spec.md and the hardware specifications from ./wdt.md to create a comprehensive Simics ${DEVICE_NAME} device implementation."
 
     echo "   Prompt: $SPECIFY_PROMPT"
-    copilot --allow-all-tools --agent specify -p "$SPECIFY_PROMPT"
+    copilot --allow-all-tools --agent specify --log-dir ./log --log-level debug -p "$SPECIFY_PROMPT"
     if [ $? -ne 0 ]; then
         echo -e "${YELLOW}⚠️  Specify agent completed with warnings${NC}"
     else
@@ -297,7 +383,7 @@ if [ "$SKIP_PROPOSAL" = false ]; then
     PROPOSAL_PROMPT="/proposal proposal capabilities to implement simics watchdog timer device and tests based on spec.md in specs/"
 
     echo "   Prompt: $PROPOSAL_PROMPT"
-    copilot --allow-all-tools --agent openspec_proposal -p "$PROPOSAL_PROMPT"
+    copilot --allow-all-tools --agent openspec_proposal --log-dir ./log --log-level debug -p "$PROPOSAL_PROMPT"
     if [ $? -ne 0 ]; then
         echo -e "${YELLOW}⚠️  Proposal agent completed with warnings${NC}"
     else
@@ -361,7 +447,7 @@ else
             APPLY_PROMPT="/apply --id $CAPABILITY_NAME"
             
             echo "   Prompt: $APPLY_PROMPT"
-            if copilot --allow-all-tools --agent openspec_apply -p "$APPLY_PROMPT"; then
+            if copilot --allow-all-tools --agent openspec_apply --log-dir ./log --log-level debug -p "$APPLY_PROMPT"; then
                 echo -e "${GREEN}✅ Apply completed for $CAPABILITY_NAME${NC}"
             else
                 echo -e "${YELLOW}⚠️  Apply completed with warnings for $CAPABILITY_NAME${NC}"
