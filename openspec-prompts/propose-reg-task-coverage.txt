@@ -1,0 +1,45 @@
+Read /home/hfeng1/adk-python/powers/openspec-propose/POWER.md and create an OpenSpec change proposal following these instructions:
+
+CONTEXT:
+- Working directory: /home/hfeng1/adk_openspec_project
+- Source spec: specs/001-read-the-simics/spec.md (93 requirements total)
+- Existing tasks: openspec/changes/implement-watchdog-timer/tasks.md (covers ~27% of requirements)
+- Demonstration goal: Show OpenSpec's capability to generate comprehensive task coverage from specifications
+
+TASK:
+Create a proposal demonstrating OpenSpec's capability to extract REGISTER requirements from a spec and generate comprehensive, actionable implementation tasks.
+
+REQUIREMENTS TO COVER:
+REG-001 through REG-009 (9 register requirements total)
+- WDOGLOAD register (REG-001)
+- WDOGVALUE register (REG-002)
+- WDOGCONTROL register (REG-003)
+- WDOGINTCLR register (REG-004)
+- WDOGRIS register (REG-005)
+- WDOGMIS register (REG-006)
+- WDOGLOCK register (REG-007)
+- WDOGITCR register (REG-008)
+- WDOGITOP register (REG-009)
+
+PROPOSAL DETAILS:
+- Change ID: add-missing-reg-tasks
+- Purpose: Demonstrate systematic requirement extraction → task generation capability
+- Target: Create new tasks.md with tasks for all REG-XXX requirements
+- Coverage: Extract ALL 9 register requirements from source spec into actionable tasks
+
+CRITICAL REQUIREMENTS:
+1. Read the ENTIRE source spec at specs/001-read-the-simics/spec.md
+2. Extract ALL 9 REG requirements (not just a sample)
+3. Create detailed, actionable tasks with 3-5 sub-tasks each
+4. Reference specific requirement IDs (e.g., 'Implements REG-004')
+5. Include BOTH DML implementation tasks AND test tasks
+6. Ensure 100% coverage of REG requirements (9/9)
+7. Follow Task Decomposition Requirements from POWER.md
+8. Validate with: openspec validate add-missing-reg-tasks --strict
+
+Follow ALL instructions in POWER.md, especially:
+- Pre-Flight Checklist (read spec, understand requirements)
+- Execution Steps (STEP 1-6 in exact order)
+- Spec Delta Completeness Requirements (100% coverage for this category)
+- Task Structure Requirements (DML + Test sections)
+- Task Decomposition Requirements (specific sub-tasks)

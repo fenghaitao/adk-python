@@ -1,0 +1,42 @@
+Read /home/hfeng1/adk-python/powers/openspec-propose/POWER.md and create an OpenSpec change proposal following these instructions:
+
+CONTEXT:
+- Working directory: /home/hfeng1/adk_openspec_project
+- Source spec: specs/001-read-the-simics/spec.md (93 requirements total)
+- Existing tasks: openspec/changes/implement-watchdog-timer/tasks.md (covers ~27% of requirements)
+- Demonstration goal: Show OpenSpec's capability to generate comprehensive task coverage from specifications
+
+TASK:
+Create a proposal demonstrating OpenSpec's capability to extract FUNCTIONAL requirements from a spec and generate comprehensive, actionable implementation tasks.
+
+REQUIREMENTS TO COVER:
+FUNC-001 through FUNC-024 (24 functional requirements total)
+- Timer functionality (FUNC-001 to FUNC-004)
+- Interrupt and reset (FUNC-005 to FUNC-008)
+- Register access (FUNC-009 to FUNC-016)
+- Clock divider (FUNC-017 to FUNC-019)
+- Integration test mode (FUNC-020 to FUNC-022)
+- Identification (FUNC-023 to FUNC-024)
+
+PROPOSAL DETAILS:
+- Change ID: add-missing-func-tasks
+- Purpose: Demonstrate systematic requirement extraction → task generation capability
+- Target: Create new tasks.md with tasks for all FUNC-XXX requirements
+- Coverage: Extract ALL 24 functional requirements from source spec into actionable tasks
+
+CRITICAL REQUIREMENTS:
+1. Read the ENTIRE source spec at specs/001-read-the-simics/spec.md
+2. Extract ALL 24 FUNC requirements (not just a sample)
+3. Create detailed, actionable tasks with 3-5 sub-tasks each
+4. Reference specific requirement IDs (e.g., 'Implements FUNC-012')
+5. Include BOTH DML implementation tasks AND test tasks
+6. Ensure 100% coverage of FUNC requirements (24/24)
+7. Follow Task Decomposition Requirements from POWER.md
+8. Validate with: openspec validate add-missing-func-tasks --strict
+
+Follow ALL instructions in POWER.md, especially:
+- Pre-Flight Checklist (read spec, understand requirements)
+- Execution Steps (STEP 1-6 in exact order)
+- Spec Delta Completeness Requirements (100% coverage for this category)
+- Task Structure Requirements (DML + Test sections)
+- Task Decomposition Requirements (specific sub-tasks)
