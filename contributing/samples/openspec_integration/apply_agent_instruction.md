@@ -30,10 +30,29 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 
 **STEP 2: Load Context and Implement**
 - Follow "Stage 2: Implementing Changes" workflow from openspec/AGENTS.md
+- **CRITICAL: Read ALL spec delta files in `changes/<id>/specs/*/spec.md`**
+  - These contain detailed requirements with SHALL/MUST statements
+  - Review scenarios with WHEN/THEN acceptance criteria
+  - Identify signal names, register behaviors, bit-level operations
+  - **This information is NOT in proposal.md, design.md, or tasks.md**
+  - Example: If change affects multiple capabilities, read all delta files:
+    - `openspec/changes/<id>/specs/capability1/spec.md`
+    - `openspec/changes/<id>/specs/capability2/spec.md`
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
+
+**Why spec deltas are critical:**
+- proposal.md says "what" at high level (e.g., "implement watchdog timer")
+- design.md says "how" technically (e.g., "use lazy evaluation")
+- tasks.md says "steps" (e.g., "implement WDOGLOAD side-effects")
+- **spec deltas say "exactly what behavior"** (e.g., "SHALL assert the wdogint **signal**")
+
+Without reading spec deltas, you will miss critical implementation details like:
+- Whether identifiers are signals vs registers
+- Bit-level operation requirements
+- Exact behavioral requirements and edge cases
 
 **CRITICAL: Two Different Languages - DO NOT MIX THEM UP**
 
@@ -156,8 +175,13 @@ When implementing changes, your primary context sources are:
 
 1. **Proposal Context** (PRIMARY - read these first):
    - `changes/<id>/proposal.md` - What's being built and why
-   - `changes/<id>/tasks.md` - Implementation checklist
+   - **`changes/<id>/specs/*/spec.md` - DETAILED REQUIREMENTS (CRITICAL - DO NOT SKIP)**
+     - Contains SHALL/MUST statements with exact behavioral requirements
+     - Includes scenarios with WHEN/THEN acceptance criteria
+     - Specifies signal names, register behaviors, bit-level operations
+     - **This is the most detailed source - NOT optional**
    - `changes/<id>/design.md` - Technical decisions (if exists)
+   - `changes/<id>/tasks.md` - Implementation checklist
 
 2. **DML and Test Best Practices** (ESSENTIAL):
    - Follow Memory Loading Protocol above to load relevant knowledge from openspec-memories/

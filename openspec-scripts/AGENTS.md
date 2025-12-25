@@ -50,11 +50,16 @@ Skip proposal for:
 Track these steps as TODOs and complete them one by one.
 1. **Read proposal.md** - Understand what's being built
 2. **Read design.md** (if exists) - Review technical decisions
-3. **Read tasks.md** - Get implementation checklist
-4. **Implement tasks sequentially** - Complete in order
-5. **Confirm completion** - Ensure every item in `tasks.md` is finished before updating statuses
-6. **Update checklist** - After all work is done, set every task to `- [x]` so the list reflects reality
-7. **Approval gate** - Do not start implementation until the proposal is reviewed and approved
+3. **Read spec deltas** - Review detailed requirements in `changes/<id>/specs/*/spec.md`
+   - Look for SHALL/MUST statements (normative requirements)
+   - Review scenarios with WHEN/THEN (acceptance criteria)
+   - Identify signal names, register behaviors, bit-level operations
+   - **CRITICAL**: Spec deltas contain implementation details NOT in proposal/design/tasks
+4. **Read tasks.md** - Get implementation checklist
+5. **Implement tasks sequentially** - Complete in order
+6. **Confirm completion** - Ensure every item in `tasks.md` is finished before updating statuses
+7. **Update checklist** - After all work is done, set every task to `- [x]` so the list reflects reality
+8. **Approval gate** - Do not start implementation until the proposal is reviewed and approved
 
 ### Stage 3: Archiving Changes
 After deployment, create separate PR to:
@@ -67,6 +72,7 @@ After deployment, create separate PR to:
 
 **Context Checklist:**
 - [ ] Read relevant specs in `specs/[capability]/spec.md`
+- [ ] Read spec deltas in `changes/<id>/specs/*/spec.md` for detailed requirements
 - [ ] Check pending changes in `changes/` for conflicts
 - [ ] Read `openspec/project.md` for conventions
 - [ ] Run `openspec list` to see active changes

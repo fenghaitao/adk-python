@@ -192,7 +192,7 @@ cleanup() {
     fi
 }
 
-# Function to create .gitkeep files in openspec directories
+# Function to create .gitkeep files to work around git's limitation of not tracking empty directories
 create_openspec_gitkeep() {
     echo -e "${BLUE}Creating .gitkeep files for openspec directories...${NC}"
     mkdir -p openspec/changes/archive
@@ -206,6 +206,27 @@ GITKEEP_EOF
 # Specification documents are stored here
 GITKEEP_EOF
     echo -e "${GREEN}✅ .gitkeep files created in openspec directories${NC}"
+}
+
+# Function to fix the AGENTS.md spec delta reading issue
+# The openspec init command generates a basic AGENTS.md, but it's missing
+# critical instructions to read spec deltas during implementation.
+# Our version explicitly requires reading spec deltas to prevent compilation errors.
+copy_enhanced_agents_md() {
+    echo -e "${BLUE}Copying updated AGENTS.md with spec delta reading instructions...${NC}"
+    if [ -f "$SCRIPT_DIR/openspec-scripts/AGENTS.md" ]; then
+        cp "$SCRIPT_DIR/openspec-scripts/AGENTS.md" "openspec/AGENTS.md"
+        echo -e "${GREEN}✅ Updated AGENTS.md copied successfully${NC}"
+    else
+        echo -e "${YELLOW}⚠️  openspec-scripts/AGENTS.md not found, using generated version${NC}"
+    fi
+}
+
+# Function to finalize openspec initialization
+# Calls both helper functions to complete the setup
+finalize_openspec_init() {
+    create_openspec_gitkeep
+    copy_enhanced_agents_md
 }
 
 # Set up trap to cleanup on script exit
@@ -580,9 +601,9 @@ if [ ! -d "$PROJECT_NAME" ]; then
 
     echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
     
-    # Create .gitkeep files in openspec directories
+    # Finalize OpenSpec initialization
     cd "$PROJECT_NAME"
-    create_openspec_gitkeep
+    finalize_openspec_init
     cd ..
 elif [ "$NO_PROMPT" = false ] && [ "$SKIP_SPECIFY" = false ]; then
     # Directory exists, but not in interactive mode and not skipping specify
@@ -599,8 +620,8 @@ elif [ "$NO_PROMPT" = false ] && [ "$SKIP_SPECIFY" = false ]; then
 
     echo -e "${GREEN}OpenSpec project initialized successfully${NC}"
     
-    # Create .gitkeep files in openspec directories
-    create_openspec_gitkeep
+    # Finalize OpenSpec initialization
+    finalize_openspec_init
     cd ..
 else
     # Directory exists and we're in interactive mode or skipping specify
