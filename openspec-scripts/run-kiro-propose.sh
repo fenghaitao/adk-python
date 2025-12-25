@@ -91,7 +91,7 @@ echo "📁 Session directory: $KIRO_DIR"
 echo ""
 
 # Construct the prompt
-PROMPT="Read $POWER_MD and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
+PROMPT="Read $POWER_MD and propose to model a complex watchdog timer device for Simics platform simulation by following the instructions in POWER.md"
 
 echo "📝 Prompt:"
 echo "$PROMPT"

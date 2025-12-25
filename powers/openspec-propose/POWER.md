@@ -16,14 +16,55 @@ This power provides complete OpenSpec proposal creation workflow for Simics DML 
 2. **Knowledge Base** - DML and test documentation in `openspec-memories/`
 3. **Validation Tools** - OpenSpec CLI commands for proposal validation
 
+## Available Steering Files
+
+- **multi-capability-proposals** - Guide for decomposing complex devices (50+ requirements) into multiple capabilities with separate spec deltas
+
+## Quick Reference
+
+**For simple devices (<50 requirements)**:
+1. Read `openspec/AGENTS.md` for OpenSpec workflow
+2. Read `specs/<branch-name>/spec.md` completely
+3. Create proposal.md, tasks.md, and single spec delta
+4. Run `openspec validate --strict`
+
+**For complex devices (50+ requirements)**:
+1. Read `openspec/AGENTS.md` for OpenSpec workflow
+2. Read `specs/<branch-name>/spec.md` completely
+3. Read **multi-capability-proposals** steering file
+4. Decompose into multiple capabilities (e.g., timer-core, interrupt-control, lock-protection)
+5. **Create separate spec delta directory for each capability** (not a single spec delta)
+6. Create design.md documenting capability interactions and implementation order
+7. Run `openspec validate --strict` for each capability
+
+**Key difference**: Complex devices use **multiple spec delta directories** (one per capability) instead of a single spec delta, enabling independent implementation and testing of each capability.
+
+**Common device patterns**:
+- Timer/watchdog → Load `02_DML_Anti_Patterns.md` FIRST (prevents critical mistakes)
+- Register device → Load `06_DML_Common_Patterns.md`
+- New to DML → Load `01_Simics_Modeling_Philosophy.md`
+- Test setup → Load `02_Test_Configuration_Setup.md`
+
 ## Scope
 
-- This power handles the OpenSpec Proposal phase for **INITIAL implementations** (skeleton → working code)
-- DML skeleton already exists with auto-generated register structure and USER-TODO placeholders
-- The goal is to implement the device behavior specified in the existing spec, not to add new features
-- Keep the scope tight and changes minimal unless explicitly expanded
+This power handles the OpenSpec Proposal phase for **INITIAL implementations** (skeleton → working code):
 
-**CRITICAL**: This is for implementing what's already specified in `specs/<branch-name>/spec.md`, not for adding new requirements or features.
+- **Input**: DML skeleton with auto-generated register structure and USER-TODO placeholders
+- **Source of Truth**: Existing specification at `specs/<branch-name>/spec.md`
+- **Goal**: Create proposal to implement the device behavior already defined in the spec
+- **Scope Boundary**: Implement what's specified, don't invent new functionality beyond the spec
+
+**What "INITIAL implementation" means**:
+- The spec already exists with requirements (FUNC-XXX, REG-XXX, BEHAV-XXX, TEST-XXX)
+- The DML skeleton exists but has no functional behavior (USER-TODO placeholders)
+- Your proposal extracts requirements from the spec into spec deltas
+- Your proposal creates tasks to implement those requirements in DML
+- You're **not adding new requirements** to the spec, you're **implementing existing requirements**
+
+**Example**: If spec says "FUNC-005: Device SHALL generate interrupt on timeout", your proposal:
+- ✅ Extracts this as spec delta requirement
+- ✅ Creates task "Implement interrupt generation on timeout"
+- ❌ Does NOT add new requirement like "Device SHALL support multiple interrupt priorities" (not in spec)
 
 ## Guardrails
 
@@ -71,6 +112,32 @@ Then read the ENTIRE spec file at `specs/<branch-name>/spec.md` and understand:
 **⚠️ CRITICAL**: Your proposal MUST reference and build upon this existing spec, not duplicate or contradict it.
 
 **❌ FAILURE TO READ THE SPEC WILL RESULT IN INVALID PROPOSALS**
+
+**STEP 2.5: Evaluate Device Complexity IMMEDIATELY (DO THIS BEFORE LOADING DML KNOWLEDGE)**
+
+**⚠️ STOP: Before loading ANY DML knowledge, you MUST determine device complexity.**
+
+**Check if this is a complex device:**
+- User request mentions "complex" device
+- OR spec has 50+ requirements - count using grep tool:
+  ```
+  grep(pattern=\*\*(FUNC|REG|BEHAV|TEST)-\d+\*\*, path=specs/<branch-name>/spec.md)
+  ```
+- OR device has distinct functional subsystems (e.g., timer + interrupt + lock + test-mode)
+
+**If complex device detected (50+ requirements):**
+1. **IMMEDIATELY read the multi-capability-proposals steering file**:
+   - The steering file is available in this power: `multi-capability-proposals.md`
+   - Use available tools to read steering files from the openspec-propose power
+2. Follow the guidance to decompose into multiple capabilities
+3. Create separate spec delta directories for each capability
+4. Create design.md documenting capability interactions
+
+**If simple device (<50 requirements):**
+- Proceed to STEP 3 to load DML knowledge
+- Create single spec delta
+
+**⚠️ DO NOT LOAD DML KNOWLEDGE UNTIL YOU COMPLETE THIS STEP**
 
 **STEP 3: Load Relevant DML Knowledge (if needed for implementation details)**
 - Follow Memory Loading Protocol below to load relevant openspec-memories/ documents
@@ -137,13 +204,11 @@ Follow OpenSpec workflow from `openspec/AGENTS.md` for proposal structure and sp
 
 ## Simics-Specific Implementation Guidance
 
-**PREREQUISITE**: You MUST have already read the existing spec file (see STEP 2 above) before using this guidance.
-
 The user input provides the purpose (what device/feature to implement) and may include references to hardware specifications.
 
 ### Information Sources (in priority order):
 
-1. **Primary Specification** (MANDATORY - already read in STEP 2): `specs/<branch-name>/spec.md`
+1. **Primary Specification** (see STEP 2): `specs/<branch-name>/spec.md`
    - **Authoritative source** for device requirements and behavior
    - Contains: hardware spec, operational model, existing requirements (FUNC-XXX, REG-XXX, etc.), test scenarios (TEST-XXX)
    - **Your proposal MUST**: Reference and extend this spec, not duplicate or contradict it
@@ -155,7 +220,7 @@ The user input provides the purpose (what device/feature to implement) and may i
    - Contains: Comprehensive hardware details, register definitions, operational behavior
 
 3. **DML and Test Best Practices** (optional - for implementation patterns):
-   - Follow Memory Loading Protocol above to load relevant knowledge from `openspec-memories/`
+   - Follow Memory Loading Protocol (see above) to load relevant knowledge from `openspec-memories/`
    - Use when: You need DML syntax, patterns, or test implementation guidance
 
 ### Proposal Structure Template:
@@ -209,12 +274,6 @@ The Context section MUST include:
   - openspec-memories/02_DML_Anti_Patterns.md (CRITICAL: avoid performance pitfalls)
   - openspec-memories/06_DML_Common_Patterns.md (register side-effect patterns)
 ```
-
-**Why Context Matters:**
-- Apply agent knows where to find detailed requirements
-- Apply agent knows which memory documents to load
-- Reduces apply agent search time by 60%
-- Provides clear implementation context
 
 **specs/<branch-name>/spec.md (delta):**
 
@@ -303,43 +362,12 @@ When creating spec deltas from a source specification:
    - Lock protection behaviors
 
 5. **Pre-Validation Completeness Check**: Before running `openspec validate`, verify:
-   ```bash
-   # Count requirements in source spec
-   SOURCE_REQS=$(grep -E "^\*\*(FUNC|REG|BEHAV|TEST)-" specs/<branch>/spec.md | wc -l)
-   
-   # Count spec delta requirements
-   DELTA_REQS=$(grep -c "^### Requirement:" openspec/changes/<id>/specs/*/spec.md)
-   
-   # Calculate coverage
-   COVERAGE=$((DELTA_REQS * 100 / SOURCE_REQS))
-   
-   echo "📊 Requirement Coverage: $COVERAGE% ($DELTA_REQS/$SOURCE_REQS)"
-   
-   # Warn if coverage is low
-   if [ $COVERAGE -lt 70 ]; then
-     echo "⚠️  WARNING: Only $COVERAGE% requirement coverage (target: 70%+)"
-     echo "Source has $SOURCE_REQS requirements, spec delta has $DELTA_REQS"
-     echo "Consider extracting more detailed requirements from source spec"
-     echo ""
-     echo "Quick check:"
-     echo "  - Did you extract all FUNC-XXX requirements?"
-     echo "  - Did you extract all REG-XXX requirements?"
-     echo "  - Did you extract all BEHAV-XXX requirements?"
-     echo "  - Did you extract all TEST-XXX scenarios?"
-   fi
-   
-   # Also check line count ratio
-   SOURCE_LINES=$(wc -l < specs/<branch>/spec.md)
-   DELTA_LINES=$(wc -l < openspec/changes/<id>/specs/*/spec.md)
-   LINE_RATIO=$((DELTA_LINES * 100 / SOURCE_LINES))
-   
-   echo "📏 Line Count Ratio: $LINE_RATIO% ($DELTA_LINES/$SOURCE_LINES lines)"
-   
-   if [ $LINE_RATIO -lt 25 ]; then
-     echo "⚠️  WARNING: Spec delta is only $LINE_RATIO% of source spec size"
-     echo "For detailed source specs (500+ lines), target 25-40% line ratio"
-   fi
-   ```
+   - Count requirements in source spec (grep for `FUNC-XXX`, `REG-XXX`, `BEHAV-XXX`, `TEST-XXX`)
+   - Count requirements in spec delta (grep for `### Requirement:`)
+   - Calculate coverage percentage: (delta_reqs / source_reqs) × 100
+   - **Target**: 70%+ coverage (minimum 60% for simple devices)
+   - **Line ratio**: 25-40% of source spec size for detailed specs (500+ lines)
+   - If coverage is low, extract more detailed requirements from source spec
 
 6. **Completeness Criteria**:
    - **Coverage Target**: 70%+ requirement coverage (minimum 60% for simple devices)
@@ -352,9 +380,9 @@ When creating spec deltas from a source specification:
    - Source has 800 lines → Spec delta should be 200-320 lines
    - Source has 10 registers → Spec delta should cover all 10 register behaviors
 
-### Example: Good vs. Bad Spec Delta
+### Example: Spec Delta Quality
 
-**❌ BAD (only implementation guidance - low coverage):**
+**❌ BAD** (implementation pattern, not functional requirement):
 ```markdown
 ### Requirement: Timer Implementation Pattern
 The device timer SHALL use lazy evaluation and event-based timing.
@@ -365,39 +393,23 @@ The device timer SHALL use lazy evaluation and event-based timing.
 ```
 **Problem**: Only tells HOW to implement (patterns), not WHAT to implement (functionality).
 
-**✅ GOOD (extract detailed requirements - high coverage):**
+**✅ GOOD** (specific functional requirement):
 ```markdown
 ### Requirement: Load Register Functionality
-The LOAD register SHALL store a reload value that determines the device timeout period.
+The LOAD register SHALL store a reload value that determines timeout period.
 
 #### Scenario: Write to LOAD Register
-- **WHEN** a value is written to LOAD
-- **THEN** the value SHALL be stored in the register
-- **AND** the current counter SHALL NOT be affected until next reload
-
-### Requirement: Control Register INTEN Bit Functionality
-The INTEN bit in CONTROL register SHALL control interrupt generation on timeout.
-
-#### Scenario: Enable Interrupts
-- **WHEN** INTEN is set to 1
-- **THEN** an interrupt SHALL be generated when counter reaches zero
-- **AND** the interrupt signal SHALL remain asserted until cleared
-
-### Requirement: Control Register RESEN Bit Functionality
-The RESEN bit in CONTROL register SHALL control reset generation on second timeout.
-
-#### Scenario: Enable Reset
-- **WHEN** RESEN is set to 1
-- **THEN** a reset SHALL be generated when counter reaches zero after interrupt
-- **AND** the reset signal SHALL remain asserted for one clock cycle
+- **WHEN** value is written to LOAD
+- **THEN** value SHALL be stored in the register
+- **AND** current counter SHALL NOT be affected until next reload
 ```
-**Why it's good**: Extracts specific functional requirements from source spec. Apply agent knows exactly what to implement. For DML patterns, apply agent reads `openspec-memories/` (e.g., `04_DML_Timing_Timer_Modeling.md`, `02_DML_Anti_Patterns.md`).
+**Why it's good**: Extracts specific functional requirement from source spec. Apply agent knows exactly what to implement. For DML patterns (HOW to implement), apply agent reads `openspec-memories/` (e.g., `04_DML_Timing_Timer_Modeling.md`, `02_DML_Anti_Patterns.md`).
 
-## Task Structure Requirements (CRITICAL for Apply Agent)
+## Task Requirements (CRITICAL for Apply Agent)
 
 **MANDATORY**: Every proposal MUST include BOTH implementation and test tasks.
 
-### Required Task Structure:
+### Task Structure
 
 ```markdown
 ## 1. DML Implementation
@@ -414,28 +426,19 @@ The RESEN bit in CONTROL register SHALL control reset generation on second timeo
 - [ ] 2.5 Verify all tests pass
 ```
 
-### Task Guidelines:
+### Task Quality Requirements
 
-- **DML Tasks**: Modify `simics-project/modules/<device>/<device>.dml` to implement USER-TODO placeholders
-- **Test Tasks**: Add `simics-project/modules/<device>/test/s-*.py` files to validate behavior
-- **Actionable**: Each task must be specific enough to implement without guessing
-- **Referenced**: Tasks must reference specific requirements (FUNC-XXX, REG-XXX, etc.)
-- **Ordered**: DML implementation first, then tests
-- **Sub-tasks**: Use numbered sub-tasks (1.1, 1.2, etc.) for clarity
+Tasks must be **SPECIFIC and ACTIONABLE** with clear sub-tasks:
 
-## Task Decomposition Requirements (CRITICAL - Ensures Actionable Tasks)
+**Quality Checklist**:
+- [ ] Each register with side-effects has dedicated sub-task
+- [ ] Each sub-task specifies exact behavior (not generic "implement side-effects")
+- [ ] Each sub-task references specific memory document for patterns/anti-patterns
+- [ ] DML patterns specified (event-based, lazy evaluation, session state)
+- [ ] Test tasks specify which TEST-XXX scenarios from spec they cover
+- [ ] Minimum 3-5 sub-tasks per main task
 
-**PREREQUISITE**: Review Task Structure Requirements above for the required task organization (DML Implementation + Test Implementation sections).
-
-Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks. Each main task should have 3-5 sub-tasks that specify exact behaviors.
-
-**BAD (too vague):**
-```markdown
-- [ ] 1.1 Implement register side-effects in device.dml
-- [ ] 2.1 Add test cases
-```
-
-**GOOD (specific and actionable):**
+**Example - Good Task Decomposition**:
 ```markdown
 - [ ] 1.1 Implement CONTROL register side-effects (device.dml)
   - [ ] 1.1.1 ENABLE bit write: Start/stop device operation based on 0→1 or 1→0 transition
@@ -444,11 +447,6 @@ Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks. Each main task shoul
   - [ ] 1.1.4 Pattern: Use appropriate DML pattern from openspec-memories/06_DML_Common_Patterns.md
   - [ ] 1.1.5 Anti-Pattern: Check openspec-memories/02_DML_Anti_Patterns.md for device-specific pitfalls
   
-- [ ] 1.2 Implement STATUS register side-effects (device.dml)
-  - [ ] 1.2.1 Read: Return current device state (IDLE/BUSY/ERROR)
-  - [ ] 1.2.2 Write to clear bits: Clear error flags on write-1-to-clear
-  - [ ] 1.2.3 Update on state change: Reflect device state transitions
-  
 - [ ] 2.1 Implement basic functionality tests (test/s-basic-operation.py)
   - [ ] 2.1.1 Test device initialization and default register values (covers TEST-001)
   - [ ] 2.1.2 Test enable/disable transitions (covers TEST-002, TEST-003)
@@ -456,67 +454,32 @@ Tasks must be SPECIFIC and ACTIONABLE with clear sub-tasks. Each main task shoul
   - [ ] 2.1.4 Setup: Use patterns from openspec-memories/02_Test_Configuration_Setup.md
 ```
 
-**Task Quality Checklist:**
-- [ ] Each register with side-effects has dedicated sub-task
-- [ ] Each sub-task specifies exact behavior (not generic "implement side-effects")
-- [ ] Each sub-task references specific memory document for patterns/anti-patterns
-- [ ] Anti-patterns explicitly called out with consequences when relevant
-- [ ] DML patterns specified (event-based, lazy evaluation, session state, etc.)
-- [ ] Test tasks specify which TEST-XXX scenarios from spec they cover
-- [ ] Minimum 3-5 sub-tasks per main task
+**Device-Specific Task Patterns**:
 
-**Device-Specific Task Examples:**
+| Device Type | Key Sub-Tasks | Reference |
+|-------------|---------------|-----------|
+| Timer/watchdog | Counter decrement logic, interrupt generation, reload/reset behavior | `04_DML_Timing_Timer_Modeling.md` |
+| UART/serial | TX/RX buffer management, baud rate config, data ready interrupts | `06_DML_Common_Patterns.md` |
+| Interrupt controller | Priority handling, masking/unmasking, pending/active status | `06_DML_Common_Patterns.md` |
 
-For timer/watchdog devices:
-- Sub-tasks for counter decrement logic with event-based timing
-- Sub-tasks for interrupt generation on timeout
-- Sub-tasks for reload/reset behavior
-- Reference: openspec-memories/04_DML_Timing_Timer_Modeling.md
+### Task Guidelines
 
-For UART/serial devices:
-- Sub-tasks for TX/RX buffer management
-- Sub-tasks for baud rate configuration
-- Sub-tasks for interrupt on data ready/transmit complete
-- Reference: openspec-memories/06_DML_Common_Patterns.md
-
-For interrupt controllers:
-- Sub-tasks for priority handling
-- Sub-tasks for masking/unmasking interrupts
-- Sub-tasks for pending/active status tracking
-- Reference: openspec-memories/06_DML_Common_Patterns.md
+- **DML Tasks**: Modify `simics-project/modules/<device>/<device>.dml` to implement USER-TODO placeholders
+- **Test Tasks**: Add `simics-project/modules/<device>/test/s-*.py` files to validate behavior
+- **Actionable**: Each task must be specific enough to implement without guessing
+- **Referenced**: Tasks must reference specific requirements (FUNC-XXX, REG-XXX, etc.)
+- **Ordered**: DML implementation first, then tests
+- **Sub-tasks**: Use numbered sub-tasks (1.1, 1.2, etc.) for clarity
 
 ## Apply Agent Handoff
 
 When creating proposals, ensure:
-- **Detailed Tasks**: All tasks in tasks.md are actionable and specific with clear sub-tasks (see Task Structure Requirements and Task Decomposition Requirements above)
-- **Both DML and Tests**: Include BOTH implementation tasks AND test tasks (see Task Structure Requirements above)
+- **Detailed Tasks**: All tasks in tasks.md are actionable and specific with clear sub-tasks (see Task Requirements above)
+- **Both DML and Tests**: Include BOTH implementation tasks AND test tasks
 - **Implementation Guidance**: Tasks reference specific DML patterns and anti-patterns to avoid
 - **Complete Spec Deltas**: Include sufficient detail for implementation without guessing (see Spec Delta Completeness Requirements above for coverage criteria)
 - **Clean Validation**: Validation passes completely before handoff
 - **Clear Context**: Change ID is descriptive enough for apply agent to understand context
-
-## Knowledge Base Location
-
-All Simics DML development documentation is in your project at:
-
-```
-openspec-memories/
-├── 00_DML_Best_Practices_Index.md      # START HERE for DML
-├── 00_Test_Best_Practices_Index.md     # START HERE for tests
-├── 01_Simics_Modeling_Philosophy.md
-├── 02_DML_Anti_Patterns.md             # CRITICAL: Read before timer/watchdog
-├── 03_DML_Basic_Syntax.md
-├── 04_DML_Timing_Timer_Modeling.md
-├── 05_DML_Troubleshooting.md
-├── 06_DML_Common_Patterns.md
-├── 07_DML_Register_Access_Scope.md
-├── 01_Test_File_Location_Requirements.md
-├── 02_Test_Configuration_Setup.md
-├── 03_Test_Register_Access.md
-├── 04_Test_Device_Outputs.md
-├── 05_Test_DMA_Memory.md
-└── 06_Test_Events_Timing.md
-```
 
 ## OpenSpec Commands Reference
 
