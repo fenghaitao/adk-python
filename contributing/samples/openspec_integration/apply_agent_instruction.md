@@ -99,13 +99,16 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 **STEP 3: Test and Validate Quality**
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
 - When encountering test failures (Python test errors):
-  - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+  - **FIRST**: Check `openspec-memories/07_Test_Anti_Patterns.md` - comprehensive troubleshooting guide for ALL test issues
+  - **THEN**: Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md` to find specific section
   - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
   - These are Python-specific issues - do NOT apply DML patterns
-  - Common Python test issues:
-    * `AttributeError` → Wrong object/method name (check Python API)
-    * `TypeError` → Wrong argument types (Python types, not DML types)
+  - Common Python test issues (see 07_Test_Anti_Patterns.md for details):
+    * `AttributeError` with `.val` → Wrong .val usage (use .val inside pyobj class, NOT outside)
+    * `AttributeError` on 'bank' → Missing .bank. namespace
+    * `Duplicate object name` → Multiple test functions in single file
     * Test not found → Check file location per `01_Test_File_Location_Requirements.md`
+    * Test function not executing → Function defined but never called
   - Verify implementation completeness (return to STEP 2.5)
 
 **STEP 4: Report Status**
@@ -164,7 +167,9 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
      - For additional details/examples only, see `openspec-memories/01_Test_File_Location_Requirements.md` + `openspec-memories/02_Test_Configuration_Setup.md`
    - Timer/watchdog testing → Use `<device>_common.create_config()` + patterns from `openspec-memories/06_Test_Events_Timing.md`
    - Register testing → Follow `s-<device>.py` example + `openspec-memories/03_Test_Register_Access.md` for more examples
-   - Test errors → Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
+   - **Test errors/failures** → **MUST read `openspec-memories/07_Test_Anti_Patterns.md` FIRST** (comprehensive troubleshooting for ALL test issues)
+     - Covers: test structure, attribute access (.val usage), register access, timing, fake objects, configuration, test location, DMA/memory
+     - Use troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md` to find specific anti-pattern section
    - ⚠️ These docs use Python syntax: `def`, `stest.expect_equal()`, etc.
 
 6. Use `perform_rag_query` for additional Simics/DML documentation as needed
