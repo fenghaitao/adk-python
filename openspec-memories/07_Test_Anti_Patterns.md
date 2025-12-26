@@ -11,47 +11,19 @@ This document consolidates common anti-patterns and mistakes in Simics device mo
 
 ## Table of Contents
 
-1. [Test Location Anti-Patterns](#test-location-anti-patterns)
-2. [Configuration Anti-Patterns](#configuration-anti-patterns)
-3. [Register Access Anti-Patterns](#register-access-anti-patterns)
+1. [Test Structure Anti-Patterns](#test-structure-anti-patterns)
+2. [Register Access Anti-Patterns](#register-access-anti-patterns)
+3. [Timing Anti-Patterns](#timing-anti-patterns)
 4. [Fake Object Anti-Patterns](#fake-object-anti-patterns)
-5. [DMA and Memory Anti-Patterns](#dma-and-memory-anti-patterns)
-6. [Timing Anti-Patterns](#timing-anti-patterns)
+5. [Configuration Anti-Patterns](#configuration-anti-patterns)
+6. [Test Location Anti-Patterns](#test-location-anti-patterns)
+7. [DMA and Memory Anti-Patterns](#dma-and-memory-anti-patterns)
 
 ---
 
-## Test Location Anti-Patterns
+## Test Structure Anti-Patterns
 
-**Reference:** [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md)
-
-### ❌ Using Underscore Instead of Hyphen in Project Directory
-
-```bash
-# ❌ WRONG
-simics_project/modules/device/test/s-test.py
-
-# ✅ CORRECT
-simics-project/modules/device/test/s-test.py
-```
-
-**Why it's wrong:** Simics test-runner only discovers tests in `simics-project/` (hyphen), not `simics_project/` (underscore)
-
-### ❌ Missing SUITEINFO File
-
-```bash
-# ❌ WRONG - no SUITEINFO marker
-simics-project/modules/device/test/
-├── s-basic.py
-└── s-advanced.py
-
-# ✅ CORRECT - includes SUITEINFO
-simics-project/modules/device/test/
-├── SUITEINFO
-├── s-basic.py
-└── s-advanced.py
-```
-
-**Why it's wrong:** Test-runner requires SUITEINFO file to recognize directory as a test suite
+**Reference:** General test organization best practices
 
 ### ❌ Defining Test Functions Without Calling Them
 
@@ -76,49 +48,44 @@ test_interrupts()  # ✅ Execute the test
 
 **Why it's wrong:** Silent failure - test appears to pass but never executed
 
----
-
-## Configuration Anti-Patterns
-
-**Reference:** [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md)
-
-### ❌ Setting Attributes After Instantiation
+### ❌ Multiple Test Functions in Single File
 
 ```python
-# ❌ WRONG - configure after SIM_add_configuration
-dev = simics.pre_conf_object('dev', 'device')
-clk = simics.pre_conf_object('clk', 'clock')
-simics.SIM_add_configuration([dev, clk], None)
-conf.clk.freq_mhz = 100  # ❌ Too late
-conf.dev.queue = conf.clk
+# ❌ WRONG - multiple tests in one file
+def test_basic_operations():
+    dut = create_config()
+    regs = dev_util.bank_regs(dut.bank.regs)
+    regs.CONTROL.write(0x1)
+    stest.expect_equal(regs.STATUS.read(), 0x1)
 
-# ✅ CORRECT - configure before SIM_add_configuration
-dev = simics.pre_conf_object('dev', 'device')
-clk = simics.pre_conf_object('clk', 'clock')
-clk.freq_mhz = 100  # ✅ Before instantiation
-simics.SIM_add_configuration([dev, clk], None)
-dev.queue = clk
+def test_advanced_operations():
+    dut = create_config()  # ❌ Duplicate object name!
+    regs = dev_util.bank_regs(dut.bank.regs)
+    regs.CONTROL.write(0x2)
+
+test_basic_operations()
+test_advanced_operations()  # Error: simics.SimExc_General: Duplicate object name
+
+# ✅ CORRECT - one test per file
+# File: s-basic-operations.py
+def test_basic_operations():
+    dut = create_config()
+    regs = dev_util.bank_regs(dut.bank.regs)
+    regs.CONTROL.write(0x1)
+    stest.expect_equal(regs.STATUS.read(), 0x1)
+
+test_basic_operations()
+
+# File: s-advanced-operations.py
+def test_advanced_operations():
+    dut = create_config()
+    regs = dev_util.bank_regs(dut.bank.regs)
+    regs.CONTROL.write(0x2)
+
+test_advanced_operations()
 ```
 
-**Why it's wrong:** Required attributes must be set on pre-conf objects before instantiation
-
-### ❌ Returning Pre-Conf Object Instead of Conf Object
-
-```python
-# ❌ WRONG
-def create_config():
-    dev = simics.pre_conf_object('dut', 'device')
-    simics.SIM_add_configuration([dev], None)
-    return dev  # ❌ Returns pre-conf object
-
-# ✅ CORRECT
-def create_config():
-    dev = simics.pre_conf_object('dut', 'device')
-    simics.SIM_add_configuration([dev], None)
-    return conf.dut  # ✅ Returns conf object
-```
-
-**Why it's wrong:** Pre-conf objects lack full API; must return conf objects for register access
+**Why it's wrong:** Multiple test functions calling `create_config()` create duplicate object names in the same Simics session, causing "Duplicate object name" errors. Each test should be in its own file with its own configuration.
 
 ---
 
@@ -172,6 +139,28 @@ regs = dev_util.bank_regs(device.bank.regs)
 
 ---
 
+## Timing Anti-Patterns
+
+**Reference:** [06_Test_Events_Timing](06_Test_Events_Timing.md)
+
+### ❌ Insufficient Wait Time
+
+```python
+# ❌ WRONG - not waiting long enough
+regs.TIMER_VALUE.write(1000)
+regs.TIMER_START.write(0x1)
+simics.SIM_continue(100)  # Only 100 cycles!
+
+# ✅ CORRECT - wait full duration
+regs.TIMER_VALUE.write(1000)
+regs.TIMER_START.write(0x1)
+simics.SIM_continue(1000)  # Full 1000 cycles
+```
+
+**Why it's wrong:** Async operations need time to complete; checking too early sees incomplete state
+
+---
+
 ## Fake Object Anti-Patterns
 
 **Reference:** [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md)
@@ -214,6 +203,85 @@ class FakePic(pyobj.ConfObject):
 ```
 
 **Why it's wrong:** Interface method names must exactly match DML calls
+
+---
+
+## Configuration Anti-Patterns
+
+**Reference:** [02_Test_Configuration_Setup](02_Test_Configuration_Setup.md)
+
+### ❌ Setting Attributes After Instantiation
+
+```python
+# ❌ WRONG - configure after SIM_add_configuration
+dev = simics.pre_conf_object('dev', 'device')
+clk = simics.pre_conf_object('clk', 'clock')
+simics.SIM_add_configuration([dev, clk], None)
+conf.clk.freq_mhz = 100  # ❌ Too late
+conf.dev.queue = conf.clk
+
+# ✅ CORRECT - configure before SIM_add_configuration
+dev = simics.pre_conf_object('dev', 'device')
+clk = simics.pre_conf_object('clk', 'clock')
+clk.freq_mhz = 100  # ✅ Before instantiation
+simics.SIM_add_configuration([dev, clk], None)
+dev.queue = clk
+```
+
+**Why it's wrong:** Required attributes must be set on pre-conf objects before instantiation
+
+### ❌ Returning Pre-Conf Object Instead of Conf Object
+
+```python
+# ❌ WRONG
+def create_config():
+    dev = simics.pre_conf_object('dut', 'device')
+    simics.SIM_add_configuration([dev], None)
+    return dev  # ❌ Returns pre-conf object
+
+# ✅ CORRECT
+def create_config():
+    dev = simics.pre_conf_object('dut', 'device')
+    simics.SIM_add_configuration([dev], None)
+    return conf.dut  # ✅ Returns conf object
+```
+
+**Why it's wrong:** Pre-conf objects lack full API; must return conf objects for register access
+
+---
+
+## Test Location Anti-Patterns
+
+**Reference:** [01_Test_File_Location_Requirements](01_Test_File_Location_Requirements.md)
+
+### ❌ Using Underscore Instead of Hyphen in Project Directory
+
+```bash
+# ❌ WRONG
+simics_project/modules/device/test/s-test.py
+
+# ✅ CORRECT
+simics-project/modules/device/test/s-test.py
+```
+
+**Why it's wrong:** Simics test-runner only discovers tests in `simics-project/` (hyphen), not `simics_project/` (underscore)
+
+### ❌ Missing SUITEINFO File
+
+```bash
+# ❌ WRONG - no SUITEINFO marker
+simics-project/modules/device/test/
+├── s-basic.py
+└── s-advanced.py
+
+# ✅ CORRECT - includes SUITEINFO
+simics-project/modules/device/test/
+├── SUITEINFO
+├── s-basic.py
+└── s-advanced.py
+```
+
+**Why it's wrong:** Test-runner requires SUITEINFO file to recognize directory as a test suite
 
 ---
 
@@ -271,58 +339,18 @@ result = mem.read(dst_addr, size)
 
 ---
 
-## Timing Anti-Patterns
-
-**Reference:** [06_Test_Events_Timing](06_Test_Events_Timing.md)
-
-### ❌ Missing Clock Configuration
-
-```python
-# ❌ WRONG - incomplete clock setup
-dev = simics.pre_conf_object('dev', 'timer_device')
-clk = simics.pre_conf_object('clk', 'clock')
-# Missing: clk.freq_mhz = 100
-# Missing: dev.queue = clk
-
-# ✅ CORRECT - complete setup
-dev = simics.pre_conf_object('dev', 'timer_device')
-clk = simics.pre_conf_object('clk', 'clock')
-clk.freq_mhz = 100
-dev.queue = clk
-```
-
-**Why it's wrong:** Time-dependent devices need both clock frequency and queue assignment; events won't fire otherwise
-
-### ❌ Insufficient Wait Time
-
-```python
-# ❌ WRONG - not waiting long enough
-regs.TIMER_VALUE.write(1000)
-regs.TIMER_START.write(0x1)
-simics.SIM_continue(100)  # Only 100 cycles!
-
-# ✅ CORRECT - wait full duration
-regs.TIMER_VALUE.write(1000)
-regs.TIMER_START.write(0x1)
-simics.SIM_continue(1000)  # Full 1000 cycles
-```
-
-**Why it's wrong:** Async operations need time to complete; checking too early sees incomplete state
-
----
-
 ## Summary: Top 10 Anti-Patterns to Avoid
 
-1. ❌ **Wrong directory name**: Use `simics-project/` not `simics_project/`
-2. ❌ **Late attribute configuration**: Set attributes BEFORE `SIM_add_configuration()`
-3. ❌ **Missing .bank. namespace**: Always use `device.bank.<bank_name>`
-4. ❌ **No dev_util.bank_regs() wrapper**: Always wrap banks for register access
-5. ❌ **Returning pre-conf objects**: Return `conf.<name>` from `create_config()`
-6. ❌ **Guessing bank names**: Read DML for exact names, don't scan
-7. ❌ **Missing fake objects**: Create fakes for ALL DML connect blocks
-8. ❌ **Not waiting for async**: Use `SIM_continue()` for DMA, timers, events
-9. ❌ **Uncalled test functions**: If you define test functions, call them!
-10. ❌ **Not clearing memory**: Clear destination before DMA tests to verify transfer
+1. ❌ **Multiple test functions per file**: One test per file to avoid "Duplicate object name" errors
+2. ❌ **Uncalled test functions**: If you define test functions, call them!
+3. ❌ **Wrong directory name**: Use `simics-project/` not `simics_project/`
+4. ❌ **Late attribute configuration**: Set attributes BEFORE `SIM_add_configuration()`
+5. ❌ **Missing .bank. namespace**: Always use `device.bank.<bank_name>`
+6. ❌ **No dev_util.bank_regs() wrapper**: Always wrap banks for register access
+7. ❌ **Returning pre-conf objects**: Return `conf.<name>` from `create_config()`
+8. ❌ **Guessing bank names**: Read DML for exact names, don't scan
+9. ❌ **Missing fake objects**: Create fakes for ALL DML connect blocks
+10. ❌ **Not waiting for async**: Use `SIM_continue()` for DMA, timers, events
 
 ---
 
