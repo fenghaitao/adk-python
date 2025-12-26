@@ -18,7 +18,7 @@ Each document focuses on a single testing subject without mixing contexts:
 | [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md) | Mocking interfaces and dependencies | Isolating device under test |
 | [05_Test_DMA_Memory](05_Test_DMA_Memory.md) | DMA and memory testing | Testing DMA operations |
 | [06_Test_Events_Timing](06_Test_Events_Timing.md) | Time-dependent behavior testing | Testing timers and events |
-| [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | ⚠️ **TROUBLESHOOTING** - Common mistakes and debugging | Debugging test failures, avoiding pitfalls |
+| [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | ⚠️ **TROUBLESHOOTING** - Common mistakes: test structure, attribute access (.val usage), register access, timing, fake objects, configuration, test location, DMA/memory | Debugging test failures, avoiding pitfalls |
 
 ## Quick Navigation
 
@@ -50,15 +50,17 @@ Common issues and solutions:
 | Problem | Primary Document | Quick Reference |
 |---------|------------------|-----------------|
 | **Any test failure** | **[07_Test_Anti_Patterns](07_Test_Anti_Patterns.md)** | **Comprehensive troubleshooting guide** |
-| Test files not found by test-runner | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test location issues |
-| "Queue not set" error | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Configuration errors |
-| Segfault on test run | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing fake objects |
+| Test functions not executing | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test structure issues |
+| Duplicate object name error | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Multiple tests in single file |
+| AttributeError with .val | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Incorrect .val usage |
+| AttributeError on 'bank' | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing .bank. namespace |
 | Register access errors | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Register access problems |
 | Events don't fire | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Timing issues |
-| DMA verification fails | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | DMA/Memory problems |
-| Test functions not executing | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test location issues |
-| AttributeError on 'bank' | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing .bank. namespace |
 | Clock/timing incorrect | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | freq_mhz configuration |
+| Segfault on test run | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Missing fake objects |
+| "Queue not set" error | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Configuration errors |
+| Test files not found by test-runner | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | Test location issues |
+| DMA verification fails | [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) | DMA/Memory problems |
 
 ## Document Dependencies
 
@@ -80,27 +82,32 @@ Common issues and solutions:
 ### Essential Rules (Read These First)
 
 1. ✅ **Test Location**: Tests MUST be in `simics-project/modules/<device>/test/`
-2. ✅ **Clock Setup**: Set `clk.freq_mhz` BEFORE `SIM_add_configuration()`
-3. ✅ **Return conf_object**: Return `conf.<name>` from `create_config()`, NOT pre-conf objects
-4. ✅ **Bank Access**: Use `dev_util.bank_regs(device.bank.<bank_name>)`, read DML for exact name
-5. ✅ **Call Test Functions**: If you wrap test code in a function, MUST call it at the end
+2. ✅ **One Test Per File**: Each test file should have ONE test function to avoid duplicate object names
+3. ✅ **Attribute Access**: Use `.val` INSIDE pyobj class methods, NOT outside in test code
+4. ✅ **Clock Setup**: Set `clk.freq_mhz` BEFORE `SIM_add_configuration()`
+5. ✅ **Return conf_object**: Return `conf.<name>` from `create_config()`, NOT pre-conf objects
+6. ✅ **Bank Access**: Use `dev_util.bank_regs(device.bank.<bank_name>)`, read DML for exact name
+7. ✅ **Call Test Functions**: If you wrap test code in a function, MUST call it at the end
 
 ### Common Anti-Patterns to Avoid
 
 **See [07_Test_Anti_Patterns](07_Test_Anti_Patterns.md) for comprehensive list with examples**
 
-Top 5 mistakes:
-- ❌ Creating tests in `simics_project/` (underscore) instead of `simics-project/` (hyphen)
-- ❌ Setting clock frequency after `SIM_add_configuration()`
-- ❌ Missing `.bank.` namespace when accessing registers
-- ❌ Not wrapping banks with `dev_util.bank_regs()`
-- ❌ Returning pre-conf objects instead of conf objects from `create_config()`
+Top 10 mistakes (from 07_Test_Anti_Patterns.md):
+1. ❌ **Multiple test functions per file**: One test per file to avoid "Duplicate object name" errors
+2. ❌ **Uncalled test functions**: If you define test functions, call them!
+3. ❌ **Wrong .val usage**: Use `.val` inside pyobj class methods, NOT outside in test code
+4. ❌ **Missing .bank. namespace**: Always use `device.bank.<bank_name>`
+5. ❌ **No dev_util.bank_regs() wrapper**: Always wrap banks for register access
+6. ❌ **Wrong directory name**: Use `simics-project/` not `simics_project/`
+7. ❌ **Late attribute configuration**: Set attributes BEFORE `SIM_add_configuration()`
+8. ❌ **Returning pre-conf objects**: Return `conf.<name>` from `create_config()`
+9. ❌ **Missing fake objects**: Create fakes for ALL DML connect blocks
+10. ❌ **Not waiting for async**: Use `SIM_continue()` for DMA, timers, events
 
 Additional common mistakes:
 - ❌ Scanning/discovering bank names dynamically instead of reading DML
-- ❌ Defining test functions but forgetting to call them
-- ❌ Missing fake objects for DML connect blocks (causes segfaults)
-- ❌ Not waiting for async operations (DMA, timers) to complete
+- ❌ Wrong interface method names in fake objects
 - ❌ Testing without assertions (silent failures)
 
 ## Document Status
