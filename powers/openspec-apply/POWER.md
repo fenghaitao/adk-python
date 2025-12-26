@@ -208,6 +208,11 @@ When implementing changes, your primary context sources are:
    - `changes/<id>/proposal.md` - What's being built and why
    - `changes/<id>/tasks.md` - Implementation checklist
    - `changes/<id>/design.md` - Technical decisions (if exists)
+   - **`changes/<id>/specs/*/spec.md`** - Spec delta files with detailed requirements
+     - Look for SHALL/MUST statements (normative requirements)
+     - Review scenarios with WHEN/THEN (acceptance criteria)
+     - Identify signal names, register behaviors, bit-level operations
+     - **CRITICAL**: Spec deltas contain implementation details NOT in proposal/design/tasks
 
 2. **DML and Test Best Practices** (ESSENTIAL):
    - Follow Memory Loading Protocol above to load relevant knowledge from openspec-memories/

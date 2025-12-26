@@ -1,20 +1,111 @@
 #!/bin/bash
 
 # Run kiro-cli to create OpenSpec proposal and analyze the session
-# Usage: ./run-kiro-propose.sh [workdir] [session-name]
+# Usage: ./run-kiro-propose.sh [workdir] [session-name] [--multi-spec-deltas]
+#
+# Options:
+#   --multi-spec-deltas   Use multi-spec-deltas mode for complex devices (50+ requirements)
+#                         Default: simple mode for standard proposals
+#   --help, -h            Show this help message
 
 set -e
+
+# Function to display help
+show_help() {
+    cat << 'EOF'
+Run Kiro CLI to create OpenSpec proposal and analyze the session
+
+USAGE:
+    ./run-kiro-propose.sh [WORKDIR] [SESSION_NAME] [OPTIONS]
+
+POSITIONAL ARGUMENTS:
+    WORKDIR         Working directory (default: adk_openspec_project)
+    SESSION_NAME    Session filename (default: kiro-proposal-session_TIMESTAMP.json)
+
+OPTIONS:
+    --multi-spec-deltas   Use multi-spec-deltas mode for complex devices (50+ requirements)
+                          - Uses powers/openspec-propose-multiple-spec-deltas/POWER.md
+                          - Includes guidance for decomposing into multiple spec deltas
+                          - Creates separate spec delta directories per capability
+                          Default: simple mode for standard proposals
+    --help, -h            Show this help message and exit
+
+MODES:
+    Simple Mode (default):
+        - For devices with <50 requirements
+        - Single capability with one spec delta
+        - Uses powers/openspec-propose/POWER.md
+        
+    Multi-Spec-Deltas Mode (--multi-spec-deltas):
+        - For complex devices with 50+ requirements
+        - Multiple capabilities with separate spec deltas
+        - Uses powers/openspec-propose-multiple-spec-deltas/POWER.md
+        - Includes design.md for capability interactions
+
+EXAMPLES:
+    # Simple mode (default)
+    ./run-kiro-propose.sh
+
+    # Simple mode with custom workdir
+    ./run-kiro-propose.sh myproject
+
+    # Multi-spec-deltas mode for complex device
+    ./run-kiro-propose.sh myproject --multi-spec-deltas
+
+    # Multi-spec-deltas mode with custom session name
+    ./run-kiro-propose.sh myproject my-session.json --multi-spec-deltas
+
+    # Show help
+    ./run-kiro-propose.sh --help
+
+OUTPUT:
+    - Session file: workdir/kiro-propose/SESSION_NAME
+    - Analysis file: workdir/kiro-propose/SESSION_NAME.txt
+    - Proposal: workdir/openspec/changes/CHANGE_ID/
+
+EOF
+}
+
+# Check for help flag first
+for arg in "$@"; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+done
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Use provided workdir or default to adk_openspec_project
-WORKDIR=${1:-adk_openspec_project}
+# Parse arguments
+WORKDIR=""
+SESSION_NAME=""
+MULTI_SPEC_DELTAS=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --multi-spec-deltas)
+      MULTI_SPEC_DELTAS=true
+      shift
+      ;;
+    *)
+      if [ -z "$WORKDIR" ]; then
+        WORKDIR="$1"
+      elif [ -z "$SESSION_NAME" ]; then
+        SESSION_NAME="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+# Use defaults if not provided
+WORKDIR=${WORKDIR:-adk_openspec_project}
 
 # Generate timestamp for session name
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-SESSION_NAME=${2:-kiro-proposal-session_${TIMESTAMP}.json}
+SESSION_NAME=${SESSION_NAME:-kiro-proposal-session_${TIMESTAMP}.json}
 
 # Resolve absolute paths
 # If workdir is relative, resolve from current directory; if absolute, use as-is
@@ -26,7 +117,15 @@ else
   WORKDIR_ABS=$(realpath "$WORKDIR")
 fi
 
-POWER_MD="$REPO_ROOT/powers/openspec-propose/POWER.md"
+# Select power file based on mode
+if [ "$MULTI_SPEC_DELTAS" = true ]; then
+  POWER_MD="$REPO_ROOT/powers/openspec-propose-multiple-spec-deltas/POWER.md"
+  MODE_DESC="multi-spec-deltas (complex devices)"
+else
+  POWER_MD="$REPO_ROOT/powers/openspec-propose/POWER.md"
+  MODE_DESC="simple (standard proposals)"
+fi
+
 VIEW_SCRIPT="$REPO_ROOT/view_kiro_session.py"
 
 # Check if workdir exists
@@ -76,6 +175,7 @@ echo "================================"
 echo "🚀 Running Kiro CLI Proposal"
 echo "================================"
 echo "Working Directory: $WORKDIR_ABS"
+echo "Mode: $MODE_DESC"
 echo "Power File: $POWER_MD"
 echo "Session Name: $SESSION_NAME"
 echo ""
@@ -90,8 +190,14 @@ mkdir -p "$KIRO_DIR"
 echo "📁 Session directory: $KIRO_DIR"
 echo ""
 
-# Construct the prompt
-PROMPT="Read $POWER_MD and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
+# Construct the prompt based on mode
+if [ "$MULTI_SPEC_DELTAS" = true ]; then
+  # Complex prompt for multi-spec-deltas devices
+  PROMPT="Read $POWER_MD and propose to model a complex watchdog timer device for Simics platform simulation by following the instructions in POWER.md. This is a complex device with 50+ requirements that should be decomposed into multiple capabilities with separate spec deltas."
+else
+  # Simple prompt for standard proposals (from main branch)
+  PROMPT="Read $POWER_MD and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
+fi
 
 echo "📝 Prompt:"
 echo "$PROMPT"
