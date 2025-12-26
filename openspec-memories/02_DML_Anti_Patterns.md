@@ -133,7 +133,7 @@ If you see ANY of these patterns in init()/post_init(), it's WRONG:
 
 ```dml
 // ❌ INCOMPLETE - Has lazy evaluation but NO event mechanism:
-register WDOGVALUE {
+register VALUE_REG {
     method read_register() -> (uint64) {
         // ✅ Good: Lazy evaluation calculates current counter value
         local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
@@ -223,9 +223,105 @@ register CONTROL {
 
 ---
 
+## CRITICAL Anti-Pattern 4: Incorrect cast() Syntax
+
+### The Problem
+
+**CRITICAL MISTAKE: cast() arguments in wrong order**
+
+```dml
+// ❌ WRONG - Type first, value second (common mistake):
+register LOAD_REG {
+    method write_register(uint64 val, uint64 enabled_bytes, void *aux) {
+        default(val, enabled_bytes, aux);
+        last_counter_value = cast(uint32, val);  // ❌ WRONG! Causes "unknown identifier" error
+    }
+}
+
+register VALUE_REG {
+    method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+        return cast(uint64, last_counter_value);  // ❌ WRONG! Causes "unknown identifier" error
+    }
+}
+```
+
+### Compilation Error
+
+```
+error: unknown identifier: 'uint32'
+error: unknown identifier: 'uint64'
+error: missing return statement in method with output argument
+```
+
+### Why This FAILS
+
+The DML `cast()` function expects: **cast(value, type)** - value FIRST, type SECOND
+
+The error message "unknown identifier: 'uint32'" occurs because DML interprets the type as a variable name when it's in the first position.
+
+### The CORRECT Syntax
+
+```dml
+// ✅ CORRECT - Value first, type second:
+register LOAD_REG {
+    method write_register(uint64 val, uint64 enabled_bytes, void *aux) {
+        default(val, enabled_bytes, aux);
+        last_counter_value = cast(val, uint32);  // ✅ CORRECT! Value first, type second
+    }
+}
+
+register VALUE_REG {
+    method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
+        return cast(last_counter_value, uint64);  // ✅ CORRECT! Value first, type second
+    }
+}
+```
+
+### DML cast() Signature
+
+```dml
+// Correct syntax:
+cast(expression, target_type)
+//   ^^^^^^^^^^  ^^^^^^^^^^^
+//   VALUE       TYPE
+//   (first)     (second)
+
+// Common examples:
+local uint32 small = cast(large_value, uint32);
+local uint64 big = cast(small_value, uint64);
+local cycles_t cycles = cast(count, cycles_t);
+```
+
+### Detection Rules
+
+- ❌ **WRONG:** `cast(uint32, value)` - Type first
+- ❌ **WRONG:** `cast(uint64, value)` - Type first
+- ❌ **WRONG:** `cast(int, value)` - Type first
+- ✅ **CORRECT:** `cast(value, uint32)` - Value first
+- ✅ **CORRECT:** `cast(value, uint64)` - Value first
+- ✅ **CORRECT:** `cast(value, int)` - Value first
+
+### Best Practice: When Unsure About DML Library Methods
+
+**If you don't know the correct syntax for a DML library method:**
+
+1. **Use MCP RAG tool** to search for examples:
+   ```
+   perform_rag_query("DML cast function syntax example")
+   perform_rag_query("how to use cast in DML")
+   perform_rag_query("DML type conversion")
+   ```
+
+2. **Search in existing DML code** for working examples
+3. **Check DML documentation** for the correct function signature
+
+**Never guess the syntax** - incorrect DML library method calls cause cryptic compilation errors that are hard to debug.
+
+---
+
 ## Additional Anti-Patterns
 
-### Anti-Pattern 4: Updating Counters Every Cycle
+### Anti-Pattern 5: Updating Counters Every Cycle
 
 ```dml
 // ❌ DON'T: Update counters every cycle
@@ -248,7 +344,7 @@ register counter {
 }
 ```
 
-### Anti-Pattern 5: Using `after` with Stack-Allocated Data
+### Anti-Pattern 6: Using `after` with Stack-Allocated Data
 
 ```dml
 // ❌ DON'T: Use after with stack-allocated data
@@ -266,7 +362,7 @@ method safe_after() {
 }
 ```
 
-### Anti-Pattern 6: Forgetting to Cancel Events
+### Anti-Pattern 7: Forgetting to Cancel Events
 
 ```dml
 // ❌ DON'T: Post events without canceling previous ones
@@ -282,7 +378,7 @@ method start_timer() {
 }
 ```
 
-### Anti-Pattern 7: Mixing Time Units
+### Anti-Pattern 8: Mixing Time Units
 
 ```dml
 // ❌ DON'T: Mix time units without explicit conversion
@@ -298,7 +394,7 @@ method cycles_to_seconds(cycles_t cycles) -> (double) {
 local double result = cycles_to_seconds(cycles) + seconds;  // ✅ Proper conversion
 ```
 
-### Anti-Pattern 8: Checkpointing Calculated Values
+### Anti-Pattern 9: Checkpointing Calculated Values
 
 ```dml
 // ❌ DON'T: Checkpoint calculated values
@@ -332,14 +428,16 @@ register counter {
 1. **NEVER** model clock signals or update counters every cycle
 2. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
 3. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
-4. **ALWAYS** cancel pending events before posting new ones
-5. **ALWAYS** use explicit time unit conversions
-6. **ALWAYS** checkpoint base values, not calculated values
-7. **NEVER** use `after` with stack-allocated data
-8. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
+4. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
+5. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
+6. **ALWAYS** cancel pending events before posting new ones
+7. **ALWAYS** use explicit time unit conversions
+8. **ALWAYS** checkpoint base values, not calculated values
+9. **NEVER** use `after` with stack-allocated data
+10. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
 
 ---
 
 **Document Status**: ✅ Complete  
 **Extracted From**: DML_Best_Practices.md  
-**Last Updated**: December 11, 2025
+**Last Updated**: December 25, 2025
