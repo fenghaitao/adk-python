@@ -12,12 +12,13 @@ This document consolidates common anti-patterns and mistakes in Simics device mo
 ## Table of Contents
 
 1. [Test Structure Anti-Patterns](#test-structure-anti-patterns)
-2. [Register Access Anti-Patterns](#register-access-anti-patterns)
-3. [Timing Anti-Patterns](#timing-anti-patterns)
-4. [Fake Object Anti-Patterns](#fake-object-anti-patterns)
-5. [Configuration Anti-Patterns](#configuration-anti-patterns)
-6. [Test Location Anti-Patterns](#test-location-anti-patterns)
-7. [DMA and Memory Anti-Patterns](#dma-and-memory-anti-patterns)
+2. [Attribute Access Anti-Patterns](#attribute-access-anti-patterns)
+3. [Register Access Anti-Patterns](#register-access-anti-patterns)
+4. [Timing Anti-Patterns](#timing-anti-patterns)
+5. [Fake Object Anti-Patterns](#fake-object-anti-patterns)
+6. [Configuration Anti-Patterns](#configuration-anti-patterns)
+7. [Test Location Anti-Patterns](#test-location-anti-patterns)
+8. [DMA and Memory Anti-Patterns](#dma-and-memory-anti-patterns)
 
 ---
 
@@ -86,6 +87,53 @@ test_advanced_operations()
 ```
 
 **Why it's wrong:** Multiple test functions calling `create_config()` create duplicate object names in the same Simics session, causing "Duplicate object name" errors. Each test should be in its own file with its own configuration.
+
+---
+
+## Attribute Access Anti-Patterns
+
+**Reference:** [04_Test_Fake_Objects_Mocking](04_Test_Fake_Objects_Mocking.md)
+
+### ❌ Incorrect Attribute Access for conf_object and pyobj
+
+```python
+# ❌ WRONG - using .val outside pyobj class
+fake_pic = simics.pre_conf_object('fake_pic', 'FakePic')
+simics.SIM_add_configuration([fake_pic], None)
+signal_raised_cnt = conf.fake_pic.raised.val  # ❌ Wrong!
+stest.expect_equal(signal_raised_cnt, 0)
+
+# ✅ CORRECT - no .val outside pyobj class
+fake_pic = simics.pre_conf_object('fake_pic', 'FakePic')
+simics.SIM_add_configuration([fake_pic], None)
+signal_raised_cnt = conf.fake_pic.raised  # ✅ Direct access
+stest.expect_equal(signal_raised_cnt, 0)
+
+# ❌ WRONG - missing .val inside pyobj class
+class FakePic(pyobj.ConfObject):
+    class raised(pyobj.SimpleAttribute(0, 'i')): pass
+    
+    class signal(pyobj.Interface):
+        def signal_raise(self):
+            self._up.raised += 1  # ❌ Wrong! Need .val
+
+# ✅ CORRECT - use .val inside pyobj class
+class FakePic(pyobj.ConfObject):
+    class raised(pyobj.SimpleAttribute(0, 'i')): pass
+    
+    class signal(pyobj.Interface):
+        def signal_raise(self):
+            self._up.raised.val += 1  # ✅ Use .val
+            
+        def signal_lower(self):
+            self._up.raised.val -= 1  # ✅ Use .val
+```
+
+**Why it's wrong:** Attribute access rules differ by context:
+- **Outside pyobj class** (in test code): Access `conf_object.attribute` directly without `.val`
+- **Inside pyobj class** (class methods): Access `self._up.attribute.val` with `.val` suffix
+
+This distinction is critical - mixing them causes AttributeError or incorrect behavior.
 
 ---
 
@@ -343,12 +391,12 @@ result = mem.read(dst_addr, size)
 
 1. ❌ **Multiple test functions per file**: One test per file to avoid "Duplicate object name" errors
 2. ❌ **Uncalled test functions**: If you define test functions, call them!
-3. ❌ **Wrong directory name**: Use `simics-project/` not `simics_project/`
-4. ❌ **Late attribute configuration**: Set attributes BEFORE `SIM_add_configuration()`
-5. ❌ **Missing .bank. namespace**: Always use `device.bank.<bank_name>`
-6. ❌ **No dev_util.bank_regs() wrapper**: Always wrap banks for register access
-7. ❌ **Returning pre-conf objects**: Return `conf.<name>` from `create_config()`
-8. ❌ **Guessing bank names**: Read DML for exact names, don't scan
+3. ❌ **Wrong .val usage**: Use `.val` inside pyobj class methods, NOT outside in test code
+4. ❌ **Missing .bank. namespace**: Always use `device.bank.<bank_name>`
+5. ❌ **No dev_util.bank_regs() wrapper**: Always wrap banks for register access
+6. ❌ **Wrong directory name**: Use `simics-project/` not `simics_project/`
+7. ❌ **Late attribute configuration**: Set attributes BEFORE `SIM_add_configuration()`
+8. ❌ **Returning pre-conf objects**: Return `conf.<name>` from `create_config()`
 9. ❌ **Missing fake objects**: Create fakes for ALL DML connect blocks
 10. ❌ **Not waiting for async**: Use `SIM_continue()` for DMA, timers, events
 
