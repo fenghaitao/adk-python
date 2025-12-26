@@ -220,50 +220,45 @@ fi
 
 # Step 3: Create .github directory and setup agent files
 mkdir -p log
-if [ "$SKIP_INIT" = false ]; then
-    echo -e "${BLUE}Step 3: Setting up GitHub Copilot agents...${NC}"
-    mkdir -p .github/agents
-    
-    # Create openspec_proposal.agent.md
-    cat > .github/agents/openspec_proposal.agent.md << 'EOF'
+echo -e "${BLUE}Step 3: Setting up GitHub Copilot agents...${NC}"
+mkdir -p .github/agents
+
+# Create openspec_proposal.agent.md
+cat > .github/agents/openspec_proposal.agent.md << 'EOF'
 ---
 name: OpenSpec-Proposal-Initial
 description: Create OpenSpec proposals for Simics device INITIAL implementations.
 ---
 
 EOF
-    cat "$SCRIPT_DIR/../contributing/samples/openspec_integration/proposal_initial_agent_instruction.md" >> .github/agents/openspec_proposal.agent.md
-    
-    # Create openspec_apply.agent.md
-    cat > .github/agents/openspec_apply.agent.md << 'EOF'
+cat "$SCRIPT_DIR/../contributing/samples/openspec_integration/proposal_initial_agent_instruction.md" >> .github/agents/openspec_proposal.agent.md
+
+# Create openspec_apply.agent.md
+cat > .github/agents/openspec_apply.agent.md << 'EOF'
 ---
 name: OpenSpec-Apply
 description: Execute OpenSpec Apply phase - implement Simics device DML code and tests from approved proposals
 ---
 
 EOF
-    cat "$SCRIPT_DIR/../contributing/samples/openspec_integration/apply_agent_instruction.md" >> .github/agents/openspec_apply.agent.md
-    
-    # Copy simics_project_setup.agent.md
-    cp "$SCRIPT_DIR/../openspec-copilot/agents/simics_project_setup.agent.md" .github/agents/
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to copy simics_project_setup.agent.md${NC}"
-        exit 1
-    fi
-    
-    # Copy specify.agent.md
-    cp "$SCRIPT_DIR/../openspec-copilot/agents/specify.agent.md" .github/agents/
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Failed to copy specify.agent.md${NC}"
-        exit 1
-    fi
-   
-    echo -e "${GREEN}✅ Copilot agent files created in .github/agents/${NC}"
-    echo ""
-else
-    echo -e "${YELLOW}⏭️  Skipping Step 3: GitHub Copilot agents setup${NC}"
-    echo ""
+cat "$SCRIPT_DIR/../contributing/samples/openspec_integration/apply_agent_instruction.md" >> .github/agents/openspec_apply.agent.md
+
+# Copy simics_project_setup.agent.md
+cp "$SCRIPT_DIR/../openspec-copilot/agents/simics_project_setup.agent.md" .github/agents/
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to copy simics_project_setup.agent.md${NC}"
+    exit 1
 fi
+
+# Copy specify.agent.md
+cp "$SCRIPT_DIR/../openspec-copilot/agents/specify.agent.md" .github/agents/
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to copy specify.agent.md${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Copilot agent files created in .github/agents/${NC}"
+echo ""
 
 # Step 4: Configure Copilot MCP server settings
 echo -e "${BLUE}Step 4: Configuring Copilot MCP server settings...${NC}"
