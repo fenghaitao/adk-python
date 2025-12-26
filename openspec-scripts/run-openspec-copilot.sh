@@ -6,13 +6,15 @@ set -e
 # Usage: ./run-openspec-copilot.sh <workdir> <mcp_port> [OPTIONS]
 # Example: ./run-openspec-copilot.sh myproject 8051
 # Example: ./run-openspec-copilot.sh myproject 8051 --skip-init
-# Example: ./run-openspec-copilot.sh myproject 8051 --skip-specify
 # Example: ./run-openspec-copilot.sh myproject 8051 --skip-proposal
+# Example: ./run-openspec-copilot.sh myproject 8051 --skip-apply
+# Example: ./run-openspec-copilot.sh myproject 8051 --init-only
 #
 # Options:
-#   --skip-init      Skip steps 1-4 (initialization and setup)
-#   --skip-specify   Skip steps 1-5 (init, setup, and specify agent)
-#   --skip-proposal  Skip steps 1-6 (init, setup, specify, and proposal agent)
+#   --skip-init      Skip steps 1, 2, 5, 6, 7, 8 (initialization and setup)
+#   --skip-proposal  Skip steps 1, 2, 5, 6, 7, 8, 9 (init + proposal)
+#   --skip-apply     Skip steps 1, 2, 5, 6, 7, 8, 10 (init + apply)
+#   --init-only      Run only steps 1-8 (initialization only, skip proposal and apply)
 
 # Colors for output
 RED='\033[0;31m'
@@ -36,9 +38,10 @@ if [ "$#" -lt 2 ]; then
     echo "Example: $0 myproject 8051 --skip-init"
     echo ""
     echo "Options:"
-    echo "  --skip-init      Skip steps 1-4 (initialization and setup)"
-    echo "  --skip-specify   Skip steps 1-5 (init, setup, and specify agent)"
-    echo "  --skip-proposal  Skip steps 1-6 (init, setup, specify, and proposal agent)"
+    echo "  --skip-init      Skip steps 1, 2, 5, 6, 7, 8 (initialization and setup)"
+    echo "  --skip-proposal  Skip steps 1, 2, 5, 6, 7, 8, 9 (init + proposal)"
+    echo "  --skip-apply     Skip steps 1, 2, 5, 6, 7, 8, 10 (init + apply)"
+    echo "  --init-only      Run only steps 1-8 (initialization only, skip proposal and apply)"
     exit 1
 fi
 
@@ -47,8 +50,9 @@ MCP_PORT="$2"
 DEVICE_NAME="wdt"
 BUILTIN_MCP="${BUILTIN_MCP_SERVER:-no}"
 SKIP_INIT=false
-SKIP_SPECIFY=false
 SKIP_PROPOSAL=false
+SKIP_APPLY=false
+INIT_ONLY=false
 
 # Parse optional arguments
 shift 2
@@ -58,15 +62,18 @@ while [[ $# -gt 0 ]]; do
             SKIP_INIT=true
             shift
             ;;
-        --skip-specify)
-            SKIP_SPECIFY=true
+        --skip-proposal)
             SKIP_INIT=true
+            SKIP_PROPOSAL=true
             shift
             ;;
-        --skip-proposal)
-            SKIP_PROPOSAL=true
-            SKIP_SPECIFY=true
+        --skip-apply)
             SKIP_INIT=true
+            SKIP_APPLY=true
+            shift
+            ;;
+        --init-only)
+            INIT_ONLY=true
             shift
             ;;
         *)
@@ -75,6 +82,14 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Validate --init-only parameter
+if [ "$INIT_ONLY" = true ]; then
+    if [ "$SKIP_INIT" = true ] || [ "$SKIP_PROPOSAL" = true ] || [ "$SKIP_APPLY" = true ]; then
+        echo -e "${RED}Error: --init-only cannot be used with --skip-init, --skip-proposal, or --skip-apply${NC}"
+        exit 1
+    fi
+fi
 
 # Track whether MCP servers were started
 MCP_SERVERS_STARTED=false
@@ -138,13 +153,16 @@ echo "Working directory: $WORKDIR"
 echo "MCP Port: $MCP_PORT"
 echo "Device Name: $DEVICE_NAME"
 if [ "$SKIP_INIT" = true ]; then
-    echo "Skip Mode: Initialization (steps 1-4)"
-fi
-if [ "$SKIP_SPECIFY" = true ]; then
-    echo "Skip Mode: Specify agent (step 5)"
+    echo "Skip Mode: Initialization (steps 1, 2, 5, 6, 7, 8)"
 fi
 if [ "$SKIP_PROPOSAL" = true ]; then
-    echo "Skip Mode: Proposal agent (step 6)"
+    echo "Skip Mode: Proposal agent (step 9)"
+fi
+if [ "$SKIP_APPLY" = true ]; then
+    echo "Skip Mode: Apply agent (step 10)"
+fi
+if [ "$INIT_ONLY" = true ]; then
+    echo "Init Only Mode: Running steps 1-8 only"
 fi
 echo ""
 
@@ -247,8 +265,8 @@ else
     echo ""
 fi
 
-# Step 3.5: Configure Copilot MCP server settings
-echo -e "${BLUE}Step 3.5: Configuring Copilot MCP server settings...${NC}"
+# Step 4: Configure Copilot MCP server settings
+echo -e "${BLUE}Step 4: Configuring Copilot MCP server settings...${NC}"
 MCP_CONFIG_FILE="$HOME/.copilot/mcp-config.json"
 
 # Create config directory if it doesn't exist
@@ -332,9 +350,9 @@ EOF
 fi
 echo ""
 
-# Step 4: Copy specification files
+# Step 5: Copy specification files
 if [ "$SKIP_INIT" = false ]; then
-    echo -e "${BLUE}Step 4: Copying specification files...${NC}"
+    echo -e "${BLUE}Step 5: Copying specification files...${NC}"
     cp "$SCRIPT_DIR/../simics-wdt-spec.md" .
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to copy simics-wdt-spec.md${NC}"
@@ -355,13 +373,13 @@ if [ "$SKIP_INIT" = false ]; then
     echo -e "${GREEN}✅ Specification files copied${NC}"
     echo ""
 else
-    echo -e "${YELLOW}⏭️  Skipping Step 4: Copying specification files${NC}"
+    echo -e "${YELLOW}⏭️  Skipping Step 5: Copying specification files${NC}"
     echo ""
 fi
 
-# Step 5: Run Specify agent
-if [ "$SKIP_SPECIFY" = false ]; then
-    echo -e "${BLUE}Step 5: Running Specify agent (IP-XACT generation)...${NC}"
+# Step 6: Run Specify agent
+if [ "$SKIP_INIT" = false ]; then
+    echo -e "${BLUE}Step 6: Running Specify agent (IP-XACT generation)...${NC}"
     SPECIFY_PROMPT="/specify Read the Simics WDT specification from ./simics-wdt-spec.md and the hardware specifications from ./wdt.md to create a comprehensive Simics ${DEVICE_NAME} device implementation."
 
     echo "   Prompt: $SPECIFY_PROMPT"
@@ -373,13 +391,60 @@ if [ "$SKIP_SPECIFY" = false ]; then
     fi
     echo ""
 else
-    echo -e "${YELLOW}⏭️  Skipping Step 5: Specify agent${NC}"
+    echo -e "${YELLOW}⏭️  Skipping Step 6: Specify agent${NC}"
     echo ""
 fi
 
-# Step 6: Run OpenSpec Proposal agent
-if [ "$SKIP_PROPOSAL" = false ]; then
-    echo -e "${BLUE}Step 6: Running OpenSpec Proposal agent...${NC}"
+# Step 7: Fill project.md
+if [ "$SKIP_INIT" = false ]; then
+    echo -e "${BLUE}Step 7: Filling openspec/project.md...${NC}"
+    PROJECT_PROMPT="Read current project to fill \`openspec/project.md\`"
+
+    echo "   Prompt: $PROJECT_PROMPT"
+    if copilot --allow-all-tools -p "$PROJECT_PROMPT"; then
+        echo -e "${GREEN}✅ Project.md filled successfully${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Project.md filling completed with warnings${NC}"
+    fi
+    echo ""
+else
+    echo -e "${YELLOW}⏭️  Skipping Step 7: Fill project.md${NC}"
+    echo ""
+fi
+
+# Step 8: Run Simics Project Setup agent
+if [ "$SKIP_INIT" = false ]; then
+    echo -e "${BLUE}Step 8: Setting up Simics project...${NC}"
+    SIMICS_SETUP_PROMPT="setup simics-project for device wdt"
+
+    echo "   Prompt: $SIMICS_SETUP_PROMPT"
+    if copilot --allow-all-tools --agent simics_project_setup -p "$SIMICS_SETUP_PROMPT"; then
+        echo -e "${GREEN}✅ Simics project setup completed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Simics project setup completed with warnings${NC}"
+    fi
+    echo ""
+else
+    echo -e "${YELLOW}⏭️  Skipping Step 8: Simics project setup${NC}"
+    echo ""
+fi
+
+# Commit changes after project initialization
+if [ "$SKIP_INIT" = false ]; then
+    echo -e "${BLUE}Committing project initialization changes...${NC}"
+    git add .
+    git commit -m "Project Initialization done"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Changes committed successfully${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Git commit completed with warnings (possibly no changes to commit)${NC}"
+    fi
+    echo ""
+fi
+
+# Step 9: Run OpenSpec Proposal agent
+if [ "$SKIP_PROPOSAL" = false ] && [ "$INIT_ONLY" = false ]; then
+    echo -e "${BLUE}Step 9: Running OpenSpec Proposal agent...${NC}"
     PROPOSAL_PROMPT="/proposal proposal capabilities to implement simics watchdog timer device and tests based on spec.md in specs/"
 
     echo "   Prompt: $PROPOSAL_PROMPT"
@@ -391,72 +456,64 @@ if [ "$SKIP_PROPOSAL" = false ]; then
     fi
     echo ""
 else
-    echo -e "${YELLOW}⏭️  Skipping Step 6: Proposal agent${NC}"
+    echo -e "${YELLOW}⏭️  Skipping Step 9: Proposal agent${NC}"
     echo ""
 fi
 
-# Step 7: Run Simics Project Setup agent
-echo -e "${BLUE}Step 7: Setting up Simics project...${NC}"
-SIMICS_SETUP_PROMPT="setup simics-project for device wdt"
-
-echo "   Prompt: $SIMICS_SETUP_PROMPT"
-if copilot --allow-all-tools --agent simics_project_setup -p "$SIMICS_SETUP_PROMPT"; then
-    echo -e "${GREEN}✅ Simics project setup completed${NC}"
-else
-    echo -e "${YELLOW}⚠️  Simics project setup completed with warnings${NC}"
-fi
-echo ""
-
-# Step 8: List OpenSpec changes and extract capability names
-echo -e "${BLUE}Step 8: Listing OpenSpec changes...${NC}"
-OPENSPEC_LIST_OUTPUT=$(openspec list 2>&1)
-echo "$OPENSPEC_LIST_OUTPUT"
-echo ""
-
-# Step 9: Apply each capability
-echo -e "${BLUE}Step 9: Preparing to run OpenSpec Apply agent for each capability...${NC}"
-
-# Parse capability names from openspec list output
-# Look for pattern: "capability-name" followed by task count
-# Example: "implement-watchdog-timer 0/39 tasks" or "001_add-wdt-registers 0/28 tasks"
-CAPABILITY_NAMES=$(echo "$OPENSPEC_LIST_OUTPUT" | grep -oE '([0-9]{3}_)?[a-zA-Z0-9_-]+\s+[0-9]+/[0-9]+\s+tasks' | grep -oE '^([0-9]{3}_)?[a-zA-Z0-9_-]+' | sort -u)
-
-# Debug: Show what was parsed
-if [ -n "$CAPABILITY_NAMES" ]; then
-    echo -e "${BLUE}Parsed capability names:${NC}"
-    echo "$CAPABILITY_NAMES"
+# Step 10: List OpenSpec changes and apply each capability
+if [ "$SKIP_APPLY" = false ] && [ "$INIT_ONLY" = false ]; then
+    echo -e "${BLUE}Step 10: Listing OpenSpec changes and applying capabilities...${NC}"
+    OPENSPEC_LIST_OUTPUT=$(openspec list 2>&1)
+    echo "$OPENSPEC_LIST_OUTPUT"
     echo ""
-fi
 
-if [ -z "$CAPABILITY_NAMES" ]; then
-    echo -e "${YELLOW}⚠️  No capabilities found in openspec list output${NC}"
-    echo -e "${YELLOW}   This is expected when --skip-proposal is used${NC}"
-    echo -e "${YELLOW}   Skipping apply step${NC}"
-    echo ""
-else
-    # Count capabilities
-    CAPABILITY_COUNT=$(echo "$CAPABILITY_NAMES" | wc -l)
-    echo -e "${GREEN}✅ Found $CAPABILITY_COUNT capability(ies) to apply${NC}"
-    echo ""
-    
-    CAPABILITY_INDEX=1
-    
-    while IFS= read -r CAPABILITY_NAME; do
-        if [ -n "$CAPABILITY_NAME" ]; then
-            echo -e "${BLUE}[$CAPABILITY_INDEX/$CAPABILITY_COUNT] Applying capability: $CAPABILITY_NAME${NC}"
-            APPLY_PROMPT="/apply --id $CAPABILITY_NAME"
-            
-            echo "   Prompt: $APPLY_PROMPT"
-            if copilot --allow-all-tools --agent openspec_apply --log-dir ./log --log-level debug -p "$APPLY_PROMPT"; then
-                echo -e "${GREEN}✅ Apply completed for $CAPABILITY_NAME${NC}"
-            else
-                echo -e "${YELLOW}⚠️  Apply completed with warnings for $CAPABILITY_NAME${NC}"
+    echo -e "${BLUE}Preparing to run OpenSpec Apply agent for each capability...${NC}"
+
+    # Parse capability names from openspec list output
+    # Look for pattern: "capability-name" followed by task count
+    # Example: "implement-watchdog-timer 0/39 tasks" or "001_add-wdt-registers 0/28 tasks"
+    CAPABILITY_NAMES=$(echo "$OPENSPEC_LIST_OUTPUT" | grep -oE '([0-9]{3}_)?[a-zA-Z0-9_-]+\s+[0-9]+/[0-9]+\s+tasks' | grep -oE '^([0-9]{3}_)?[a-zA-Z0-9_-]+' | sort -u)
+
+    # Debug: Show what was parsed
+    if [ -n "$CAPABILITY_NAMES" ]; then
+        echo -e "${BLUE}Parsed capability names:${NC}"
+        echo "$CAPABILITY_NAMES"
+        echo ""
+    fi
+
+    if [ -z "$CAPABILITY_NAMES" ]; then
+        echo -e "${YELLOW}⚠️  No capabilities found in openspec list output${NC}"
+        echo -e "${YELLOW}   This is expected when --skip-proposal is used${NC}"
+        echo -e "${YELLOW}   Skipping apply step${NC}"
+        echo ""
+    else
+        # Count capabilities
+        CAPABILITY_COUNT=$(echo "$CAPABILITY_NAMES" | wc -l)
+        echo -e "${GREEN}✅ Found $CAPABILITY_COUNT capability(ies) to apply${NC}"
+        echo ""
+        
+        CAPABILITY_INDEX=1
+        
+        while IFS= read -r CAPABILITY_NAME; do
+            if [ -n "$CAPABILITY_NAME" ]; then
+                echo -e "${BLUE}[$CAPABILITY_INDEX/$CAPABILITY_COUNT] Applying capability: $CAPABILITY_NAME${NC}"
+                APPLY_PROMPT="/apply --id $CAPABILITY_NAME"
+                
+                echo "   Prompt: $APPLY_PROMPT"
+                if copilot --allow-all-tools --agent openspec_apply --log-dir ./log --log-level debug -p "$APPLY_PROMPT"; then
+                    echo -e "${GREEN}✅ Apply completed for $CAPABILITY_NAME${NC}"
+                else
+                    echo -e "${YELLOW}⚠️  Apply completed with warnings for $CAPABILITY_NAME${NC}"
+                fi
+                echo ""
+                
+                CAPABILITY_INDEX=$((CAPABILITY_INDEX + 1))
             fi
-            echo ""
-            
-            CAPABILITY_INDEX=$((CAPABILITY_INDEX + 1))
-        fi
-    done <<< "$CAPABILITY_NAMES"
+        done <<< "$CAPABILITY_NAMES"
+    fi
+else
+    echo -e "${YELLOW}⏭️  Skipping Step 10: Apply capabilities${NC}"
+    echo ""
 fi
 
 echo -e "${GREEN}============================================${NC}"
@@ -467,24 +524,25 @@ echo "Summary:"
 if [ "$SKIP_INIT" = false ]; then
     echo "  • Spec-Kit project initialized"
     echo "  • OpenSpec project initialized"
-    echo "  • Copilot agents configured"
     echo "  • Specification files copied"
-fi
-if [ "$SKIP_SPECIFY" = false ]; then
     echo "  • Specify agent executed (IP-XACT generation)"
+    echo "  • Project.md filled"
+    echo "  • Simics project setup completed"
 fi
 if [ "$SKIP_PROPOSAL" = false ]; then
     echo "  • Proposal agent executed"
 fi
-echo "  • Simics project setup completed"
-if [ -n "$CAPABILITY_NAMES" ]; then
-    echo "  • Apply agent executed for $CAPABILITY_COUNT capability(ies)"
-else
-    echo "  • No capabilities found to apply"
+echo "  • Copilot agents configured"
+if [ "$SKIP_APPLY" = false ] && [ "$INIT_ONLY" = false ]; then
+    if [ -n "$CAPABILITY_NAMES" ]; then
+        echo "  • Apply agent executed for $CAPABILITY_COUNT capability(ies)"
+    else
+        echo "  • No capabilities found to apply"
+    fi
 fi
 echo ""
 echo "Next steps:"
-if [ -z "$CAPABILITY_NAMES" ]; then
+if [ "$SKIP_APPLY" = true ] || [ "$INIT_ONLY" = true ] || [ -z "$CAPABILITY_NAMES" ]; then
     echo "  1. Create a proposal: copilot --allow-all-tools --agent openspec_proposal -p '/proposal ...'"
     echo "  2. Then run this script again with --skip-proposal to apply changes"
 else
