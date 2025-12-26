@@ -64,7 +64,104 @@ If you see ANY of these patterns, it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 2: Calling SIM_cycle_count/SIM_time in init() or post_init()
+## CRITICAL Anti-Pattern 2: Calling Interface Methods on Connect Objects in init() or post_init()
+
+### The Problem
+
+**NEVER call interface methods on connect objects in device initialization methods.**
+
+```dml
+// ❌ FORBIDDEN - Calling interface methods in init():
+connect interrupt_out {
+    interface signal;
+}
+
+connect reset_out {
+    interface signal;
+}
+
+method init() {
+    load_value = 0xffffffff;
+    control_value = 0;
+    
+    // ❌ WRONG! Causes segmentation fault
+    interrupt_out.signal.signal_lower();
+    reset_out.signal.signal_lower();
+}
+
+method post_init() {
+    // ❌ WRONG! Connections not established yet
+    interrupt_out.signal.signal_lower();
+}
+```
+
+### Runtime Error
+
+```
+Segmentation fault (SIGSEGV) in main thread
+#0  in _DML_M_init
+The simulation state has been corrupted. Simulation cannot continue.
+```
+
+### Why This CAUSES SEGFAULT
+
+1. **Connection Timing**: Connect objects are wired up AFTER `init()` and `post_init()` complete
+2. **Null Reference**: Interface methods are called on uninitialized/null connect objects
+3. **Default State**: All Simics signals are created in the LOWERED state by default - no initialization needed
+4. **Crash Risk**: Calling interface methods before connections are established causes immediate segmentation fault
+
+### The CORRECT Alternative - No Manual Signal Initialization Needed
+
+```dml
+// ✅ CORRECT - Don't initialize signals in init()
+connect interrupt_out {
+    interface signal;
+}
+
+connect reset_out {
+    interface signal;
+}
+
+method init() {
+    load_value = 0xffffffff;
+    control_value = 0;
+    // ✅ Do NOT call signal_lower() - signals default to low
+}
+
+// ✅ CORRECT - Drive signals during runtime, not init
+register CONTROL {
+    method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
+        default(value, enabled_bytes, aux);
+        
+        if (enable_bit.val) {
+            interrupt_out.signal.signal_raise();  // ✅ OK at runtime
+        } else {
+            interrupt_out.signal.signal_lower();  // ✅ OK at runtime
+        }
+    }
+}
+```
+
+### Key Facts About Simics Signals
+
+1. **Default State**: All signals are created in the LOWERED state automatically
+2. **No Init Needed**: Never need to call `signal_lower()` in `init()` or `post_init()`
+3. **Runtime Only**: Only call interface methods during normal device operation (register access, events, etc.)
+4. **Connection Order**: Connections are established by test configuration AFTER device initialization
+
+### Detection Rules
+
+If you see ANY of these patterns in init()/post_init(), it's WRONG and will SEGFAULT:
+- Calling `.signal.signal_raise()` in `method init()` or `method post_init()`
+- Calling `.signal.signal_lower()` in `method init()` or `method post_init()`
+- Calling ANY interface method on ANY connect object in initialization methods
+- Trying to "initialize" signal states in `init()` or `post_init()`
+
+**Correct Pattern**: Only call interface methods during runtime (register access, event handlers, etc.), NEVER in init().
+
+---
+
+## CRITICAL Anti-Pattern 3: Calling SIM_cycle_count/SIM_time in init() or post_init()
 
 ### The Problem
 
@@ -125,7 +222,7 @@ If you see ANY of these patterns in init()/post_init(), it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 3: Incomplete Timer/Counter Implementation
+## CRITICAL Anti-Pattern 4: Incomplete Timer/Counter Implementation
 
 ### The Problem
 
@@ -223,7 +320,7 @@ register CONTROL {
 
 ---
 
-## CRITICAL Anti-Pattern 4: Incorrect cast() Syntax
+## CRITICAL Anti-Pattern 5: Incorrect cast() Syntax
 
 ### The Problem
 
@@ -321,7 +418,7 @@ local cycles_t cycles = cast(count, cycles_t);
 
 ## Additional Anti-Patterns
 
-### Anti-Pattern 5: Updating Counters Every Cycle
+### Anti-Pattern 6: Updating Counters Every Cycle
 
 ```dml
 // ❌ DON'T: Update counters every cycle
@@ -344,7 +441,7 @@ register counter {
 }
 ```
 
-### Anti-Pattern 6: Using `after` with Stack-Allocated Data
+### Anti-Pattern 7: Using `after` with Stack-Allocated Data
 
 ```dml
 // ❌ DON'T: Use after with stack-allocated data
@@ -362,7 +459,7 @@ method safe_after() {
 }
 ```
 
-### Anti-Pattern 7: Forgetting to Cancel Events
+### Anti-Pattern 8: Forgetting to Cancel Events
 
 ```dml
 // ❌ DON'T: Post events without canceling previous ones
@@ -378,7 +475,7 @@ method start_timer() {
 }
 ```
 
-### Anti-Pattern 8: Mixing Time Units
+### Anti-Pattern 9: Mixing Time Units
 
 ```dml
 // ❌ DON'T: Mix time units without explicit conversion
@@ -394,7 +491,7 @@ method cycles_to_seconds(cycles_t cycles) -> (double) {
 local double result = cycles_to_seconds(cycles) + seconds;  // ✅ Proper conversion
 ```
 
-### Anti-Pattern 9: Checkpointing Calculated Values
+### Anti-Pattern 10: Checkpointing Calculated Values
 
 ```dml
 // ❌ DON'T: Checkpoint calculated values
@@ -426,15 +523,17 @@ register counter {
 ## Summary: Key Rules to Remember
 
 1. **NEVER** model clock signals or update counters every cycle
-2. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
-3. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
-4. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
-5. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
-6. **ALWAYS** cancel pending events before posting new ones
-7. **ALWAYS** use explicit time unit conversions
-8. **ALWAYS** checkpoint base values, not calculated values
-9. **NEVER** use `after` with stack-allocated data
-10. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
+2. **NEVER** call interface methods on connect objects in `init()` or `post_init()` - causes SEGFAULT
+3. **REMEMBER** all Simics signals default to LOWERED state - no manual initialization needed
+4. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
+5. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
+6. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
+7. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
+8. **ALWAYS** cancel pending events before posting new ones
+9. **ALWAYS** use explicit time unit conversions
+10. **ALWAYS** checkpoint base values, not calculated values
+11. **NEVER** use `after` with stack-allocated data
+12. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
 
 ---
 
