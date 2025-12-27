@@ -4,7 +4,114 @@
 
 This document lists critical anti-patterns and mistakes to avoid when writing DML device models. These patterns lead to poor performance, incorrect behavior, or compilation failures.
 
-## CRITICAL Anti-Pattern 1: Clock Signal Modeling & Cycle-Accurate Updates
+## CRITICAL Anti-Pattern 1: Using DML Keywords as Object References
+
+**⚠️ CRITICAL COMPILATION ERROR - CAUSES BUILD FAILURE**
+
+### The Problem
+
+**NEVER use `bank`, `register`, or `field` keywords as object references in DML code.**
+
+These are **declaration keywords** ONLY - they declare the structure, but are NOT used to reference instances.
+
+```dml
+// ❌ WRONG - Using keywords as object references:
+bank regs {
+    register CONTROL {
+        field ENABLE @ [0] { }
+        
+        method write_register() {
+            // ❌ ALL THESE ARE WRONG:
+            local uint8 val1 = this.field.ENABLE.val;           // Error: reference to unknown object 'CONTROL.field'
+            local uint8 val2 = this.register.CONTROL.val;       // Error: reference to unknown object 'CONTROL.register'
+            local uint8 val3 = dev.bank.regs.val;               // Error: reference to unknown object 'device.bank'
+            local uint8 val4 = this.bank.regs.val;              // Error: reference to unknown object 'CONTROL.bank'
+        }
+    }
+}
+
+// ❌ WRONG - Using 'bank' as reference at device level:
+method device_method() {
+    local uint32 load = dev.bank.regs.LOAD.val;  // ❌ Error!
+}
+```
+
+### Compilation Errors You'll See
+
+```
+error: reference to unknown object 'CONTROL.field'
+error: reference to unknown object 'register'
+error: reference to unknown object 'device.bank'
+error: reference to unknown object 'this.bank'
+```
+
+### The CORRECT Way - Direct Name References
+
+**Rule: Reference objects by their DECLARED NAMES ONLY, never by keywords.**
+
+```dml
+// ✅ CORRECT - Direct name references:
+bank regs {
+    register CONTROL {
+        field ENABLE @ [0] { }
+        
+        method write_register() {
+            // ✅ CORRECT: Reference field by name directly
+            local uint8 enable_val = this.ENABLE.val;  // From register scope
+            
+            // ✅ CORRECT: Reference register from bank scope
+            local uint8 ctrl_val = regs.CONTROL.val;
+        }
+    }
+    
+    register LOAD { }
+
+    // ✅ CORRECT - Reference from one register to another:
+    register VALUE {
+        method read_register() -> (uint64) {
+            // Reference sibling register by name
+            return regs.LOAD.val;
+        }
+    }
+}
+
+// ✅ CORRECT - Device-level reference to bank/register:
+method device_method() {
+    // Reference bank by its NAME, not by keyword 'bank'
+    local uint32 load = regs.LOAD.val;
+}
+```
+
+### Understanding DML Scope Rules
+
+**Read `openspec-memories/07_DML_Register_Access_Scope.md` for complete details.**
+
+| Context | Access Pattern | Example |
+|---------|----------------|---------|
+| **Inside field** | `this.<field_name>` | `this.ENABLE.val` |
+| **Inside register** | `this.<field_name>` | `this.ENABLE.val` (field access) |
+| **Inside register** | `<bank_name>.<register_name>` | `regs.LOAD.val` (sibling register) |
+| **Inside bank** | `this.<register_name>` | `this.CONTROL.val` |
+| **Device level** | `<bank_name>.<register_name>` | `regs.LOAD.val` |
+
+### Key Rules
+
+1. ✅ **DO**: Use declared names (`regs`, `CONTROL`, `ENABLE`)
+2. ❌ **DON'T**: Use keywords (`bank`, `register`, `field`) as references
+3. ❌ **DON'T**: Use `dev.bank.<anything>` or `this.bank.<anything>`
+4. ❌ **DON'T**: Use `this.register.<anything>` or `this.field.<anything>`
+5. ✅ **DO**: Read `07_DML_Register_Access_Scope.md` for all scope patterns
+
+### Why This Matters
+
+- **`bank`**, **`register`**, **`field`** are **declaration keywords**, not namespace identifiers
+- DML compiler doesn't create a `.bank` or `.register` or `.field` namespace
+- Using these keywords causes immediate compilation failure
+- This is a fundamental DML syntax rule, not a style preference
+
+---
+
+## CRITICAL Anti-Pattern 2: Clock Signal Modeling & Cycle-Accurate Updates
 
 **⚠️ MOST COMMON MISTAKE - NEVER DO THIS**
 
@@ -64,7 +171,7 @@ If you see ANY of these patterns, it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 2: Calling Interface Methods on Connect Objects in init() or post_init()
+## CRITICAL Anti-Pattern 3: Calling Interface Methods on Connect Objects in init() or post_init()
 
 ### The Problem
 
@@ -161,7 +268,7 @@ If you see ANY of these patterns in init()/post_init(), it's WRONG and will SEGF
 
 ---
 
-## CRITICAL Anti-Pattern 3: Calling SIM_cycle_count/SIM_time in init() or post_init()
+## CRITICAL Anti-Pattern 4: Calling SIM_cycle_count/SIM_time in init() or post_init()
 
 ### The Problem
 
@@ -181,11 +288,21 @@ method post_init() {
 }
 ```
 
+### Runtime Error You'll See
+
+```
+*** SIM_cycle_count():/disk2/mp/builds/nightly-base.785.17418104131.1/core/src/core/common/event.c:892 
+- the object 'dev' has no valid queue attribute but 'SIM_cycle_count()' requires the object to have one. 
+If this assertion occurs while loading a configuration, you are probably calling 'SIM_cycle_count()' 
+before the finalize phase, which is usually not allowed.
+```
+
 ### Why This FAILS
 
 1. **Queue Dependency**: `SIM_cycle_count()` and `SIM_time()` require a valid queue object
 2. **Initialization Order**: Queue is assigned AFTER device object creation, not during `init()`
-3. **Runtime Error**: Causes crashes or undefined behavior when queue is not yet configured
+3. **Finalize Phase**: These APIs can only be called after the configuration finalize phase
+4. **Runtime Error**: Causes assertion failure when queue is not yet configured
 
 ### The CORRECT Alternative - Initialize on First Use
 
@@ -222,7 +339,7 @@ If you see ANY of these patterns in init()/post_init(), it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 4: Incomplete Timer/Counter Implementation
+## CRITICAL Anti-Pattern 5: Incomplete Timer/Counter Implementation
 
 ### The Problem
 
@@ -320,7 +437,7 @@ register CONTROL {
 
 ---
 
-## CRITICAL Anti-Pattern 5: Incorrect cast() Syntax
+## CRITICAL Anti-Pattern 6: Incorrect cast() Syntax
 
 ### The Problem
 
@@ -418,7 +535,235 @@ local cycles_t cycles = cast(count, cycles_t);
 
 ## Additional Anti-Patterns
 
-### Anti-Pattern 6: Updating Counters Every Cycle
+### Anti-Pattern 6: Using `this.obj` Instead of `dev.obj` with Timing APIs
+
+```dml
+// ❌ DON'T: Use this.obj with SIM_cycle_count() or SIM_time()
+register COUNTER {
+    method read_register() -> (uint64) {
+        local cycles_t now = SIM_cycle_count(this.obj);  // ❌ WRONG! `this` refer to the register, not device
+        local cycles_t elapsed = now - start_time;
+        return start_value - cast(elapsed, uint64);
+    }
+}
+
+bank regs {
+    method some_method() {
+        local double time = SIM_time(this.obj);  // ❌ WRONG! this refers to the bank, not device
+    }
+}
+
+// ✅ DO: Always use dev.obj for timing APIs
+register COUNTER {
+    method read_register() -> (uint64) {
+        local cycles_t now = SIM_cycle_count(dev.obj);  // ✅ CORRECT! Always device context
+        local cycles_t elapsed = now - start_time;
+        return start_value - cast(elapsed, uint64);
+    }
+}
+
+bank regs {
+    method some_method() {
+        local double time = SIM_time(dev.obj);  // ✅ CORRECT! Device context
+    }
+}
+```
+
+**Why this matters:**
+- `this` is a dynamic pointer - could refer to device, bank, register, or field depending on context
+- `SIM_cycle_count()` and `SIM_time()` expect the **device object**, not a register/bank/field object
+- Using `this.obj` inside a register/bank/field method passes the wrong object type
+- `dev.obj` always refers to the device object, ensuring correct context
+- Most timing operations need device-level queue context, not register/field context
+
+**Rule:** Always use `dev.obj` with `SIM_cycle_count()`, `SIM_time()`, and other Simics timing APIs.
+
+### Anti-Pattern 7: Adding Prefixes/Suffixes to Register and Field Names
+
+```dml
+// DML declarations:
+bank regs {
+    register CONTROL {
+        field ENABLE @ [0] { }
+    }
+    register STATUS { }
+}
+
+// ❌ DON'T: Add prefixes or suffixes to declared names
+method device_method() {
+    // ❌ WRONG - Adding "_r" suffix to register name:
+    local uint32 ctrl = regs.CONTROL_r.val;     // Error: reference to unknown object 'regs.CONTROL_r'
+    local uint32 stat = regs.STATUS_r.val;      // Error: reference to unknown object 'regs.STATUS_r'
+    
+    // ❌ WRONG - Adding "field_" prefix to field name:
+    local uint8 en = regs.CONTROL.field_ENABLE.val;  // Error: reference to unknown object 'CONTROL.field_ENABLE'
+    
+    // ❌ WRONG - Adding "reg_" prefix to register name:
+    local uint32 ctrl2 = regs.reg_CONTROL.val;  // Error: reference to unknown object 'regs.reg_CONTROL'
+}
+
+// ✅ DO: Use EXACT declared names without modifications
+method device_method() {
+    // ✅ CORRECT - Use exact name as declared:
+    local uint32 ctrl = regs.CONTROL.val;       // ✅ Matches declaration
+    local uint32 stat = regs.STATUS.val;        // ✅ Matches declaration
+    
+    // ✅ CORRECT - Use exact field name:
+    local uint8 en = regs.CONTROL.ENABLE.val;   // ✅ Matches declaration
+}
+```
+
+### Compilation Errors You'll See
+
+```
+error: reference to unknown object 'regs.CONTROL_r'
+error: reference to unknown object 'CONTROL.field_ENABLE'
+error: reference to unknown object 'regs.reg_CONTROL'
+```
+
+**Why this matters:**
+- DML compiler looks for **EXACT** names as declared in `bank`, `register`, and `field` statements
+- Adding any prefix (`field_`, `reg_`, `bank_`) or suffix (`_r`, `_f`) creates a non-existent identifier
+- These are not namespaces or type indicators - use the declared name verbatim
+- **Read `openspec-memories/07_DML_Register_Access_Scope.md` for correct scope patterns**
+
+**Rule:** Use register and field names EXACTLY as declared, with no prefixes or suffixes.
+
+### Anti-Pattern 8: Using Incorrect Type Names
+
+```dml
+// ❌ DON'T: Use non-existent DML type names
+method calculate_time() {
+    local real64 time_value = 1.5;      // ❌ WRONG! 'real64' doesn't exist in DML
+    local float64 result = time_value * 2.0;  // ❌ WRONG! 'float64' doesn't exist
+    local boolean flag = true;          // ❌ WRONG! Use 'bool', not 'boolean'
+    local string name = "device";       // ❌ WRONG! DML has no 'string' type
+}
+
+// ✅ DO: Use correct DML type names
+method calculate_time() {
+    local double time_value = 1.5;      // ✅ CORRECT! Use 'double' for floating-point
+    local double result = time_value * 2.0;  // ✅ CORRECT!
+    local bool flag = true;             // ✅ CORRECT! Use 'bool'
+    local char *name = "device";        // ✅ CORRECT! Use 'char *' for strings
+}
+```
+
+### Compilation Error You'll See
+
+```
+error: unknown type: 'real64'
+error: unknown type: 'float64'
+error: unknown type: 'boolean'
+error: unknown type: 'string'
+```
+
+### Valid DML 1.4 Type Names
+
+**Integer types:**
+- `int`, `int8`, `int16`, `int32`, `int64` (signed integers)
+- `uint8`, `uint16`, `uint32`, `uint64` (unsigned integers)
+
+**Floating-point types:**
+- `float` (32-bit floating-point)
+- `double` (64-bit floating-point)
+
+**Other types:**
+- `bool` (boolean, NOT `boolean`)
+- `char *` (C-style string, NOT `string`)
+- `void` (no return value)
+- `cycles_t` (Simics cycle count type)
+
+**Common mistakes from other languages:**
+- ❌ `real64` (Python/NumPy) → ✅ Use `double`
+- ❌ `float64` (Go/NumPy) → ✅ Use `double`
+- ❌ `boolean` (Java) → ✅ Use `bool`
+- ❌ `string` (C++/Python/Java) → ✅ Use `char *`
+- ❌ `long` (C/Java) → ✅ Use `int64` or `uint64`
+- ❌ `short` (C/Java) → ✅ Use `int16` or `uint16`
+
+**Rule:** Only use DML 1.4 type names. When unsure, check DML documentation or use MCP RAG tool.
+
+### Anti-Pattern 9: Using Non-Boolean Expressions in Conditional Statements
+
+DML requires conditional expressions in `if()`, `while()`, and `for()` to be **strictly boolean** (`bool` type). Unlike C/Python where integers can be used directly, DML does NOT allow implicit integer-to-boolean conversion.
+
+```dml
+// ❌ DON'T: Use integer/uint32 directly in conditionals
+saved uint32 is_timer_active;
+saved uint64 counter;
+saved uint32 retry_count;
+
+method check_timer() {
+    if (is_timer_active) {              // ❌ ERROR: non-boolean condition
+        // ...
+    }
+    
+    while (counter) {                   // ❌ ERROR: non-boolean condition
+        counter--;
+    }
+    
+    for (local uint32 i = 0; i < 10; i++) {
+        if (!retry_count) {             // ❌ ERROR: non-boolean condition
+            break;
+        }
+    }
+}
+
+// ✅ DO: Use explicit comparison to create bool expression
+method check_timer() {
+    if (is_timer_active != 0) {         // ✅ CORRECT: Explicit comparison
+        // ...
+    }
+    
+    while (counter > 0) {               // ✅ CORRECT: Explicit comparison
+        counter--;
+    }
+    
+    for (local uint32 i = 0; i < 10; i++) {
+        if (retry_count == 0) {         // ✅ CORRECT: Explicit comparison
+            break;
+        }
+    }
+}
+```
+
+### Compilation Error You'll See
+
+```
+error: non-boolean condition: 'is_timer_active' of type 'uint32'
+error: non-boolean condition: 'counter' of type 'uint64'
+error: non-boolean condition: 'retry_count' of type 'uint32'
+```
+
+### Correct Patterns
+
+```dml
+// if() statements
+if (value != 0) { ... }         // ✅ CORRECT: Checking non-zero
+if (value == 0) { ... }         // ✅ CORRECT: Checking zero
+
+// while() loops
+while (counter > 0) { ... }     // ✅ CORRECT: Explicit comparison
+while (index < max) { ... }     // ✅ CORRECT: Explicit comparison
+
+// for() loops - condition must be bool
+for (local uint32 i = 0; i < 10; i++) { ... }  // ✅ CORRECT: i < 10 is bool
+
+// For pointers (NULL checking)
+if (ptr != NULL) { ... }        // ✅ CORRECT
+if (ptr == NULL) { ... }        // ✅ CORRECT
+
+// For actual booleans - can use directly
+saved bool enabled;
+if (enabled) { ... }            // ✅ CORRECT (enabled is bool type)
+if (!enabled) { ... }           // ✅ CORRECT
+while (enabled) { ... }         // ✅ CORRECT
+```
+
+**Rule:** In DML, `if()`, `while()`, and `for()` conditions ONLY accept `bool` type. Always use explicit comparisons (`== 0`, `!= 0`, `< N`, `> 0`, etc.) for integer types.
+
+### Anti-Pattern 10: Updating Counters Every Cycle
 
 ```dml
 // ❌ DON'T: Update counters every cycle
@@ -441,7 +786,7 @@ register counter {
 }
 ```
 
-### Anti-Pattern 7: Using `after` with Stack-Allocated Data
+### Anti-Pattern 11: Using `after` with Stack-Allocated Data
 
 ```dml
 // ❌ DON'T: Use after with stack-allocated data
@@ -459,7 +804,7 @@ method safe_after() {
 }
 ```
 
-### Anti-Pattern 8: Forgetting to Cancel Events
+### Anti-Pattern 12: Forgetting to Cancel Events
 
 ```dml
 // ❌ DON'T: Post events without canceling previous ones
@@ -475,7 +820,7 @@ method start_timer() {
 }
 ```
 
-### Anti-Pattern 9: Mixing Time Units
+### Anti-Pattern 13: Mixing Time Units
 
 ```dml
 // ❌ DON'T: Mix time units without explicit conversion
@@ -491,7 +836,7 @@ method cycles_to_seconds(cycles_t cycles) -> (double) {
 local double result = cycles_to_seconds(cycles) + seconds;  // ✅ Proper conversion
 ```
 
-### Anti-Pattern 10: Checkpointing Calculated Values
+### Anti-Pattern 14: Checkpointing Calculated Values
 
 ```dml
 // ❌ DON'T: Checkpoint calculated values
@@ -522,21 +867,28 @@ register counter {
 
 ## Summary: Key Rules to Remember
 
-1. **NEVER** model clock signals or update counters every cycle
-2. **NEVER** call interface methods on connect objects in `init()` or `post_init()` - causes SEGFAULT
-3. **REMEMBER** all Simics signals default to LOWERED state - no manual initialization needed
-4. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
-5. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
-6. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
-7. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
-8. **ALWAYS** cancel pending events before posting new ones
-9. **ALWAYS** use explicit time unit conversions
-10. **ALWAYS** checkpoint base values, not calculated values
-11. **NEVER** use `after` with stack-allocated data
-12. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
+1. **NEVER** use `bank`, `register`, or `field` keywords as object references - use declared names only
+2. **ALWAYS** read `07_DML_Register_Access_Scope.md` to understand correct scope patterns
+3. **NEVER** use `dev.bank.*` or `this.bank.*` or `this.register.*` or `this.field.*` syntax
+4. **NEVER** model clock signals or update counters every cycle
+5. **NEVER** call interface methods on connect objects in `init()` or `post_init()` - causes SEGFAULT
+6. **REMEMBER** all Simics signals default to LOWERED state - no manual initialization needed
+7. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
+8. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
+9. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
+10. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
+11. **ALWAYS** use `dev.obj` with timing APIs (`SIM_cycle_count`, `SIM_time`), NEVER `this.obj`
+12. **NEVER** add prefixes/suffixes to register/field names - use EXACT declared names
+13. **ALWAYS** use correct DML type names (double, not real64; bool, not boolean; char*, not string)
+14. **ALWAYS** use explicit comparisons in `if()`, `while()`, `for()` conditions - DML requires bool type, NOT integers (use `if (var != 0)`, `while (count > 0)`, not `if (var)`, `while (count)`)
+15. **ALWAYS** cancel pending events before posting new ones
+16. **ALWAYS** use explicit time unit conversions
+17. **ALWAYS** checkpoint base values, not calculated values
+18. **NEVER** use `after` with stack-allocated data
+19. **ALWAYS** use lazy evaluation instead of cycle-by-cycle updates
 
 ---
 
 **Document Status**: ✅ Complete  
 **Extracted From**: DML_Best_Practices.md  
-**Last Updated**: December 25, 2025
+**Last Updated**: December 27, 2025
