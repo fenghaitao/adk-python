@@ -578,7 +578,84 @@ bank regs {
 
 **Rule:** Always use `dev.obj` with `SIM_cycle_count()`, `SIM_time()`, and other Simics timing APIs.
 
-### Anti-Pattern 7: Adding Prefixes/Suffixes to Register and Field Names
+### Anti-Pattern 7: Calling Timing APIs Without Required Parameters
+
+**⚠️ CRITICAL COMPILATION ERROR - CAUSES BUILD FAILURE**
+
+**NEVER call Simics timing APIs without required parameters.**
+
+Many Simics timing APIs require a device object parameter - they CANNOT be called with empty parentheses.
+
+```dml
+// ❌ DON'T: Call timing APIs without parameters
+register COUNTER {
+    method read_register() -> (uint64) {
+        local cycles_t now = SIM_cycle_count();     // ❌ WRONG! Missing required parameter
+        local double time = SIM_time();             // ❌ WRONG! Missing required parameter
+        return cast(now, uint64);
+    }
+}
+
+method device_method() {
+    local cycles_t cycles = SIM_cycle_count();      // ❌ WRONG! Missing dev.obj parameter
+    local double current_time = SIM_time();         // ❌ WRONG! Missing dev.obj parameter
+}
+
+// ✅ DO: Always provide dev.obj as the parameter
+register COUNTER {
+    method read_register() -> (uint64) {
+        local cycles_t now = SIM_cycle_count(dev.obj);   // ✅ CORRECT! Device object provided
+        local double time = SIM_time(dev.obj);           // ✅ CORRECT! Device object provided
+        return cast(now, uint64);
+    }
+}
+
+method device_method() {
+    local cycles_t cycles = SIM_cycle_count(dev.obj);    // ✅ CORRECT!
+    local double current_time = SIM_time(dev.obj);       // ✅ CORRECT!
+}
+```
+
+### Compilation Errors You'll See
+
+```
+error: too few arguments to function 'SIM_cycle_count'
+error: too few arguments to function 'SIM_time'
+error: expected 1 argument, got 0
+```
+
+### Common Timing APIs That Require Parameters
+
+**All these APIs require `dev.obj` as parameter:**
+- `SIM_cycle_count(dev.obj)` - Get current cycle count
+- `SIM_time(dev.obj)` - Get current simulation time
+- `SIM_stacked_post(dev.obj, callback, data)` - Post event to queue
+- `SIM_event_find_next_cycle(dev.obj, callback)` - Find next scheduled event
+
+### Why This Matters
+
+- **Queue context**: Timing APIs need to know which device's event queue to use
+- **Not global functions**: Unlike some languages, these APIs are not global - they operate on specific device instances
+- **Device object required**: The `dev.obj` parameter provides the Simics object handle for the device
+- **Runtime state**: The device object carries runtime state needed for timing operations
+
+### Common Mistake Pattern
+
+Agents sometimes assume timing APIs are global functions like in other simulation frameworks:
+
+```dml
+// ❌ WRONG - Treating as global function (common in other frameworks):
+local cycles_t now = SIM_cycle_count();     // Missing device context
+local double time = SIM_time();             // Missing device context
+
+// ✅ CORRECT - Simics requires device context:
+local cycles_t now = SIM_cycle_count(dev.obj);   // Device context provided
+local double time = SIM_time(dev.obj);           // Device context provided
+```
+
+**Rule:** All Simics timing and event APIs require `dev.obj` as the first parameter. Never call them with empty parentheses.
+
+### Anti-Pattern 8: Adding Prefixes/Suffixes to Register and Field Names
 
 ```dml
 // DML declarations:
@@ -629,7 +706,7 @@ error: reference to unknown object 'regs.reg_CONTROL'
 
 **Rule:** Use register and field names EXACTLY as declared, with no prefixes or suffixes.
 
-### Anti-Pattern 8: Using Incorrect Type Names
+### Anti-Pattern 9: Using Incorrect Type Names
 
 ```dml
 // ❌ DON'T: Use non-existent DML type names
@@ -684,7 +761,7 @@ error: unknown type: 'string'
 
 **Rule:** Only use DML 1.4 type names. When unsure, check DML documentation or use MCP RAG tool.
 
-### Anti-Pattern 9: Using Non-Boolean Expressions in Conditional Statements
+### Anti-Pattern 10: Using Non-Boolean Expressions in Conditional Statements
 
 DML requires conditional expressions in `if()`, `while()`, and `for()` to be **strictly boolean** (`bool` type). Unlike C/Python where integers can be used directly, DML does NOT allow implicit integer-to-boolean conversion.
 

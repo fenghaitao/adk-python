@@ -38,8 +38,22 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
   - Example: If change affects multiple capabilities, read all delta files:
     - `openspec/changes/<id>/specs/capability1/spec.md`
     - `openspec/changes/<id>/specs/capability2/spec.md`
+- **BEFORE writing ANY DML code**: Read `openspec-memories/02_DML_Anti_Patterns.md` to understand what NOT to do
+  - This prevents 90%+ of compilation errors by avoiding common mistakes
+  - Focus on CRITICAL Anti-Patterns 1-6 which cause build failures
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
+- **DML Error-Driven Development Workflow**:
+  1. Write DML code following anti-pattern guidelines
+  2. Build using `build_simics_project()`
+  3. **IF build fails**: 
+     - **STOP** - do NOT make random changes
+     - **MATCH** error message to anti-pattern in `02_DML_Anti_Patterns.md` (see error mapping below)
+     - **READ** the complete anti-pattern section (wrong code + correct code + explanation)
+     - **APPLY** the exact correction shown in anti-pattern doc
+     - **REBUILD** to verify single fix
+     - **REPEAT** for next error (fix ONE error at a time)
+  4. **IF build succeeds**: Proceed to testing
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
 
@@ -75,9 +89,25 @@ You will work with TWO completely different programming languages:
 - ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
 
 - When encountering build failures (DML compilation errors):
-  - Check `openspec-memories/05_DML_Troubleshooting.md`
-  - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
-  - Verify register scope patterns (device/bank/register level)
+  - **MANDATORY FIRST STEP**: Match error message to `openspec-memories/02_DML_Anti_Patterns.md` anti-patterns:
+    * `error: unknown identifier: 'uint32'` or `'uint64'` → CRITICAL Anti-Pattern 6 (incorrect cast() syntax)
+    * `error: reference to unknown object 'device.bank'` or `'this.bank'` or `'this.register'` or `'this.field'` → CRITICAL Anti-Pattern 1 (using DML keywords as references)
+    * `error: too few arguments to function 'SIM_cycle_count'` or `'SIM_time'` → Anti-Pattern 7 (missing required parameters)
+    * `error: non-boolean condition: 'variable' of type 'uint32'` or `'int'` → Anti-Pattern 10 (non-boolean expressions in if/while/for)
+    * `error: unknown type: 'real64'` or `'float64'` or `'boolean'` or `'string'` → Anti-Pattern 9 (incorrect type names)
+    * `error: reference to unknown object 'regs.CONTROL_r'` or `'field_ENABLE'` → Anti-Pattern 8 (adding prefixes/suffixes)
+    * `object 'dev' has no valid queue attribute` → CRITICAL Anti-Pattern 4 (SIM_cycle_count in init)
+    * `Segmentation fault in _DML_M_init` → CRITICAL Anti-Pattern 3 (interface methods in init)
+  - **SECOND**: Read the matched anti-pattern section completely - it contains:
+    * The EXACT error message you're seeing
+    * The WRONG code pattern causing it
+    * The CORRECT code pattern to use
+    * Explanation of why it fails
+  - **THIRD**: Apply the CORRECT pattern from anti-pattern doc - do NOT guess or try variations
+  - **Additional resources** (only after checking anti-patterns):
+    * `openspec-memories/05_DML_Troubleshooting.md` for general compilation issues
+    * `openspec-memories/07_DML_Register_Access_Scope.md` for scope/access pattern errors
+  - **CRITICAL**: Fix errors ONE AT A TIME - do not try to fix multiple errors simultaneously
   - These are DML-specific issues - do NOT apply Python patterns
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
