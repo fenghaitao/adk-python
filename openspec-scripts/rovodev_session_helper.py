@@ -8,7 +8,7 @@ import select
 import time
 import re
 
-def run_acli_with_commands(commands, timeout=90):
+def run_acli_with_commands(commands, timeout=600):
     """Run acli rovodev with commands sent to interactive session."""
     acli_path = os.environ.get('ACLI_CMD', os.path.expanduser('~/acli'))
     
@@ -35,8 +35,7 @@ def run_acli_with_commands(commands, timeout=90):
     command_index = 0
     start_time = time.time()
     last_data_time = start_time
-    prompt_seen = False
-    waiting_for_response = False
+    last_output = ""  # Track recent output (last 500 chars) for pattern matching
     
     try:
         while time.time() - start_time < timeout:
@@ -50,30 +49,48 @@ def run_acli_with_commands(commands, timeout=90):
                         output.append(data)
                         sys.stdout.write(data)
                         sys.stdout.flush()
-                        last_data_time = time.time()
                         
-                        # Detect when prompt appears (look for '> ' or '>' at end)
-                        if '>' in data and not waiting_for_response:
-                            prompt_seen = True
-                            time.sleep(0.5)  # Wait for prompt to fully render
-                            
-                            if command_index < len(commands):
-                                cmd = commands[command_index]
-                                print(f"\n[Sending command: {cmd}]", file=sys.stderr)
-                                os.write(master, (cmd + '\n').encode('utf-8'))
-                                command_index += 1
-                                waiting_for_response = True
-                                last_data_time = time.time()
+                        # Keep last 500 chars for pattern matching
+                        last_output = (last_output + data)[-500:]
                         
-                        # After sending command, wait for response to complete
-                        if waiting_for_response and ('>' in data or 'Session ID' in data):
-                            waiting_for_response = False
+                        # Only update last_data_time if this is not just cursor blinking
+                        # Cursor blink patterns: just whitespace, or contains '> █' in small chunks
+                        # Also ignore box drawing and formatting characters
+                        is_cursor_blink = (
+                            data.strip() == '' or 
+                            (len(data) < 200 and '█' in data and data.count('\n') < 3)
+                        )
+                        
+                        if not is_cursor_blink:
+                            last_data_time = time.time()
                 
                 except OSError:
                     break
             
-            # If no data for 3 seconds and we've sent all commands, exit
-            if command_index >= len(commands) and time.time() - last_data_time > 3:
+            # Check if we should send the next command
+            idle_time = time.time() - last_data_time
+            
+            if command_index < len(commands):
+                # Look for the prompt pattern '│ > ' or '\n> '
+                # The prompt may not be at the very end due to footer text
+                cleaned_output = last_output.replace('█', '')
+                has_prompt = ('│ > ' in cleaned_output or '\n> ' in cleaned_output)
+                
+                # For first command, send immediately when prompt appears (no idle wait)
+                # For subsequent commands, wait 5 seconds of idle time
+                if command_index == 0:
+                    required_idle = 0.0  # Send immediately
+                else:
+                    required_idle = 5.0  # Wait for idle
+                
+                if has_prompt and idle_time >= required_idle:
+                    cmd = commands[command_index]
+                    os.write(master, (cmd + '\n').encode('utf-8'))
+                    command_index += 1
+                    last_data_time = time.time()  # Reset idle timer
+            
+            # If no data for 10 seconds and we've sent all commands, exit
+            if command_index >= len(commands) and idle_time > 10:
                 break
             
             # Check if process is still alive
