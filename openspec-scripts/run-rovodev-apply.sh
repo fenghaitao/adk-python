@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run acli rovodev to apply a change and capture session ID
-# Usage: ./run-rovodev-apply.sh <change-id> [--power <POWER_MD>]
+# Usage: ./run-rovodev-apply.sh [workdir] <change-id> [--power <POWER_MD>]
 
 set -e
 
@@ -11,14 +11,21 @@ show_help() {
 Run acli rovodev to apply a change and capture session ID
 
 USAGE:
-    ./run-rovodev-apply.sh <CHANGE_ID> [OPTIONS]
+    ./run-rovodev-apply.sh [WORKDIR] <CHANGE_ID> [OPTIONS]
 
 POSITIONAL ARGUMENTS:
+    WORKDIR         Working directory (default: adk_openspec_project)
     CHANGE_ID       Change identifier to apply (required)
 
 OPTIONS:
     --power <POWER_MD>  Use the given POWER file (default: powers/openspec-apply/POWER.md)
     --help, -h          Show this help message and exit
+
+BEHAVIOR:
+    - Runs acli rovodev with --yolo flag
+    - Sends apply prompt with change ID
+    - Captures session ID using /status command
+    - Saves session log and session ID in workdir/rovodev-apply/
 EOF
 }
 
@@ -27,8 +34,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Defaults
+WORKDIR=""
 CHANGE_ID=""
-POWER_MD="$REPO_ROOT/powers/openspec-apply/POWER.md"
+POWER_MD=""
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Parse arguments
@@ -43,7 +51,10 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      if [ -z "$CHANGE_ID" ]; then
+      if [ -z "$WORKDIR" ]; then
+        WORKDIR="$1"
+        shift
+      elif [ -z "$CHANGE_ID" ]; then
         CHANGE_ID="$1"
         shift
       else
@@ -55,9 +66,34 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Set default workdir
+WORKDIR=${WORKDIR:-adk_openspec_project}
+
+# Set default POWER_MD if not provided
+if [ -z "$POWER_MD" ]; then
+  DEFAULT_POWER_MD="$REPO_ROOT/powers/openspec-apply/POWER.md"
+  if [ -f "$DEFAULT_POWER_MD" ]; then
+    POWER_MD="$DEFAULT_POWER_MD"
+    echo "Using default POWER.md: $POWER_MD"
+  fi
+fi
+
 if [ -z "$CHANGE_ID" ]; then
   echo "❌ Error: CHANGE_ID is required"
   show_help
+  exit 1
+fi
+
+# Resolve WORKDIR to absolute
+if [[ "$WORKDIR" = /* ]]; then
+  WORKDIR_ABS="$WORKDIR"
+else
+  WORKDIR_ABS=$(realpath "$WORKDIR" 2>/dev/null || echo "$REPO_ROOT/$WORKDIR")
+fi
+
+# Check workdir
+if [ ! -d "$WORKDIR_ABS" ]; then
+  echo "❌ Error: Working directory not found: $WORKDIR_ABS"
   exit 1
 fi
 
@@ -67,8 +103,9 @@ if [ ! -f "$POWER_MD" ]; then
   exit 1
 fi
 
-# Setup directories
-ROVO_DIR="$REPO_ROOT/rovodev-apply"
+# Setup directories in workdir
+cd "$WORKDIR_ABS"
+ROVO_DIR="$WORKDIR_ABS/rovodev-apply"
 mkdir -p "$ROVO_DIR"
 LOG_FILE="$ROVO_DIR/rovodev-apply_${TIMESTAMP}.log"
 SESSION_ID_FILE="$ROVO_DIR/last_session_id.txt"
@@ -79,6 +116,7 @@ PROMPT="Read $POWER_MD and apply change $CHANGE_ID by following the instructions
 echo "================================"
 echo "🚀 Running acli rovodev Apply"
 echo "================================"
+echo "Working Directory: $WORKDIR_ABS"
 echo "Change ID: $CHANGE_ID"
 echo "Power File: $POWER_MD"
 echo "Log File: $LOG_FILE"
