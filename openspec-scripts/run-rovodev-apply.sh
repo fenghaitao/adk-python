@@ -1,105 +1,73 @@
 #!/bin/bash
 
-# Run acli rovodev to apply a change and capture session ID
-# Usage: ./run-rovodev-apply.sh [workdir] <change-id> [--power <POWER_MD>]
+# Run acli rovodev to apply OpenSpec proposal and analyze the session
+# Usage: ./run-rovodev-apply.sh [workdir] [change-id] [session-name]
 
 set -e
 
-# Help
-show_help() {
-  cat << 'EOF'
-Run acli rovodev to apply a change and capture session ID
-
-USAGE:
-    ./run-rovodev-apply.sh [WORKDIR] <CHANGE_ID> [OPTIONS]
-
-POSITIONAL ARGUMENTS:
-    WORKDIR         Working directory (default: adk_openspec_project)
-    CHANGE_ID       Change identifier to apply (required)
-
-OPTIONS:
-    --power <POWER_MD>  Use the given POWER file (default: powers/openspec-apply/POWER.md)
-    --help, -h          Show this help message and exit
-
-BEHAVIOR:
-    - Runs acli rovodev with --yolo flag
-    - Sends apply prompt with change ID
-    - Captures session ID using /status command
-    - Saves session log and session ID in workdir/rovodev-apply/
-EOF
-}
-
-# Get script directory and repo root
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Defaults
-WORKDIR=""
-CHANGE_ID=""
-POWER_MD=""
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+# Use provided workdir or default to adk_openspec_project
+WORKDIR=${1:-adk_openspec_project}
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -h|--help)
-      show_help
-      exit 0
-      ;;
-    --power)
-      POWER_MD="$2"
-      shift 2
-      ;;
-    *)
-      if [ -z "$WORKDIR" ]; then
-        WORKDIR="$1"
-        shift
-      elif [ -z "$CHANGE_ID" ]; then
-        CHANGE_ID="$1"
-        shift
-      else
-        echo "❌ Error: Unknown argument: $1"
-        show_help
-        exit 1
-      fi
-      ;;
-  esac
-done
-
-# Set default workdir
-WORKDIR=${WORKDIR:-adk_openspec_project}
-
-# Set default POWER_MD if not provided
-if [ -z "$POWER_MD" ]; then
-  DEFAULT_POWER_MD="$REPO_ROOT/powers/openspec-apply/POWER.md"
-  if [ -f "$DEFAULT_POWER_MD" ]; then
-    POWER_MD="$DEFAULT_POWER_MD"
-    echo "Using default POWER.md: $POWER_MD"
-  fi
-fi
+# Change ID is required
+CHANGE_ID=${2}
 
 if [ -z "$CHANGE_ID" ]; then
-  echo "❌ Error: CHANGE_ID is required"
-  show_help
+  echo "❌ Error: Change ID is required"
+  echo "Usage: $0 [workdir] <change-id> [session-name]"
+  echo ""
+  echo "Example: $0 adk_openspec_project 001-implement-wdt"
   exit 1
 fi
 
-# Resolve WORKDIR to absolute
+# Generate timestamp for session name
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+SESSION_NAME=${3:-rovodev-apply-session_${TIMESTAMP}.log}
+
+# Resolve absolute paths
+# If workdir is relative, resolve from current directory; if absolute, use as-is
 if [[ "$WORKDIR" = /* ]]; then
+  # Absolute path provided
   WORKDIR_ABS="$WORKDIR"
 else
-  WORKDIR_ABS=$(realpath "$WORKDIR" 2>/dev/null || echo "$REPO_ROOT/$WORKDIR")
+  # Relative path - resolve from current directory
+  WORKDIR_ABS=$(realpath "$WORKDIR")
 fi
 
-# Check workdir
+POWER_MD="$REPO_ROOT/powers/openspec-apply/POWER.md"
+
+# Check if workdir exists
 if [ ! -d "$WORKDIR_ABS" ]; then
   echo "❌ Error: Working directory not found: $WORKDIR_ABS"
   exit 1
 fi
 
-# Verify POWER.md exists
+# Verify openspec-memories exists (should have been created by run-rovodev-propose.sh)
+MEMORIES_DIR="$WORKDIR_ABS/openspec-memories"
+if [ ! -e "$MEMORIES_DIR" ]; then
+  echo "❌ Error: openspec-memories not found: $MEMORIES_DIR"
+  echo ""
+  echo "The knowledge base is required for the apply agent."
+  echo "Please run ./openspec-scripts/run-rovodev-propose.sh first to set up the workspace."
+  exit 1
+fi
+
+# Check if POWER.md exists
 if [ ! -f "$POWER_MD" ]; then
-  echo "❌ Error: POWER file not found: $POWER_MD"
+  echo "❌ Error: POWER.md not found: $POWER_MD"
+  exit 1
+fi
+
+# Check if change exists
+CHANGE_DIR="$WORKDIR_ABS/openspec/changes/$CHANGE_ID"
+if [ ! -d "$CHANGE_DIR" ]; then
+  echo "❌ Error: Change not found: $CHANGE_DIR"
+  echo ""
+  echo "Available changes:"
+  ls -1 "$WORKDIR_ABS/openspec/changes/" 2>/dev/null || echo "  (none)"
   exit 1
 fi
 
@@ -107,11 +75,6 @@ fi
 cd "$WORKDIR_ABS"
 ROVO_DIR="$WORKDIR_ABS/rovodev-apply"
 mkdir -p "$ROVO_DIR"
-LOG_FILE="$ROVO_DIR/rovodev-apply_${TIMESTAMP}.log"
-SESSION_ID_FILE="$ROVO_DIR/last_session_id.txt"
-
-# Build prompt
-PROMPT="Read $POWER_MD and apply change $CHANGE_ID by following the instructions in POWER.md"
 
 echo "================================"
 echo "🚀 Running acli rovodev Apply"
@@ -119,25 +82,72 @@ echo "================================"
 echo "Working Directory: $WORKDIR_ABS"
 echo "Change ID: $CHANGE_ID"
 echo "Power File: $POWER_MD"
-echo "Log File: $LOG_FILE"
+echo "Session Name: $SESSION_NAME"
+echo ""
+
+# Change to working directory
+cd "$WORKDIR_ABS"
+
+# Create rovodev-apply directory for session files
+echo "📁 Session directory: $ROVO_DIR"
+echo ""
+
+# Build prompt
+PROMPT="Read $POWER_MD and apply change $CHANGE_ID by following the instructions in POWER.md"
+
+echo "📝 Prompt:"
+echo "$PROMPT"
 echo ""
 
 # Set acli command
 ACLI_CMD_BIN="${ACLI_CMD:-$HOME/acli}"
 export ACLI_CMD="$ACLI_CMD_BIN"
 
+LOG_PATH="$ROVO_DIR/$SESSION_NAME"
+
+echo "🤖 Running acli rovodev..."
+echo ""
+
 # Run acli rovodev with session helper
-echo "Running acli rovodev session..."
-python3 "$SCRIPT_DIR/rovodev_session_helper.py" "$PROMPT" "/status" "/exit" 2>&1 | tee "$LOG_FILE"
+python3 "$SCRIPT_DIR/rovodev_session_helper.py" "$PROMPT" "/status" "/exit" 2>&1 | tee "$LOG_PATH"
+
+# Check if session file was created
+if [ ! -f "$LOG_PATH" ]; then
+  echo "❌ Error: Session file not created: $LOG_PATH"
+  exit 1
+fi
 
 echo ""
-echo "Session log saved to: $LOG_FILE"
+echo "✅ Session saved: $LOG_PATH"
+echo ""
+
+# Analyze the session
+echo "================================"
+echo "📊 Analyzing Session"
+echo "================================"
+echo ""
+
+# Strip .log extension and add .txt for the analysis file
+SESSION_BASE="${LOG_PATH%.log}"
+ANALYSIS_FILE="${SESSION_BASE}.txt"
+
+VIEW_ROVODEV_SCRIPT="$SCRIPT_DIR/view_rovodev_session.py"
+
+# Check if view script exists
+if [ ! -f "$VIEW_ROVODEV_SCRIPT" ]; then
+  echo "❌ Error: view_rovodev_session.py not found: $VIEW_ROVODEV_SCRIPT"
+  exit 1
+fi
+
+python3 "$VIEW_ROVODEV_SCRIPT" "$LOG_PATH"
+
+echo "✅ Analysis saved: $ANALYSIS_FILE"
+echo ""
 
 # Extract session ID from log
-SESSION_ID=$(grep -oP 'Session ID:\s*\K[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$LOG_FILE" | head -1)
+SESSION_ID=$(grep -oP 'Session ID:\s*\K[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$LOG_PATH" | head -1)
 
 if [ -n "$SESSION_ID" ]; then
-    echo ""
     echo "✅ Session ID: $SESSION_ID"
     
     # Check if session directory exists
@@ -147,16 +157,41 @@ if [ -n "$SESSION_ID" ]; then
     fi
     
     # Save session ID to a file
-    echo "$SESSION_ID" > "$SESSION_ID_FILE"
-    echo "   Session ID saved to: $SESSION_ID_FILE"
+    echo "$SESSION_ID" > "$ROVO_DIR/last_session_id.txt"
+    echo "   Session ID saved to: $ROVO_DIR/last_session_id.txt"
 else
     echo "⚠️  Could not extract session ID from log"
-    echo "   Showing last 30 lines of log:"
-    tail -30 "$LOG_FILE"
 fi
+
+echo ""
+# Display summary
+echo "================================"
+echo "📋 Session Summary"
+echo "================================"
+echo ""
+
+# Extract key metrics from the analysis
+if [ -f "$ANALYSIS_FILE" ]; then
+  # Show conversation summary
+  grep "Total Messages:" "$ANALYSIS_FILE" || true
+  grep "User Messages:" "$ANALYSIS_FILE" || true
+  grep "Assistant Messages:" "$ANALYSIS_FILE" || true
+  
+  # Show token usage
+  grep "Total Tokens:" "$ANALYSIS_FILE" || true
+  
+  echo ""
+  echo "📄 Full analysis available at: $ANALYSIS_FILE"
+fi
+
 echo ""
 echo "================================"
-echo "📋 Next Steps"
+echo "✅ Complete!"
 echo "================================"
-echo "1) Review the session log and repository changes"
-echo "2) Build, test, and validate results as appropriate"
+echo ""
+echo "Next steps:"
+echo "1. Review the session: cat $ANALYSIS_FILE"
+echo "2. Check build status: cd simics-project && make <device-name>"
+echo "3. Run tests: cd simics-project && ./bin/test-runner -v modules/<device-name>/test/"
+echo "4. Review implementation: Check simics-project/modules/<device-name>/"
+echo ""

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run complete Rovodev workflow: propose then apply
-# Usage: ./run-rovodev.sh [workdir] [--power-propose <POWER_MD>] [--power-apply <POWER_MD>]
+# Usage: ./run-rovodev.sh [workdir] [--multi-spec-deltas]
 
 set -e
 
@@ -18,22 +18,40 @@ POSITIONAL ARGUMENTS:
     WORKDIR         Working directory (default: adk_openspec_project)
 
 OPTIONS:
-    --power-propose <POWER_MD>  Use the given POWER file for propose step
-    --power-apply <POWER_MD>    Use the given POWER file for apply step
-    --help, -h                  Show this help message and exit
+    --multi-spec-deltas   Use multi-spec-deltas mode for complex devices (50+ requirements)
+                          Default: simple mode for standard proposals
+    --help, -h            Show this help message and exit
 
 BEHAVIOR:
     1. Runs run-rovodev-propose.sh to create a proposal
     2. Captures the change ID from the proposal
     3. Prompts user to continue
     4. Runs run-rovodev-apply.sh with the captured change ID
+
+MODES:
+    Simple Mode (default):
+        - For devices with <50 requirements
+        - Single capability with one spec delta
+        
+    Multi-Spec-Deltas Mode (--multi-spec-deltas):
+        - For complex devices with 50+ requirements
+        - Multiple capabilities with separate spec deltas
+
+EXAMPLES:
+    # Simple mode (default)
+    ./run-rovodev.sh
+
+    # Simple mode with custom workdir
+    ./run-rovodev.sh myproject
+
+    # Multi-spec-deltas mode for complex device
+    ./run-rovodev.sh myproject --multi-spec-deltas
 EOF
 }
 
 # Defaults
 WORKDIR=""
-POWER_PROPOSE=""
-POWER_APPLY=""
+MULTI_SPEC_DELTAS=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -42,13 +60,9 @@ while [[ $# -gt 0 ]]; do
       show_help
       exit 0
       ;;
-    --power-propose)
-      POWER_PROPOSE="$2"
-      shift 2
-      ;;
-    --power-apply)
-      POWER_APPLY="$2"
-      shift 2
+    --multi-spec-deltas)
+      MULTI_SPEC_DELTAS=true
+      shift
       ;;
     *)
       if [ -z "$WORKDIR" ]; then
@@ -66,9 +80,19 @@ done
 # Set default workdir
 WORKDIR=${WORKDIR:-adk_openspec_project}
 
+# Determine mode description
+if [ "$MULTI_SPEC_DELTAS" = true ]; then
+  MODE_DESC="multi-spec-deltas (complex devices)"
+else
+  MODE_DESC="simple (standard proposals)"
+fi
+
 echo "================================"
 echo "🚀 Rovodev Complete Workflow"
 echo "================================"
+echo ""
+echo "Working Directory: $WORKDIR"
+echo "Mode: $MODE_DESC"
 echo ""
 echo "This will run:"
 echo "  1. run-rovodev-propose.sh - Create proposal"
@@ -83,8 +107,8 @@ echo ""
 
 # Build propose command
 PROPOSE_CMD=("$SCRIPT_DIR/run-rovodev-propose.sh" "$WORKDIR")
-if [ -n "$POWER_PROPOSE" ]; then
-  PROPOSE_CMD+=(--power "$POWER_PROPOSE")
+if [ "$MULTI_SPEC_DELTAS" = true ]; then
+  PROPOSE_CMD+=(--multi-spec-deltas)
 fi
 
 # Run propose and capture last line (change ID)
@@ -120,11 +144,8 @@ if [ -z "$CHANGE_ID" ]; then
   exit 1
 fi
 
-# Build apply command
+# Build apply command - no longer uses --power flag
 APPLY_CMD=("$SCRIPT_DIR/run-rovodev-apply.sh" "$WORKDIR" "$CHANGE_ID")
-if [ -n "$POWER_APPLY" ]; then
-  APPLY_CMD+=(--power "$POWER_APPLY")
-fi
 
 # Run apply
 "${APPLY_CMD[@]}"
