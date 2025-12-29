@@ -60,7 +60,7 @@ bank regs {
             local uint8 enable_val = this.ENABLE.val;  // From register scope
             
             // ✅ CORRECT: Reference register from bank scope
-            local uint8 ctrl_val = regs.CONTROL.val;
+            local uint8 ctrl_val = regs.CONTROL.val; // `regs` is the bank name here, not a keyword
         }
     }
     
@@ -70,7 +70,7 @@ bank regs {
     register VALUE {
         method read_register() -> (uint64) {
             // Reference sibling register by name
-            return regs.LOAD.val;
+            return regs.LOAD.val; // `regs` is the bank name here, not a keyword
         }
     }
 }
@@ -78,7 +78,7 @@ bank regs {
 // ✅ CORRECT - Device-level reference to bank/register:
 method device_method() {
     // Reference bank by its NAME, not by keyword 'bank'
-    local uint32 load = regs.LOAD.val;
+    local uint32 load = regs.LOAD.val; // `regs` is the bank name defined as above, not a keyword
 }
 ```
 
