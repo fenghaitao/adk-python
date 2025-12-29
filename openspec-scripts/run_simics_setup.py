@@ -82,6 +82,9 @@ async def setup_simics_project(proj_dir_path: str, device_name: str):
     # Import after adding to path
     from spec_kit_tools import create_simics_mcp_toolset
     
+    # Convert proj_dir_path to absolute path if it's relative
+    proj_dir_path = str(Path(proj_dir_path).resolve())
+    
     # Construct simics project path inside workspace
     simics_proj_path = str(Path(proj_dir_path) / "simics-project")
     print(f"Workspace root: {proj_dir_path}")
