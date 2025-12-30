@@ -7,6 +7,10 @@ set -euo pipefail
 # apply agent session logs and context to generate quality scores
 # and metrics.
 #
+# The score agent consists of:
+#   - score_agent.py: Python agent implementation
+#   - score_agent_instruction.md: Detailed scoring instruction (loaded at runtime)
+#
 # Usage examples:
 #   ./run-score-agent.sh \
 #       --workdir adk_openspec_project \
@@ -31,9 +35,24 @@ if [[ ! -x "$ADK_BIN" ]]; then
 fi
 
 # Simple helper to prepare an ADK agent directory with root_agent
+# Note: Symlinks the {agent_name}_instruction.md file to target directory
+# so it's accessible if the agent uses Path(__file__).parent to load it
 prepare_agent_dir() {
   local target_dir="$1"; local import_path="$2"
   mkdir -p "$target_dir"
+  # Extract the last component (agent name) from import path
+  # E.g., "openspec_integration.score_agent" -> "score_agent"
+  local agent_name="${import_path##*.}"
+
+  # Symlink {agent_name}_instruction.md from source to target directory
+  INSTRUCTION_SRC="$SCRIPT_DIR/../contributing/samples/openspec_integration/${agent_name}_instruction.md"
+  if [[ -f "$INSTRUCTION_SRC" ]]; then
+    ln -sf "$INSTRUCTION_SRC" "$target_dir/$(basename "$INSTRUCTION_SRC")"
+    echo -e "${GREEN}✅ Symlinked instruction file to $target_dir${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Instruction file not found at $INSTRUCTION_SRC${NC}"
+  fi
+
   cat > "$target_dir/agent.py" <<EOF
 import sys, os
 sys.path.insert(0, '$SAMPLES_DIR')
