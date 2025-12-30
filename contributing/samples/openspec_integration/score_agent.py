@@ -154,25 +154,45 @@ This script evaluates:
 
 Capture and parse the JSON output to get objective scores.
 
-**STEP 3: Run Automated Agent Behavior Scoring Script**
+**STEP 3: Run Automated Agent Behavior Scoring Script (OPTIONAL)**
 
-Use the pre-built behavior scoring script from the openspec-scripts directory:
+**IMPORTANT:** Agent behavior scoring requires session log files in `<workdir>/adk_openspec_apply_agent/`.
+If this directory or session files don't exist, **SKIP this step** and score agent behavior as 0 (N/A).
+
+First, check if session files exist:
 
 ```bash
-# Get the path to ADK_ROOT
-ADK_ROOT="${ADK_ROOT:-$(cd $(dirname $0)/../.. && pwd)}"
-SCORE_SCRIPT="$ADK_ROOT/openspec-scripts/score_agent_behavior.py"
-
-# Run the agent behavior scoring script
-python3 "$SCORE_SCRIPT" <workdir> <device_name>
+# Check if apply agent directory exists
+if [ -d "<workdir>/adk_openspec_apply_agent" ]; then
+  # Check if any session.txt files exist
+  SESSION_COUNT=$(ls -1 <workdir>/adk_openspec_apply_agent/*.session.txt 2>/dev/null | wc -l)
+  if [ $SESSION_COUNT -gt 0 ]; then
+    echo "Session files found. Running behavior scoring..."
+    
+    # Get the path to ADK_ROOT
+    ADK_ROOT="${ADK_ROOT:-$(cd $(dirname $0)/../.. && pwd)}"
+    SCORE_SCRIPT="$ADK_ROOT/openspec-scripts/score_agent_behavior.py"
+    
+    # Run the agent behavior scoring script
+    python3 "$SCORE_SCRIPT" <workdir> <device_name>
+  else
+    echo "No session files found. Skipping behavior scoring."
+    echo '{"documentation_reading": 0, "efficiency": 0, "time_score": 0, "total_behavior_score": 0, "evidence": {"error": "No session files available"}}'
+  fi
+else
+  echo "Apply agent directory not found. Skipping behavior scoring."
+  echo '{"documentation_reading": 0, "efficiency": 0, "time_score": 0, "total_behavior_score": 0, "evidence": {"error": "Apply agent directory not found"}}'
+fi
 ```
 
-This script analyzes the agent's session log and evaluates:
+**If session files are available**, this script analyzes the agent's session log and evaluates:
 - Documentation reading (50 points): AGENTS.md, proposal.md, tasks.md, spec.md, DML/Test memories
 - Efficiency (30 points): Error resolution, best practices compliance
 - Time (10 points): Completion time efficiency
 
-Capture and parse the JSON output to get behavior scores.
+**If session files are NOT available**, return zeros and note the reason in evidence.
+
+Capture and parse the JSON output to get behavior scores (or zeros if N/A).
 
 ### PHASE 2: MANUAL VERIFICATION (LLM Analysis)
 
@@ -182,7 +202,7 @@ Now use your LLM capabilities to manually verify and enhance the automated score
 
 1. **Read the DML file** - Look for code quality indicators
 2. **Read test files** - Assess test coverage and quality
-3. **Read session log** - Understand agent's decision-making process
+3. **Read session log** (if available) - Understand agent's decision-making process
 4. **Read related specs** - Verify implementation matches requirements
 
 For each scoring criterion, ask yourself:
@@ -190,12 +210,19 @@ For each scoring criterion, ask yourself:
 - Are there nuances the script might have missed?
 - Is there additional evidence I can provide?
 
+**Note:** If session log is not available, focus only on code quality verification.
+
 **STEP 5: Compare and Reconcile Scores**
 
 Compare automated scores with your manual analysis:
 - If they match → High confidence in the score
 - If they differ → Investigate why and adjust with explanation
 - Always provide the reasoning for final scores
+
+**For Agent Behavior:** 
+- If session files were not found, accept the 0/N/A score
+- Document in the report that behavior analysis was not possible
+- Focus the evaluation on code quality only
 
 ### PHASE 3: REPORT GENERATION
 
@@ -209,18 +236,21 @@ Create a detailed score.md report with this structure:
 **Generated:** YYYY-MM-DD HH:MM:SS  
 **Working Directory:** <workdir>  
 **Device Name:** <device_name>  
-**Session File:** <session_file_name>
+**Session File:** <session_file_name or "N/A">
 
 ---
 
 ## Executive Summary
 
-**Overall Score: X/180 (XX%)**
+**Overall Score: X/180 (XX%)** or **X/90 (XX%)** if behavior scoring N/A
 
 - **Code Quality Score: X/90 (XX%)**
-- **Agent Behavior Score: X/90 (XX%)**
+- **Agent Behavior Score: X/90 (XX%)** or **N/A** if session files not available
 
 **Grade:** [A+ (170-180) | A (160-169) | B+ (150-159) | B (140-149) | C+ (130-139) | C (120-129) | D (100-119) | F (<100)]
+
+**Note:** If agent behavior score shows "N/A", it means session log files were not found in 
+`adk_openspec_apply_agent/` directory. The overall score is based only on Code Quality (out of 90 points).
 
 **Key Strengths:**
 1. [Strength 1]
@@ -448,41 +478,48 @@ Files using SIM_continue: X/Y
 
 ## Part 2: Agent Behavior Evaluation (90 points)
 
+**IMPORTANT:** If no session files were found, this entire section should show:
+- Score: 0/90 (N/A)
+- Note: "Session log files not available for behavior analysis"
+- Skip all subsections and proceed to Final Summary
+
+**If session files ARE available**, proceed with detailed evaluation below:
+
 ### 2.1 Documentation Reading (50 points)
 
-**Score: X/50**
+**Score: X/50** or **N/A**
 
-**Session File:** <session_file>
+**Session File:** <session_file or "Not available">
 
 **Automated Analysis Summary:**
 | Document | Required | Read? | Score |
 |----------|----------|-------|-------|
-| AGENTS.md | Yes | [YES/NO] | X/10 |
-| proposal.md | Yes | [YES/NO] | X/10 |
-| tasks.md | Yes | [YES/NO] | X/10 |
-| spec.md | Yes | [YES/NO] | X/10 |
-| DML Best Practices | 4+ files | X files | X/10 |
-| Test Best Practices | 4+ files | X files | X/10 |
+| AGENTS.md | Yes | [YES/NO/N/A] | X/10 |
+| proposal.md | Yes | [YES/NO/N/A] | X/10 |
+| tasks.md | Yes | [YES/NO/N/A] | X/10 |
+| spec.md | Yes | [YES/NO/N/A] | X/10 |
+| DML Best Practices | 4+ files | X files/N/A | X/10 |
+| Test Best Practices | 4+ files | X files/N/A | X/10 |
 
 #### 2.1.1 Read AGENTS.md (10 points)
 
-**Automated Score: X/10**
+**Automated Score: X/10** or **N/A**
 
 **Evidence from session log:**
 ```
-[Grep results showing file access]
+[Grep results showing file access or "Session log not available"]
 ```
 
 **Manual Verification:**
-[Did the agent actually use the information from AGENTS.md in its decisions?]
+[Did the agent actually use the information from AGENTS.md in its decisions? Or "N/A - no session log"]
 
-**Final Score: X/10**
+**Final Score: X/10** or **N/A**
 
 ---
 
 #### 2.1.2 Read proposal.md (10 points)
 
-**Automated Score: X/10**
+**Automated Score: X/10** or **N/A**
 
 **Evidence:**
 ```
@@ -595,6 +632,8 @@ Files using SIM_continue: X/Y
 
 ### Overall Score Breakdown
 
+**Note:** If Agent Behavior scoring is N/A, use only Code Quality for the overall score (X/90).
+
 | Component | Score | Max | Percentage |
 |-----------|-------|-----|------------|
 | **Code Quality** | X | 90 | XX% |
@@ -602,15 +641,15 @@ Files using SIM_continue: X/Y
 | Test Pass Rate | X | 10 | XX% |
 | DML Code Quality | X | 30 | XX% |
 | Test Code Quality | X | 20 | XX% |
-| **Agent Behavior** | X | 90 | XX% |
-| Documentation Reading | X | 50 | XX% |
-| Efficiency | X | 30 | XX% |
-| Time | X | 10 | XX% |
-| **OVERALL TOTAL** | **X** | **180** | **XX%** |
+| **Agent Behavior** | X or N/A | 90 | XX% or N/A |
+| Documentation Reading | X or N/A | 50 | XX% or N/A |
+| Efficiency | X or N/A | 30 | XX% or N/A |
+| Time | X or N/A | 10 | XX% or N/A |
+| **OVERALL TOTAL** | **X** | **180 or 90** | **XX%** |
 
 ### Grade: [GRADE]
 
-**Grade Scale:**
+**Grade Scale (when behavior available - out of 180):**
 - A+ (170-180): Exceptional implementation
 - A  (160-169): Excellent implementation
 - B+ (150-159): Very good implementation
@@ -619,6 +658,16 @@ Files using SIM_continue: X/Y
 - C  (120-129): Adequate implementation
 - D  (100-119): Needs improvement
 - F  (<100): Significant issues
+
+**Grade Scale (when behavior N/A - out of 90):**
+- A+ (85-90): Exceptional code quality
+- A  (80-84): Excellent code quality
+- B+ (75-79): Very good code quality
+- B  (70-74): Good code quality
+- C+ (65-69): Satisfactory code quality
+- C  (60-64): Adequate code quality
+- D  (50-59): Needs improvement
+- F  (<50): Significant issues
 
 ---
 
