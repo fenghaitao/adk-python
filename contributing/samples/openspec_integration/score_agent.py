@@ -273,7 +273,7 @@ def score_code_quality(workdir: str, device_name: str) -> dict:
             print("❌ No Simics event usage")
         
         # 3c. Lazy evaluation (5 points)
-        if re.search(r'(sim_time|SIM_cycle_count)\\s*\\(', dml_content):
+        if re.search(r'(SIM_time|SIM_cycle_count)\\s*\\(', dml_content):
             scores["dml_quality"] += 5
             scores["evidence"]["dml_lazy_eval"] = "✅ Uses lazy evaluation (+5)"
             print("✅ Uses lazy evaluation (+5)")
