@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -56,7 +56,7 @@ class CodeQualityScore(BaseModel):
   dml_quality: int = Field(..., description="Score for DML code quality (0-30)")
   test_quality: int = Field(..., description="Score for test code quality (0-20)")
   total_code_score: int = Field(..., description="Total code quality score (0-90)")
-  evidence: Dict[str, str] = Field(..., description="Evidence/proof for each scoring criterion")
+  evidence: Dict[str, Any] = Field(..., description="Evidence/proof for each scoring criterion (can be strings, numbers, or other data)")
 
 
 class AgentBehaviorScore(BaseModel):
@@ -65,7 +65,7 @@ class AgentBehaviorScore(BaseModel):
   efficiency: int = Field(..., description="Score for efficiency and best practices (0-30)")
   time_score: int = Field(..., description="Score based on completion time (0-10)")
   total_behavior_score: int = Field(..., description="Total agent behavior score (0-90)")
-  evidence: Dict[str, str] = Field(..., description="Evidence/proof for each scoring criterion")
+  evidence: Dict[str, Any] = Field(..., description="Evidence/proof for each scoring criterion (can be strings, numbers, or other data)")
 
 
 class FinalScore(BaseModel):
