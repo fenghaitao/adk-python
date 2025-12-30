@@ -81,6 +81,7 @@ for i in $(seq "$start_num" "$end_num"); do
 		else
 			pushd "$proj_folder" >/dev/null
 			"$ADK_ROOT/openspec-scripts/run-meta-improve.sh" --workdir ./adk_openspec_project
+			"$ADK_ROOT/openspec-scripts/run-score-agent.sh" --workdir ./adk_openspec_project/ --device-name wdt
 			popd >/dev/null
 		fi
 	else
