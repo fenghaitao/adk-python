@@ -701,7 +701,42 @@ Files using SIM_continue: X/Y
 
 ## Appendix
 
-### A. Scoring Scripts Used
+### A. Arithmetic Verification
+
+**IMPORTANT:** Show explicit calculations to verify accuracy:
+
+**Code Quality Calculation:**
+```
+Build Pass:        X points
+Test Pass Rate:    Y points  
+DML Quality:       Z points
+Test Quality:      W points
+----------------------------
+Subtotal:          X + Y + Z + W = [TOTAL] points
+Verification:      [TOTAL] / 90 = XX%
+```
+
+**Agent Behavior Calculation (if applicable):**
+```
+Documentation:     X points
+Efficiency:        Y points
+Time:              Z points
+----------------------------
+Subtotal:          X + Y + Z = [TOTAL] points
+Verification:      [TOTAL] / 90 = XX%
+```
+
+**Overall Total Calculation:**
+```
+Code Quality:      X points
+Agent Behavior:    Y points (or N/A)
+----------------------------
+Overall Total:     X + Y = [TOTAL] points
+Verification:      [TOTAL] / 180 (or 90) = XX%
+Grade:             [GRADE] (verified against scale)
+```
+
+### B. Scoring Scripts Used
 
 #### Code Quality Script
 ```python
@@ -713,7 +748,7 @@ Files using SIM_continue: X/Y
 [Include the full automated scoring script]
 ```
 
-### B. Key File Locations
+### C. Key File Locations
 
 - DML Implementation: `<workdir>/simics-project/modules/<device_name>/<device_name>.dml`
 - Test Files: `<workdir>/simics-project/modules/<device_name>/test/s-*.py`
@@ -744,7 +779,56 @@ write_file(
 )
 ```
 
-**STEP 8: Return Structured Results**
+**STEP 8: Validate Arithmetic and Review Report**
+
+**CRITICAL:** Before returning the final results, you MUST validate all score calculations:
+
+1. **Verify Code Quality Total:**
+   - Build Pass: X points
+   - Test Pass Rate: Y points
+   - DML Quality: Z points
+   - Test Quality: W points
+   - **Calculate: X + Y + Z + W = Total Code Quality**
+   - **Verify:** Does this match the total you reported?
+
+2. **Verify Agent Behavior Total (if applicable):**
+   - Documentation Reading: X points
+   - Efficiency: Y points
+   - Time: Z points
+   - **Calculate: X + Y + Z = Total Behavior**
+   - **Verify:** Does this match the total you reported?
+
+3. **Verify Overall Total:**
+   - Code Quality Total: X points
+   - Behavior Total: Y points (or 0 if N/A)
+   - **Calculate: X + Y = Overall Total**
+   - **Verify:** Does this match the executive summary?
+
+4. **Verify Percentage Calculations:**
+   - Code Quality %: (Code Quality Total / 90) × 100
+   - Behavior %: (Behavior Total / 90) × 100 (if applicable)
+   - Overall %: (Overall Total / 180) × 100 or (Overall Total / 90) × 100 if behavior N/A
+
+5. **Verify Grade Assignment:**
+   - Check that the grade matches the overall score using the correct grade scale
+   - Ensure consistency between numeric score and letter grade
+
+**If you find any arithmetic errors:**
+- Recalculate the correct values
+- Update the report using write_file again
+- Ensure all tables, summaries, and totals are consistent
+
+**Show your verification work:**
+```
+Arithmetic Verification:
+- Code Quality: 30 + 8 + 22 + 6 = 66 ✅
+- Agent Behavior: 35 + 20 + 5 = 60 ✅
+- Overall Total: 66 + 60 = 126 ✅
+- Overall %: (126/180) × 100 = 70% ✅
+- Grade: B (for score 126/180) ✅
+```
+
+**STEP 9: Return Structured Results**
 
 Finally, use set_model_response to return the FinalScore with all details.
 
@@ -769,6 +853,16 @@ You have access to:
 - Provide detailed evidence for every score
 - Be objective and fair in your assessment
 - Focus on what can be measured and verified
+- **CRITICAL: Verify all arithmetic calculations before finalizing the report**
+  - Double-check that all subsection scores add up correctly to category totals
+  - Verify category totals add up correctly to the overall score
+  - Ensure percentages are calculated correctly
+  - Confirm grade assignment matches the numeric score
+  - Show your verification work in STEP 8
+- When in doubt, err on the side of being generous but honest
+- The report should be comprehensive and actionable
+- Save the score.md report in the workdir root directory
+- If you find calculation errors after saving, immediately update the report with corrected values
 - When in doubt, err on the side of being generous but honest
 - The report should be comprehensive and actionable
 - Save the score.md report in the workdir root directory
