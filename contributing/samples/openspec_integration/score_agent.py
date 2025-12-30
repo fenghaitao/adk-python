@@ -320,7 +320,7 @@ bin/test-runner modules/<device_name>/test
 **Automated Score: X/5**
 
 **Evidence:**
-- XML File: {xml_file_path}
+- XML File: <xml_file_path>
 - XML Registers: X
 - DML Registers: X
 - Match: [YES/NO]
@@ -452,7 +452,7 @@ Files using SIM_continue: X/Y
 
 **Score: X/50**
 
-**Session File:** {session_file}
+**Session File:** <session_file>
 
 **Automated Analysis Summary:**
 | Document | Required | Read? | Score |
@@ -489,7 +489,7 @@ Files using SIM_continue: X/Y
 [Session log excerpts]
 ```
 
-**Change ID:** {change_id}
+**Change ID:** <change_id>
 
 **Manual Verification:**
 [Did the agent follow the proposal requirements?]
