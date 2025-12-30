@@ -135,11 +135,12 @@ Before scoring, validate the environment:
 
 **STEP 2: Run Automated Code Quality Scoring Script**
 
-Create and run a Python scoring script that checks objective criteria:
+Create and run a Python scoring script that checks objective criteria.
+The script should have this structure (use bash_command to create and run it):
 
 ```python
 #!/usr/bin/env python3
-"""Automated scoring script for code quality evaluation."""
+# Automated scoring script for code quality evaluation.
 
 import os
 import sys
@@ -149,12 +150,8 @@ import json
 from pathlib import Path
 
 def score_code_quality(workdir: str, device_name: str) -> dict:
-    """
-    Score code quality based on objective criteria.
-    
-    Returns:
-        dict with scores and evidence for each criterion
-    """
+    # Score code quality based on objective criteria.
+    # Returns: dict with scores and evidence for each criterion
     scores = {
         "build_pass": 0,
         "test_pass": 0,
@@ -273,7 +270,7 @@ def score_code_quality(workdir: str, device_name: str) -> dict:
             print("❌ No Simics event usage")
         
         # 3c. Lazy evaluation (5 points)
-        if re.search(r'(SIM_time|SIM_cycle_count)\\s*\\(', dml_content):
+        if re.search(r'(sim_time|SIM_cycle_count)\\s*\\(', dml_content):
             scores["dml_quality"] += 5
             scores["evidence"]["dml_lazy_eval"] = "✅ Uses lazy evaluation (+5)"
             print("✅ Uses lazy evaluation (+5)")
@@ -442,7 +439,7 @@ Create and run a script to analyze the agent's session log:
 
 ```python
 #!/usr/bin/env python3
-"""Automated scoring script for agent behavior evaluation."""
+# Automated scoring script for agent behavior evaluation.
 
 import os
 import sys
@@ -451,12 +448,8 @@ from pathlib import Path
 from datetime import datetime
 
 def score_agent_behavior(workdir: str, device_name: str) -> dict:
-    """
-    Score agent behavior based on session log analysis.
-    
-    Returns:
-        dict with scores and evidence for each criterion
-    """
+    # Score agent behavior based on session log analysis.
+    # Returns: dict with scores and evidence for each criterion
     scores = {
         "documentation_reading": 0,
         "efficiency": 0,
