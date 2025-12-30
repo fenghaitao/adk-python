@@ -413,8 +413,11 @@ if [ "$SKIP_INIT" = false ]; then
     echo -e "${BLUE}Step 8: Setting up Simics project...${NC}"
     SIMICS_SETUP_PROMPT="setup simics-project for device wdt"
 
+    # Get absolute path of current directory (already in WORKDIR from Step 2)
+    WORKDIR_ABS="$(pwd)"
+
     echo "   Running: run_simics_setup.py for device $DEVICE_NAME"
-    if "$ADK_ROOT/.venv/bin/python3" "$ADK_ROOT/openspec-scripts/run_simics_setup.py" "$WORKDIR" "$DEVICE_NAME"; then
+    if "$ADK_ROOT/.venv/bin/python3" "$ADK_ROOT/openspec-scripts/run_simics_setup.py" "$WORKDIR_ABS" "$DEVICE_NAME"; then
         echo -e "${GREEN}✅ Simics project setup completed${NC}"
     else
         echo -e "${YELLOW}⚠️  Simics project setup completed with warnings${NC}"
