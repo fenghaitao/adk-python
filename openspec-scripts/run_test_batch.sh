@@ -20,6 +20,7 @@ fi
 SLEEP_SECONDS=600
 PROJECT_PREFIX="wdt_dbg"
 DRY_RUN=0
+MODEL="${OPENSPEC_MODEL:-iflow/qwen3-coder-plus}"
 
 shift 2
 
@@ -59,7 +60,7 @@ for i in $(seq "$start_num" "$end_num"); do
 
 	echo "\n=== Running test for project: $proj_folder (iteration $i) ==="
 
-	run_test_cmd=("$ADK_ROOT/openspec-scripts/run_test.sh" "8051" "iflow/qwen3-coder-plus" "$proj_folder" "0,1")
+    run_test_cmd=("$ADK_ROOT/openspec-scripts/run_test.sh" "8051" "$MODEL" "$proj_folder" "0,1")
 
 	if [[ $DRY_RUN -eq 1 ]]; then
 		echo "DRY RUN: ${run_test_cmd[*]}"
@@ -81,6 +82,7 @@ for i in $(seq "$start_num" "$end_num"); do
 		else
 			pushd "$proj_folder" >/dev/null
 			"$ADK_ROOT/openspec-scripts/run-meta-improve.sh" --workdir ./adk_openspec_project
+            sleep 60
 			"$ADK_ROOT/openspec-scripts/run-score-agent.sh" --workdir ./adk_openspec_project/ --device-name wdt
 			popd >/dev/null
 		fi
