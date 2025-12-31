@@ -7,17 +7,10 @@ import pty
 import select
 import time
 import re
-import shutil
 
 def run_qodercli_with_commands(commands, timeout=600):
     """Run qodercli with commands sent to interactive session."""
     qodercli_path = os.environ.get('QODERCLI_CMD', 'qodercli')
-    
-    # Check if qodercli is available
-    if not shutil.which(qodercli_path) and not os.path.isfile(qodercli_path):
-        print(f"Error: qodercli not found at '{qodercli_path}'", file=sys.stderr)
-        print("Please set QODERCLI_CMD environment variable or ensure qodercli is in PATH", file=sys.stderr)
-        sys.exit(1)
     
     # Create a pseudo-terminal
     master, slave = pty.openpty()
@@ -40,11 +33,8 @@ def run_qodercli_with_commands(commands, timeout=600):
         os.dup2(slave, 2)  # stderr
         os.close(slave)
         
-        # Execute qodercli
-        if os.path.isfile(qodercli_path):
-            os.execv(qodercli_path, [qodercli_path])
-        else:
-            os.execlp(qodercli_path, qodercli_path)
+        # Execute qodercli with --dangerously-skip-permissions flag
+        os.execlp(qodercli_path, qodercli_path, '--dangerously-skip-permissions')
     
     # Parent process
     os.close(slave)
