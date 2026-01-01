@@ -37,6 +37,7 @@ class GitHubCopilotLlm(LiteLlm):
   Supported models:
   - github_copilot/gpt-4o
   - github_copilot/gpt-4o-mini
+  - github_copilot/gpt-4.1
   - github_copilot/gpt-5
   - github_copilot/gpt-5-mini
   - github_copilot/o1-preview
@@ -80,7 +81,8 @@ class GitHubCopilotLlm(LiteLlm):
     """
     return [
       r"github_copilot/gpt-4o.*",
-      r"github_copilot/gpt-4o-mini.*", 
+      r"github_copilot/gpt-4o-mini.*",
+      r"github_copilot/gpt-4\.1.*",
       r"github_copilot/gpt-5.*",
       r"github_copilot/gpt-5-mini.*",
       r"github_copilot/o1-preview.*",
@@ -91,6 +93,7 @@ class GitHubCopilotLlm(LiteLlm):
       # Support models without github_copilot/ prefix for convenience
       r"gpt-4o.*",
       r"gpt-4o-mini.*",
+      r"gpt-4\.1.*",
       r"gpt-5.*",
       r"gpt-5-mini.*",
       r"o1-preview.*", 
