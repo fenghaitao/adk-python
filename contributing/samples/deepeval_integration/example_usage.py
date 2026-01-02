@@ -22,6 +22,7 @@ from deepeval.metrics import AnswerRelevancyMetric
 from google.adk.agents.llm_agent import LlmAgent
 
 from adk_metric import AdkMetric, EvaluationScore
+from adk_answer_relevancy import AdkAnswerRelevancyMetric
 
 
 def main():
@@ -65,6 +66,12 @@ def main():
     threshold=0.7
   )
   
+  # Create ADK-based Answer Relevancy metric
+  adk_answer_relevancy = AdkAnswerRelevancyMetric(
+    model="github_copilot/gpt-4.1",
+    threshold=0.5
+  )
+  
   # Create test cases
   test_cases = [
     LLMTestCase(
@@ -81,14 +88,18 @@ def main():
     )
   ]
   
-  # Evaluate with both ADK and DeepEval metrics
-  # Both using gpt-4.1 for direct comparison (ADK via GitHub Copilot, DeepEval via OpenAI)
+  # Evaluate with three metrics:
+  # 1. Helpfulness (ADK) - simple single-agent evaluation
+  # 2. Answer Relevancy (ADK) - multi-step evaluation using ADK
+  # 3. Answer Relevancy (DeepEval) - DeepEval's original implementation
+  # All using gpt-4.1 for comparison (ADK via GitHub Copilot, DeepEval via OpenAI)
   print("Running evaluation...")
   results = evaluate(
     test_cases,
     metrics=[
-      helpfulness_metric,  # ADK-powered metric (github_copilot/gpt-4.1)
-      AnswerRelevancyMetric(model="gpt-4.1")  # DeepEval metric (openai gpt-4.1)
+      helpfulness_metric,  # ADK single-agent (github_copilot/gpt-4.1)
+      adk_answer_relevancy,  # ADK multi-step (github_copilot/gpt-4.1)
+      AnswerRelevancyMetric(model="gpt-4.1")  # DeepEval (openai gpt-4.1)
     ]
   )
   
