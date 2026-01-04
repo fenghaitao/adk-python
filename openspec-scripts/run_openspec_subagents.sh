@@ -10,14 +10,18 @@ set -euo pipefail
 #       --change-id "123-implement-wdt" \
 #       --device wdt \
 #       --apply \
+#       --test-fix \
 #       --archive
 #
-#   ./run_openspec_subagents.sh --proposal "Add product search" --agent initial --apply
+#   ./run_openspec_subagents.sh --proposal "Add product search" --agent initial --apply --test-fix
 #
 #   ./run_openspec_subagents.sh \
 #       --proposal openspec-prompts/refine-wdt-interrupt.md \
 #       --agent refine \
-#       --apply
+#       --apply \
+#       --test-fix
+#
+#   ./run_openspec_subagents.sh --change-id implement-wdt-initial --test-fix
 #
 # Options:
 #   --proposal TITLE|FILE    Short summary/title for /proposal (string or file path) (required unless --change-id provided)
@@ -26,6 +30,7 @@ set -euo pipefail
 #   --device NAME            Optional device name hint for id generation
 #   --workdir DIR            Working directory for agent directories and logs (default: current directory)
 #   --apply                  Run /apply after /proposal using the resolved change id
+#   --test-fix               Run /fix after /apply to fix build and test failures
 #   --archive                Run /archive after /apply using the same change id
 #   --port PORT              MCP server port (default: 8051)
 #   --model MODEL            Override model for sub-agents (default: env OPENSPEC_MODEL or github_copilot/gpt-5-mini)
@@ -57,6 +62,7 @@ AGENT_TYPE="initial"
 DEVICE_HINT=""
 WORKDIR=""
 RUN_APPLY=false
+RUN_TEST_FIX=false
 RUN_ARCHIVE=false
 MCP_PORT=8051
 MODEL="${OPENSPEC_MODEL:-github_copilot/gpt-5-mini}"
@@ -78,6 +84,7 @@ while [[ $# -gt 0 ]]; do
     --device) DEVICE_HINT="$2"; shift 2;;
     --workdir) WORKDIR="$2"; shift 2;;
     --apply) RUN_APPLY=true; shift;;
+    --test-fix) RUN_TEST_FIX=true; shift;;
     --archive) RUN_ARCHIVE=true; shift;;
     --port) MCP_PORT="$2"; shift 2;;
     --model) MODEL="$2"; shift 2;;
@@ -144,6 +151,7 @@ fi
 PROPOSAL_INITIAL_DIR="$WORKDIR/adk_openspec_proposal_initial_agent"
 PROPOSAL_REFINE_DIR="$WORKDIR/adk_openspec_proposal_refine_agent"
 APPLY_DIR="$WORKDIR/adk_openspec_apply_agent"
+TEST_FIX_DIR="$WORKDIR/adk_openspec_test_fix_agent"
 ARCHIVE_DIR="$WORKDIR/adk_openspec_archive_agent"
 
 prepare_agent_dir() {
@@ -287,6 +295,48 @@ if [[ "$RUN_APPLY" == true ]]; then
       python3 "$SCRIPT_DIR/../view_session.py" "$APPLY_DIR/${APPLY_SESSION_ID}.session.json" > "$APPLY_DIR/${APPLY_SESSION_ID}.session.txt"
       if [[ -f "$APPLY_DIR/${APPLY_SESSION_ID}.session.txt" ]]; then
         echo -e "${GREEN}Human-readable apply session saved: $APPLY_DIR/${APPLY_SESSION_ID}.session.txt${NC}"
+      fi
+    fi
+  fi
+fi
+
+# Run /fix if requested
+if [[ "$RUN_TEST_FIX" == true ]]; then
+  echo -e "${BLUE}🩺 Running /fix for ${CHANGE_ID}...${NC}"
+  prepare_agent_dir "$TEST_FIX_DIR" "openspec_integration.test_fix_agent"
+
+  # Build ADK command with session options
+  ADK_TEST_FIX_CMD="$ADK_BIN run $TEST_FIX_DIR"
+  if [[ "$SAVE_SESSION" == true ]]; then
+    TEST_FIX_SESSION_ID="test_fix_${CHANGE_ID}_$(date +%Y%m%d_%H%M%S)"
+    ADK_TEST_FIX_CMD="$ADK_TEST_FIX_CMD --save_session --session_id $TEST_FIX_SESSION_ID"
+    echo -e "${BLUE}Session will be saved as: $TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.json${NC}"
+  fi
+  
+  # Save test fix output to log file while displaying it
+  TEST_FIX_LOG="$TEST_FIX_DIR/test_fix.log"
+  
+  set +e
+  printf "/fix --id %s\nexit\n" "$CHANGE_ID" | OPENSPEC_MODEL="$MODEL" $ADK_TEST_FIX_CMD 2>&1 | tee "$TEST_FIX_LOG"
+  TEST_FIX_STATUS=${PIPESTATUS[0]}
+  set -e
+  
+  echo -e "${BLUE}📝 Test fix log saved: $TEST_FIX_LOG${NC}"
+  
+  if [[ $TEST_FIX_STATUS -ne 0 ]]; then
+    echo -e "${YELLOW}⚠️  /fix completed with warnings${NC}"
+  else
+    echo -e "${GREEN}✅ /fix completed successfully${NC}"
+  fi
+  
+  # Generate human-readable session dump if session was saved
+  if [[ "$SAVE_SESSION" == true ]] && [[ -f "$TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.json" ]]; then
+    echo -e "${GREEN}Test fix session saved: $TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.json${NC}"
+    if [[ -f "$SCRIPT_DIR/../view_session.py" ]]; then
+      echo "📄 Generating human-readable test fix session dump..."
+      python3 "$SCRIPT_DIR/../view_session.py" "$TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.json" > "$TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.txt"
+      if [[ -f "$TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.txt" ]]; then
+        echo -e "${GREEN}Human-readable test fix session saved: $TEST_FIX_DIR/${TEST_FIX_SESSION_ID}.session.txt${NC}"
       fi
     fi
   fi

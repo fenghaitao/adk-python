@@ -117,5 +117,5 @@ if [[ "${run_stage[1]}" == "1" ]]; then
     echo "=== Stage 1: proposal initialization ===" | tee "$log_dir/${proj_dir}.1.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" "$log_dir/${proj_dir}.1.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --test-fix --archive --model $model" "$log_dir/${proj_dir}.1.log"
 fi
