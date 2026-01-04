@@ -95,7 +95,7 @@ async def setup_simics_project(proj_dir_path: str, device_name: str):
     specs_dir = Path(proj_dir_path) / "specs" / branch
 
     # Search for register XML file containing device name
-    xml_pattern = str(specs_dir / f"*{device_name}*.xml")
+    xml_pattern = str(specs_dir / f"*register*.xml")
     xml_files = glob.glob(xml_pattern)
 
     if not xml_files:
