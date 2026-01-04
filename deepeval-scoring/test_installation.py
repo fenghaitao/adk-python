@@ -63,10 +63,12 @@ def test_dependencies():
   
   try:
     import deepeval
-    print("✅ deepeval installed")
+    print(f"✅ deepeval installed (version {deepeval.__version__})")
+    print(f"   Location: {deepeval.__file__}")
   except ImportError:
     missing.append("deepeval")
     print("❌ deepeval not installed")
+    print("   Install from parent directory: cd ../deepeval && pip install -e .")
   
   try:
     import litellm
@@ -91,7 +93,7 @@ def test_dependencies():
   
   if missing:
     print(f"\n⚠️  Missing dependencies: {', '.join(missing)}")
-    print("Run: pip install -r requirements.txt")
+    print("Run: pip install -e .")
     return False
   
   return True

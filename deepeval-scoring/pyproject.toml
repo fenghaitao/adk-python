@@ -48,12 +48,12 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 
+# NOTE: This project depends on the local deepeval installation from ../deepeval
+# Install deepeval first: cd ../deepeval && pip install -e .
 dependencies = [
-    "deepeval>=1.0.0",
+    "deepeval @ file:///${PROJECT_ROOT}/../deepeval",
     "openai>=1.0.0",
     "litellm>=1.0.0",
-    "tree-sitter>=0.20.0",
-    "tree-sitter-c>=0.20.0",
     "pyyaml>=6.0",
     "pydantic>=2.0.0",
     "jinja2>=3.0.0",

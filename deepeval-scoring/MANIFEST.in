@@ -1,11 +1,11 @@
 # Include documentation
 include README.md
 include LICENSE
+include QUICKSTART.md
 
 # Include configuration files
 include config.yaml
 include pyproject.toml
-include requirements.txt
 
 # Include test files
 include test_installation.py

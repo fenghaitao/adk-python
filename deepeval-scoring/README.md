@@ -16,30 +16,30 @@ See [QUICKSTART.md](QUICKSTART.md) for a 5-minute getting started guide.
 
 ## Installation
 
-### Option 1: Install from source (recommended)
+### Prerequisites
+
+This project requires the local DeepEval installation from the parent directory:
 
 ```bash
-cd deepeval-scoring
+# First, ensure deepeval is installed from the parent directory
+cd ../deepeval
+pip install -e .
+cd ../deepeval-scoring
+```
+
+### Install deepeval-scoring
+
+```bash
+# Install in editable mode with all dependencies
 pip install -e .
 ```
 
-This installs the package in editable mode with all dependencies.
-
-### Option 2: Install with requirements.txt
+### Install with development dependencies
 
 ```bash
-cd deepeval-scoring
-pip install -r requirements.txt
-```
-
-### Option 3: Install with development dependencies
-
-```bash
-cd deepeval-scoring
+# Includes testing and linting tools (pytest, black, pylint, mypy)
 pip install -e ".[dev]"
 ```
-
-This includes testing and linting tools (pytest, black, pylint, mypy).
 
 ## Usage
 
