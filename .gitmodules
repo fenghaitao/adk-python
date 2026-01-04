@@ -16,3 +16,6 @@
 [submodule "deepeval"]
 	path = deepeval
 	url = https://github.com/fenghaitao/deepeval.git
+[submodule "textual"]
+	path = textual
+	url = https://github.com/fenghaitao/textual
