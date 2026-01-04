@@ -628,7 +628,7 @@ class KiroCLIController(App):
     CSS = """
     Screen {
         layout: grid;
-        grid-size: 4 4;
+        grid-size: 4 3;
         grid-gutter: 1;
     }
 
@@ -643,7 +643,7 @@ class KiroCLIController(App):
     /* Sidebar - Left column */
     #sidebar {
         column-span: 1;
-        row-span: 4;
+        row-span: 3;
         background: $surface;
         border: solid $primary;
     }
@@ -715,7 +715,7 @@ class KiroCLIController(App):
     /* Chat panel - Right column */
     #chat-panel {
         column-span: 1;
-        row-span: 4;
+        row-span: 3;
         background: $surface;
         border: solid $primary;
         layout: vertical;
@@ -742,26 +742,6 @@ class KiroCLIController(App):
     }
 
     #chat-send {
-        width: auto;
-    }
-
-    /* Input bar - Bottom */
-    #input-bar {
-        column-span: 3;
-        row-span: 1;
-        height: 3;
-        background: $surface;
-        border: solid $primary;
-        layout: horizontal;
-        padding: 0 1;
-    }
-
-    #command-input {
-        width: 1fr;
-        margin-right: 1;
-    }
-
-    #send-button {
         width: auto;
     }
 
@@ -848,14 +828,6 @@ class KiroCLIController(App):
         # Chat panel on the right
         with Container(id="chat-panel"):
             yield ChatInterface()
-        
-        # Input bar at bottom
-        with Container(id="input-bar"):
-            yield Input(
-                placeholder="Type commands here...",
-                id="command-input"
-            )
-            yield Button("Send", id="send-button", variant="primary")
 
         yield Footer()
 
@@ -893,26 +865,9 @@ class KiroCLIController(App):
             except Exception:
                 pass
 
-    @on(Button.Pressed, "#send-button")
-    def send_input_command(self) -> None:
-        """Send command from input field."""
-        input_widget = self.query_one("#command-input")
-        command = input_widget.value.strip()
-        if command:
-            self.send_command(command)
-            input_widget.value = ""
-
-    @on(Input.Submitted, "#command-input")
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle Enter key in input field."""
-        command = event.value.strip()
-        if command:
-            self.send_command(command)
-            event.input.value = ""
-
     @on(Button.Pressed, "#chat-send")
     def send_chat_message(self) -> None:
-        """Send message to AI chat."""
+        """Send message to kiro-cli."""
         chat_input = self.query_one("#chat-input")
         message = chat_input.value.strip()
         if message:
@@ -920,8 +875,8 @@ class KiroCLIController(App):
             chat_interface.add_message("user", message)
             chat_input.value = ""
             
-            # Simulate AI response (integrate with actual AI later)
-            self.simulate_ai_response(message)
+            # Send to kiro-cli
+            self.send_command(message)
 
     @on(Input.Submitted, "#chat-input")
     def on_chat_submitted(self, event: Input.Submitted) -> None:
@@ -931,7 +886,8 @@ class KiroCLIController(App):
             chat_interface = self.query_one(ChatInterface)
             chat_interface.add_message("user", message)
             event.input.value = ""
-            self.simulate_ai_response(message)
+            # Send to kiro-cli
+            self.send_command(message)
 
     @on(Input.Changed, "#history-search")
     def filter_history(self, event: Input.Changed) -> None:
