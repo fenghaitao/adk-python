@@ -17,5 +17,8 @@
 	path = deepeval
 	url = https://github.com/fenghaitao/deepeval.git
 [submodule "dspy"]
-	path = dspy
-	url = https://github.com/fenghaitao/dspy.git
+        path = dspy
+        url = https://github.com/fenghaitao/dspy.git
+[submodule "textual"]
+        path = textual
+        url = https://github.com/fenghaitao/textual
