@@ -155,6 +155,8 @@ textual = [
   # go/keep-sorted start
   # Install textual from local submodule
   # The submodule must be initialized: git submodule update --init textual
+  "psutil>=7.2.1",
+  "pyte>=0.8.2",
   "textual",
   # go/keep-sorted end
 ]
