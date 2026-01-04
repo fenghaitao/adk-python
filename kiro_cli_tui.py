@@ -28,8 +28,10 @@ import logging
 import os
 import pty
 import pyte
+import re
 import select
 import shlex
+import shutil
 import signal
 import struct
 import subprocess
@@ -56,6 +58,8 @@ from textual.widgets import (
     ListItem,
     ListView,
     OptionList,
+    RadioButton,
+    RadioSet,
     RichLog,
     Static,
     TabbedContent,
@@ -367,9 +371,9 @@ AGENTS = {
         'color': 'cyan',
     },
     'acli': {
-        'name': 'Agent OS CLI',
+        'name': 'Atlassian CLI',
         'command': 'acli',
-        'description': 'Agent OS command-line interface',
+        'description': 'Atlassian command-line interface',
         'color': 'green',
     },
     'qodercli': {
@@ -449,6 +453,88 @@ class StatusPanel(Static):
                 pass
 
 
+class WorkflowTab(Static):
+    """Widget for workflow automation interface."""
+
+    workflow_status = reactive("Ready")
+    current_step = reactive(0)
+    change_id = reactive("")
+
+    def compose(self) -> ComposeResult:
+        """Compose the workflow interface."""
+        with VerticalScroll():
+            yield Label("🔄 Workflow Automation", classes="section-title")
+            
+            # Workflow mode selector
+            yield Label("Workflow Mode:", classes="workflow-label")
+            with RadioSet(id="workflow-mode"):
+                yield RadioButton("Propose (Simple)", id="mode-propose-simple", value=True)
+                yield RadioButton("Propose (Multi-delta)", id="mode-propose-multi")
+                yield RadioButton("Apply", id="mode-apply")
+                yield RadioButton("Full (Propose+Apply)", id="mode-full")
+            
+            # Configuration inputs
+            yield Label("Working Directory:", classes="workflow-label")
+            yield Input(value="adk_openspec_project", id="workflow-workdir")
+            
+            yield Label("Session Name (optional):", classes="workflow-label")
+            yield Input(placeholder="auto-generated", id="workflow-session")
+            
+            yield Label("Change ID (for Apply/Full):", classes="workflow-label")
+            yield Input(placeholder="001-implement-wdt", id="workflow-changeid")
+            
+            # Action button
+            yield Button("🚀 Run Workflow", id="run-workflow", variant="primary")
+            
+            # Progress tracker
+            yield Label("─" * 30, classes="separator")
+            yield Label("Workflow Progress:", classes="workflow-label")
+            yield Label("⬜ Setup workspace", id="step-setup")
+            yield Label("⬜ Run agent", id="step-run")
+            yield Label("⬜ Save session", id="step-save")
+            yield Label("⬜ Analyze results", id="step-analyze")
+            
+            # Status display
+            yield Label("─" * 30, classes="separator")
+            yield Label(f"Status: {self.workflow_status}", id="workflow-status-label")
+            yield Label(f"Change ID: {self.change_id or 'None'}", id="workflow-changeid-label")
+
+    def watch_workflow_status(self, value: str) -> None:
+        """Update workflow status display."""
+        if self.is_mounted:
+            try:
+                self.query_one("#workflow-status-label").update(f"Status: {value}")
+            except Exception:
+                pass
+
+    def watch_change_id(self, value: str) -> None:
+        """Update change ID display."""
+        if self.is_mounted:
+            try:
+                self.query_one("#workflow-changeid-label").update(f"Change ID: {value or 'None'}")
+            except Exception:
+                pass
+
+    def update_step(self, step: int, status: str) -> None:
+        """Update workflow step status."""
+        step_ids = ["#step-setup", "#step-run", "#step-save", "#step-analyze"]
+        step_names = ["Setup workspace", "Run agent", "Save session", "Analyze results"]
+        
+        if 0 <= step < len(step_ids) and self.is_mounted:
+            try:
+                label = self.query_one(step_ids[step])
+                if status == "complete":
+                    label.update(f"✅ {step_names[step]}")
+                elif status == "running":
+                    label.update(f"⏳ {step_names[step]}")
+                elif status == "error":
+                    label.update(f"❌ {step_names[step]}")
+                else:
+                    label.update(f"⬜ {step_names[step]}")
+            except Exception:
+                pass
+
+
 class ChatInterface(Static):
     """Widget for AI chat interface."""
 
@@ -471,42 +557,6 @@ class ChatInterface(Static):
             chat.write(f"[bold green][{timestamp}] AI:[/] {message}")
         elif role == "system":
             chat.write(f"[dim][{timestamp}] System:[/] {message}")
-
-
-class CommandHistory(Static):
-    """Widget for command history with search."""
-
-    def __init__(self):
-        super().__init__()
-        self.history: deque = deque(maxlen=100)
-
-    def compose(self) -> ComposeResult:
-        """Compose the command history."""
-        yield Label("📜 Command History", classes="section-title")
-        yield Input(placeholder="Search history...", id="history-search")
-        yield ListView(id="history-list")
-
-    def add_command(self, command: str) -> None:
-        """Add command to history."""
-        self.history.append({
-            'command': command,
-            'timestamp': datetime.now().isoformat(),
-        })
-        self.refresh_list()
-
-    def refresh_list(self, filter_text: str = "") -> None:
-        """Refresh the history list with optional filter."""
-        if not self.is_mounted:
-            return
-            
-        list_view = self.query_one("#history-list")
-        list_view.clear()
-        
-        for entry in reversed(self.history):
-            cmd = entry['command']
-            if filter_text.lower() in cmd.lower() or not filter_text:
-                timestamp = datetime.fromisoformat(entry['timestamp']).strftime("%H:%M:%S")
-                list_view.append(ListItem(Label(f"[{timestamp}] {cmd}")))
 
 
 class InteractiveTerminal(RichLog):
@@ -649,17 +699,12 @@ class KiroCLIController(App):
     }
 
     AgentSelector {
-        height: 50%;
+        height: 60%;
         border-bottom: solid $primary;
     }
 
     StatusPanel {
-        height: 30%;
-        border-bottom: solid $primary;
-    }
-
-    CommandHistory {
-        height: 20%;
+        height: 40%;
     }
 
     #agent-list {
@@ -678,7 +723,7 @@ class KiroCLIController(App):
     #main-content {
         column-span: 2;
         row-span: 3;
-        background: black;
+        background: $background;
         border: solid $primary;
     }
 
@@ -688,7 +733,7 @@ class KiroCLIController(App):
 
     #terminal-scroll {
         height: 1fr;
-        background: black;
+        background: $background;
         border: none;
         padding: 0;
         margin: 0;
@@ -696,8 +741,8 @@ class KiroCLIController(App):
 
     #terminal-output {
         height: auto;
-        background: black;
-        color: white;
+        background: $background;
+        color: $text;
         border: none;
         padding: 0;
         margin: 0;
@@ -705,8 +750,8 @@ class KiroCLIController(App):
 
     InteractiveTerminal {
         height: auto;
-        background: black;
-        color: white;
+        background: $background;
+        color: $text;
         border: none;
         padding: 0;
         margin: 0;
@@ -719,6 +764,49 @@ class KiroCLIController(App):
         background: $surface;
         border: solid $primary;
         layout: vertical;
+    }
+
+    #chat-tabs {
+        height: 100%;
+    }
+
+    WorkflowTab {
+        height: 100%;
+        padding: 1;
+    }
+
+    .workflow-label {
+        margin-top: 1;
+        color: $text-muted;
+    }
+
+    .separator {
+        color: $text-muted;
+        margin: 1 0;
+    }
+
+    #workflow-mode {
+        margin-bottom: 1;
+    }
+
+    #run-workflow {
+        margin: 1 0;
+        width: 100%;
+    }
+
+    #workflow-workdir, #workflow-session, #workflow-changeid {
+        margin-bottom: 1;
+    }
+
+    #step-setup, #step-run, #step-save, #step-analyze {
+        padding: 0 1;
+        margin: 0;
+    }
+
+    #workflow-status-label, #workflow-changeid-label {
+        padding: 0 1;
+        margin: 0;
+        color: $text-muted;
     }
 
     ChatInterface {
@@ -807,16 +895,19 @@ class KiroCLIController(App):
             'chat_history': [],
             'start_time': None,
         }
+        # Workflow state
+        self.workflow_running = False
+        self.workflow_mode = "propose-simple"
+        self.workflow_change_id = None
 
     def compose(self) -> ComposeResult:
         """Compose the UI with multi-pane layout."""
         yield Header(show_clock=True)
         
-        # Sidebar with agents, status, and history
+        # Sidebar with agents and status
         with VerticalScroll(id="sidebar"):
             yield AgentSelector()
             yield StatusPanel()
-            yield CommandHistory()
         
         # Main content area with tabs for different agents
         with Container(id="main-content"):
@@ -825,9 +916,13 @@ class KiroCLIController(App):
                     with VerticalScroll(id="terminal-scroll"):
                         yield InteractiveTerminal(id="terminal-output")
         
-        # Chat panel on the right
+        # Chat panel on the right with tabs
         with Container(id="chat-panel"):
-            yield ChatInterface()
+            with TabbedContent(id="chat-tabs"):
+                with TabPane("Chat", id="chat-tab"):
+                    yield ChatInterface()
+                with TabPane("Workflow", id="workflow-tab"):
+                    yield WorkflowTab()
 
         yield Footer()
 
@@ -889,11 +984,57 @@ class KiroCLIController(App):
             # Send to kiro-cli
             self.send_command(message)
 
-    @on(Input.Changed, "#history-search")
-    def filter_history(self, event: Input.Changed) -> None:
-        """Filter command history based on search."""
-        history_widget = self.query_one(CommandHistory)
-        history_widget.refresh_list(event.value)
+    @on(Button.Pressed, "#run-workflow")
+    def on_run_workflow_clicked(self) -> None:
+        """Handle run workflow button click."""
+        if self.workflow_running:
+            self.log_output("⚠️ Workflow already running")
+            return
+        
+        # Get workflow configuration
+        mode_set = self.query_one("#workflow-mode", RadioSet)
+        workdir = self.query_one("#workflow-workdir", Input).value.strip()
+        session_name = self.query_one("#workflow-session", Input).value.strip()
+        change_id = self.query_one("#workflow-changeid", Input).value.strip()
+        
+        # Determine mode from selected radio button
+        pressed_button = mode_set.pressed_button
+        if pressed_button:
+            mode_map = {
+                "mode-propose-simple": "propose-simple",
+                "mode-propose-multi": "propose-multi",
+                "mode-apply": "apply",
+                "mode-full": "full"
+            }
+            self.workflow_mode = mode_map.get(pressed_button.id, "propose-simple")
+        
+        # Validate inputs
+        if not workdir:
+            self.log_output("❌ Working directory is required")
+            return
+        
+        if self.workflow_mode in ["apply", "full"] and not change_id:
+            self.log_output("❌ Change ID is required for Apply/Full mode")
+            return
+        
+        # Store change ID if provided
+        if change_id:
+            self.workflow_change_id = change_id
+        
+        # Start workflow
+        self.run_workflow(workdir, session_name, change_id)
+
+    @on(RadioSet.Changed, "#workflow-mode")
+    def on_workflow_mode_changed(self, event: RadioSet.Changed) -> None:
+        """Handle workflow mode selection change."""
+        mode_map = {
+            "mode-propose-simple": "propose-simple",
+            "mode-propose-multi": "propose-multi",
+            "mode-apply": "apply",
+            "mode-full": "full"
+        }
+        if event.pressed and event.pressed.id:
+            self.workflow_mode = mode_map.get(event.pressed.id, "propose-simple")
 
     @on(OptionList.OptionSelected, "#agent-list")
     def agent_selected(self, event: OptionList.OptionSelected) -> None:
@@ -906,8 +1047,6 @@ class KiroCLIController(App):
             # Update description
             desc_label = self.query_one("#agent-description")
             desc_label.update(agent_info['description'])
-            
-            self.log_output(f"Selected agent: {agent_info['name']}")
 
     def action_start_agent(self) -> None:
         """Start the selected agent."""
@@ -920,11 +1059,6 @@ class KiroCLIController(App):
     def action_toggle_chat(self) -> None:
         """Toggle chat panel visibility."""
         self.chat_visible = not self.chat_visible
-
-    def action_toggle_history(self) -> None:
-        """Show command history."""
-        history_widget = self.query_one(CommandHistory)
-        history_widget.display = not history_widget.display
 
     def action_switch_theme(self) -> None:
         """Switch between light and dark themes."""
@@ -1090,10 +1224,6 @@ class KiroCLIController(App):
                 status_panel = self.query_one(StatusPanel)
                 status_panel.command_count = self.command_count
                 
-                # Add to history
-                history_widget = self.query_one(CommandHistory)
-                history_widget.add_command(command)
-                
                 # Save to session
                 self.session_data['commands'].append({
                     'command': command,
@@ -1102,6 +1232,205 @@ class KiroCLIController(App):
                 
         except Exception as e:
             self.log_output(f"ERROR: Failed to send command: {e}")
+
+    @work(exclusive=True)
+    async def run_workflow(self, workdir: str, session_name: str, change_id: str) -> None:
+        """Execute workflow automation."""
+        self.workflow_running = True
+        workflow_tab = self.query_one(WorkflowTab)
+        workflow_tab.workflow_status = "Running"
+        
+        try:
+            # Resolve working directory
+            if not workdir.startswith('/'):
+                workdir = str(Path.cwd() / workdir)
+            
+            workdir_path = Path(workdir)
+            if not workdir_path.exists():
+                self.log_output(f"❌ Working directory not found: {workdir}")
+                workflow_tab.workflow_status = "Error"
+                return
+            
+            # Generate session name if not provided
+            if not session_name:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                if self.workflow_mode.startswith("propose"):
+                    session_name = f"kiro-propose-session_{timestamp}.json"
+                else:
+                    session_name = f"kiro-apply-session_{timestamp}.json"
+            
+            self.log_output("="*50)
+            self.log_output(f"🚀 Starting Workflow: {self.workflow_mode}")
+            self.log_output(f"Working Directory: {workdir}")
+            self.log_output(f"Session Name: {session_name}")
+            if change_id:
+                self.log_output(f"Change ID: {change_id}")
+            self.log_output("="*50)
+            
+            # Step 1: Setup workspace
+            workflow_tab.update_step(0, "running")
+            await self.workflow_setup_workspace(workdir_path, self.workflow_mode)
+            workflow_tab.update_step(0, "complete")
+            
+            # Step 2: Run agent with appropriate prompt
+            workflow_tab.update_step(1, "running")
+            await self.workflow_run_agent(workdir_path, session_name, change_id)
+            workflow_tab.update_step(1, "complete")
+            
+            # Step 3: Save session (already handled in run_agent)
+            workflow_tab.update_step(2, "complete")
+            
+            # Step 4: Analyze results
+            workflow_tab.update_step(3, "running")
+            await self.workflow_analyze_session(workdir_path, session_name)
+            workflow_tab.update_step(3, "complete")
+            
+            workflow_tab.workflow_status = "Complete"
+            self.log_output("✅ Workflow completed successfully")
+            
+            # If full mode and propose completed, prepare for apply
+            if self.workflow_mode == "full" and self.workflow_change_id:
+                workflow_tab.change_id = self.workflow_change_id
+                self.log_output(f"\n📋 Change ID captured: {self.workflow_change_id}")
+                self.log_output("\nTo apply this change, switch to Apply mode and use the captured Change ID")
+            
+        except Exception as e:
+            workflow_tab.workflow_status = "Error"
+            self.log_output(f"❌ Workflow error: {e}")
+            logger.error(f"Workflow error: {e}", exc_info=True)
+        finally:
+            self.workflow_running = False
+
+    async def workflow_setup_workspace(self, workdir: Path, mode: str) -> None:
+        """Setup workspace for workflow."""
+        self.log_output("⚙️  Setting up workspace...")
+        
+        # Create openspec-memories symlink if needed for propose mode
+        if mode.startswith("propose"):
+            memories_link = workdir / "openspec-memories"
+            if not memories_link.exists():
+                # Look for memories in parent directory
+                repo_memories = workdir.parent / "openspec-memories"
+                if repo_memories.exists():
+                    memories_link.symlink_to(repo_memories)
+                    self.log_output(f"✅ Created symlink: {memories_link} -> {repo_memories}")
+                else:
+                    self.log_output(f"⚠️  openspec-memories not found, skipping symlink creation")
+        
+        # Check/copy MCP config for apply mode
+        if mode in ["apply", "full"]:
+            mcp_config = workdir / ".kiro" / "settings" / "mcp.json"
+            if not mcp_config.exists():
+                repo_mcp = workdir.parent / ".kiro" / "settings" / "mcp.json"
+                if repo_mcp.exists():
+                    mcp_config.parent.mkdir(parents=True, exist_ok=True)
+                    import shutil
+                    shutil.copy(repo_mcp, mcp_config)
+                    self.log_output(f"✅ Copied MCP config: {mcp_config}")
+        
+        self.log_output("✅ Workspace setup complete")
+
+    async def workflow_run_agent(self, workdir: Path, session_name: str, change_id: str) -> None:
+        """Run agent with appropriate prompt based on workflow mode."""
+        self.log_output("🤖 Running agent...")
+        
+        # Construct prompt based on mode
+        if self.workflow_mode == "propose-simple":
+            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            session_dir = "kiro-propose"
+        elif self.workflow_mode == "propose-multi":
+            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md. Use multi-spec-deltas mode for complex changes spanning multiple spec files."
+            session_dir = "kiro-propose"
+        elif self.workflow_mode == "apply":
+            prompt = f"Read powers/openspec-apply/POWER.md and apply change {change_id} by following the instructions in POWER.md"
+            session_dir = "kiro-apply"
+        elif self.workflow_mode == "full":
+            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            session_dir = "kiro-propose"
+        else:
+            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            session_dir = "kiro-propose"
+        
+        self.log_output(f"📝 Prompt: {prompt}")
+        
+        # Send prompt to agent
+        self.send_command(prompt)
+        
+        # Wait a bit for agent to process
+        await asyncio.sleep(2)
+        
+        # Send save command
+        session_path = f"{session_dir}/{session_name}"
+        self.log_output(f"💾 Saving session to: {session_path}")
+        self.send_command(f"/chat save {session_path}")
+        
+        # Wait for save to complete
+        await asyncio.sleep(1)
+        
+        self.log_output("✅ Agent execution complete")
+
+    async def workflow_analyze_session(self, workdir: Path, session_name: str) -> None:
+        """Analyze the workflow session."""
+        self.log_output("📊 Analyzing session...")
+        
+        # Determine session directory based on mode
+        if self.workflow_mode.startswith("propose"):
+            session_dir = workdir / "kiro-propose"
+        else:
+            session_dir = workdir / "kiro-apply"
+        
+        session_file = session_dir / session_name
+        
+        if not session_file.exists():
+            self.log_output(f"⚠️  Session file not found: {session_file}")
+            return
+        
+        # Create analysis file
+        analysis_file = session_file.with_suffix('.txt')
+        
+        try:
+            # Run view_kiro_session.py
+            view_script = workdir.parent / "view_kiro_session.py"
+            if not view_script.exists():
+                self.log_output(f"⚠️  view_kiro_session.py not found: {view_script}")
+                return
+            
+            result = subprocess.run(
+                [sys.executable, str(view_script), str(session_file)],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                analysis_file.write_text(result.stdout)
+                self.log_output(f"✅ Analysis saved: {analysis_file}")
+                
+                # Extract key metrics
+                if "Conversation Turns:" in result.stdout:
+                    for line in result.stdout.split('\n'):
+                        if "Conversation Turns:" in line or "Total Time:" in line:
+                            self.log_output(f"  {line.strip()}")
+                
+                # Try to extract change ID from analysis for propose mode
+                if self.workflow_mode.startswith("propose") or self.workflow_mode == "full":
+                    for line in result.stdout.split('\n'):
+                        if "change" in line.lower() and "-" in line:
+                            # Simple heuristic to find change IDs like "001-implement-wdt"
+                            import re
+                            match = re.search(r'\b(\d{3}-[a-z-]+)\b', line)
+                            if match:
+                                self.workflow_change_id = match.group(1)
+                                workflow_tab = self.query_one(WorkflowTab)
+                                workflow_tab.change_id = self.workflow_change_id
+                                break
+            else:
+                self.log_output(f"⚠️  Analysis failed: {result.stderr}")
+        
+        except Exception as e:
+            self.log_output(f"⚠️  Analysis error: {e}")
+        
+        self.log_output("✅ Analysis complete")
 
     def simulate_ai_response(self, user_message: str) -> None:
         """Simulate AI response (placeholder for real AI integration)."""
@@ -1115,7 +1444,6 @@ class KiroCLIController(App):
                 "I can help you with:\n"
                 "• Starting/stopping agents (F1/F2)\n"
                 "• Running commands in agents\n"
-                "• Viewing command history (Ctrl+H)\n"
                 "• Switching between agents\n"
                 "• Theme switching (F3)"
             )
@@ -1124,15 +1452,13 @@ class KiroCLIController(App):
                 "I can see you're experiencing an issue. "
                 "Try checking:\n"
                 "1. Is the agent running? (press F1)\n"
-                "2. Check the terminal output for errors\n"
-                "3. Review command history for syntax issues"
+                "2. Check the terminal output for errors"
             )
         elif "command" in message_lower:
             response = (
                 "You can send commands using:\n"
-                "• Type in the input bar at the bottom\n"
-                "• Press Enter or click Send\n"
-                "• View history with Ctrl+H"
+                "• Type directly in the terminal\n"
+                "• Press Enter to send"
             )
         else:
             response = (
