@@ -26,25 +26,30 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
 from metrics.documentation_usage import DocumentationUsageMetric
+from metrics.instruction_following import InstructionFollowingMetric
 from parsers.session_parser import SessionParser
 
 
 class BehaviorEvaluator:
   """Evaluates agent behavior using DeepEval metrics."""
   
-  def __init__(self, workdir: str, device_name: str, model: str):
+  def __init__(self, workdir: str, device_name: str, model: str, agent: Optional[str] = None):
     self.workdir = Path(workdir)
     self.device_name = device_name
     self.model = model
+    self.agent = agent
     
     # Initialize parsers
     self.session_parser = SessionParser()
   
   def evaluate(self) -> Optional[Dict]:
     """Run agent behavior evaluation."""
-    # Load session log
+    # Load agent instructions and session log
+    instructions = self._load_agent_instructions()
     session_log = self._load_session_log()
-    if not session_log:
+    
+    if not instructions or not session_log:
+      print(f"⚠️  Skipping behavior evaluation: missing instructions or session log")
       return None
     
     # Load spec and code for context
@@ -53,13 +58,17 @@ class BehaviorEvaluator:
     
     # Create test case
     test_case = LLMTestCase(
-      input=spec,
-      actual_output=dml_code,
-      context=[session_log]
+      input=instructions,
+      actual_output=session_log,
+      context=[spec, dml_code] if spec or dml_code else []
     )
     
     # Create metrics
     metrics = [
+      InstructionFollowingMetric(
+        model=self.model,
+        threshold=0.7
+      ),
       DocumentationUsageMetric(
         model=self.model,
         threshold=0.8,
@@ -73,7 +82,39 @@ class BehaviorEvaluator:
     # Process results
     return self._process_results(results)
   
+  def _load_agent_instructions(self) -> str:
+    """Load agent-specific instructions."""
+    if not self.agent:
+      return ""
+    
+    # Map agent types to their instruction files
+    instruction_paths = {
+      "rovodev": Path("powers/openspec-apply/POWER.md")  # Relative to current working directory
+    }
+    
+    instruction_path = instruction_paths.get(self.agent)
+    if instruction_path and instruction_path.exists():
+      return instruction_path.read_text()
+    
+    return ""
+  
   def _load_session_log(self) -> str:
+    """Load agent session log."""
+    if self.agent:
+      # Agent-specific session log paths
+      if self.agent == "rovodev":
+        # Look for rovodev-apply session logs
+        rovodev_dir = self.workdir / "rovodev-apply"
+        if rovodev_dir.exists():
+          # Find the most recent session log matching the pattern
+          session_logs = sorted(rovodev_dir.glob("rovodev-apply_*.txt"), reverse=True)
+          if session_logs:
+            return session_logs[0].read_text()
+    
+    # Fallback to generic loading
+    return self._load_generic_session_log()
+  
+  def _load_generic_session_log(self) -> str:
     """Load agent session log."""
     # Look for session logs in common locations
     log_paths = [

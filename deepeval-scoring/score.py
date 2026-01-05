@@ -74,6 +74,10 @@ def main():
     default="llm",
     help="Scoring mode: llm (LLM-based), deterministic (parser-based), or hybrid (both)"
   )
+  parser.add_argument(
+    "--agent",
+    help="Agent type for behavior evaluation (e.g., rovodev)"
+  )
   
   args = parser.parse_args()
   
@@ -103,7 +107,8 @@ def main():
   behavior_eval = BehaviorEvaluator(
     workdir=args.workdir,
     device_name=args.device,
-    model=args.model
+    model=args.model,
+    agent=args.agent
   ) if not args.skip_behavior and args.scoring_mode != "deterministic" else None
   
   # Run behavior evaluation (only for LLM modes)
