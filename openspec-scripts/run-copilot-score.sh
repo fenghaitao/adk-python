@@ -108,22 +108,72 @@ fi
 
 # Check for apply agent session files
 APPLY_AGENT_DIR="adk_openspec_apply_agent"
-if [ ! -d "$APPLY_AGENT_DIR" ]; then
-    echo -e "${YELLOW}⚠️  Apply agent directory not found: $APPLY_AGENT_DIR${NC}"
-    echo -e "${YELLOW}   Agent behavior scoring will not be available${NC}"
-    echo -e "${YELLOW}   Only code quality will be evaluated${NC}"
-    echo ""
-else
+APPLY_AGENT_SESSION_FOUND=false
+
+# First, check if adk_openspec_apply_agent directory exists with session files
+if [ -d "$APPLY_AGENT_DIR" ]; then
     SESSION_COUNT=$(ls -1 "$APPLY_AGENT_DIR"/*.session.txt 2>/dev/null | wc -l)
-    if [ "$SESSION_COUNT" -eq 0 ]; then
-        echo -e "${YELLOW}⚠️  No session files found in $APPLY_AGENT_DIR${NC}"
-        echo -e "${YELLOW}   Agent behavior scoring will not be available${NC}"
-        echo ""
-    else
-        echo -e "${GREEN}✅ Found $SESSION_COUNT session file(s) for behavior analysis${NC}"
+    if [ "$SESSION_COUNT" -gt 0 ]; then
+        echo -e "${GREEN}✅ Found $SESSION_COUNT session file(s) in $APPLY_AGENT_DIR${NC}"
+        APPLY_AGENT_SESSION_FOUND=true
         echo ""
     fi
 fi
+
+# If not found, check for log/session-*.log files and extract apply agent session
+if [ "$APPLY_AGENT_SESSION_FOUND" = false ]; then
+    echo -e "${BLUE}Checking for apply agent logs in log/session-*.log files...${NC}"
+    
+    if [ -d "log" ]; then
+        # Find apply agent log file by checking for the pattern
+        APPLY_AGENT_LOG=""
+        for LOG_FILE in log/session-*.log; do
+            if [ -f "$LOG_FILE" ]; then
+                # Check if this log contains the apply agent pattern
+                # Use a simple pattern that works with JSON across newlines
+                if grep -q '"/apply --id' "$LOG_FILE" 2>/dev/null; then
+                    APPLY_AGENT_LOG="$LOG_FILE"
+                    echo -e "${GREEN}✅ Found apply agent log: $LOG_FILE${NC}"
+                    break
+                fi
+            fi
+        done
+        
+        # If found, extract the session file
+        if [ -n "$APPLY_AGENT_LOG" ]; then
+            # Create the apply agent directory
+            mkdir -p "$APPLY_AGENT_DIR"
+            
+            # Use view_copilot_session.py to extract the session
+            VIEW_SESSION_SCRIPT="$SCRIPT_DIR/../openspec-copilot/view_copilot_session.py"
+            OUTPUT_SESSION="$APPLY_AGENT_DIR/apply_agent.session.txt"
+            
+            if [ -f "$VIEW_SESSION_SCRIPT" ]; then
+                echo -e "${BLUE}Extracting apply agent session...${NC}"
+                python3 "$VIEW_SESSION_SCRIPT" "$APPLY_AGENT_LOG" -o "$OUTPUT_SESSION" 2>/dev/null
+                
+                if [ -f "$OUTPUT_SESSION" ]; then
+                    echo -e "${GREEN}✅ Extracted session to: $OUTPUT_SESSION${NC}"
+                    APPLY_AGENT_SESSION_FOUND=true
+                else
+                    echo -e "${YELLOW}⚠️  Failed to extract session from $APPLY_AGENT_LOG${NC}"
+                fi
+            else
+                echo -e "${YELLOW}⚠️  Session extraction script not found: $VIEW_SESSION_SCRIPT${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️  No apply agent logs found in log/ directory${NC}"
+        fi
+    fi
+fi
+
+# Report final status
+if [ "$APPLY_AGENT_SESSION_FOUND" = false ]; then
+    echo -e "${YELLOW}⚠️  No apply agent session files available${NC}"
+    echo -e "${YELLOW}   Agent behavior scoring will not be available${NC}"
+    echo -e "${YELLOW}   Only code quality will be evaluated${NC}"
+fi
+echo ""
 
 # Step 3: Setup score agent file
 echo -e "${BLUE}Step 3: Setting up score agent...${NC}"
