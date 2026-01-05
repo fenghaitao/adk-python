@@ -80,7 +80,8 @@ class BehaviorEvaluator:
     
     # Map agent types to their instruction files
     instruction_paths = {
-      "rovodev": Path("powers/openspec-apply/POWER.md")  # Relative to current working directory
+      "rovodev": Path("powers/openspec-apply/POWER.md"),  # Relative to current working directory
+      "copilot-cli": Path("contributing/samples/openspec_integration/apply_agent_instruction.md")  # Relative to current working directory
     }
     
     instruction_path = instruction_paths.get(self.agent)
@@ -101,23 +102,32 @@ class BehaviorEvaluator:
           session_logs = sorted(rovodev_dir.glob("rovodev-apply_*.txt"), reverse=True)
           if session_logs:
             return session_logs[0].read_text()
+      
+      elif self.agent == "copilot-cli":
+        # Look for copilot-cli session logs in log directory
+        log_dir = self.workdir / "log"
+        if log_dir.exists():
+          # Find the most recent session log matching the pattern apply-*.txt
+          session_logs = sorted(log_dir.glob("apply-*.txt"), reverse=True)
+          if session_logs:
+            return session_logs[0].read_text()
     
     # Fallback to generic loading
     return self._load_generic_session_log()
   
   def _load_generic_session_log(self) -> str:
     """Load agent session log."""
-    # Look for session logs in common locations
+    # Look for session logs in common locations (only .txt files)
     log_paths = [
-      self.workdir / "apply.log",
-      self.workdir / "session.log",
-      self.workdir / "openspec" / "session.log",
+      self.workdir / "apply.txt",
+      self.workdir / "session.txt",
+      self.workdir / "openspec" / "session.txt",
     ]
     
     # Also check qodercli-apply directory for session logs
     qodercli_apply_dir = self.workdir / "qodercli-apply"
     if qodercli_apply_dir.exists():
-      # Find the most recent session log
+      # Find the most recent session log (only .txt files)
       session_logs = sorted(qodercli_apply_dir.glob("*session*.txt"), reverse=True)
       if session_logs:
         log_paths.insert(0, session_logs[0])

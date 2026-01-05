@@ -76,7 +76,7 @@ def main():
   )
   parser.add_argument(
     "--agent",
-    help="Agent type for behavior evaluation (e.g., rovodev)"
+    help="Agent type for behavior evaluation (e.g., rovodev, copilot-cli)"
   )
   
   args = parser.parse_args()

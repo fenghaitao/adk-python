@@ -119,7 +119,7 @@ For each criterion, assign:
 - 0.5 = Partially implemented or minor issues
 - 0.0 = Not implemented or major issues
 
-Return JSON:
+Respond with ONLY valid JSON, no markdown formatting, no code blocks, no additional text:
 {{
   "criteria_scores": {{
     "register_implementation": <score>,

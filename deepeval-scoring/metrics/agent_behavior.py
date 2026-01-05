@@ -127,7 +127,7 @@ For each criterion, assign:
 - 0.5 = Adequate performance or minor deviations from best practices
 - 0.0 = Poor performance, major deviations, or failure to follow process
 
-Return JSON:
+Respond with ONLY valid JSON, no markdown formatting, no code blocks, no additional text:
 {{
   "criteria_scores": {{
     "workflow_adherence": <score>,

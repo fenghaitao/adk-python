@@ -19,11 +19,38 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
 import litellm
+
+
+def _extract_json_from_response(content: str) -> str:
+  """Extract JSON object from LLM response that may contain extra text."""
+  # Try to find JSON object in the response
+  # Look for content between { and } (handling nested braces)
+  brace_count = 0
+  start_idx = -1
+  end_idx = -1
+  
+  for i, char in enumerate(content):
+    if char == '{':
+      if start_idx == -1:
+        start_idx = i
+      brace_count += 1
+    elif char == '}':
+      brace_count -= 1
+      if brace_count == 0 and start_idx != -1:
+        end_idx = i + 1
+        break
+  
+  if start_idx != -1 and end_idx != -1:
+    return content[start_idx:end_idx]
+  
+  # Fallback: return original content
+  return content
 
 
 def _setup_litellm_logging():
@@ -190,11 +217,17 @@ def call_llm_for_evaluation(prompt: str, model: str) -> Dict:
     if not content or content.strip() == "":
       raise ValueError("Empty response from LLM")
     
-    data = json.loads(content)
+    # Extract JSON from response (handle cases where LLM adds extra text)
+    try:
+      data = json.loads(content)
+    except json.JSONDecodeError:
+      # Fallback: try to extract JSON from response
+      json_content = _extract_json_from_response(content)
+      data = json.loads(json_content)
     
     # Log parsed results
     result = {
-      "score": data.get("overall_score", 0.0),
+      "score": data.get("score", data.get("overall_score", 0.0)),
       "reason": data.get("reason", "No reason provided"),
       "criteria_scores": data.get("criteria_scores", {})
     }

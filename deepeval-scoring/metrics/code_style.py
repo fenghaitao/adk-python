@@ -108,7 +108,7 @@ For each criterion, assign:
 - 0.5 = Some issues or inconsistencies
 - 0.0 = Poor adherence or major issues
 
-Return JSON:
+Respond with ONLY valid JSON, no markdown formatting, no code blocks, no additional text:
 {{
   "criteria_scores": {{
     "naming_conventions": <score>,

@@ -132,7 +132,7 @@ For each criterion, assign:
 - 0.5 = Partially covered or tests need improvement
 - 0.0 = Not covered or poor quality tests
 
-Return JSON:
+Respond with ONLY valid JSON, no markdown formatting, no code blocks, no additional text:
 {{
   "criteria_scores": {{
     "register_coverage": <score>,
