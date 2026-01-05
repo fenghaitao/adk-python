@@ -86,7 +86,8 @@ class BehaviorEvaluator:
       "rovodev": "powers/openspec-apply/POWER.md",
       "copilot-cli": "contributing/samples/openspec_integration/apply_agent_instruction.md",
       "kiro-cli": "powers/openspec-propose/POWER.md",
-      "adk-python": "contributing/samples/openspec_integration/apply_agent_instruction.md"
+      "adk-python": "contributing/samples/openspec_integration/apply_agent_instruction.md",
+      "qodercli": "powers/openspec-apply/POWER.md"
     }
     
     instruction_file = instruction_files.get(self.agent)
@@ -136,6 +137,15 @@ class BehaviorEvaluator:
         if adk_apply_dir.exists():
           # Find the most recent session log matching apply_*.session.txt pattern
           session_logs = sorted(adk_apply_dir.glob("apply_*.session.txt"), reverse=True)
+          if session_logs:
+            return session_logs[0].read_text()
+      
+      elif self.agent == "qodercli":
+        # Look for qodercli session logs in qodercli-apply directory
+        qodercli_dir = self.workdir / "qodercli-apply"
+        if qodercli_dir.exists():
+          # Find the most recent session log matching qodercli-apply-session_*.txt
+          session_logs = sorted(qodercli_dir.glob("qodercli-apply-session_*.txt"), reverse=True)
           if session_logs:
             return session_logs[0].read_text()
     
