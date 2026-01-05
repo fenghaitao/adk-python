@@ -53,9 +53,50 @@ python score.py \
 ```
 
 This will:
-1. Evaluate code quality (DML implementation and tests)
+1. Evaluate code quality using LLM-based metrics
 2. Evaluate agent behavior (if session logs available)
 3. Generate a `score.md` report in the workdir
+
+### Scoring Modes
+
+Choose between different evaluation approaches:
+
+```bash
+# LLM-based scoring (default) - Uses AI models for evaluation
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --scoring-mode llm
+
+# Deterministic scoring - Fast, consistent, no LLM calls
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --scoring-mode deterministic
+
+# Hybrid scoring - Combines both approaches with intelligent weighting
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --scoring-mode hybrid
+```
+
+**Hybrid Mode Weighting:**
+- **40% Deterministic** - Objective metrics (register coverage, test coverage, build success)
+- **40% LLM Code Quality** - Subjective analysis (code style, correctness, best practices)  
+- **20% Agent Behavior** - Process evaluation (documentation usage, efficiency)
+
+This prevents double-counting while combining the strengths of both approaches.
+
+**Scoring Mode Comparison:**
+
+| Mode | Speed | Cost | Consistency | Coverage |
+|------|-------|------|-------------|----------|
+| `deterministic` | ⚡ Fast | 💰 Free | 🎯 Perfect | 📊 Basic |
+| `llm` | 🐌 Slow | 💸 Expensive | 🎲 Variable | 🔍 Deep |
+| `hybrid` | ⚖️ Medium | 💵 Moderate | 📈 Good | 🎯 Complete |
 
 ### Advanced Options
 
@@ -89,7 +130,37 @@ python score.py \
 
 ## Scoring Criteria
 
-### Code Quality (90 points)
+### Deterministic Scoring (90 points)
+
+When using `--scoring-mode deterministic` or `hybrid`:
+
+1. **Build Success** (20% weight)
+   - DML file exists and is readable
+   - Basic file structure validation
+
+2. **Register Coverage** (25% weight)
+   - Percentage of spec-required registers implemented
+   - Extracted using DML parser
+
+3. **Test Coverage** (25% weight)
+   - Percentage of implemented registers with tests
+   - Heuristic matching of test names to registers
+
+4. **Implementation Completeness** (20% weight)
+   - Session variables usage
+   - Reset logic implementation
+   - Interrupt logic implementation
+   - Methods and events presence
+
+5. **Code Structure** (10% weight)
+   - Import statements
+   - Code comments and documentation
+   - File size reasonableness
+   - Syntax correctness
+
+### LLM-Based Scoring (90 points)
+
+When using `--scoring-mode llm` or `hybrid`:
 
 1. **Code Correctness** (threshold: 0.8)
    - Register implementation
@@ -115,6 +186,8 @@ python score.py \
    - Maintainability
 
 ### Agent Behavior (90 points)
+
+Available only with LLM-based modes:
 
 1. **Documentation Usage** (threshold: 0.8)
    - Proactive reading
@@ -184,6 +257,17 @@ For OpenAI models:
 ```bash
 export OPENAI_API_KEY="your-api-key"
 ```
+
+For detailed LiteLLM session logging:
+```bash
+export DEEPEVAL_DEBUG=1
+```
+
+This will enable detailed logging of all LLM interactions and save them to:
+- `.deepeval/litellm_session_YYYYMMDD_HHMMSS.log` - Standard LiteLLM logs
+- `.deepeval/litellm_detailed_session_YYYYMMDD_HHMMSS.log` - Detailed request/response logs
+
+Each evaluation run creates new timestamped log files to prevent overwriting previous sessions.
 
 ## Exit Codes
 

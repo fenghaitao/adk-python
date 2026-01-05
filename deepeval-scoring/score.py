@@ -29,6 +29,7 @@ from typing import Dict, Optional
 
 from evaluators.code_evaluator import CodeEvaluator
 from evaluators.behavior_evaluator import BehaviorEvaluator
+from metrics.deterministic_scoring import DeterministicScorer
 from report_generator import ReportGenerator
 
 
@@ -67,26 +68,45 @@ def main():
     action="store_true",
     help="Skip agent behavior evaluation (if no session logs)"
   )
+  parser.add_argument(
+    "--scoring-mode",
+    choices=["llm", "deterministic", "hybrid"],
+    default="llm",
+    help="Scoring mode: llm (LLM-based), deterministic (parser-based), or hybrid (both)"
+  )
   
   args = parser.parse_args()
   
-  # Initialize evaluators
-  code_eval = CodeEvaluator(
-    workdir=args.workdir,
-    device_name=args.device,
-    model=args.model
-  )
+  # Initialize evaluators based on scoring mode
+  code_results = None
+  deterministic_results = None
+  
+  if args.scoring_mode in ["llm", "hybrid"]:
+    # LLM-based evaluation
+    code_eval = CodeEvaluator(
+      workdir=args.workdir,
+      device_name=args.device,
+      model=args.model
+    )
+    print("🔍 Evaluating code quality with LLM...")
+    code_results = code_eval.evaluate()
+  
+  if args.scoring_mode in ["deterministic", "hybrid"]:
+    # Deterministic evaluation
+    deterministic_scorer = DeterministicScorer(
+      workdir=args.workdir,
+      device_name=args.device
+    )
+    print("🔍 Evaluating code quality with deterministic scoring...")
+    deterministic_results = deterministic_scorer.score_implementation()
   
   behavior_eval = BehaviorEvaluator(
     workdir=args.workdir,
     device_name=args.device,
     model=args.model
-  ) if not args.skip_behavior else None
+  ) if not args.skip_behavior and args.scoring_mode != "deterministic" else None
   
-  # Run evaluations
-  print("🔍 Evaluating code quality...")
-  code_results = code_eval.evaluate()
-  
+  # Run behavior evaluation (only for LLM modes)
   behavior_results = None
   if behavior_eval:
     print("🔍 Evaluating agent behavior...")
@@ -98,9 +118,11 @@ def main():
   report = report_gen.generate(
     code_results=code_results,
     behavior_results=behavior_results,
+    deterministic_results=deterministic_results,
     format=args.format,
     device_name=args.device,
-    model=args.model
+    model=args.model,
+    scoring_mode=args.scoring_mode
   )
   
   # Save report
@@ -110,24 +132,37 @@ def main():
   print(f"✅ Report saved to: {output_path}")
   
   # Print summary
-  print_summary(code_results, behavior_results)
+  print_summary(code_results, behavior_results, deterministic_results, args.scoring_mode)
   
   # Exit with appropriate code
-  overall_score = calculate_overall_score(code_results, behavior_results)
+  overall_score = calculate_overall_score(code_results, behavior_results, deterministic_results, args.scoring_mode)
   sys.exit(0 if overall_score >= 0.7 else 1)
 
 
-def print_summary(code_results: Dict, behavior_results: Optional[Dict]):
+def print_summary(
+    code_results: Optional[Dict], 
+    behavior_results: Optional[Dict],
+    deterministic_results: Optional[Dict],
+    scoring_mode: str
+):
   """Print summary to console."""
   print("\n" + "="*60)
   print("EVALUATION SUMMARY")
   print("="*60)
   
-  # Code quality
-  code_score = code_results["overall_score"]
-  print(f"\n📊 Code Quality: {code_score:.1%} ({code_score * 90:.0f}/90)")
-  for metric_name, result in code_results["metrics"].items():
-    print(f"  • {metric_name}: {result['score']:.1%}")
+  # Deterministic scoring
+  if deterministic_results:
+    det_score = deterministic_results["overall_score"]
+    print(f"\n🔧 Deterministic Score: {det_score:.1%} ({det_score * 90:.0f}/90)")
+    for metric_name, score in deterministic_results["component_scores"].items():
+      print(f"  • {metric_name.replace('_', ' ').title()}: {score:.1%}")
+  
+  # LLM-based code quality
+  if code_results:
+    code_score = code_results["overall_score"]
+    print(f"\n📊 LLM Code Quality: {code_score:.1%} ({code_score * 90:.0f}/90)")
+    for metric_name, result in code_results["metrics"].items():
+      print(f"  • {metric_name}: {result['score']:.1%}")
   
   # Agent behavior
   if behavior_results:
@@ -137,20 +172,82 @@ def print_summary(code_results: Dict, behavior_results: Optional[Dict]):
       print(f"  • {metric_name}: {result['score']:.1%}")
   
   # Overall
-  overall = calculate_overall_score(code_results, behavior_results)
-  total_points = 180 if behavior_results else 90
-  print(f"\n🎯 Overall Score: {overall:.1%} ({overall * total_points:.0f}/{total_points})")
+  overall = calculate_overall_score(code_results, behavior_results, deterministic_results, scoring_mode)
+  
+  if scoring_mode == "hybrid":
+    print(f"\n🎯 Hybrid Score: {overall:.1%}")
+    print("   Weighting: 40% Deterministic + 40% LLM Code + 20% Behavior")
+  else:
+    total_points = _calculate_total_points(code_results, behavior_results, deterministic_results)
+    print(f"\n🎯 Overall Score: {overall:.1%} ({overall * total_points:.0f}/{total_points})")
+  
+  print(f"📋 Scoring Mode: {scoring_mode.upper()}")
   print("="*60 + "\n")
 
 
 def calculate_overall_score(
-    code_results: Dict,
-    behavior_results: Optional[Dict]
+    code_results: Optional[Dict],
+    behavior_results: Optional[Dict],
+    deterministic_results: Optional[Dict],
+    scoring_mode: str
 ) -> float:
-  """Calculate overall score."""
+  """Calculate overall score based on available results."""
+  
+  if scoring_mode == "deterministic":
+    if deterministic_results:
+      return deterministic_results["overall_score"]
+    return 0.0
+    
+  elif scoring_mode == "llm":
+    scores = []
+    if code_results:
+      scores.append(code_results["overall_score"])
+    if behavior_results:
+      scores.append(behavior_results["overall_score"])
+    return sum(scores) / len(scores) if scores else 0.0
+    
+  elif scoring_mode == "hybrid":
+    # Hybrid mode: Use deterministic for objective metrics, LLM for subjective
+    # Weight: 40% deterministic (objective), 40% LLM code quality (subjective), 20% behavior
+    
+    total_score = 0.0
+    total_weight = 0.0
+    
+    # Deterministic scoring (objective metrics)
+    if deterministic_results:
+      total_score += deterministic_results["overall_score"] * 0.4
+      total_weight += 0.4
+    
+    # LLM code quality (subjective analysis)
+    if code_results:
+      total_score += code_results["overall_score"] * 0.4
+      total_weight += 0.4
+    
+    # Agent behavior (process evaluation)
+    if behavior_results:
+      total_score += behavior_results["overall_score"] * 0.2
+      total_weight += 0.2
+    
+    return total_score / total_weight if total_weight > 0 else 0.0
+  
+  return 0.0
+
+
+def _calculate_total_points(
+    code_results: Optional[Dict],
+    behavior_results: Optional[Dict], 
+    deterministic_results: Optional[Dict]
+) -> int:
+  """Calculate total possible points based on what was evaluated."""
+  # Each component contributes 90 points when present
+  points = 0
+  if code_results:
+    points += 90
   if behavior_results:
-    return (code_results["overall_score"] + behavior_results["overall_score"]) / 2
-  return code_results["overall_score"]
+    points += 90
+  if deterministic_results:
+    points += 90
+  return points if points > 0 else 90
 
 
 if __name__ == "__main__":
