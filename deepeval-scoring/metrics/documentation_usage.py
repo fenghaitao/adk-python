@@ -85,7 +85,7 @@ class DocumentationUsageMetric(BaseMetric):
     
     return self.score
   
-  async def a_measure(self, test_case: LLMTestCase) -> float:
+  async def a_measure(self, test_case: LLMTestCase, _show_indicator: bool = True) -> float:
     """Async version of measure - calls synchronous version."""
     return self.measure(test_case)
   

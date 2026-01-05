@@ -56,14 +56,16 @@ class CodeStyleMetric(BaseMetric):
     Args:
       test_case: LLMTestCase with:
         - actual_output: Generated DML code
+        - context: DML style guidelines and best practices
     
     Returns:
       Score from 0.0 to 1.0
     """
     dml_code = test_case.actual_output
+    context = test_case.context or []
     
     # Build evaluation prompt
-    prompt = self._build_prompt(dml_code)
+    prompt = self._build_prompt(dml_code, context)
     
     # Call LLM for evaluation
     response = call_llm_for_evaluation(prompt, self.model)
@@ -76,16 +78,23 @@ class CodeStyleMetric(BaseMetric):
     
     return self.score
   
-  async def a_measure(self, test_case: LLMTestCase) -> float:
+  async def a_measure(self, test_case: LLMTestCase, _show_indicator: bool = True) -> float:
     """Async version of measure - calls synchronous version."""
     return self.measure(test_case)
   
-  def _build_prompt(self, code: str) -> str:
+  def _build_prompt(self, code: str, context: list) -> str:
     """Build evaluation prompt."""
+    context_str = "\n\n".join([
+      f"Context {i+1}:\n{c}" for i, c in enumerate(context)
+    ])
+    
     return f"""Evaluate the code style and best practices of this DML implementation.
 
 DML CODE:
 {code}
+
+ADDITIONAL CONTEXT:
+{context_str}
 
 Evaluate the code on these criteria (each worth equal weight):
 1. **Naming Conventions**: Follows DML naming standards (snake_case, descriptive names)

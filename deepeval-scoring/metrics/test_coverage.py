@@ -61,7 +61,7 @@ class TestCoverageMetric(BaseMetric):
       test_case: LLMTestCase with:
         - input: Specification requirements
         - actual_output: Generated DML code
-        - context: Test files
+        - context: Test best practices and guidelines
     
     Returns:
       Score from 0.0 to 1.0
@@ -69,10 +69,11 @@ class TestCoverageMetric(BaseMetric):
     # Extract data
     spec_requirements = test_case.input
     dml_code = test_case.actual_output
-    test_files = self.test_files or test_case.context or []
+    context = test_case.context or []
+    test_files = self.test_files or []
     
     # Build evaluation prompt
-    prompt = self._build_prompt(spec_requirements, dml_code, test_files)
+    prompt = self._build_prompt(spec_requirements, dml_code, test_files, context)
     
     # Call LLM for evaluation
     response = call_llm_for_evaluation(prompt, self.model)
@@ -85,7 +86,7 @@ class TestCoverageMetric(BaseMetric):
     
     return self.score
   
-  async def a_measure(self, test_case: LLMTestCase) -> float:
+  async def a_measure(self, test_case: LLMTestCase, _show_indicator: bool = True) -> float:
     """Async version of measure - calls synchronous version."""
     return self.measure(test_case)
   
@@ -93,17 +94,25 @@ class TestCoverageMetric(BaseMetric):
       self,
       spec: str,
       code: str,
-      test_files: List[str]
+      test_files: List[str],
+      context: List[str]
   ) -> str:
     """Build evaluation prompt."""
     tests_str = "\n\n".join([
       f"Test File {i+1}:\n{t}" for i, t in enumerate(test_files)
     ])
     
+    context_str = "\n\n".join([
+      f"Context {i+1}:\n{c}" for i, c in enumerate(context)
+    ])
+    
     return f"""Evaluate the test coverage and quality for this DML implementation.
 
 SPECIFICATION:
 {spec}
+
+ADDITIONAL CONTEXT:
+{context_str}
 
 DML CODE:
 {code}
