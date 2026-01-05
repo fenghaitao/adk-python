@@ -25,8 +25,7 @@ from deepeval.test_case import LLMTestCase
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-from metrics.documentation_usage import DocumentationUsageMetric
-from metrics.instruction_following import InstructionFollowingMetric
+from metrics.agent_behavior import AgentBehaviorMetric
 from parsers.session_parser import SessionParser
 
 
@@ -52,27 +51,19 @@ class BehaviorEvaluator:
       print(f"⚠️  Skipping behavior evaluation: missing instructions or session log")
       return None
     
-    # Load spec and code for context
-    spec = self._load_spec()
-    dml_code = self._load_dml_code()
-    
-    # Create test case
+    # Create test case - no additional context needed for behavior evaluation
+    # We only need instructions (what agent should do) and session log (what agent did)
     test_case = LLMTestCase(
       input=instructions,
       actual_output=session_log,
-      context=[spec, dml_code] if spec or dml_code else []
+      context=[]  # No additional context needed for process evaluation
     )
     
     # Create metrics
     metrics = [
-      InstructionFollowingMetric(
+      AgentBehaviorMetric(
         model=self.model,
         threshold=0.7
-      ),
-      DocumentationUsageMetric(
-        model=self.model,
-        threshold=0.8,
-        session_log=session_log
       )
     ]
     
@@ -136,26 +127,6 @@ class BehaviorEvaluator:
         return log_path.read_text()
     
     return ""
-  
-  def _load_spec(self) -> str:
-    """Load specification."""
-    spec_files = list((self.workdir / "openspec" / "specs").rglob("spec.md"))
-    if spec_files:
-      return spec_files[0].read_text()
-    return ""
-  
-  def _load_dml_code(self) -> str:
-    """Load DML implementation."""
-    dml_path = (
-      self.workdir / 
-      "simics-project" / 
-      "modules" / 
-      self.device_name / 
-      f"{self.device_name}.dml"
-    )
-    if not dml_path.exists():
-      return ""
-    return dml_path.read_text()
   
   def _process_results(self, results) -> Dict:
     """Process evaluation results."""

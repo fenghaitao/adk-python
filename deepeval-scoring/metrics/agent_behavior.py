@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Instruction following metric using DeepEval."""
+"""Agent behavior metric using DeepEval."""
 
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from deepeval.test_case import LLMTestCase
 from .llm_utils import call_llm_for_evaluation
 
 
-class InstructionFollowingMetric(BaseMetric):
-  """Evaluates how well an agent follows given instructions.
+class AgentBehaviorMetric(BaseMetric):
+  """Evaluates overall agent behavior including instruction following and documentation usage.
   
   Checks:
   - Adherence to specified workflow steps
@@ -33,6 +33,10 @@ class InstructionFollowingMetric(BaseMetric):
   - Following best practices and guidelines
   - Completing required tasks
   - Error handling and recovery
+  - Documentation was read before implementation
+  - Relevant sections were consulted
+  - Best practices from docs were followed
+  - Efficient documentation usage
   """
   
   def __init__(
@@ -53,7 +57,7 @@ class InstructionFollowingMetric(BaseMetric):
     self.async_mode = async_mode
   
   def measure(self, test_case: LLMTestCase) -> float:
-    """Evaluate instruction following.
+    """Evaluate agent behavior.
     
     Args:
       test_case: LLMTestCase with:
@@ -94,44 +98,49 @@ class InstructionFollowingMetric(BaseMetric):
       context: List[str]
   ) -> str:
     """Build evaluation prompt."""
-    context_str = "\n\n".join([
-      f"Context {i+1}:\n{c}" for i, c in enumerate(context)
-    ])
-    
-    return f"""Evaluate how well the agent followed the given instructions based on the session log.
+    return f"""Evaluate the agent's behavior and process adherence based on the session log and instructions.
 
 AGENT INSTRUCTIONS:
 {instructions}
 
-ADDITIONAL CONTEXT:
-{context_str}
-
 AGENT SESSION LOG:
 {session_log}
 
+Evaluate how well the agent followed the prescribed process and used available resources. Focus on PROCESS EVALUATION, not output quality.
+
 Evaluate the agent's behavior on these criteria (each worth equal weight):
-1. **Workflow Adherence**: Agent follows the specified workflow steps and procedures
-2. **Tool Usage**: Proper use of recommended tools, commands, and utilities
-3. **Best Practices**: Follows guidelines, conventions, and best practices mentioned in instructions
-4. **Task Completion**: Successfully completes required tasks and objectives
-5. **Error Handling**: Appropriately handles errors, recovers from failures, and follows error procedures
+
+**Instruction Following (50% weight):**
+1. **Workflow Adherence**: Agent follows the specified workflow steps and procedures in the correct order
+2. **Tool Usage**: Proper and effective use of recommended tools, commands, and utilities
+3. **Task Completion**: Successfully completes all required process steps and objectives
+4. **Error Handling**: Appropriately handles errors, recovers from failures, and follows error procedures
+
+**Documentation Usage (50% weight):**
+5. **Proactive Reading**: Agent reads documentation and instructions BEFORE attempting implementation
+6. **Best Practices Applied**: Agent demonstrates understanding and application of documented best practices
+7. **Problem Solving**: Agent uses available documentation and resources to resolve issues and questions
+8. **Efficiency**: Agent consults relevant sections systematically without wasting time on irrelevant material
 
 For each criterion, assign:
-- 1.0 = Fully followed instructions with excellent execution
-- 0.5 = Partially followed instructions or minor deviations
-- 0.0 = Did not follow instructions or major deviations
+- 1.0 = Excellent performance with clear evidence in session log
+- 0.5 = Adequate performance or minor deviations from best practices
+- 0.0 = Poor performance, major deviations, or failure to follow process
 
 Return JSON:
 {{
   "criteria_scores": {{
     "workflow_adherence": <score>,
     "tool_usage": <score>,
-    "best_practices": <score>,
     "task_completion": <score>,
-    "error_handling": <score>
+    "error_handling": <score>,
+    "proactive_reading": <score>,
+    "best_practices_applied": <score>,
+    "problem_solving": <score>,
+    "efficiency": <score>
   }},
   "overall_score": <average of all criteria>,
-  "reason": "<detailed explanation of how well the agent followed instructions, with specific examples from the session log>"
+  "reason": "<detailed explanation focusing on PROCESS QUALITY: how well the agent followed instructions, used documentation, and executed the workflow. Provide specific examples from the session log showing good/poor process adherence.>"
 }}"""
   
   def is_successful(self) -> bool:
@@ -140,4 +149,4 @@ Return JSON:
   
   @property
   def __name__(self):
-    return "Instruction Following"
+    return "Agent Behavior"

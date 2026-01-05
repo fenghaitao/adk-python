@@ -19,11 +19,11 @@ from __future__ import annotations
 from .code_correctness import CodeCorrectnessMetric
 from .test_coverage import TestCoverageMetric
 from .code_style import CodeStyleMetric
-from .documentation_usage import DocumentationUsageMetric
+from .agent_behavior import AgentBehaviorMetric
 
 __all__ = [
   "CodeCorrectnessMetric",
   "TestCoverageMetric",
   "CodeStyleMetric",
-  "DocumentationUsageMetric",
+  "AgentBehaviorMetric",
 ]
