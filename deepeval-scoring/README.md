@@ -101,11 +101,12 @@ This prevents double-counting while combining the strengths of both approaches.
 ### Advanced Options
 
 ```bash
-# Use different model
+# Use different model and specify agent type
 python score.py \
   --workdir /path/to/project \
   --device wdt \
-  --model github_copilot/gpt-4.1
+  --model github_copilot/gpt-4.1 \
+  --agent kiro-cli
 
 # Skip behavior evaluation
 python score.py \
@@ -189,12 +190,14 @@ When using `--scoring-mode llm` or `hybrid`:
 
 Available only with LLM-based modes:
 
-1. **Documentation Usage** (threshold: 0.8)
-   - Proactive reading
-   - Relevant sections
-   - Best practices applied
-   - Efficiency
-   - Problem solving
+1. **Agent Behavior** (threshold: 0.7)
+   - Instruction following and workflow adherence
+   - Tool usage and task completion
+   - Error handling and recovery
+   - Documentation usage and best practices applied
+   - Problem solving and efficiency
+   
+   For `--agent kiro-cli`, the evaluation focuses on OpenSpec-specific workflow steps like reading openspec/AGENTS.md, loading DML knowledge, creating proper proposals, and running validation.
 
 ## Project Structure
 

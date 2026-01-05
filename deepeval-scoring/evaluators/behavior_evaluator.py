@@ -78,14 +78,22 @@ class BehaviorEvaluator:
     if not self.agent:
       return ""
     
-    # Map agent types to their instruction files
-    instruction_paths = {
-      "rovodev": Path("powers/openspec-apply/POWER.md"),  # Relative to current working directory
-      "copilot-cli": Path("contributing/samples/openspec_integration/apply_agent_instruction.md")  # Relative to current working directory
+    # Get the adk-python root directory (parent of deepeval-scoring)
+    adk_root = Path(__file__).parent.parent.parent
+    
+    # Map agent types to their instruction files (relative to adk-python root)
+    instruction_files = {
+      "rovodev": "powers/openspec-apply/POWER.md",
+      "copilot-cli": "contributing/samples/openspec_integration/apply_agent_instruction.md",
+      "kiro-cli": "powers/openspec-propose/POWER.md"
     }
     
-    instruction_path = instruction_paths.get(self.agent)
-    if instruction_path and instruction_path.exists():
+    instruction_file = instruction_files.get(self.agent)
+    if not instruction_file:
+      return ""
+    
+    instruction_path = adk_root / instruction_file
+    if instruction_path.exists():
       return instruction_path.read_text()
     
     return ""
@@ -109,6 +117,15 @@ class BehaviorEvaluator:
         if log_dir.exists():
           # Find the most recent session log matching the pattern apply-*.txt
           session_logs = sorted(log_dir.glob("apply-*.txt"), reverse=True)
+          if session_logs:
+            return session_logs[0].read_text()
+      
+      elif self.agent == "kiro-cli":
+        # Look for kiro-cli session logs in kiro-apply directory
+        kiro_apply_dir = self.workdir / "kiro-apply"
+        if kiro_apply_dir.exists():
+          # Find the most recent session log matching the pattern kiro-apply-session_*.txt
+          session_logs = sorted(kiro_apply_dir.glob("kiro-apply-session_*.txt"), reverse=True)
           if session_logs:
             return session_logs[0].read_text()
     
