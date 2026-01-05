@@ -85,7 +85,8 @@ class BehaviorEvaluator:
     instruction_files = {
       "rovodev": "powers/openspec-apply/POWER.md",
       "copilot-cli": "contributing/samples/openspec_integration/apply_agent_instruction.md",
-      "kiro-cli": "powers/openspec-propose/POWER.md"
+      "kiro-cli": "powers/openspec-propose/POWER.md",
+      "adk-python": "contributing/samples/openspec_integration/apply_agent_instruction.md"
     }
     
     instruction_file = instruction_files.get(self.agent)
@@ -126,6 +127,15 @@ class BehaviorEvaluator:
         if kiro_apply_dir.exists():
           # Find the most recent session log matching the pattern kiro-apply-session_*.txt
           session_logs = sorted(kiro_apply_dir.glob("kiro-apply-session_*.txt"), reverse=True)
+          if session_logs:
+            return session_logs[0].read_text()
+      
+      elif self.agent == "adk-python":
+        # Look for adk-python session logs in adk_openspec_apply_agent directory
+        adk_apply_dir = self.workdir / "adk_openspec_apply_agent"
+        if adk_apply_dir.exists():
+          # Find the most recent session log matching apply_*.session.txt pattern
+          session_logs = sorted(adk_apply_dir.glob("apply_*.session.txt"), reverse=True)
           if session_logs:
             return session_logs[0].read_text()
     
