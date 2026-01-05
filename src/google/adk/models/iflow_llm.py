@@ -86,7 +86,9 @@ class IFlowLlm(LiteLlm):
     return [
       r"iflow/Qwen3-Coder.*",
       r"iflow/qwen3-coder-plus.*",
+      r"iflow/kimi-k2-0905.*",
       # Support models without iflow/ prefix for convenience
       r"Qwen3-Coder.*",
       r"qwen3-coder-plus.*",
+      r"kimi-k2-0905.*",
     ]
