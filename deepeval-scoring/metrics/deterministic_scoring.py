@@ -116,15 +116,51 @@ class DeterministicScorer:
   
   def _parse_spec_files(self) -> Dict:
     """Parse specification files."""
-    spec_files = list((self.workdir / "openspec" / "specs").rglob("spec.md"))
+    # First, look for spec.md in openspec/specs/
+    specs_dir = self.workdir / "openspec" / "specs"
+    if specs_dir.exists():
+      spec_files = list(specs_dir.rglob("spec.md"))
+      if spec_files:
+        # Parse all spec files and combine their data
+        combined_registers = []
+        combined_requirements = []
+        
+        for spec_file in spec_files:
+          spec_data = self.spec_parser.parse_file(spec_file)
+          combined_registers.extend(spec_data.get("registers", []))
+          combined_requirements.extend(spec_data.get("requirements", []))
+        
+        return {
+          "exists": True,
+          "location": "specs",
+          "file_count": len(spec_files),
+          "registers": list(set(combined_registers)),  # Remove duplicates
+          "requirements": combined_requirements
+        }
     
-    if not spec_files:
-      return {"exists": False}
+    # If not found, look in openspec/changes/
+    changes_dir = self.workdir / "openspec" / "changes"
+    if changes_dir.exists():
+      spec_files = list(changes_dir.rglob("spec.md"))
+      if spec_files:
+        # Parse all spec files and combine their data
+        combined_registers = []
+        combined_requirements = []
+        
+        for spec_file in spec_files:
+          spec_data = self.spec_parser.parse_file(spec_file)
+          combined_registers.extend(spec_data.get("registers", []))
+          combined_requirements.extend(spec_data.get("requirements", []))
+        
+        return {
+          "exists": True,
+          "location": "changes",
+          "file_count": len(spec_files),
+          "registers": list(set(combined_registers)),  # Remove duplicates
+          "requirements": combined_requirements
+        }
     
-    spec_data = self.spec_parser.parse_file(spec_files[0])
-    spec_data["exists"] = True
-    
-    return spec_data
+    return {"exists": False}
   
   def _score_build_success(self) -> float:
     """Score based on build success indicators."""

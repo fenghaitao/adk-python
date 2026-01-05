@@ -52,31 +52,68 @@ class CodeEvaluator:
     dml_code = self._load_dml_code()
     test_files = self._load_test_files()
     spec = self._load_spec()
-    context = self._load_context()
     
-    # Create test case
-    test_case = LLMTestCase(
+    # Load metric-specific contexts
+    correctness_context = self._load_correctness_context()
+    style_context = self._load_style_context()
+    test_context = self._load_test_context()
+    
+    # Create test cases with metric-specific contexts
+    correctness_test_case = LLMTestCase(
       input=spec,
       actual_output=dml_code,
-      context=context
+      context=correctness_context
     )
     
-    # Create metrics
-    metrics = [
-      CodeCorrectnessMetric(model=self.model, threshold=0.8),
-      TestCoverageMetric(
-        model=self.model,
-        threshold=0.7,
-        test_files=test_files
-      ),
-      CodeStyleMetric(model=self.model, threshold=0.9)
-    ]
+    style_test_case = LLMTestCase(
+      input=spec,
+      actual_output=dml_code,
+      context=style_context
+    )
     
-    # Run evaluation
-    results = evaluate([test_case], metrics)
+    test_coverage_test_case = LLMTestCase(
+      input=spec,
+      actual_output=dml_code,
+      context=test_context
+    )
     
-    # Process results
-    return self._process_results(results)
+    # Create metrics with specific test cases
+    correctness_metric = CodeCorrectnessMetric(model=self.model, threshold=0.8)
+    style_metric = CodeStyleMetric(model=self.model, threshold=0.9)
+    coverage_metric = TestCoverageMetric(
+      model=self.model,
+      threshold=0.7,
+      test_files=test_files
+    )
+    
+    # Run evaluations separately with appropriate contexts
+    correctness_results = evaluate([correctness_test_case], [correctness_metric])
+    style_results = evaluate([style_test_case], [style_metric])
+    coverage_results = evaluate([test_coverage_test_case], [coverage_metric])
+    
+    # Combine results
+    combined_results = self._combine_metric_results([
+      correctness_results,
+      style_results,
+      coverage_results
+    ])
+    
+    return self._process_results(combined_results)
+  
+  def _combine_metric_results(self, results_list) -> object:
+    """Combine results from multiple separate metric evaluations."""
+    # Create a mock results object that combines all metrics
+    class CombinedResults:
+      def __init__(self, results_list):
+        self.test_results = []
+        
+        # Combine all test results from different evaluations
+        for results in results_list:
+          test_results = results.test_results if hasattr(results, 'test_results') else results
+          if test_results:
+            self.test_results.extend(test_results)
+    
+    return CombinedResults(results_list)
   
   def _load_dml_code(self) -> str:
     """Load DML implementation."""
@@ -109,34 +146,122 @@ class CodeEvaluator:
   
   def _load_spec(self) -> str:
     """Load specification."""
-    # Find spec.md in openspec/specs/
-    spec_files = list((self.workdir / "openspec" / "specs").rglob("spec.md"))
-    if spec_files:
-      return spec_files[0].read_text()
+    # First, look for spec.md in openspec/specs/
+    specs_dir = self.workdir / "openspec" / "specs"
+    if specs_dir.exists():
+      spec_files = list(specs_dir.rglob("spec.md"))
+      if spec_files:
+        if len(spec_files) == 1:
+          return spec_files[0].read_text()
+        else:
+          # Combine multiple spec files
+          combined_spec = []
+          for spec_file in spec_files:
+            combined_spec.append(f"# {spec_file.parent.name}")
+            combined_spec.append(spec_file.read_text())
+            combined_spec.append("")
+          return "\n".join(combined_spec)
+    
+    # If not found, look in openspec/changes/
+    changes_dir = self.workdir / "openspec" / "changes"
+    if changes_dir.exists():
+      spec_files = list(changes_dir.rglob("spec.md"))
+      if spec_files:
+        if len(spec_files) == 1:
+          return spec_files[0].read_text()
+        else:
+          # Combine multiple spec files
+          combined_spec = []
+          for spec_file in spec_files:
+            combined_spec.append(f"# {spec_file.parent.name}")
+            combined_spec.append(spec_file.read_text())
+            combined_spec.append("")
+          return "\n".join(combined_spec)
+    
     return ""
   
   def _load_context(self) -> List[str]:
-    """Load additional context."""
+    """Load additional context including DML knowledge and best practices."""
+    # This method provides general context - specific metrics may need targeted context
     context = []
     
-    # Load XML registers
-    xml_files = list(self.workdir.glob("*.xml"))
-    if xml_files:
-      context.append(f"XML Registers:\n{xml_files[0].read_text()}")
+    # Load DML Best Practices Index (provides overview of DML patterns)
+    dml_index_path = self.workdir / "openspec-memories" / "00_DML_Best_Practices_Index.md"
+    if dml_index_path.exists():
+      context.append(f"DML Best Practices Index:\n{dml_index_path.read_text()}")
     
-    # Load proposal
-    proposal_files = list(
-      (self.workdir / "openspec" / "changes").rglob("proposal.md")
-    )
-    if proposal_files:
-      context.append(f"Proposal:\n{proposal_files[0].read_text()}")
+    # Load DML Anti-Patterns (CRITICAL - prevents major implementation mistakes)
+    anti_patterns_path = self.workdir / "openspec-memories" / "02_DML_Anti_Patterns.md"
+    if anti_patterns_path.exists():
+      context.append(f"DML Anti-Patterns (CRITICAL):\n{anti_patterns_path.read_text()}")
     
-    # Load tasks
-    tasks_files = list(
-      (self.workdir / "openspec" / "changes").rglob("tasks.md")
-    )
-    if tasks_files:
-      context.append(f"Tasks:\n{tasks_files[0].read_text()}")
+    return context
+  
+  def _load_correctness_context(self) -> List[str]:
+    """Load context specific to code correctness evaluation."""
+    context = []
+    
+    # Anti-patterns - CRITICAL for correctness
+    anti_patterns_path = self.workdir / "openspec-memories" / "02_DML_Anti_Patterns.md"
+    if anti_patterns_path.exists():
+      context.append(f"DML Anti-Patterns (CRITICAL):\n{anti_patterns_path.read_text()}")
+    
+    # Modeling philosophy - core principles
+    philosophy_path = self.workdir / "openspec-memories" / "01_Simics_Modeling_Philosophy.md"
+    if philosophy_path.exists():
+      context.append(f"Simics Modeling Philosophy:\n{philosophy_path.read_text()}")
+    
+    # Timer modeling - for timer/watchdog devices
+    timer_path = self.workdir / "openspec-memories" / "04_DML_Timing_Timer_Modeling.md"
+    if timer_path.exists():
+      context.append(f"DML Timing and Timer Modeling:\n{timer_path.read_text()}")
+    
+    # Common patterns - correct implementation examples
+    patterns_path = self.workdir / "openspec-memories" / "06_DML_Common_Patterns.md"
+    if patterns_path.exists():
+      context.append(f"DML Common Patterns:\n{patterns_path.read_text()}")
+    
+    return context
+  
+  def _load_style_context(self) -> List[str]:
+    """Load context specific to code style evaluation."""
+    context = []
+    
+    # Best practices index - style guidelines
+    index_path = self.workdir / "openspec-memories" / "00_DML_Best_Practices_Index.md"
+    if index_path.exists():
+      context.append(f"DML Best Practices Index:\n{index_path.read_text()}")
+    
+    # Basic syntax - proper DML structure
+    syntax_path = self.workdir / "openspec-memories" / "03_DML_Basic_Syntax.md"
+    if syntax_path.exists():
+      context.append(f"DML Basic Syntax:\n{syntax_path.read_text()}")
+    
+    # Register access scope - organization patterns
+    scope_path = self.workdir / "openspec-memories" / "07_DML_Register_Access_Scope.md"
+    if scope_path.exists():
+      context.append(f"DML Register Access Scope:\n{scope_path.read_text()}")
+    
+    return context
+  
+  def _load_test_context(self) -> List[str]:
+    """Load context specific to test coverage evaluation."""
+    context = []
+    
+    # Test best practices index
+    test_index_path = self.workdir / "openspec-memories" / "00_Test_Best_Practices_Index.md"
+    if test_index_path.exists():
+      context.append(f"Test Best Practices Index:\n{test_index_path.read_text()}")
+    
+    # Register access testing
+    test_register_path = self.workdir / "openspec-memories" / "03_Test_Register_Access.md"
+    if test_register_path.exists():
+      context.append(f"Test Register Access:\n{test_register_path.read_text()}")
+    
+    # Test configuration setup
+    test_config_path = self.workdir / "openspec-memories" / "02_Test_Configuration_Setup.md"
+    if test_config_path.exists():
+      context.append(f"Test Configuration Setup:\n{test_config_path.read_text()}")
     
     return context
   
