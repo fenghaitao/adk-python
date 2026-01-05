@@ -4,22 +4,14 @@ how well the agent followed best practices during execution.
 
 ## CRITICAL INSTRUCTIONS
 
-1. **YOU ARE AN EVALUATOR WITH AUTOMATION**
-   - You will use BOTH automated scoring scripts AND manual verification
-   - First run scoring scripts to get objective metrics
-   - Then manually verify key aspects by reading files
-   - Combine both results for final, accurate scoring
-   - Provide detailed evidence for every score
+1. **THREE-PHASE EVALUATION APPROACH**
+   - **Phase 1 - Automated Scoring**: Run scoring scripts for objective metrics (build pass, test results, code patterns)
+   - **Phase 2 - Manual Verification**: Use LLM analysis to verify and enhance automated scores by reading files directly
+   - **Phase 3 - Final Report**: Compare results, reconcile differences, and generate comprehensive score.md with detailed evidence
 
-2. **TWO-PHASE SCORING APPROACH**
-   - Phase 1: Run automated scoring scripts (objective metrics)
-   - Phase 2: Manual verification and LLM analysis (subjective assessment)
-   - Phase 3: Compare results and produce final score with evidence
-
-3. **MANDATORY: Save Score Report**
-   - You MUST save a detailed score.md report at the end
-   - Include executive summary, detailed scores, and evidence
-   - Use write_file tool to save the report
+2. **MANDATORY: Save Score Report**
+   - You MUST save a detailed score.md report at the end using write_file tool
+   - Include executive summary, detailed scores with evidence, and actionable recommendations
 
 ## Your Mission
 
@@ -39,12 +31,12 @@ Before scoring, validate the environment:
 1. Get working directory from user (required parameter: --workdir)
 2. Get device name from user (required parameter: --device-name)
 3. Verify required paths exist:
-   - `<workdir>/simics-project/modules/<device_name>/`
-   - `<workdir>/simics-project/modules/<device_name>/test/`
-   - `<workdir>/adk_openspec_apply_agent/`
-   - `<workdir>/openspec/changes/`
+   - `<workdir>/simics-project/modules/<device_name>/` (required)
+   - `<workdir>/simics-project/modules/<device_name>/test/` (required)
+   - `<workdir>/adk_openspec_apply_agent/` (optional - needed for behavior scoring)
+   - `<workdir>/openspec/changes/` (required)
 
-4. Find the apply agent session log file:
+4. Find the apply agent session log file (if available for behavior scoring):
    ```bash
    ls -1t <workdir>/adk_openspec_apply_agent/*.session.txt | head -1
    ```
@@ -668,7 +660,7 @@ Grade:             [GRADE] (verified against scale)
 
 - DML Implementation: `<workdir>/simics-project/modules/<device_name>/<device_name>.dml`
 - Test Files: `<workdir>/simics-project/modules/<device_name>/test/s-*.py`
-- Session Log: `<workdir>/adk_openspec_apply_agent/<session_file>`
+- Session Log (optional): `<workdir>/adk_openspec_apply_agent/<session_file>` (if available)
 - Proposal: `<workdir>/openspec/changes/<change_id>/proposal.md`
 - Tasks: `<workdir>/openspec/changes/<change_id>/tasks.md`
 - Spec: `<workdir>/openspec/specs/<branch>/spec.md`
