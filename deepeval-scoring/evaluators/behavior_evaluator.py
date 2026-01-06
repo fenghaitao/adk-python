@@ -176,7 +176,13 @@ class BehaviorEvaluator:
       return LiteLLMModel(
         model=model_name,
         api_key=api_key,
-        base_url="https://apis.iflow.cn/v1/"
+        base_url="https://apis.iflow.cn/v1/",
+        generation_kwargs={
+          "temperature": 0.0,
+          # Disable problematic parameters for iFlow/Dashscope
+          "logprobs": False,
+          "top_logprobs": None
+        }
       )
     elif self.model.startswith("github_copilot/"):
       # Import here to avoid circular imports

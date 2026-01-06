@@ -106,16 +106,15 @@ class CodeEvaluator:
       print("   Adding LLM reference comparison metrics...")
       reference_metrics = self._create_reference_metrics(reference_code)
       
-      # Create reference comparison test case
+      # Load comprehensive context for reference comparison
+      reference_context = self._load_reference_context()
+      
+      # Create reference comparison test case with rich context
       reference_test_case = LLMTestCase(
         input=f"Compare the generated DML implementation against the golden reference for {self.device_name} device",
         actual_output=dml_code,
         expected_output=reference_code,
-        context=[
-          f"Device: {self.device_name}",
-          "Task: DML device implementation comparison",
-          "Focus: Structural similarity, functional correctness, and code quality"
-        ]
+        context=reference_context
       )
       
       # Add reference metrics and test cases
@@ -301,6 +300,17 @@ class CodeEvaluator:
     
     return context
   
+  def _load_reference_context(self) -> List[str]:
+    """Load context specific to reference comparison evaluation."""
+    context = [
+      f"Device: {self.device_name}",
+      "Task: Compare the generated DML implementation against the golden reference",
+      "Focus: Structural similarity, functional correctness, and implementation completeness",
+      "Instructions: Analyze both implementations and identify similarities, differences, and areas where the generated code matches or deviates from the reference."
+    ]
+    
+    return context
+  
   def _process_results(self, results) -> Dict:
     """Process evaluation results."""
     metric_results = {}
@@ -389,10 +399,12 @@ class CodeEvaluator:
     ))
     
     # 4. Faithfulness to Reference (using DeepEval's FaithfulnessMetric)
-    metrics.append(FaithfulnessMetric(
-      model=model_for_eval,
-      threshold=0.7
-    ))
+    # Note: FaithfulnessMetric requires retrieval_context, so we'll skip it for now
+    # and rely on the G-Eval metrics for comprehensive reference comparison
+    # metrics.append(FaithfulnessMetric(
+    #   model=model_for_eval,
+    #   threshold=0.7
+    # ))
     
     return metrics
   
@@ -410,7 +422,13 @@ class CodeEvaluator:
       return LiteLLMModel(
         model=model_name,
         api_key=api_key,
-        base_url="https://apis.iflow.cn/v1/"
+        base_url="https://apis.iflow.cn/v1/",
+        generation_kwargs={
+          "temperature": 0.0,
+          # Disable problematic parameters for iFlow/Dashscope
+          "logprobs": False,
+          "top_logprobs": None
+        }
       )
     elif self.model.startswith("github_copilot/"):
       from deepeval.models import LiteLLMModel
@@ -429,34 +447,41 @@ class CodeEvaluator:
   
   def _load_reference_code(self) -> Optional[str]:
     """Load the golden reference DML implementation."""
-    if not self.reference_dir:
-      # Auto-discover reference directories
-      possible_ref_dirs = [
-        self.workdir / "reference",
-        self.workdir / "golden",
-        self.workdir / "expected",
-        self.workdir.parent / "reference" / self.device_name,
-        self.workdir.parent / "golden" / self.device_name
-      ]
-      
-      for ref_dir in possible_ref_dirs:
-        if ref_dir.exists():
-          self.reference_dir = ref_dir
-          break
-    
+        
     if not self.reference_dir or not self.reference_dir.exists():
       return None
     
-    # Look for DML files in reference directory
+    # First, try to find the reference DML file in the same project structure
+    # e.g., examples/wdt_dbg152/adk_openspec_project/simics-project/modules/wdt/wdt.dml
+    structured_ref_path = (
+      self.reference_dir / 
+      "adk_openspec_project" / 
+      "simics-project" / 
+      "modules" / 
+      self.device_name / 
+      f"{self.device_name}.dml"
+    )
+    
+    if structured_ref_path.exists():
+      try:
+        return structured_ref_path.read_text()
+      except Exception as e:
+        print(f"⚠️  Error reading structured reference DML file: {e}")
+    
+    # Fallback: Look for DML files anywhere in reference directory
     ref_dml_files = list(self.reference_dir.glob(f"**/{self.device_name}.dml"))
     if not ref_dml_files:
       ref_dml_files = list(self.reference_dir.glob("**/*.dml"))
     
     if not ref_dml_files:
+      print(f"⚠️  No reference DML files found in {self.reference_dir}")
       return None
     
     try:
-      return ref_dml_files[0].read_text()
+      # Use the first matching DML file
+      ref_file = ref_dml_files[0]
+      print(f"📁 Using reference DML file: {ref_file}")
+      return ref_file.read_text()
     except Exception as e:
       print(f"⚠️  Error reading reference DML file: {e}")
       return None
