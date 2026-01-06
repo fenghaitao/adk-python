@@ -17,10 +17,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from deepeval import evaluate
-from deepeval.test_case import LLMTestCase
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.metrics import GEval, FaithfulnessMetric, HallucinationMetric, ArgumentCorrectnessMetric
+from deepeval.metrics.g_eval import Rubric
 
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
@@ -36,10 +38,11 @@ from parsers.spec_parser import SpecParser
 class CodeEvaluator:
   """Evaluates code quality using DeepEval metrics."""
   
-  def __init__(self, workdir: str, device_name: str, model: str):
+  def __init__(self, workdir: str, device_name: str, model: str, reference_dir: Optional[str] = None):
     self.workdir = Path(workdir)
     self.device_name = device_name
     self.model = model
+    self.reference_dir = Path(reference_dir) if reference_dir else None
     
     # Initialize parsers
     self.dml_parser = DMLParser()
@@ -53,6 +56,9 @@ class CodeEvaluator:
     test_files = self._load_test_files()
     spec = self._load_spec()
     
+    # Check if reference is available
+    reference_code = self._load_reference_code() if self.reference_dir else None
+    
     # Load metric-specific contexts
     correctness_context = self._load_correctness_context()
     style_context = self._load_style_context()
@@ -62,12 +68,14 @@ class CodeEvaluator:
     correctness_test_case = LLMTestCase(
       input=spec,
       actual_output=dml_code,
+      expected_output=reference_code,  # Include reference if available
       context=correctness_context
     )
     
     style_test_case = LLMTestCase(
       input=spec,
       actual_output=dml_code,
+      expected_output=reference_code,  # Include reference if available
       context=style_context
     )
     
@@ -77,7 +85,11 @@ class CodeEvaluator:
       context=test_context
     )
     
-    # Create metrics with specific test cases
+    # Create standard metrics
+    metrics_to_run = []
+    test_cases_to_run = []
+    
+    # Standard code quality metrics
     correctness_metric = CodeCorrectnessMetric(model=self.model, threshold=0.8)
     style_metric = CodeStyleMetric(model=self.model, threshold=0.9)
     coverage_metric = TestCoverageMetric(
@@ -86,17 +98,41 @@ class CodeEvaluator:
       test_files=test_files
     )
     
-    # Run evaluations separately with appropriate contexts
-    correctness_results = evaluate([correctness_test_case], [correctness_metric])
-    style_results = evaluate([style_test_case], [style_metric])
-    coverage_results = evaluate([test_coverage_test_case], [coverage_metric])
+    metrics_to_run.extend([correctness_metric, style_metric, coverage_metric])
+    test_cases_to_run.extend([correctness_test_case, style_test_case, test_coverage_test_case])
+    
+    # Add reference comparison metrics if reference is available
+    if reference_code:
+      print("   Adding LLM reference comparison metrics...")
+      reference_metrics = self._create_reference_metrics(reference_code)
+      
+      # Create reference comparison test case
+      reference_test_case = LLMTestCase(
+        input=f"Compare the generated DML implementation against the golden reference for {self.device_name} device",
+        actual_output=dml_code,
+        expected_output=reference_code,
+        context=[
+          f"Device: {self.device_name}",
+          "Task: DML device implementation comparison",
+          "Focus: Structural similarity, functional correctness, and code quality"
+        ]
+      )
+      
+      # Add reference metrics and test cases
+      for metric in reference_metrics:
+        metrics_to_run.append(metric)
+        test_cases_to_run.append(reference_test_case)
+    
+    # Run all evaluations
+    print(f"   Running {len(metrics_to_run)} code quality metrics...")
+    all_results = []
+    
+    for i, (test_case, metric) in enumerate(zip(test_cases_to_run, metrics_to_run)):
+      result = evaluate([test_case], [metric])
+      all_results.append(result)
     
     # Combine results
-    combined_results = self._combine_metric_results([
-      correctness_results,
-      style_results,
-      coverage_results
-    ])
+    combined_results = self._combine_metric_results(all_results)
     
     return self._process_results(combined_results)
   
@@ -289,3 +325,138 @@ class CodeEvaluator:
       "metrics": metric_results,
       "test_case_count": len(test_results)
     }
+  
+  def _create_reference_metrics(self, reference_code: str) -> List:
+    """Create LLM-powered metrics for reference comparison."""
+    
+    # Get model instance for metrics
+    model_for_eval = self._get_model_for_eval()
+    
+    metrics = []
+    
+    # 1. Structural Equivalence using G-Eval
+    metrics.append(GEval(
+      name="Structural Equivalence",
+      evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.CONTEXT],
+      criteria="""Evaluate how well the generated DML code matches the structural organization of the reference implementation.
+      Consider: register definitions, method signatures, field declarations, interface specifications, 
+      overall code organization, and architectural patterns. Focus on structural similarity rather than exact syntax.""",
+      rubric=[
+        Rubric(score_range=(9, 10), expected_outcome="Excellent structural match with all key elements present and properly organized"),
+        Rubric(score_range=(7, 8), expected_outcome="Good structural similarity with minor organizational differences"),
+        Rubric(score_range=(5, 6), expected_outcome="Adequate structure covering most essential elements"),
+        Rubric(score_range=(3, 4), expected_outcome="Partial structural match with notable missing elements"),
+        Rubric(score_range=(0, 2), expected_outcome="Poor structural similarity with major architectural differences")
+      ],
+      model=model_for_eval,
+      threshold=0.7
+    ))
+    
+    # 2. Functional Correctness using G-Eval
+    metrics.append(GEval(
+      name="Functional Correctness vs Reference",
+      evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.CONTEXT],
+      criteria="""Evaluate how well the generated code implements the same functionality as the reference implementation.
+      Consider: register read/write behaviors, side effects, timing logic, event handling, error conditions,
+      state management, and overall device behavior. Focus on functional equivalence and correctness.""",
+      rubric=[
+        Rubric(score_range=(9, 10), expected_outcome="Functionally equivalent with all behaviors correctly implemented"),
+        Rubric(score_range=(7, 8), expected_outcome="Mostly correct functionality with minor behavioral differences"),
+        Rubric(score_range=(5, 6), expected_outcome="Core functionality present but some behaviors may differ"),
+        Rubric(score_range=(3, 4), expected_outcome="Partial functionality with notable behavioral gaps"),
+        Rubric(score_range=(0, 2), expected_outcome="Significant functional differences or incorrect behaviors")
+      ],
+      model=model_for_eval,
+      threshold=0.7
+    ))
+    
+    # 3. Implementation Completeness using G-Eval
+    metrics.append(GEval(
+      name="Implementation Completeness",
+      evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT, LLMTestCaseParams.CONTEXT],
+      criteria="""Evaluate how completely the generated implementation covers all aspects present in the reference.
+      Consider: all registers implemented, all required methods present, complete functionality coverage,
+      proper error handling, edge case coverage, and no missing critical components.""",
+      rubric=[
+        Rubric(score_range=(9, 10), expected_outcome="Complete implementation covering all reference aspects"),
+        Rubric(score_range=(7, 8), expected_outcome="Nearly complete with only minor omissions"),
+        Rubric(score_range=(5, 6), expected_outcome="Most functionality present but some gaps exist"),
+        Rubric(score_range=(3, 4), expected_outcome="Partial implementation with notable missing components"),
+        Rubric(score_range=(0, 2), expected_outcome="Incomplete implementation missing major functionality")
+      ],
+      model=model_for_eval,
+      threshold=0.7
+    ))
+    
+    # 4. Faithfulness to Reference (using DeepEval's FaithfulnessMetric)
+    metrics.append(FaithfulnessMetric(
+      model=model_for_eval,
+      threshold=0.7
+    ))
+    
+    return metrics
+  
+  def _get_model_for_eval(self):
+    """Get appropriate model instance for evaluation metrics."""
+    if self.model.startswith("iflow/"):
+      from deepeval.models import LiteLLMModel
+      import os
+      
+      model_name = self.model.replace("iflow/", "dashscope/")
+      api_key = os.getenv("IFLOW_API_KEY")
+      if not api_key:
+        raise ValueError("IFLOW_API_KEY environment variable not set")
+      
+      return LiteLLMModel(
+        model=model_name,
+        api_key=api_key,
+        base_url="https://apis.iflow.cn/v1/"
+      )
+    elif self.model.startswith("github_copilot/"):
+      from deepeval.models import LiteLLMModel
+      
+      return LiteLLMModel(
+        model=self.model,
+        generation_kwargs={
+          "extra_headers": {
+            "Editor-Version": "vscode/1.85.0",
+            "Copilot-Integration-Id": "vscode-chat"
+          }
+        }
+      )
+    else:
+      return self.model
+  
+  def _load_reference_code(self) -> Optional[str]:
+    """Load the golden reference DML implementation."""
+    if not self.reference_dir:
+      # Auto-discover reference directories
+      possible_ref_dirs = [
+        self.workdir / "reference",
+        self.workdir / "golden",
+        self.workdir / "expected",
+        self.workdir.parent / "reference" / self.device_name,
+        self.workdir.parent / "golden" / self.device_name
+      ]
+      
+      for ref_dir in possible_ref_dirs:
+        if ref_dir.exists():
+          self.reference_dir = ref_dir
+          break
+    
+    if not self.reference_dir or not self.reference_dir.exists():
+      return None
+    
+    # Look for DML files in reference directory
+    ref_dml_files = list(self.reference_dir.glob(f"**/{self.device_name}.dml"))
+    if not ref_dml_files:
+      ref_dml_files = list(self.reference_dir.glob("**/*.dml"))
+    
+    if not ref_dml_files:
+      return None
+    
+    try:
+      return ref_dml_files[0].read_text()
+    except Exception as e:
+      print(f"⚠️  Error reading reference DML file: {e}")
+      return None

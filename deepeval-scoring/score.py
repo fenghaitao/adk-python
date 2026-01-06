@@ -24,6 +24,9 @@ Usage:
   
   # Behavior evaluation only
   python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus --agent kiro-cli --behavior-only
+  
+  # With LLM-powered reference comparison
+  python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus --agent kiro-cli --reference-dir /path/to/golden
 """
 
 from __future__ import annotations
@@ -90,6 +93,10 @@ def main():
     "--agent",
     help="Agent type for behavior evaluation (e.g., rovodev, copilot-cli, kiro-cli, adk-python, qodercli)"
   )
+  parser.add_argument(
+    "--reference-dir",
+    help="Directory containing golden reference implementation for LLM-powered comparison"
+  )
   
   args = parser.parse_args()
   
@@ -105,11 +112,12 @@ def main():
   # Skip code evaluation if behavior-only mode
   if not args.behavior_only:
     if args.scoring_mode in ["llm", "hybrid"]:
-      # LLM-based evaluation
+      # LLM-based evaluation (now includes reference comparison if available)
       code_eval = CodeEvaluator(
         workdir=args.workdir,
         device_name=args.device,
-        model=args.model
+        model=args.model,
+        reference_dir=args.reference_dir  # Pass reference directory to CodeEvaluator
       )
       print("🔍 Evaluating code quality with LLM...")
       code_results = code_eval.evaluate()
@@ -235,7 +243,7 @@ def calculate_overall_score(
     
   elif scoring_mode == "hybrid":
     # Hybrid mode: Use deterministic for objective metrics, LLM for subjective
-    # Weight: 40% deterministic (objective), 40% LLM code quality (subjective), 20% behavior
+    # Weight: 40% deterministic, 40% LLM code quality (includes reference comparison), 20% behavior
     
     total_score = 0.0
     total_weight = 0.0
@@ -245,7 +253,7 @@ def calculate_overall_score(
       total_score += deterministic_results["overall_score"] * 0.4
       total_weight += 0.4
     
-    # LLM code quality (subjective analysis)
+    # LLM code quality (subjective analysis, now includes reference comparison)
     if code_results:
       total_score += code_results["overall_score"] * 0.4
       total_weight += 0.4
