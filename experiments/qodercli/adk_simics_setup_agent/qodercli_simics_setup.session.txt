@@ -1,0 +1,54 @@
+================================================================================
+📋 SESSION: adk_simics_setup_agent/qodercli_simics_setup.session.json
+================================================================================
+App Name: adk_simics_setup_agent
+User ID: test_user
+Session ID: 22de79f0-b525-494d-a590-f0f7ab43fa2c
+Created: N/A
+Updated: N/A
+Last Update: 2026-01-06 07:01:15 UTC
+Events: 4 total
+
+================================================================================
+💬 CONVERSATION
+================================================================================
+[94m👤 [user] 2026-01-06 07:01:11 UTC[0m
+   Set up Simics project at /home/hfeng1/demo/qodercli/simics-project for device wdt using /home/hfeng1/demo/qodercli/wdt.xml
+   🆔 Invocation: e-13d40d59-b465-46f6-b74e-a012123a3d58
+
+[92m🤖 [simics_integration_agent] 2026-01-06 07:01:11 UTC (+0.0 seconds)[0m
+   🔧 create_simics_project(project_path=/home/hfeng1/demo/qodercli/simics-project)
+   🔧 generate_dml_registers(project_path=/home/hfeng1/demo/qodercli/simics-project, device_name=wdt, reg_xml=/home/hfeng1/demo/qodercli/wdt.xml)
+   🆔 Invocation: e-13d40d59-b465-46f6-b74e-a012123a3d58
+
+[92m🤖 [simics_integration_agent] 2026-01-06 07:01:14 UTC (+3.5 seconds)[0m
+   📤 create_simics_project → {'content': [{'type': 'text', 'text': '{"success": true, "project_path": "/home/hfeng1/demo/qodercli/simics-project", "message": "Successfully created Simics project at /home/hfeng1/demo/qodercli/simics-project", "output": "Will create project in directory /home/hfeng1/demo/qodercli/simics-project with all installed packages from /home/hfeng1/.simics-mcp-server/simics-install\\nsimics-project created successfully\\n"}'}], 'structuredContent': {'result': '{"success": true, "project_path": "/home/hfeng1/demo/qodercli/simics-project", "message": "Successfully created Simics project at /home/hfeng1/demo/qodercli/simics-project", "output": "Will create project in directory /home/hfeng1/demo/qodercli/simics-project with all installed packages from /home/hfeng1/.simics-mcp-server/simics-install\\nsimics-project created successfully\\n"}'}, 'isError': False}
+   📤 generate_dml_registers → {'content': [{'type': 'text', 'text': '{\n  "success": true,\n  "device_name": "wdt",\n  "xml_file": "/home/hfeng1/demo/qodercli/wdt.xml",\n  "output_directory": "/home/hfeng1/demo/qodercli/simics-project/modules/wdt",\n  "generated_files": [\n    "wdt-registers.dml",\n    "CMakeLists.txt",\n    "Makefile",\n    "module_load.py",\n    "wdt.dml",\n    "test/s-info-status.py",\n    "test/CMakeLists.txt",\n    "test/wdt_common.py",\n    "test/README",\n    "test/SUITEINFO",\n    "test/s-wdt.py",\n    "s-info-status.py",\n    "CMakeLists.txt",\n    "wdt_common.py",\n    "README",\n    "SUITEINFO",\n    "s-wdt.py"\n  ],\n  "message": "Successfully generated DML registers for device \'wdt\'",\n  "stdout": "Generated DML files wdt.dml and wdt-registers.dml in \'/home/hfeng1/demo/qodercli/simics-project/modules/wdt\'\\nGenerated test files in \'/home/hfeng1/demo/qodercli/simics-project/modules/wdt/test/\'\\n",\n  "stderr": null\n}'}], 'structuredContent': {'result': '{\n  "success": true,\n  "device_name": "wdt",\n  "xml_file": "/home/hfeng1/demo/qodercli/wdt.xml",\n  "output_directory": "/home/hfeng1/demo/qodercli/simics-project/modules/wdt",\n  "generated_files": [\n    "wdt-registers.dml",\n    "CMakeLists.txt",\n    "Makefile",\n    "module_load.py",\n    "wdt.dml",\n    "test/s-info-status.py",\n    "test/CMakeLists.txt",\n    "test/wdt_common.py",\n    "test/README",\n    "test/SUITEINFO",\n    "test/s-wdt.py",\n    "s-info-status.py",\n    "CMakeLists.txt",\n    "wdt_common.py",\n    "README",\n    "SUITEINFO",\n    "s-wdt.py"\n  ],\n  "message": "Successfully generated DML registers for device \'wdt\'",\n  "stdout": "Generated DML files wdt.dml and wdt-registers.dml in \'/home/hfeng1/demo/qodercli/simics-project/modules/wdt\'\\nGenerated test files in \'/home/hfeng1/demo/qodercli/simics-project/modules/wdt/test/\'\\n",\n  "stderr": null\n}'}, 'isError': False}
+   🆔 Invocation: e-13d40d59-b465-46f6-b74e-a012123a3d58
+
+[92m🤖 [simics_integration_agent] 2026-01-06 07:01:15 UTC (+0.2 seconds)[0m
+   ✅ Simics project created at /home/hfeng1/demo/qodercli/simics-project. DML device module generated for wdt with register definitions from wdt.xml. Ready for development.
+   🆔 Invocation: e-13d40d59-b465-46f6-b74e-a012123a3d58
+
+================================================================================
+⏱️  SESSION TIMING SUMMARY
+================================================================================
+Session Start: 2026-01-06 07:01:11 UTC
+Session End: 2026-01-06 07:01:15 UTC
+Session Duration: 3.7 seconds
+Total Events: 4
+Average Events per Minute: 65.2
+
+🐌 TIME-CONSUMING EVENTS
+========================================
+Found 1 events taking >1 second:
+
+  1. 🤖  3.5 seconds - 📤 create_simics_project → {'content': [{'type': 'text', 'text': '{"success": ...
+      Event #3 at 2026-01-06 07:01:14 UTC
+
+Total time in slow events: 3.5 seconds
+Average slow event duration: 3.5 seconds
+Percentage of session time: 94.0%
+================================================================================
+✅ Session view complete
+================================================================================
