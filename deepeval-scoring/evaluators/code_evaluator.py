@@ -220,83 +220,134 @@ class CodeEvaluator:
     # This method provides general context - specific metrics may need targeted context
     context = []
     
+    # Get the adk-python root directory (parent of deepeval-scoring)
+    adk_root = Path(__file__).parent.parent.parent
+    
     # Load DML Best Practices Index (provides overview of DML patterns)
-    dml_index_path = self.workdir / "openspec-memories" / "00_DML_Best_Practices_Index.md"
+    dml_index_path = adk_root / "openspec-memories" / "00_DML_Best_Practices_Index.md"
     if dml_index_path.exists():
+      print(f"   📚 Loading: {dml_index_path}")
       context.append(f"DML Best Practices Index:\n{dml_index_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {dml_index_path}")
     
     # Load DML Anti-Patterns (CRITICAL - prevents major implementation mistakes)
-    anti_patterns_path = self.workdir / "openspec-memories" / "02_DML_Anti_Patterns.md"
+    anti_patterns_path = adk_root / "openspec-memories" / "02_DML_Anti_Patterns.md"
     if anti_patterns_path.exists():
+      print(f"   📚 Loading: {anti_patterns_path}")
       context.append(f"DML Anti-Patterns (CRITICAL):\n{anti_patterns_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {anti_patterns_path}")
     
     return context
   
   def _load_correctness_context(self) -> List[str]:
     """Load context specific to code correctness evaluation."""
     context = []
+    print("   🔍 Loading correctness context...")
+    
+    # Get the adk-python root directory (parent of deepeval-scoring)
+    adk_root = Path(__file__).parent.parent.parent
     
     # Anti-patterns - CRITICAL for correctness
-    anti_patterns_path = self.workdir / "openspec-memories" / "02_DML_Anti_Patterns.md"
+    anti_patterns_path = adk_root / "openspec-memories" / "02_DML_Anti_Patterns.md"
     if anti_patterns_path.exists():
+      print(f"   📚 Loading: {anti_patterns_path}")
       context.append(f"DML Anti-Patterns (CRITICAL):\n{anti_patterns_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {anti_patterns_path}")
     
     # Modeling philosophy - core principles
-    philosophy_path = self.workdir / "openspec-memories" / "01_Simics_Modeling_Philosophy.md"
+    philosophy_path = adk_root / "openspec-memories" / "01_Simics_Modeling_Philosophy.md"
     if philosophy_path.exists():
+      print(f"   📚 Loading: {philosophy_path}")
       context.append(f"Simics Modeling Philosophy:\n{philosophy_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {philosophy_path}")
     
     # Timer modeling - for timer/watchdog devices
-    timer_path = self.workdir / "openspec-memories" / "04_DML_Timing_Timer_Modeling.md"
+    timer_path = adk_root / "openspec-memories" / "04_DML_Timing_Timer_Modeling.md"
     if timer_path.exists():
+      print(f"   📚 Loading: {timer_path}")
       context.append(f"DML Timing and Timer Modeling:\n{timer_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {timer_path}")
     
     # Common patterns - correct implementation examples
-    patterns_path = self.workdir / "openspec-memories" / "06_DML_Common_Patterns.md"
+    patterns_path = adk_root / "openspec-memories" / "06_DML_Common_Patterns.md"
     if patterns_path.exists():
+      print(f"   📚 Loading: {patterns_path}")
       context.append(f"DML Common Patterns:\n{patterns_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {patterns_path}")
     
     return context
   
   def _load_style_context(self) -> List[str]:
     """Load context specific to code style evaluation."""
     context = []
+    print("   🎨 Loading style context...")
+    
+    # Get the adk-python root directory (parent of deepeval-scoring)
+    adk_root = Path(__file__).parent.parent.parent
     
     # Best practices index - style guidelines
-    index_path = self.workdir / "openspec-memories" / "00_DML_Best_Practices_Index.md"
+    index_path = adk_root / "openspec-memories" / "00_DML_Best_Practices_Index.md"
     if index_path.exists():
+      print(f"   📚 Loading: {index_path}")
       context.append(f"DML Best Practices Index:\n{index_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {index_path}")
     
     # Basic syntax - proper DML structure
-    syntax_path = self.workdir / "openspec-memories" / "03_DML_Basic_Syntax.md"
+    syntax_path = adk_root / "openspec-memories" / "03_DML_Basic_Syntax.md"
     if syntax_path.exists():
+      print(f"   📚 Loading: {syntax_path}")
       context.append(f"DML Basic Syntax:\n{syntax_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {syntax_path}")
     
     # Register access scope - organization patterns
-    scope_path = self.workdir / "openspec-memories" / "07_DML_Register_Access_Scope.md"
+    scope_path = adk_root / "openspec-memories" / "07_DML_Register_Access_Scope.md"
     if scope_path.exists():
+      print(f"   📚 Loading: {scope_path}")
       context.append(f"DML Register Access Scope:\n{scope_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {scope_path}")
     
     return context
   
   def _load_test_context(self) -> List[str]:
     """Load context specific to test coverage evaluation."""
     context = []
+    print("   🧪 Loading test context...")
+    
+    # Get the adk-python root directory (parent of deepeval-scoring)
+    adk_root = Path(__file__).parent.parent.parent
     
     # Test best practices index
-    test_index_path = self.workdir / "openspec-memories" / "00_Test_Best_Practices_Index.md"
+    test_index_path = adk_root / "openspec-memories" / "00_Test_Best_Practices_Index.md"
     if test_index_path.exists():
+      print(f"   📚 Loading: {test_index_path}")
       context.append(f"Test Best Practices Index:\n{test_index_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {test_index_path}")
     
     # Register access testing
-    test_register_path = self.workdir / "openspec-memories" / "03_Test_Register_Access.md"
+    test_register_path = adk_root / "openspec-memories" / "03_Test_Register_Access.md"
     if test_register_path.exists():
+      print(f"   📚 Loading: {test_register_path}")
       context.append(f"Test Register Access:\n{test_register_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {test_register_path}")
     
     # Test configuration setup
-    test_config_path = self.workdir / "openspec-memories" / "02_Test_Configuration_Setup.md"
+    test_config_path = adk_root / "openspec-memories" / "02_Test_Configuration_Setup.md"
     if test_config_path.exists():
+      print(f"   📚 Loading: {test_config_path}")
       context.append(f"Test Configuration Setup:\n{test_config_path.read_text()}")
+    else:
+      print(f"   ⚠️  Missing: {test_config_path}")
     
     return context
   
