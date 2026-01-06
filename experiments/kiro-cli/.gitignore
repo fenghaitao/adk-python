@@ -1,0 +1,55 @@
+# Build artifacts
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+
+# Dependency files
+*.dep
+*.dmldep
+*.d
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node modules
+node_modules/
+
+# Simics temporary files
+*.modcache
+*.simics-log
+*.simics-checkpoint
+simics-workspace/
+
+# Temporary build and crash traces
+bt/
+
+# Temporary files
+*.tmp
+
+# Build directories
+build/
+dist/
+*.egg-info/
+linux64/
+bin/
+targets/

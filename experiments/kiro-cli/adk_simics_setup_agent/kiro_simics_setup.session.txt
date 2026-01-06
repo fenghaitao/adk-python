@@ -1,0 +1,54 @@
+================================================================================
+📋 SESSION: adk_simics_setup_agent/kiro_simics_setup.session.json
+================================================================================
+App Name: adk_simics_setup_agent
+User ID: test_user
+Session ID: 0a633794-5227-4821-bce3-ad1aea1c3b69
+Created: N/A
+Updated: N/A
+Last Update: 2026-01-06 05:33:45 UTC
+Events: 4 total
+
+================================================================================
+💬 CONVERSATION
+================================================================================
+[94m👤 [user] 2026-01-06 05:33:40 UTC[0m
+   Set up Simics project at /tmp/hfeng1/demo/kiro/simics-project for device wdt using /tmp/hfeng1/demo/kiro/wdt.xml
+   🆔 Invocation: e-fdf1f737-8e29-40a8-8a54-546a325693ab
+
+[92m🤖 [simics_integration_agent] 2026-01-06 05:33:40 UTC (+0.1 seconds)[0m
+   🔧 create_simics_project(project_path=/tmp/hfeng1/demo/kiro/simics-project)
+   🔧 generate_dml_registers(project_path=/tmp/hfeng1/demo/kiro/simics-project, device_name=wdt, reg_xml=/tmp/hfeng1/demo/kiro/wdt.xml)
+   🆔 Invocation: e-fdf1f737-8e29-40a8-8a54-546a325693ab
+
+[92m🤖 [simics_integration_agent] 2026-01-06 05:33:44 UTC (+4.6 seconds)[0m
+   📤 create_simics_project → {'content': [{'type': 'text', 'text': '{"success": true, "project_path": "/tmp/hfeng1/demo/kiro/simics-project", "message": "Successfully created Simics project at /tmp/hfeng1/demo/kiro/simics-project", "output": "Will create project in directory /tmp/hfeng1/demo/kiro/simics-project with all installed packages from /nfs/site/home/hfeng1/coder/.simics-mcp-server/simics-install\\nsimics-project created successfully\\n"}'}], 'structuredContent': {'result': '{"success": true, "project_path": "/tmp/hfeng1/demo/kiro/simics-project", "message": "Successfully created Simics project at /tmp/hfeng1/demo/kiro/simics-project", "output": "Will create project in directory /tmp/hfeng1/demo/kiro/simics-project with all installed packages from /nfs/site/home/hfeng1/coder/.simics-mcp-server/simics-install\\nsimics-project created successfully\\n"}'}, 'isError': False}
+   📤 generate_dml_registers → {'content': [{'type': 'text', 'text': '{\n  "success": true,\n  "device_name": "wdt",\n  "xml_file": "/tmp/hfeng1/demo/kiro/wdt.xml",\n  "output_directory": "/tmp/hfeng1/demo/kiro/simics-project/modules/wdt",\n  "generated_files": [\n    "CMakeLists.txt",\n    "Makefile",\n    "wdt.dml",\n    "module_load.py",\n    "wdt-registers.dml",\n    "test/CMakeLists.txt",\n    "test/README",\n    "test/SUITEINFO",\n    "test/wdt_common.py",\n    "test/s-wdt.py",\n    "test/s-info-status.py",\n    "CMakeLists.txt",\n    "README",\n    "SUITEINFO",\n    "wdt_common.py",\n    "s-wdt.py",\n    "s-info-status.py"\n  ],\n  "message": "Successfully generated DML registers for device \'wdt\'",\n  "stdout": "Generated DML files wdt.dml and wdt-registers.dml in \'/tmp/hfeng1/demo/kiro/simics-project/modules/wdt\'\\nGenerated test files in \'/tmp/hfeng1/demo/kiro/simics-project/modules/wdt/test/\'\\n",\n  "stderr": null\n}'}], 'structuredContent': {'result': '{\n  "success": true,\n  "device_name": "wdt",\n  "xml_file": "/tmp/hfeng1/demo/kiro/wdt.xml",\n  "output_directory": "/tmp/hfeng1/demo/kiro/simics-project/modules/wdt",\n  "generated_files": [\n    "CMakeLists.txt",\n    "Makefile",\n    "wdt.dml",\n    "module_load.py",\n    "wdt-registers.dml",\n    "test/CMakeLists.txt",\n    "test/README",\n    "test/SUITEINFO",\n    "test/wdt_common.py",\n    "test/s-wdt.py",\n    "test/s-info-status.py",\n    "CMakeLists.txt",\n    "README",\n    "SUITEINFO",\n    "wdt_common.py",\n    "s-wdt.py",\n    "s-info-status.py"\n  ],\n  "message": "Successfully generated DML registers for device \'wdt\'",\n  "stdout": "Generated DML files wdt.dml and wdt-registers.dml in \'/tmp/hfeng1/demo/kiro/simics-project/modules/wdt\'\\nGenerated test files in \'/tmp/hfeng1/demo/kiro/simics-project/modules/wdt/test/\'\\n",\n  "stderr": null\n}'}, 'isError': False}
+   🆔 Invocation: e-fdf1f737-8e29-40a8-8a54-546a325693ab
+
+[92m🤖 [simics_integration_agent] 2026-01-06 05:33:45 UTC (+0.2 seconds)[0m
+   ✅ Simics project created at /tmp/hfeng1/demo/kiro/simics-project. DML device module generated for wdt with register definitions from wdt.xml. Ready for development.
+   🆔 Invocation: e-fdf1f737-8e29-40a8-8a54-546a325693ab
+
+================================================================================
+⏱️  SESSION TIMING SUMMARY
+================================================================================
+Session Start: 2026-01-06 05:33:40 UTC
+Session End: 2026-01-06 05:33:45 UTC
+Session Duration: 4.9 seconds
+Total Events: 4
+Average Events per Minute: 49.2
+
+🐌 TIME-CONSUMING EVENTS
+========================================
+Found 1 events taking >1 second:
+
+  1. 🤖  4.6 seconds - 📤 create_simics_project → {'content': [{'type': 'text', 'text': '{"success": ...
+      Event #3 at 2026-01-06 05:33:44 UTC
+
+Total time in slow events: 4.6 seconds
+Average slow event duration: 4.6 seconds
+Percentage of session time: 93.4%
+================================================================================
+✅ Session view complete
+================================================================================

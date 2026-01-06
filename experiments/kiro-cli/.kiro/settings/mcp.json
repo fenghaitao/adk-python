@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sse-server": {
+      "transport": "sse",
+      "url": "http://localhost:8056/sse",
+      "disabled": false,
+      "autoApprove": [
+        "perform_rag_query",
+        "get_simics_version",
+        "build_simics_project",
+        "run_simics_test"
+      ]
+    }
+  }
+}
