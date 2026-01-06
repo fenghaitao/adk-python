@@ -1,0 +1,5 @@
+project: /tmp/hfeng1/demo/rovodev/simics-project
+simics-root: /nfs/site/home/hfeng1/coder/.simics-mcp-server/simics-install/simics-7.57.0
+simics-model-builder: /nfs/site/home/hfeng1/coder/.simics-mcp-server/simics-install/simics-7.57.0
+simics-python: /nfs/site/home/hfeng1/coder/.simics-mcp-server/simics-install/simics-7.57.0/scripts/../../simics-python-7.13.0/linux64/bin/../..
+mingw: None

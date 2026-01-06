@@ -1,0 +1,727 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipxact:component xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2014">
+  <ipxact:vendor>arm</ipxact:vendor>
+  <ipxact:library>peripheral</ipxact:library>
+  <ipxact:name>wdt</ipxact:name>
+  <ipxact:version>1.0</ipxact:version>
+  <ipxact:memoryMaps>
+    <ipxact:memoryMap>
+      <ipxact:name>apb</ipxact:name>
+      <ipxact:addressBlock>
+        <ipxact:name>wdt_regs</ipxact:name>
+        <ipxact:baseAddress>0x0</ipxact:baseAddress>
+        <ipxact:range>0x1000</ipxact:range>
+        <ipxact:width>32</ipxact:width>
+        <ipxact:register>
+          <ipxact:name>WDOGLOAD</ipxact:name>
+          <ipxact:description>Watchdog load register - sets the 32-bit reload value for the watchdog counter. Writing reloads the current counter value if the watchdog was previously disabled.</ipxact:description>
+          <ipxact:addressOffset>0x0</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_write</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xFFFFFFFF</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>wdog_load</ipxact:name>
+            <ipxact:description>Watchdog decrementing counter reload value</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>32</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGVALUE</ipxact:name>
+          <ipxact:description>Watchdog value register - returns the current value of the decrementing counter. Read side-effects: none.</ipxact:description>
+          <ipxact:addressOffset>0x4</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>true</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xFFFFFFFF</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>count_read</ipxact:name>
+            <ipxact:description>The current value of watchdog counter</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>32</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGCONTROL</ipxact:name>
+          <ipxact:description>Watchdog control register - controls interrupt enable, reset enable and clock divider. Write side-effects: writing to INTEN bit can trigger counter reload from WDOGLOAD when enabled after previously being disabled.</ipxact:description>
+          <ipxact:addressOffset>0x8</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_write</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>INTEN</ipxact:name>
+            <ipxact:description>Enable the interrupt event, WDOGINT. Set to 1 to enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enabled after previously being disabled.</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>RESEN</ipxact:name>
+            <ipxact:description>Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.</ipxact:description>
+            <ipxact:bitOffset>1</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>step_value</ipxact:name>
+            <ipxact:description>Clock divider selection: 000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16</ipxact:description>
+            <ipxact:bitOffset>2</ipxact:bitOffset>
+            <ipxact:bitWidth>3</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>5</ipxact:bitOffset>
+            <ipxact:bitWidth>27</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGINTCLR</ipxact:name>
+          <ipxact:description>Watchdog interrupt clear register. Write side-effects: writing any value clears the watchdog interrupt and reloads the counter from WDOGLOAD register.</ipxact:description>
+          <ipxact:addressOffset>0xC</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>write_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGRIS</ipxact:name>
+          <ipxact:description>Watchdog raw interrupt status register - indicates the raw interrupt status from the counter.</ipxact:description>
+          <ipxact:addressOffset>0x10</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>true</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>raw_watchdog_interrupt</ipxact:name>
+            <ipxact:description>Raw interrupt status from the counter</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>1</ipxact:bitOffset>
+            <ipxact:bitWidth>31</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGMIS</ipxact:name>
+          <ipxact:description>Watchdog masked interrupt status register - returns the logical AND of WDOGRIS and INTEN.</ipxact:description>
+          <ipxact:addressOffset>0x14</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>true</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>watchdog_interrupt</ipxact:name>
+            <ipxact:description>Enable interrupt status from the counter (WDOGRIS &amp; INTEN)</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>1</ipxact:bitOffset>
+            <ipxact:bitWidth>31</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGLOCK</ipxact:name>
+          <ipxact:description>Watchdog lock register - controls write access to other registers. Write side-effects: writing 0x1ACCE551 unlocks registers, any other value locks them.</ipxact:description>
+          <ipxact:addressOffset>0xC00</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_write</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>wdog_lock</ipxact:name>
+            <ipxact:description>Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value. A read returns the lock status: 0x0=unlocked, 0x1=locked.</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>32</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGITCR</ipxact:name>
+          <ipxact:description>Watchdog integration test control register - controls whether the device is in integration test mode. Write side-effects: setting bit 0 enables direct output control via WDOGITOP.</ipxact:description>
+          <ipxact:addressOffset>0xF00</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_write</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>integration_test_mode_enable</ipxact:name>
+            <ipxact:description>Integration test mode enable: 1=enter integration test mode, 0=normal decrementing counter mode</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>read_write</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>1</ipxact:bitOffset>
+            <ipxact:bitWidth>31</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGITOP</ipxact:name>
+          <ipxact:description>Watchdog integration test output register - directly controls output signals in integration test mode. Write side-effects: directly drives wdogint and wdogres outputs when integration test mode is enabled.</ipxact:description>
+          <ipxact:addressOffset>0xF04</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>write_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>integration_test_wdogres_value</ipxact:name>
+            <ipxact:description>Integration test mode WDOGRES value - sets the reset output in test mode</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>write_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>integration_test_wdogint_value</ipxact:name>
+            <ipxact:description>Integration test mode WDOGINT value - sets the interrupt output in test mode</ipxact:description>
+            <ipxact:bitOffset>1</ipxact:bitOffset>
+            <ipxact:bitWidth>1</ipxact:bitWidth>
+            <ipxact:access>write_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>2</ipxact:bitOffset>
+            <ipxact:bitWidth>30</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID4</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 4 - JEP106 continuation code and block count.</ipxact:description>
+          <ipxact:addressOffset>0xFD0</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x4</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID4</ipxact:name>
+            <ipxact:description>Block count [7:4] and JEP106 continuation code [3:0]</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID5</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 5 - not used.</ipxact:description>
+          <ipxact:addressOffset>0xFD4</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID5</ipxact:name>
+            <ipxact:description>Peripheral ID register 5, not used</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID6</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 6 - not used.</ipxact:description>
+          <ipxact:addressOffset>0xFD8</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID6</ipxact:name>
+            <ipxact:description>Peripheral ID register 6, not used</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID7</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 7 - not used.</ipxact:description>
+          <ipxact:addressOffset>0xFDC</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID7</ipxact:name>
+            <ipxact:description>Peripheral ID register 7, not used</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID0</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 0 - part number bits [7:0].</ipxact:description>
+          <ipxact:addressOffset>0xFE0</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x24</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID0</ipxact:name>
+            <ipxact:description>Part number [7:0]</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID1</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 1 - JEP106 code and part number bits [11:8].</ipxact:description>
+          <ipxact:addressOffset>0xFE4</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xB8</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID1</ipxact:name>
+            <ipxact:description>JEP106 ID [7:4] and part number [11:8] [3:0]</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID2</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 2 - revision and JEP106 code.</ipxact:description>
+          <ipxact:addressOffset>0xFE8</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x1B</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID2</ipxact:name>
+            <ipxact:description>Revision [7:4], JEDEC flag [3], and JEP106 ID [2:0]</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPERIPHID3</ipxact:name>
+          <ipxact:description>Watchdog peripheral identification register 3 - ECO revision and customer modification.</ipxact:description>
+          <ipxact:addressOffset>0xFEC</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>ECOREVNUM</ipxact:name>
+            <ipxact:description>ECO revision number [7:4]</ipxact:description>
+            <ipxact:bitOffset>4</ipxact:bitOffset>
+            <ipxact:bitWidth>4</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>WDOG_PERIPH_ID3</ipxact:name>
+            <ipxact:description>Customer modification number [3:0]</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>4</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPCELLID0</ipxact:name>
+          <ipxact:description>Watchdog PrimeCell identification register 0.</ipxact:description>
+          <ipxact:addressOffset>0xFF0</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xD</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PCELL_ID0</ipxact:name>
+            <ipxact:description>Component ID register 0</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPCELLID1</ipxact:name>
+          <ipxact:description>Watchdog PrimeCell identification register 1.</ipxact:description>
+          <ipxact:addressOffset>0xFF4</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xF0</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PCELL_ID1</ipxact:name>
+            <ipxact:description>Component ID register 1</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPCELLID2</ipxact:name>
+          <ipxact:description>Watchdog PrimeCell identification register 2.</ipxact:description>
+          <ipxact:addressOffset>0xFF8</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0x5</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PCELL_ID2</ipxact:name>
+            <ipxact:description>Component ID register 2</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+        <ipxact:register>
+          <ipxact:name>WDOGPCELLID3</ipxact:name>
+          <ipxact:description>Watchdog PrimeCell identification register 3.</ipxact:description>
+          <ipxact:addressOffset>0xFFC</ipxact:addressOffset>
+          <ipxact:size>32</ipxact:size>
+          <ipxact:access>read_only</ipxact:access>
+          <ipxact:volatile>false</ipxact:volatile>
+          <ipxact:reset>
+            <ipxact:value>0xB1</ipxact:value>
+            <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+          </ipxact:reset>
+          <ipxact:field>
+            <ipxact:name>WDOG_PCELL_ID3</ipxact:name>
+            <ipxact:description>Component ID register 3</ipxact:description>
+            <ipxact:bitOffset>0</ipxact:bitOffset>
+            <ipxact:bitWidth>8</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+          <ipxact:field>
+            <ipxact:name>Reserved</ipxact:name>
+            <ipxact:description>Reserved bits, read as zero</ipxact:description>
+            <ipxact:bitOffset>8</ipxact:bitOffset>
+            <ipxact:bitWidth>24</ipxact:bitWidth>
+            <ipxact:access>read_only</ipxact:access>
+          </ipxact:field>
+        </ipxact:register>
+      </ipxact:addressBlock>
+    </ipxact:memoryMap>
+  </ipxact:memoryMaps>
+  <ipxact:ports>
+    <ipxact:port>
+      <ipxact:name>wclk</ipxact:name>
+      <ipxact:description>Working clock input. Main working clock for the timer.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>wclk_en</ipxact:name>
+      <ipxact:description>Clock enable signal. Enables the timer when high.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>wrst_n</ipxact:name>
+      <ipxact:description>Working clock domain reset. Asynchronous active-low reset for working clock domain.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>prst_n</ipxact:name>
+      <ipxact:description>APB bus reset. Asynchronous active-low reset for APB interface.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>wdogint</ipxact:name>
+      <ipxact:description>Watchdog interrupt output. Edge-triggered interrupt signal, generated when counter reaches zero and INTEN=1. Asserted when counter reaches zero and INTEN=1, remains asserted until cleared by writing to WDOGINTCLR.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>out</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>wdogres</ipxact:name>
+      <ipxact:description>Watchdog reset output. Reset signal, generated when counter reaches zero again while interrupt is still asserted and RESEN=1. Remains active until system reset occurs.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>out</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>paddr</ipxact:name>
+      <ipxact:description>APB address bus. Address bus for register access.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:vector>
+          <ipxact:left>31</ipxact:left>
+          <ipxact:right>0</ipxact:right>
+        </ipxact:vector>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic_vector</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>pwdata</ipxact:name>
+      <ipxact:description>APB write data bus. Write data bus for register writes.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:vector>
+          <ipxact:left>31</ipxact:left>
+          <ipxact:right>0</ipxact:right>
+        </ipxact:vector>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic_vector</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>prdata</ipxact:name>
+      <ipxact:description>APB read data bus. Read data bus for register reads.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>out</ipxact:direction>
+        <ipxact:vector>
+          <ipxact:left>31</ipxact:left>
+          <ipxact:right>0</ipxact:right>
+        </ipxact:vector>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic_vector</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>pwrite</ipxact:name>
+      <ipxact:description>APB write enable. Write/Read control (1=write, 0=read).</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>psel</ipxact:name>
+      <ipxact:description>APB select. Device selection signal.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>penable</ipxact:name>
+      <ipxact:description>APB enable. Second phase of APB transaction.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>in</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+    <ipxact:port>
+      <ipxact:name>pready</ipxact:name>
+      <ipxact:description>APB ready. Transaction complete signal.</ipxact:description>
+      <ipxact:wire>
+        <ipxact:direction>out</ipxact:direction>
+        <ipxact:wireTypeDefs>
+          <ipxact:wireTypeDef>
+            <ipxact:typeName>std_logic</ipxact:typeName>
+          </ipxact:wireTypeDef>
+        </ipxact:wireTypeDefs>
+      </ipxact:wire>
+    </ipxact:port>
+  </ipxact:ports>
+</ipxact:component>

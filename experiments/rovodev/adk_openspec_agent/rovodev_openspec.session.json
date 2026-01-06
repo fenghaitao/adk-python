@@ -1,0 +1,1373 @@
+{
+  "id": "8d07bcbb-6ede-4904-ac1d-c34ccc297bae",
+  "app_name": "adk_openspec_agent",
+  "user_id": "test_user",
+  "state": {},
+  "events": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Please read this project first, then read openspec/project.md and help me fill it out with details about my project, tech stack, and conventions"
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "user",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "44a32a56-615a-4bad-8815-d09f015675ab",
+      "timestamp": 1767682506.561248
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "I'll help you fill out the project details by first reading the existing project files and then updating the openspec/project.md file with comprehensive information about your project.\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_6d0b996459f64e9d9ad8a8f2",
+              "args": {
+                "directory_path": "."
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 54,
+        "prompt_token_count": 5227,
+        "total_token_count": 5281
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "08b233ed-cf98-44ea-9dae-46be86926695",
+      "timestamp": 1767682506.691644
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_6d0b996459f64e9d9ad8a8f2",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": ".",
+                "total_entries": 10,
+                "entries": [
+                  {
+                    "name": "AGENTS.md",
+                    "path": "AGENTS.md",
+                    "type": "file",
+                    "size": 660,
+                    "modified": 1767682056.4102232,
+                    "depth": 0
+                  },
+                  {
+                    "name": "adk_openspec_agent",
+                    "path": "adk_openspec_agent",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682506.5417957,
+                    "depth": 0
+                  },
+                  {
+                    "name": "adk_simics_setup_agent",
+                    "path": "adk_simics_setup_agent",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682500.5859597,
+                    "depth": 0
+                  },
+                  {
+                    "name": "adk_specify_agent",
+                    "path": "adk_specify_agent",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682484.434404,
+                    "depth": 0
+                  },
+                  {
+                    "name": "openspec",
+                    "path": "openspec",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682056.4062233,
+                    "depth": 0
+                  },
+                  {
+                    "name": "simics-project",
+                    "path": "simics-project",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682496.8900611,
+                    "depth": 0
+                  },
+                  {
+                    "name": "simics-wdt-spec.md",
+                    "path": "simics-wdt-spec.md",
+                    "type": "file",
+                    "size": 2700,
+                    "modified": 1767682056.4222229,
+                    "depth": 0
+                  },
+                  {
+                    "name": "specs",
+                    "path": "specs",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682076.6936734,
+                    "depth": 0
+                  },
+                  {
+                    "name": "wdt.md",
+                    "path": "wdt.md",
+                    "type": "file",
+                    "size": 17529,
+                    "modified": 1767682056.4222229,
+                    "depth": 0
+                  },
+                  {
+                    "name": "wdt.xml",
+                    "path": "wdt.xml",
+                    "type": "file",
+                    "size": 44804,
+                    "modified": 1767682056.4222229,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "a3b9a024-1fd1-4ffb-9517-7e7b200f8e27",
+      "timestamp": 1767682510.10398
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "I'll explore the openspec directory first to understand the current project structure and then read the project.md file.\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_9e38fd60a19243ad9434866c",
+              "args": {
+                "directory_path": "openspec"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 46,
+        "prompt_token_count": 5924,
+        "total_token_count": 5970
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "c9f08dd1-ea06-4cfd-a185-2edc820951d1",
+      "timestamp": 1767682510.115065
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_9e38fd60a19243ad9434866c",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "openspec",
+                "total_entries": 4,
+                "entries": [
+                  {
+                    "name": "AGENTS.md",
+                    "path": "AGENTS.md",
+                    "type": "file",
+                    "size": 15419,
+                    "modified": 1767682056.418223,
+                    "depth": 0
+                  },
+                  {
+                    "name": "changes",
+                    "path": "changes",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682056.4062233,
+                    "depth": 0
+                  },
+                  {
+                    "name": "project.md",
+                    "path": "project.md",
+                    "type": "file",
+                    "size": 759,
+                    "modified": 1767682056.4062233,
+                    "depth": 0
+                  },
+                  {
+                    "name": "specs",
+                    "path": "specs",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682056.418223,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "dc8c4d10-c4a3-434c-9de4-696c619f9402",
+      "timestamp": 1767682512.625826
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now let me read the current project.md file to see what's already there:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_6d9ac1f33a58448cb70f0c16",
+              "args": {
+                "file_path": "openspec/project.md"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 41,
+        "prompt_token_count": 6239,
+        "total_token_count": 6280
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "82784cfc-b76a-4e6b-957d-79a395e264f5",
+      "timestamp": 1767682512.63515
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_6d9ac1f33a58448cb70f0c16",
+              "name": "read_file",
+              "response": {
+                "content": "# Project Context\n\n## Purpose\n[Describe your project's purpose and goals]\n\n## Tech Stack\n- [List your primary technologies]\n- [e.g., TypeScript, React, Node.js]\n\n## Project Conventions\n\n### Code Style\n[Describe your code style preferences, formatting rules, and naming conventions]\n\n### Architecture Patterns\n[Document your architectural decisions and patterns]\n\n### Testing Strategy\n[Explain your testing approach and requirements]\n\n### Git Workflow\n[Describe your branching strategy and commit conventions]\n\n## Domain Context\n[Add domain-specific knowledge that AI assistants need to understand]\n\n## Important Constraints\n[List any technical, business, or regulatory constraints]\n\n## External Dependencies\n[Document key external services, APIs, or systems]\n",
+                "file_path": "openspec/project.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "744cef82-2436-4187-987f-74855b4f6f1d",
+      "timestamp": 1767682514.96003
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now let me explore the simics-project directory to understand the tech stack better:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_cbf5ab6e422f43e891b09f21",
+              "args": {
+                "directory_path": "simics-project"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 41,
+        "prompt_token_count": 6472,
+        "total_token_count": 6513
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "a4441563-f250-4d1a-989b-a4d300d39458",
+      "timestamp": 1767682514.971272
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_cbf5ab6e422f43e891b09f21",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "simics-project",
+                "total_entries": 12,
+                "entries": [
+                  {
+                    "name": "CMakeLists.txt",
+                    "path": "CMakeLists.txt",
+                    "type": "file",
+                    "size": 4141,
+                    "modified": 1767682496.8900611,
+                    "depth": 0
+                  },
+                  {
+                    "name": "GNUmakefile",
+                    "path": "GNUmakefile",
+                    "type": "file",
+                    "size": 3387,
+                    "modified": 1767682496.8900611,
+                    "depth": 0
+                  },
+                  {
+                    "name": "bin",
+                    "path": "bin",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682496.8060637,
+                    "depth": 0
+                  },
+                  {
+                    "name": "cmake-wrapper.mk",
+                    "path": "cmake-wrapper.mk",
+                    "type": "file",
+                    "size": 3043,
+                    "modified": 1767682496.8900611,
+                    "depth": 0
+                  },
+                  {
+                    "name": "compiler.mk",
+                    "path": "compiler.mk",
+                    "type": "file",
+                    "size": 694,
+                    "modified": 1767682496.8820615,
+                    "depth": 0
+                  },
+                  {
+                    "name": "config.mk",
+                    "path": "config.mk",
+                    "type": "file",
+                    "size": 979,
+                    "modified": 1767682496.8900611,
+                    "depth": 0
+                  },
+                  {
+                    "name": "documentation",
+                    "path": "documentation",
+                    "type": "file",
+                    "size": 659,
+                    "modified": 1767682496.7980638,
+                    "depth": 0
+                  },
+                  {
+                    "name": "gui-requirements.txt",
+                    "path": "gui-requirements.txt",
+                    "type": "file",
+                    "size": 16,
+                    "modified": 1767682496.7940638,
+                    "depth": 0
+                  },
+                  {
+                    "name": "modules",
+                    "path": "modules",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682497.042057,
+                    "depth": 0
+                  },
+                  {
+                    "name": "requirements.txt",
+                    "path": "requirements.txt",
+                    "type": "file",
+                    "size": 0,
+                    "modified": 1767682496.7940638,
+                    "depth": 0
+                  },
+                  {
+                    "name": "simics",
+                    "path": "simics",
+                    "type": "file",
+                    "size": 652,
+                    "modified": 1767682496.8020637,
+                    "depth": 0
+                  },
+                  {
+                    "name": "targets",
+                    "path": "targets",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682496.826063,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "8200f96e-f9ba-4222-935b-a15447c81cf2",
+      "timestamp": 1767682517.143602
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me check the modules directory to see what Simics device models are already implemented:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_59f0bb86053a41afb34033b9",
+              "args": {
+                "directory_path": "simics-project/modules"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 43,
+        "prompt_token_count": 7244,
+        "total_token_count": 7287
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "63814981-783a-4247-b5f5-39275954d4d1",
+      "timestamp": 1767682517.153861
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_59f0bb86053a41afb34033b9",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "simics-project/modules",
+                "total_entries": 1,
+                "entries": [
+                  {
+                    "name": "wdt",
+                    "path": "wdt",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682497.0940557,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "ea8fe11e-5355-456f-ae4f-9220d5ee6a7e",
+      "timestamp": 1767682520.005728
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me look into the WDT module as an example of what might be developed:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_233733898a3a4c52bb09ace0",
+              "args": {
+                "directory_path": "simics-project/modules/wdt"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 45,
+        "prompt_token_count": 7391,
+        "total_token_count": 7436
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "c9e1eadb-765b-40e9-9f05-52de355f255a",
+      "timestamp": 1767682520.017575
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_233733898a3a4c52bb09ace0",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "simics-project/modules/wdt",
+                "total_entries": 6,
+                "entries": [
+                  {
+                    "name": "CMakeLists.txt",
+                    "path": "CMakeLists.txt",
+                    "type": "file",
+                    "size": 138,
+                    "modified": 1767682497.042057,
+                    "depth": 0
+                  },
+                  {
+                    "name": "Makefile",
+                    "path": "Makefile",
+                    "type": "file",
+                    "size": 391,
+                    "modified": 1767682497.042057,
+                    "depth": 0
+                  },
+                  {
+                    "name": "module_load.py",
+                    "path": "module_load.py",
+                    "type": "file",
+                    "size": 426,
+                    "modified": 1767682497.1020553,
+                    "depth": 0
+                  },
+                  {
+                    "name": "test",
+                    "path": "test",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682497.046057,
+                    "depth": 0
+                  },
+                  {
+                    "name": "wdt-registers.dml",
+                    "path": "wdt-registers.dml",
+                    "type": "file",
+                    "size": 16769,
+                    "modified": 1767682497.0940557,
+                    "depth": 0
+                  },
+                  {
+                    "name": "wdt.dml",
+                    "path": "wdt.dml",
+                    "type": "file",
+                    "size": 18010,
+                    "modified": 1767682497.0940557,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "4f55fb92-827f-4153-9695-d351d1926a0b",
+      "timestamp": 1767682521.951734
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me also check the specs directory to understand the specification format:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_011654af069e415db8801071",
+              "args": {
+                "directory_path": "specs"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 36,
+        "prompt_token_count": 7844,
+        "total_token_count": 7880
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "763327e0-e96b-4d4f-82b6-74bbc25134a0",
+      "timestamp": 1767682521.962871
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_011654af069e415db8801071",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "specs",
+                "total_entries": 1,
+                "entries": [
+                  {
+                    "name": "001-tmp-hfeng1-demo",
+                    "path": "001-tmp-hfeng1-demo",
+                    "type": "directory",
+                    "size": 0,
+                    "modified": 1767682461.9430225,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "0b7f9a11-e16a-4a2b-bcdd-50050c04b50e",
+      "timestamp": 1767682524.013131
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me look at the demo spec to understand the specification structure:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_0d07c80cdd4b4f739a78be0c",
+              "args": {
+                "directory_path": "specs/001-tmp-hfeng1-demo"
+              },
+              "name": "list_directory"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 47,
+        "prompt_token_count": 7997,
+        "total_token_count": 8044
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "4a006842-2f5d-43e1-93de-b4c5d4b19f73",
+      "timestamp": 1767682524.026187
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_0d07c80cdd4b4f739a78be0c",
+              "name": "list_directory",
+              "response": {
+                "success": true,
+                "directory": "specs/001-tmp-hfeng1-demo",
+                "total_entries": 2,
+                "entries": [
+                  {
+                    "name": "spec.md",
+                    "path": "spec.md",
+                    "type": "file",
+                    "size": 38633,
+                    "modified": 1767682238.7492645,
+                    "depth": 0
+                  },
+                  {
+                    "name": "wdt-register.xml",
+                    "path": "wdt-register.xml",
+                    "type": "file",
+                    "size": 34501,
+                    "modified": 1767682461.9430225,
+                    "depth": 0
+                  }
+                ],
+                "recursive": false,
+                "max_depth": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "e4c3541c-474f-421d-9ffe-a87636ede547",
+      "timestamp": 1767682526.852457
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me read the spec.md file to understand the format:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_d44905683e074c1c849e4ad3",
+              "args": {
+                "file_path": "specs/001-tmp-hfeng1-demo/spec.md"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 47,
+        "prompt_token_count": 8223,
+        "total_token_count": 8270
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "f120953a-18de-44b2-8463-641f1eba10ce",
+      "timestamp": 1767682526.862782
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_d44905683e074c1c849e4ad3",
+              "name": "read_file",
+              "response": {
+                "content": "# Feature Specification: [FEATURE NAME]\n\n**Feature Branch**: `[###-feature-name]`\n**Created**: [Current date in YYYY-MM-DD format]\n**Status**: [Update after completing spec - count [NEEDS CLARIFICATION] markers and set to \"Ready for Planning\" (0 markers) or \"Draft (N clarifications needed)\"]\n**Input**: User description: \"$ARGUMENTS\" (text provided after /specify command)\n\n---\n\n## Simics DML Device Modeling Guidance\n\n**Note**: For Simics device modeling projects, comprehensive DML learning resources are available:\n- **.specify/memory/DML_grammar.md**: Complete DML 1.4 grammar reference with syntax rules and language constructs\n- **.specify/memory/DML_Device_Development_Best_Practices.md**: Best practices, patterns, and common pitfalls for DML development\n- **spec/[feature-name]/[device-name]-registers.xml**: IP-XACT register description XML\n\n**Functional Modeling Defaults** (unless explicitly stated otherwise):\n- **Timing**: Precise timing is NOT required for functional models - focus on functional correctness\n- **Checkpoint/Restore**: Checkpoint and restore functionality is NOT required - Simics handles this automatically for register state\n\n---\n\n## Hardware Specification *(mandatory)*\n\n### Register Map\n\n**Summary Table** (ALL registers):\n| Offset | Register Name | Type | Width | Reset Value | Description |\n|--------|---------------|------|-------|-------------|-------------|\n| 0x00 | CONTROL | R/W | 32 | 0x00000000 | Control register |\n| 0x04 | STATUS | R | 32 | 0x00000000 | Status register |\n| 0x08 | LOAD | R/W | 32 | 0xFFFFFFFF | Load value |\n| 0x0C | VALUE | R | 32 | 0xFFFFFFFF | Current counter value |\n| 0x10 | INTCLR | W | 32 | 0x00000000 | Interrupt clear |\n| 0x14 | RIS | R | 32 | 0x00000000 | Raw interrupt status |\n| 0x18 | MIS | R | 32 | 0x00000000 | Masked interrupt status |\n| 0xC00 | LOCK | R/W | 32 | 0x00000000 | Lock register |\n| ... | ... | ... | ... | ... | ... |\n\n### Register Descriptions (Side-Effect Registers Only)\n\n**Note**: Only registers with read/write side-effects or special behaviors need detailed descriptions. Skip read-only ID registers and simple R/W registers without side-effects.\n\n#### CONTROL - Control Register [0x08]\n**Offset**: 0x08 | **Size**: 32 bits | **Access**: R/W | **Reset**: 0x00\n\n| Field | Bits | Access | Reset | Description |\n|-------|------|--------|-------|-------------|\n| Reserved | [31:5] | - | - | Reserved |\n| step_value | [4:2] | R/W | 0b000 | Clock divider: 000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16 |\n| RESEN | [1] | R/W | 0 | Enable reset output (1=enabled) |\n| INTEN | [0] | R/W | 0 | Enable interrupt (1=enabled, reloads counter on 0→1 transition) |\n\n#### INTCLR - Interrupt Clear Register [0x0C]\n**Offset**: 0x0C | **Size**: 32 bits | **Access**: Write Only | **Reset**: 0x00\n\n**Side-Effect**: Writing any value clears the interrupt and reloads counter from LOAD register.\n\n#### LOCK - Lock Register [0xC00]\n**Offset**: 0xC00 | **Size**: 32 bits | **Access**: R/W | **Reset**: 0x00000000\n\n| Field | Bits | Access | Reset | Description |\n|-------|------|--------|-------|-------------|\n| lock | [31:0] | R/W | 0x00 | Write 0x1ACCE551 to unlock, any other value to lock |\n\n**Side-Effects**:\n- **Write 0x1ACCE551**: Enables write access to all other registers (unlocked)\n- **Write any other value**: Disables write access to all other registers (locked)\n- **Read**: Returns 0x0 if unlocked, 0x1 if locked\n\n### External Interfaces and Signals\n\n**Interrupt Outputs**:\n- **Signal Name**: [e.g., \"wdogint\", or NEEDS CLARIFICATION]\n- **Direction**: Output\n- **Type**: [e.g., \"Edge-triggered\", \"Level-triggered\", or NEEDS CLARIFICATION]\n- **Assertion Condition**: [e.g., \"Asserted when counter reaches zero and INTEN=1\"]\n- **Clear Mechanism**: [e.g., \"Cleared by writing to INTCLR register\"]\n\n**Reset Inputs**:\n- **Signal Name**: [e.g., \"wrst_n\", \"prst_n\", or NEEDS CLARIFICATION]\n- **Direction**: Input\n- **Type**: [e.g., \"Active-low asynchronous reset\"]\n- **Effect**: [e.g., \"Resets all registers to default values, stops counter\"]\n\n**Other Signals**:\n- **Signal Name**: [e.g., \"wdogres\", \"status_led\", or NEEDS CLARIFICATION]\n- **Direction**: [Input/Output/Bidirectional]\n- **Purpose**: [e.g., \"System reset output on second timeout\"]\n- **Behavior**: [e.g., \"Asserted when counter reaches zero twice consecutively with RESEN=1\"]\n\n### Device Operational Model\n\n**CRITICAL**: Document device states, transitions, and software/hardware interaction flows that drive test scenarios.\n\n#### Device States and Transitions\n\n**State Diagram Format**:\n```\n[STATE_1] → [STATE_2] → [STATE_3] → [STATE_4]\n              ↑____________↓\n```\n\n**State Documentation Template**:\nFor each identified state, document:\n1. **[STATE_NAME]**: Brief description\n   - Entry conditions: [How device enters this state]\n   - Observable indicators: [Register values, signal states that indicate this state]\n   - Exit conditions: [What causes transition to other states]\n   - *Test Scenario*: [Which scenario verifies this state]\n\n**Common Device States**: RESET (initial), IDLE (configured), ACTIVE (operating), ERROR (fault detected), DISABLED (intentionally off)\n\n**State Transition Template**: **[SOURCE] → [TARGET]**: Trigger condition, *Validate*: [Observable change]\n\n**Example - Generic Transitions**:\n- **RESET → IDLE**: Configuration write completes successfully\n  - *Validate*: STATUS register shows ready flag, control register reflects configuration\n- **IDLE → ACTIVE**: Enable bit set in control register\n  - *Validate*: STATUS register shows active flag, output signals change state\n\n#### Software/Hardware Interaction Flows\n\n**Flow Documentation Template**:\n```\nFlow [N]: [Flow Name] (maps to Test Scenario [X])\n\nState Transition: [INITIAL_STATE] → [INTERMEDIATE_STATE] → [FINAL_STATE]\n\nSoftware Actions                    Hardware Responses                Observable State\n─────────────────────────────────────────────────────────────────────────────────────\n1. [Software action description]  → [Hardware response]            → [What software can observe]\n2. [Next action...]               → [Response...]                  → [Observable change...]\n\nTest Validation:\n- [What to verify for step 1]\n- [What to verify for step 2]\n```\n\n**Common Flow Patterns**: Device Initialization (RESET → IDLE → ACTIVE), Interrupt Handling (ACTIVE → INTERRUPT_PENDING → ACTIVE), Error Recovery (ACTIVE → ERROR → IDLE)\n\n#### Register Access Ordering Requirements\n\n**Critical Ordering Constraints** (enforce in tests):\n[List any ordering requirements extracted from specification, e.g.:]\n1. **[Operation A] before [Operation B]**: [Reason/consequence if violated]\n\n**Common Patterns**: Configure before enable, Disable before reconfigure, Clear status before operation, Unlock before protected writes\n\n**Observable vs. Non-Observable**:\n- **Software CAN observe**: Register values, interrupt signals, output pins\n- **Software CANNOT observe**: Internal clock dividers, FSM states, pipeline stages (must infer from observable behavior)\n\n### Memory Interface Requirements\n\n**Address Space**:\n- **Base Address**: [e.g., \"0x1000\", or NEEDS CLARIFICATION]\n- **Size**: [e.g., \"4KB (0x1000 bytes)\", or NEEDS CLARIFICATION]\n- **Alignment**: [e.g., \"4-byte aligned for 32-bit registers\"]\n\n**Access Patterns**:\n- **Supported Widths**: [e.g., \"32-bit only\", \"8/16/32-bit\", or NEEDS CLARIFICATION]\n- **Unaligned Access**: [e.g., \"Not supported - must be aligned\", or NEEDS CLARIFICATION]\n- **Burst Access**: [e.g., \"Not supported\", \"Supported for data registers\", or NEEDS CLARIFICATION]\n\n**Timing Requirements**:\n- **Register Access Latency**: [e.g., \"Single cycle\", \"2-3 cycles\", or NEEDS CLARIFICATION]\n- **Counter Precision**: [e.g., \"Decrements once per clock cycle\", or NEEDS CLARIFICATION]\n- **Interrupt Latency**: [e.g., \"Asserted within 1 clock cycle of timeout\", or NEEDS CLARIFICATION]\n\n---\n\n## Functional Requirements *(mandatory)*\n\n**Purpose**: Define testable, verifiable requirements derived from the Hardware Specification. Each requirement must be traceable to hardware behaviors and validated by test scenarios.\n\n**Organization**: Group requirements by functional area with standard ID prefixes:\n- **FUNC-XXX**: Core device functionality (timer behavior, state transitions)\n- **REG-XXX**: Register access requirements (R/W behaviors, reset values, protection)\n- **INTF-XXX**: Interface/signal requirements (interrupts, clocks, resets)\n- **BEHAV-XXX**: Behavioral requirements (state machines, sequencing)\n- **TEST-XXX**: Test verification requirements (validation criteria)\n\n---\n\n### 4.1 Timer Functionality Requirements\n\n**FUNC-001**: The device shall be a 32-bit decrementing counter that starts counting from the value in LOAD register.\n\n**FUNC-002**: The timer shall decrement at a rate determined by the clock divider specified in CONTROL[4:2].\n\n**FUNC-003**: The timer shall reload with the value in LOAD when it reaches zero.\n\n**FUNC-004**: The timer shall continue decrementing after reaching zero if INTEN is not set.\n\n### 4.2 Interrupt and Reset Requirements\n\n**FUNC-005**: When the counter reaches zero and INTEN=1, the device shall assert the interrupt signal.\n\n**FUNC-006**: The interrupt signal shall remain asserted until cleared by writing to INTCLR.\n\n**FUNC-007**: If the counter reaches zero again while interrupt is asserted and RESEN=1, the device shall assert the reset signal.\n\n**FUNC-008**: The reset signal shall remain asserted until a system reset occurs.\n\n**FUNC-009**: Writing any value to INTCLR shall clear the interrupt and reload the counter from LOAD.\n\n### 4.3 Register Access Requirements\n\n**FUNC-010**: Register access shall be performed via the bus interface.\n\n**FUNC-011**: All registers except LOCK shall be write-protected when locked.\n\n**FUNC-012**: VALUE register shall always be readable regardless of lock status.\n\n**FUNC-013**: LOCK register itself shall always be readable and writable.\n\n### 4.4 Clock Divider Requirements\n\n**FUNC-014**: The clock divider setting shall determine the timer decrement rate:\n- 000: No division (÷1)\n- 001: Divide by 2\n- 010: Divide by 4\n- 011: Divide by 8\n- 100: Divide by 16\n\n**FUNC-015**: Values 101-111 for the clock divider shall be treated as invalid.\n\n### 4.5 Integration Test Mode Requirements\n\n**FUNC-016**: When ITCR[0] is set to 1, the device shall enter integration test mode.\n\n**FUNC-017**: In integration test mode, writing to ITOP shall directly control output signals.\n\n**FUNC-018**: In integration test mode, normal timer behavior shall be overridden.\n\n### 4.6 Identification Requirements\n\n**FUNC-019**: The device shall implement all identification registers with the specified values.\n\n**FUNC-020**: The identification registers shall be readable at all times and not affected by lock mechanism.\n\n## 5. Register Access Requirements\n\n### 5.1 Register Access Behavior\n\n**REG-001**: LOAD register supports read and write operations, with reset value 0xFFFFFFFF.\n\n**REG-002**: VALUE register supports read operations only, returning current counter value.\n\n**REG-003**: CONTROL register supports read and write operations, with reset value 0x00000000.\n\n**REG-004**: INTCLR register supports write operations only, any write clears interrupt and reloads counter.\n\n**REG-005**: RIS register supports read operations, showing raw interrupt status.\n\n**REG-006**: MIS register supports read operations, showing masked interrupt status.\n\n**REG-007**: LOCK register supports read and write operations with special locking behavior.\n\n### 5.2 Lock Protection Requirements\n\n**REG-010**: Writing unlock code to LOCK register shall unlock write access to protected registers.\n\n**REG-011**: Writing any value other than unlock code to LOCK register shall lock write access.\n\n**REG-012**: Reading LOCK register shall return 0x00000000 when unlocked, 0x00000001 when locked.\n\n## 6. Behavioral Requirements\n\n### 6.1 Timer State Machine\n\n**BEHAV-001**: When INTEN=0, the timer shall decrement and reload at zero without generating interrupts.\n\n**BEHAV-002**: When INTEN=1 and the timer reaches zero, the raw interrupt status shall be set to 1.\n\n**BEHAV-003**: When RESEN=1, INTEN=1, and the timer reaches zero for the second consecutive time without interrupt clear, the reset signal shall be asserted.\n\n**BEHAV-004**: The timer shall be paused when clock enable signal is deasserted.\n\n### 6.2 Interrupt Handling\n\n**BEHAV-005**: The interrupt output signal shall be asserted when MIS[0] is 1.\n\n**BEHAV-006**: The interrupt signal shall be deasserted when INTCLR is written, regardless of counter state.\n\n**BEHAV-007**: The reset signal shall remain asserted until system reset occurs.\n\n### 6.3 Reset Behavior\n\n**BEHAV-008**: Reset signals shall reset the device to its initial state.\n\n**BEHAV-009**: When reset occurs, all registers shall return to their specified reset values.\n\n---\n\n## User Scenarios & Testing *(mandatory)*\n\n**Purpose**: Define comprehensive, testable scenarios that drive specification clarity, state machine design, and test case development. Each scenario maps to device states, transitions, and operational flows.\n\n### 7. Test Scenarios\n\n### 7.1 Basic Timer Operation Test\n\n**TEST-001**: Verify basic timer countdown functionality.\n- **Setup**: Write a small value (e.g., 0x10) to LOAD, set INTEN=1 in CONTROL\n- **Action**: Verify counter decrements in VALUE register\n- **Expected**: Counter value decreases from 0x10 to 0x0, interrupt is generated\n\n### 7.2 Interrupt and Reset Generation Test\n\n**TEST-002**: Verify interrupt and reset generation sequence.\n- **Setup**: Write value to LOAD, set INTEN=1, RESEN=1 in CONTROL\n- **Action**: Allow timer to count to zero, then count to zero again without clearing interrupt\n- **Expected**: First zero generates interrupt, second zero generates reset\n\n### 7.3 Lock Protection Test\n\n**TEST-003**: Verify lock protection mechanism.\n- **Setup**: Write unlock code to LOCK to unlock\n- **Action**: Write new value to LOAD, verify write succeeds\n- **Subsequently**: Write non-magic value to LOCK to lock\n- **Action**: Attempt to write to LOAD again\n- **Expected**: First write succeeds, second write fails (register unchanged)\n\n### 7.4 Clock Divider Test\n\n**TEST-004**: Verify different clock divider settings.\n- **Setup**: Configure timer with same initial value but different step_value settings\n- **Action**: Measure time to reach zero for each divider setting\n- **Expected**: Timer with larger divider values takes proportionally longer to reach zero\n\n### 7.5 Integration Test Mode Test\n\n**TEST-005**: Verify integration test mode functionality.\n- **Setup**: Set ITCR[0]=1 to enable test mode\n- **Action**: Write different values to ITOP register\n- **Expected**: Direct control of interrupt and reset output signals\n\n---\n\n*Mark any unclear cases with [NEEDS CLARIFICATION: specific behavior under [condition]]?*\n\n### 8. Input/Output Signals\n\n### 8.1 Clock and Reset Signals\n- **clk**: Work clock input (input)\n- **clk_en**: Work clock enable (input)\n- **rst_n**: Reset (active low, input)\n\n### 8.2 Output Signals\n- **irq**: Interrupt output (output)\n- **res**: Reset output (output, if applicable)\n\n## 9. Implementation Notes\n\n### 9.1 Modeling Scope\n- This specification covers register behavior, state transitions, interrupt/reset conditions, and lock protection\n- Functional model implementation - precise cycle-accurate timing is not required\n- Base clock frequency is not specified - this is a functional model\n- Checkpoint/restore is handled automatically by Simics\n\n### 9.2 Performance Considerations\n- The implementation should achieve minimal simulation overhead\n- Follow Simics device development best practices for performance\n\n---\n\n## Clarifications Required\n\n**INSTRUCTIONS**: After completing the specification, list all `[NEEDS CLARIFICATION: ...]` markers found in the document above (excluding this instructions section and headers).\n\n**Format**:\n1. **[Section Name]**: [NEEDS CLARIFICATION text]\n2. **[Section Name]**: [NEEDS CLARIFICATION text]\n...\n\n**Status Update**:\n- **Total Clarifications**: [N] items\n- **Specification Status**: [If N=0: \"Ready for Planning\", else: \"Draft (N clarifications needed)\"]\n\n*If no clarifications are needed, write:*\n- **Total Clarifications**: 0 items\n- **Specification Status**: Ready for Planning\n\n---\n\n## Review & Acceptance Checklist\n\n### AUTOMATED CHECKS (AI Agent MUST verify)\n\n**Content Quality**:\n- [ ] No implementation details (DML syntax, code structure, algorithms)\n- [ ] Focused on hardware behavior and device operation\n- [ ] All mandatory sections completed\n\n**Hardware Specification Completeness**:\n- [ ] Register map table included (all registers with offset, name, size, access, reset, description)\n- [ ] Side-effect register descriptions included (detailed bit fields for registers with side-effects)\n- [ ] External interfaces documented (I/O signals with direction/type/behavior)\n- [ ] Device operational model documented (states, transitions, SW/HW interaction flows)\n\n**Functional Requirements Completeness**:\n- [ ] Requirements organized by category (FUNC, REG, BEHAV, INTF, TEST)\n- [ ] At least 15+ requirements across all categories\n- [ ] At least 5 test scenarios included (Setup/Action/Expected format)\n\n---\n\n## Specification Generation Status\n*AI Agent: Mark [x] as each section is completed*\n\n### Section Completion\n- [ ] **Register Map**: Summary table + detailed descriptions for side-effect registers\n- [ ] **External Interfaces**: I/O signals documented\n- [ ] **Device Operational Model**: States, transitions, SW/HW flows documented\n- [ ] **Functional Requirements**: Categorized requirements generated (FUNC, REG, BEHAV)\n- [ ] **Test Scenarios**: 5+ scenarios with Setup/Action/Expected format\n\n### Quality Validation\n- [ ] **Clarifications Listed**: All [NEEDS CLARIFICATION] markers documented\n- [ ] **Status Updated**: Clarification count complete, Status field at top updated\n\n**COMPLETION CRITERIA**: All checkboxes marked [x] = Specification ready for planning phase\n# Simics Watchdog Timer (WDT) Device Specification\n\n## 1. Device Overview\n\n**Device Name**: Simics Watchdog Timer (WDT)\n**Base Address**: 0x1000 (mapped to QSP-x86 platform memory space)\n**Category**: Timer/Counter\n**Description**: A 32-bit ARM PrimeCell compatible watchdog timer device that implements a decrementing counter with configurable timeout periods, interrupt generation, and reset functionality.\n\n## 2. Register Map\n\n### 2.1 Register Map Overview Table\n\n| Offset | Register Name | Type | Width | Reset Value | Description |\n|--------|---------------|------|-------|-------------|-------------|\n| 0x00 | WDOGLOAD | R/W | 32 | 0xFFFFFFFF | Watchdog load value - sets the counter reload value |\n| 0x04 | WDOGVALUE | R | 32 | 0xFFFFFFFF | Watchdog current value - read-only current counter value |\n| 0x08 | WDOGCONTROL | R/W | 32 | 0x00000000 | Watchdog control register - enables interrupt/reset and sets clock divider |\n| 0x0C | WDOGINTCLR | W | 32 | 0x00000000 | Watchdog interrupt clear register - clears interrupt and reloads counter |\n| 0x10 | WDOGRIS | R | 32 | 0x00000000 | Watchdog raw interrupt status register - shows unmasked interrupt status |\n| 0x14 | WDOGMIS | R | 32 | 0x00000000 | Watchdog masked interrupt status register - shows masked interrupt status |\n| 0xC00 | WDOGLOCK | R/W | 32 | 0x00000000 | Watchdog lock register - protects registers from unintended writes |\n| 0xF00 | WDOGITCR | R/W | 32 | 0x00000000 | Watchdog integration test control register - enables test mode |\n| 0xF04 | WDOGITOP | W | 32 | 0x00000000 | Watchdog integration test output register - controls outputs in test mode |\n| 0xFD0 | WDOGPERIPHID4 | R | 32 | 0x00000004 | Watchdog peripheral ID register 4 |\n| 0xFD4 | WDOGPERIPHID5 | R | 32 | 0x00000000 | Watchdog peripheral ID register 5 |\n| 0xFD8 | WDOGPERIPHID6 | R | 32 | 0x00000000 | Watchdog peripheral ID register 6 |\n| 0xFDC | WDOGPERIPHID7 | R | 32 | 0x00000000 | Watchdog peripheral ID register 7 |\n| 0xFE0 | WDOGPERIPHID0 | R | 32 | 0x00000024 | Watchdog peripheral ID register 0 |\n| 0xFE4 | WDOGPERIPHID1 | R | 32 | 0x000000B8 | Watchdog peripheral ID register 1 |\n| 0xFE8 | WDOGPERIPHID2 | R | 32 | 0x0000001B | Watchdog peripheral ID register 2 |\n| 0xFEC | WDOGPERIPHID3 | R | 32 | 0x00000000 | Watchdog peripheral ID register 3 |\n| 0xFF0 | WDOGPCELLID0 | R | 32 | 0x0000000D | Watchdog PrimeCell ID register 0 |\n| 0xFF4 | WDOGPCELLID1 | R | 32 | 0x000000F0 | Watchdog PrimeCell ID register 1 |\n| 0xFF8 | WDOGPCELLID2 | R | 32 | 0x00000005 | Watchdog PrimeCell ID register 2 |\n| 0xFFC | WDOGPCELLID3 | R | 32 | 0x000000B1 | Watchdog PrimeCell ID register 3 |\n\n### 2.2 Detailed Register Descriptions (Side-Effect Registers)\n\n#### WDOGLOAD (0x00) - Watchdog Load Register\n**Type**: R/W | **Width**: 32 bits | **Reset**: 0xFFFFFFFF\n- **Purpose**: Sets the 32-bit reload value for the watchdog counter\n- **Side Effects**: Writing to this register reloads the current counter value if the watchdog is enabled and was previously disabled\n\n#### WDOGVALUE (0x04) - Watchdog Value Register\n**Type**: R | **Width**: 32 bits | **Reset**: 0xFFFFFFFF\n- **Purpose**: Returns the current value of the watchdog counter\n- **Side Effects**: None (read-only counter value)\n\n#### WDOGCONTROL (0x08) - Watchdog Control Register\n**Type**: R/W | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Controls the watchdog timer enable, interrupt enable, reset enable, and clock divider\n- **Bit Fields**:\n  - Bits [31:5]: Reserved (read as 0)\n  - Bits [4:2]: step_value (R/W) - Clock divider selection\n    - 000: Divide by 1 (step_value = 1)\n    - 001: Divide by 2 (step_value = 2)\n    - 010: Divide by 4 (step_value = 4)\n    - 011: Divide by 8 (step_value = 8)\n    - 100: Divide by 16 (step_value = 16)\n  - Bit [1]: RESEN (R/W) - Reset enable (1=enable watchdog reset output)\n  - Bit [0]: INTEN (R/W) - Interrupt enable (1=enable counter and interrupt)\n- **Side Effects**: Writing to INTEN bit can trigger counter reload from WDOGLOAD when enabled after being disabled\n\n#### WDOGINTCLR (0x0C) - Watchdog Interrupt Clear Register\n**Type**: W | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Writing any value clears the watchdog interrupt and reloads the counter from WDOGLOAD\n- **Side Effects**: \n  - Clears the interrupt flag\n  - Reloads the counter value from WDOGLOAD register\n  - Affects WDOGRIS and WDOGMIS register values\n\n#### WDOGRIS (0x10) - Watchdog Raw Interrupt Status Register\n**Type**: R | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Shows the raw interrupt status from the counter (not masked by control register)\n- **Bit Fields**:\n  - Bits [31:1]: Reserved (read as 0)\n  - Bit [0]: raw watchdog interrupt (R) - Raw interrupt status from the counter\n- **Side Effects**: None (read-only status register)\n\n#### WDOGMIS (0x14) - Watchdog Masked Interrupt Status Register\n**Type**: R | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Shows the masked interrupt status (WDOGRIS & INTEN)\n- **Bit Fields**:\n  - Bits [31:1]: Reserved (read as 0)\n  - Bit [0]: watchdog interrupt (R) - Masked interrupt status (WDOGRIS & INTEN)\n- **Side Effects**: None (read-only status register)\n\n#### WDOGLOCK (0xC00) - Watchdog Lock Register\n**Type**: R/W | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Controls write access to other registers for protection against unintended changes\n- **Side Effects**:\n  - Writing 0x1ACCE551: Unlocks other registers for write access\n  - Writing any other value: Locks other registers, preventing writes\n  - Reading returns lock status: 0x0 = unlocked, 0x1 = locked\n  - Affects write access to all other registers\n\n#### WDOGITCR (0xF00) - Watchdog Integration Test Control Register\n**Type**: R/W | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Controls the integration test mode for direct signal control\n- **Bit Fields**:\n  - Bits [31:1]: Reserved (read as 0)\n  - Bit [0]: Integration test mode enable (R/W)\n    - 1 = Enter integration test mode\n    - 0 = Normal decrementing counter mode\n- **Side Effects**: \n  - When set to 1, allows direct control of wdogint and wdogres outputs via WDOGITOP\n  - When set to 0, returns to normal timer operation\n\n#### WDOGITOP (0xF04) - Watchdog Integration Test Output Register\n**Type**: W | **Width**: 32 bits | **Reset**: 0x00000000\n- **Purpose**: Controls watchdog outputs in integration test mode\n- **Bit Fields**:\n  - Bits [31:2]: Reserved \n  - Bit [1]: Integration test mode WDOGINT value (W) - Controls wdogint output in test mode\n  - Bit [0]: Integration test mode WDOGRES value (W) - Controls wdogres output in test mode\n- **Side Effects**: Directly drives wdogint and wdogres outputs when integration test mode is enabled\n\n## 3. External Interfaces & Signals\n\n### 3.1 Clock and Reset Signals\n- **wclk**: Working clock input (input, 1-bit) - Main working clock for the timer\n- **wclk_en**: Clock enable signal (input, 1-bit) - Enables the timer when high\n- **wrst_n**: Working clock domain reset (input, 1-bit) - Asynchronous active-low reset for working clock domain\n- **prst_n**: APB bus reset (input, 1-bit) - Asynchronous active-low reset for APB interface\n\n### 3.2 Interrupt and Reset Output Signals\n- **wdogint**: Watchdog interrupt output (output, 1-bit) - Edge-triggered interrupt signal, generated when counter reaches zero and INTEN=1\n- **wdogres**: Watchdog reset output (output, 1-bit) - Reset signal, generated when counter reaches zero again while interrupt is still asserted and RESEN=1\n\n### 3.3 APB Bus Interface Signals\n- **paddr**: APB address (input) - Address bus for register access\n- **pwdata**: APB write data (input) - Write data bus\n- **pwrite**: APB write enable (input) - Write/Read control (1=write, 0=read)\n- **psel**: APB select (input) - Device selection signal\n- **penable**: APB enable (input) - Second phase of APB transaction\n- **prdata**: APB read data (output) - Read data bus\n- **pready**: APB ready (output) - Transaction complete signal\n\n## 4. Register Side-Effects & Behaviors\n\n### 4.1 Counter/Timer Behaviors\n- The watchdog implements a 32-bit decrementing counter that decrements at intervals determined by the step_value field\n- The counter decrements on wclk rising edges when wclk_en is high\n- When the counter reaches zero and INTEN is set, it triggers the wdogint signal\n- If the interrupt is not cleared and the counter reaches zero again while RESEN is set, it triggers the wdogres reset signal\n\n### 4.2 Read Side-Effects\n- WDOGVALUE register: Returns current counter value without affecting the counter operation\n- WDOGRIS register: Returns raw interrupt status without clearing the interrupt flag\n- WDOGMIS register: Returns masked interrupt status without clearing the interrupt flag\n- WDOGLOCK register: Returns lock status value based on previous writes to this register\n\n### 4.3 Write Side-Effects\n- WDOGLOAD register: Reloads the counter value (only when enabled after previously being disabled)\n- WDOGINTCLR register: Clears interrupt flag and reloads counter from WDOGLOAD value\n- WDOGCONTROL register: Writing INTEN bit can cause counter reload when transitioning from disabled to enabled\n- WDOGITCR register: Switches between normal operation and integration test mode\n- WDOGITOP register: Directly controls wdogint and wdogres signals in test mode\n- WDOGLOCK register: Controls write access to all other registers\n\n### 4.4 Cross-Register Dependencies\n- WDOGMIS[0] = WDOGRIS[0] AND WDOGCONTROL[0] (INTEN bit)\n- WDOGINTCLR operation affects WDOGRIS and WDOGMIS register values\n- WDOGITCR[0] enables control of wdogint and wdogres through WDOGITOP register\n- WDOGLOCK value controls access to all other writable registers\n\n## 5. Device Operational Model\n\n### 5.1 Device States\n\n**State: RESET**\n- Entry conditions: prst_n or wrst_n is low\n- Observable indicators: All registers in reset state, wdogint and wdogres inactive\n- Exit conditions: Both reset signals go high\n- Test Scenario: Verify reset operation and register values\n\n**State: IDLE_LOCKED**\n- Entry conditions: Device is out of reset and WDOGLOCK does not contain 0x1ACCE551\n- Observable indicators: WDOGLOCK read returns non-zero, writes to other registers are ignored\n- Exit conditions: Write 0x1ACCE551 to WDOGLOCK register\n- Test Scenario: Verify lock protection mechanism\n\n**State: IDLE_UNLOCKED**\n- Entry conditions: Device is out of reset and WDOGLOCK contains 0x1ACCE551\n- Observable indicators: WDOGLOCK read returns 0x0, writes to other registers are accepted\n- Exit conditions: Write any non-0x1ACCE551 value to WDOGLOCK or disable timer\n- Test Scenario: Verify register write access after unlocking\n\n**State: COUNTING**\n- Entry conditions: INTEN bit in WDOGCONTROL is set to 1 and timer is not in integration test mode\n- Observable indicators: WDOGVALUE register decrements, no interrupts generated yet\n- Exit conditions: Counter reaches zero or timer disabled\n- Test Scenario: Verify timer decrementing behavior\n\n**State: INTERRUPT_PENDING**\n- Entry conditions: Counter reaches zero and INTEN=1 and RESEN=0, or counter reached zero again after interrupt was asserted but not cleared\n- Observable indicators: WDOGRIS[0] and WDOGMIS[0] are high, wdogint signal asserted\n- Exit conditions: Write to WDOGINTCLR to clear interrupt\n- Test Scenario: Verify interrupt generation and clearing\n\n**State: INTEGRATION_TEST**\n- Entry conditions: WDOGITCR[0] is set to 1\n- Observable indicators: Direct control of outputs possible, counter operation disabled\n- Exit conditions: Write 0 to WDOGITCR[0]\n- Test Scenario: Verify integration test mode functionality\n\n### 5.2 State Transitions\n\n**[RESET] → [IDLE_LOCKED]**: After reset deassertion and default lock state\n- Validate: WDOGLOCK returns 0x0 (unlocked in reset), other registers in reset state\n\n**[IDLE_LOCKED] → [IDLE_UNLOCKED]**: When 0x1ACCE551 is written to WDOGLOCK\n- Validate: WDOGLOCK read returns 0x0, writes to other registers now succeed\n\n**[IDLE_UNLOCKED] → [IDLE_LOCKED]**: When any value other than 0x1ACCE551 is written to WDOGLOCK\n- Validate: WDOGLOCK read returns 0x1, writes to other registers now fail\n\n**[IDLE_UNLOCKED] → [COUNTING]**: When INTEN bit in WDOGCONTROL is set to 1\n- Validate: WDOGVALUE begins decrementing, WDOGMIS[0] remains low\n\n**[COUNTING] → [INTERRUPT_PENDING]**: When counter reaches zero and INTEN=1\n- Validate: WDOGRIS[0] and WDOGMIS[0] become high, wdogint signal asserted\n\n**[INTERRUPT_PENDING] → [COUNTING]**: When WDOGINTCLR register is written\n- Validate: WDOGVALUE reloads from WDOGLOAD, WDOGRIS[0] and WDOGMIS[0] become low\n\n**[COUNTING] → [IDLE_UNLOCKED]**: When INTEN bit in WDOGCONTROL is set to 0\n- Validate: WDOGVALUE stops decrementing\n\n### 5.3 SW/HW Interaction Flows\n\n**Flow: Basic Timer Operation** (maps to Test Scenario 1)\nState Transition: IDLE_UNLOCKED → COUNTING → INTERRUPT_PENDING\n\n| Software Actions | Hardware Responses | Observable State |\n|------------------|-------------------|------------------|\n| 1. Write 0x1ACCE551 to WDOGLOCK | Register unlocked | WDOGLOCK returns 0x0 |\n| 2. Write 0x1000 to WDOGLOAD | Load value stored | WDOGLOAD=0x1000 |\n| 3. Write 0x1 to WDOGCONTROL[INTEN] | Timer starts counting | WDOGVALUE begins decrementing |\n| 4. Wait for counter to reach zero | Counter continues decrementing | WDOGVALUE approaches 0 |\n\n**Flow: Interrupt Generation and Clearing** (maps to Test Scenario 2)\nState Transition: COUNTING → INTERRUPT_PENDING → COUNTING\n\n| Software Actions | Hardware Responses | Observable State |\n|------------------|-------------------|------------------|\n| 1. Wait for interrupt condition | Counter reaches zero | WDOGRIS[0] and WDOGMIS[0] set |\n| 2. Verify WDOGMIS[0] = 1 | Interrupt asserted | wdogint signal active |\n| 3. Write any value to WDOGINTCLR | Interrupt cleared, counter reloaded | WDOGMIS[0] becomes 0 |\n\n**Flow: Lock Protection** (maps to Test Scenario 3)\nState Transition: IDLE_UNLOCKED ↔ IDLE_LOCKED\n\n| Software Actions | Hardware Responses | Observable State |\n|------------------|-------------------|------------------|\n| 1. Write 0x1ACCE551 to WDOGLOCK | Other registers unlocked | WDOGLOCK returns 0x0, other writes succeed |\n| 2. Write different value to WDOGPERIPHID0 | Register write ignored | WDOGPERIPHID0 unchanged |\n| 3. Write different value to WDOGLOCK | Register access locked | WDOGLOCK returns 0x1, other writes fail |\n\n## 6. Functional Requirements\n\n### 6.1 Timer Functionality Requirements\n**FUNC-001**: The watchdog timer shall be a 32-bit decrementing counter that decrements when INTEN is enabled and wclk_en is high.\n**FUNC-002**: The timer shall decrement at a rate determined by the step_value field in WDOGCONTROL register.\n**FUNC-003**: The timer shall reload with the value from WDOGLOAD when enabled after previously being disabled.\n**FUNC-004**: The WDOGVALUE register shall always return the current value of the decrementing counter.\n\n### 6.2 Interrupt and Reset Requirements\n**FUNC-005**: When counter reaches zero and INTEN=1, device shall assert wdogint signal and set WDOGRIS[0] and WDOGMIS[0] to 1.\n**FUNC-006**: When interrupt is asserted and timer reaches zero again without being cleared, device shall assert wdogres signal if RESEN=1.\n**FUNC-007**: Writing to WDOGINTCLR register shall clear the interrupt flag and reload the counter from WDOGLOAD.\n**FUNC-008**: The WDOGMIS register shall return the logical AND of WDOGRIS[0] and WDOGCONTROL[0] (INTEN bit).\n\n### 6.3 Register Access Requirements\n**FUNC-009**: Register access shall be performed via APB bus interface with proper address decoding.\n**FUNC-010**: All registers except WDOGLOCK shall be write-protected when WDOGLOCK does not contain 0x1ACCE551.\n**FUNC-011**: Writing 0x1ACCE551 to WDOGLOCK shall enable write access to protected registers.\n**FUNC-012**: WDOGVALUE register shall be read-only and return current timer value without side effects.\n\n### 6.4 Clock Divider Requirements\n**FUNC-013**: The step_value field in WDOGCONTROL shall control the timer decrement rate with 5 valid settings (÷1, ÷2, ÷4, ÷8, ÷16).\n**FUNC-014**: Clock divider setting shall determine timer decrement rate where larger values cause slower decrementing.\n\n### 6.5 Integration Test Mode Requirements\n**FUNC-015**: When WDOGITCR[0]=0, device shall operate in normal timer mode.\n**FUNC-016**: When WDOGITCR[0]=1, device shall enter integration test mode allowing direct control of outputs.\n**FUNC-017**: In integration test mode, WDOGITOP register shall directly control wdogint and wdogres output signals.\n\n### 6.6 Identification Requirements\n**FUNC-018**: Device shall implement WDOGPERIPHID0-7 registers containing ARM PrimeCell peripheral identification values.\n**FUNC-019**: Device shall implement WDOGPCELLID0-3 registers containing ARM PrimeCell component identification values.\n\n## 7. Register Access Requirements\n**REG-001**: WDOGLOAD register supports read and write operations and returns the current load value.\n**REG-002**: WDOGVALUE register supports read-only operations and returns the current decrementing counter value.\n**REG-003**: WDOGCONTROL register supports read and write operations with bit-field access control.\n**REG-004**: WDOGINTCLR register supports write-only operations that trigger side effects on read access.\n**REG-005**: WDOGRIS register supports read-only operations and returns the raw interrupt status.\n**REG-006**: WDOGMIS register supports read-only operations and returns the masked interrupt status.\n**REG-007**: WDOGLOCK register supports read and write operations with special lock/unlock functionality.\n**REG-008**: WDOGITCR register supports read and write operations for test mode control.\n**REG-009**: WDOGITOP register supports write-only operations for direct output control in test mode.\n\n## 8. Behavioral Requirements\n**BEHAV-001**: When INTEN=0, timer shall not decrement and no interrupts shall be generated.\n**BEHAV-002**: When INTEN=1 and timer reaches zero, WDOGRIS[0] shall be set to 1 and wdogint signal asserted.\n**BEHAV-003**: When wdogres signal is asserted, it shall remain active until system reset occurs.\n**BEHAV-004**: The wdogint signal shall remain asserted until cleared by writing to WDOGINTCLR register.\n**BEHAV-005**: When the watchdog timer is locked, any write attempts to protected registers shall be ignored.\n**BEHAV-006**: The timer shall only decrement when both INTEN=1 and wclk_en=1.\n\n## 9. Test Scenarios\n\n### 9.1 Basic Timer Operation Test\n**TEST-001**: Verify basic timer countdown functionality.\n- Setup: Write small value to WDOGLOAD, set INTEN=1 in WDOGCONTROL\n- Action: Verify counter decrements in WDOGVALUE register\n- Expected: Counter value decreases, interrupt is generated at zero\n\n### 9.2 Interrupt and Reset Generation Test\n**TEST-002**: Verify interrupt and reset generation sequence.\n- Setup: Write value to WDOGLOAD, set INTEN=1, RESEN=1\n- Action: Allow timer to count to zero twice without clearing interrupt\n- Expected: First zero generates interrupt, second generates reset\n\n### 9.3 Lock Protection Test\n**TEST-003**: Verify lock protection mechanism.\n- Setup: Write 0x1ACCE551 to WDOGLOCK to unlock\n- Action: Write to WDOGLOAD (should succeed), then lock, then try again\n- Expected: First write succeeds, second write fails (locked)\n\n### 9.4 Clock Divider Test\n**TEST-004**: Verify different clock divider settings.\n- Setup: Configure timer with same value but different step_value\n- Action: Measure time to reach zero for each setting\n- Expected: Larger divider → proportionally longer countdown\n\n### 9.5 Integration Test Mode Test\n**TEST-005**: Verify integration test mode functionality.\n- Setup: Set WDOGITCR[0]=1 to enable test mode\n- Action: Write different values to WDOGITOP register\n- Expected: Direct control of wdogint and wdogres outputs\n\n### 9.6 Register Access Test\n**TEST-006**: Verify all registers can be read with correct reset values.\n- Setup: Device in reset state\n- Action: Read all registers\n- Expected: All registers return expected reset values\n\n### 9.7 Interrupt Status Test\n**TEST-007**: Verify interrupt status register behavior.\n- Setup: Configure timer to generate interrupt\n- Action: Check values of WDOGRIS and WDOGMIS registers\n- Expected: WDOGRIS shows raw status, WDOGMIS shows masked status\n\n### 9.8 Counter Reload Test\n**TEST-008**: Verify counter reload functionality.\n- Setup: Set timer with small value\n- Action: Write to WDOGINTCLR when interrupt pending\n- Expected: Counter reloads from WDOGLOAD value, interrupt cleared",
+                "file_path": "specs/001-tmp-hfeng1-demo/spec.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "79e3bbf0-7064-4303-87ed-98ba89f0eaaa",
+      "timestamp": 1767682528.911124
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me also check the simics-wdt-spec.md file to understand more about the project:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_fd6e1f93cf60401996b352b2",
+              "args": {
+                "file_path": "simics-wdt-spec.md"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 46,
+        "prompt_token_count": 19132,
+        "total_token_count": 19178
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "dd22f467-c34e-4678-ac39-f220441fd6d3",
+      "timestamp": 1767682528.929613
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_fd6e1f93cf60401996b352b2",
+              "name": "read_file",
+              "response": {
+                "content": "# Simics Watchdog Timer Device Implementation Specification\n\n## Feature Description\n\nCreate a comprehensive Simics watchdog timer device implementation with the following requirements:\n\n## Core Functionality\n\n- Implement 32-bit watchdog timer compatible with ARM PrimeCell specification from wdt.md\n- Support all 21 registers including control, data, status, lock, integration test, and ID registers\n- Enable configurable timeout periods with 5 clock divider settings (÷1, ÷2, ÷4, ÷8, ÷16)\n- Generate edge-triggered interrupt on first timeout and system reset on second timeout\n- Include lock protection mechanism with magic unlock value 0x1ACCE551\n- Support integration test mode for direct signal control\n\n## Technical Implementation\n\n- Use DML 1.4 syntax with proper device template and signal interfaces\n- Implement functional model - precise cycle-accurate timing NOT required, base clock frequency NOT needed\n- Checkpoint/restore NOT required - Simics handles register state automatically\n- Use APB bus interface for register access - specific APB signal connections are implementation details\n- Provide interrupt and reset signal outputs with platform routing\n- Include comprehensive logging for debugging and monitoring\n\n## Integration & Testing\n\n- Map to QSP-x86 platform memory space at base address 0x1000\n- Memory address range: 0x1000 - 0x1FFF (4KB address space)\n- Register offsets from base address as specified in register map\n- Connect edge-triggered interrupt signal to platform interrupt controller - specific routing is implementation detail\n- Connect reset signal to platform reset controller\n- Provide comprehensive test suites covering all functionality\n- Follow TDD approach with failing tests initially\n\n## Modeling Scope\n\n**Include in specification:**\n- Register map and bit fields\n- Device behavior and state transitions\n- Interrupt and reset conditions\n- Lock protection mechanism\n\n**Do NOT include in specification (implementation details):**\n- Base clock frequency (functional model, not cycle-accurate)\n- Specific APB signal connections (handled by DML implementation)\n- Interrupt controller routing details (platform-specific)\n- Checkpoint/restore implementation (Simics automatic)\n\n## Performance & Compatibility\n\n- Achieve minimal simulation overhead for real-time performance\n- Maintain compatibility with Simics 7.x and DML 1.4 standards\n- Support both 32-bit and 64-bit simulation environments\n- Follow Simics device development best practices\n\n## Quality Requirements\n\n- Implement input validation and error handling\n- Ensure deterministic timeout behavior\n- Support observability through status registers\n- Enable security through register lock protection\n",
+                "file_path": "simics-wdt-spec.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "da67ac77-ec52-4e4f-9a14-e45980eca3a3",
+      "timestamp": 1767682532.291551
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me also check the wdt.md file to understand more about the watchdog timer:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_15b82a05762a4d68a74fd80c",
+              "args": {
+                "file_path": "wdt.md"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 41,
+        "prompt_token_count": 19773,
+        "total_token_count": 19814
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "efbb2c67-2d1f-4ed6-b7ba-728c05c2febb",
+      "timestamp": 1767682532.307172
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_15b82a05762a4d68a74fd80c",
+              "name": "read_file",
+              "response": {
+                "content": "\n# 1.      范围\n\n本文件描述CPU v3项目MSCP侧watchdog模块一些设计说明信息，方便在项目组范围内理解、使用该模块，着重描述watchdog模块的功能、接口、寄存器和使用事项等一些关键信息。\n\n# 3.      模块功能\n\n## 3.1.      技术要求\n\n### 3.1.1.       模块功能说明\n\nØ 可配时间间隔的32位递减计时器；\n\nØ 超时产生中断输出信号；\n\nØ 若前一个超时中断没有被清除，当前计数周期内超时产生复位信号；\n\nØ LOCK寄存器保护看门狗模块寄存器不被失控软件更改；\n\nØ ID寄存器唯一标识看门狗模块。\n\n### 3.1.3.       输入接口要求\n\n输入接口信号wclk、wclk_en、wrst_n。输入wclk为工作时钟输入，wrst_n为工作时钟域的复位。wclk_en为工作时钟域的时钟门控，计时器在wclk_en置1的wclk上升沿工作。\n\n### 3.1.4.       输出接口要求\n\n输出wdogint和wdogres是wclk工作时钟域，信号列表如下：\n\n| Name    | Width | Type | Source/Destination | Description          |\n| ------- | ----- | ---- | ------------------ | -------------------- |\n| wdogint | 1     | O    | System             | 看门狗中断信号，产生后没有喂狗则一直保持 |\n| wdogres | 1     | O    | System             | 看门狗复位信号，产生后保持至系统复位   |\n\n# 4.      模块设计\n\n## 4.1.      模块的逻辑设计\n\n工作流程简述：    \n1. 设置好 Load 值与 Control 参数后，32位倒计时器开始倒计时。\n2. 当计数器减到零时，根据控制寄存器中的配置：\n    - 如果 `INTEN` 为1，触发 `wdogint` 中断。\n    - 如果 `RESEN` 为1，再次为零时触发 `wdogres` 复位。\n3. 可通过中断状态寄存器查看/清除中断状态。\n\n系统首先配置看门狗LOCK寄存器，解锁后续关键寄存器的写访问权限，并读取相应的外设及版本信息;后配置控制寄存器和重载值寄存器开启看门狗模块的递减计数，看门狗计时器工作流程如下所示：\n\n```\nflowchart LR\n    A[Watchdog is programmed] --> B[Counter reaches zero]\n    B --> C[Counter reaches zero again]\n\n    B -->|If INTEN bit in WDOGCONTROL = 1 → wdogint asserted| INT[Interrupt Triggered]\n    C -->|If RESEN bit in WDOGCONTROL = 1 → wdogres asserted| RES[Reset Triggered]\n```\n\n### 4.1.5.       模块的复位说明\n\n该模块有两个复位信号：APB总线复位信号prst_n，异步复位；wclk时钟域复位信号wrst_n，异步复位。\n\n## 4.2.      模块寄存器说明\n\n**4.2.1.**       **看门狗模块寄存器概述**\n\n看门狗模块中共有21个寄存器，包括重载值寄存器WDOGLOAD、当前值寄存器WDOGVALUE、控制寄存器WDOGCONTROL、中断清除寄存器WDOGINTCLR、未屏蔽中断状态寄存器WDOGRIS、中断状态寄存器WDOGMIS、LOCK寄存器WDOGLOCK、集成测试系列寄存器WDOGITCR、WDOGITOP以及外设寄存器WDOGPERIPHID0-7、PrimeCell寄存器WDOGPCELLID0-3。\n\n**4.2.2.**       **Watchdog Load register [0x00]**\n\n看门狗模块重载值寄存器\n\n地    址：0x00\n\n寄存器名：WDOGLOAD\n\n位    宽：32位\n\n类    型：读写\n\n复位时值：0xFFFFFFFF\n\n                                Table 4       WDOGLOAD register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-0|wdog_load|R/W|0xFFFFFFFF|看门狗递减计时器重载值|\n\n**4.2.3.**       **Watchdog Value register [0x04]**\n\n看门狗模块递减计数当前值寄存器，读该寄存器可以获取递减计时器的当前计数值。\n\n地    址：0x04\n\n寄存器名：WDOGVALUE\n\n位    宽：32位\n\n类    型：读写\n\n复位时值：0xFFFFFFFF\n\n                               Table 5       WDOGVALUE register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-0|count_read|R|0xFFFFFFFF|The current value of watchdog counter<br><br>32’hffffffff: current value is 32’hffffffff<br><br>32’hfffffffe: current value is 32’hfffffffe<br><br>......<br><br>32’h00000001: current value is 32’h00000001<br><br>32’h00000000: current value is 32’h00000000|\n\n**4.2.4.**       **Watchdog Control register [0x08]**\n\n看门狗模块控制寄存器，该寄存器控制递减计时器的递减步进值和复位、中断及计时器使能。\n\n地    址：0x08\n\n寄存器名：WDOGCONTROL\n\n位    宽：32位\n\n类    型：读写\n\n复位时值：0x00\n\n                            Table 6       WDOGCONTROL register bit assigments\n\n|      |            |     |        |                                                                                                                                                                                                                                               |\n| ---- | ---------- | --- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| Bit  | Name       | R/W | Reset  | Description                                                                                                                                                                                                                                   |\n| 31-5 | Reserved   | -   | -      | Reserved                                                                                                                                                                                                                                      |\n| 4-2  | step_value | R/W | 3’b000 | 3’b000-step_value = 1, 工作时钟频率为1GHz；<br><br>3’b001-step_value = 2, 工作时钟频率为500MHz；<br><br>3’b010-step_value = 4, 工作时钟频率为250MHz；<br><br>3’b011-step_value = 8, 工作时钟频率为125MHz；<br><br>3’b100-step_value = 16,工作时钟频率为62.5MHz；<br><br>Other：invalid |\n| 1    | RESEN      | R/W | 1’b0   | Enable watchdog reset output, WDOGRES. Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset.                                                                                                       |\n| 0    | INTEN      | R/W | 1’b0   | Enable the interrupt event, WDOGINT. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable after previously being disable.                                               |\n\n**4.2.5.**       **Watchdog Interrupt Clear register [0x0C]**\n\n看门狗模块中断清除寄存器，该寄存器被写入任何值均可清除看门狗中断信号，并从WDOGLOAD寄存器中重载计数初值。\n\n地    址：0x0C\n\n寄存器名：WDOGINTCLR\n\n位    宽：32位\n\n类    型：只写\n\n复位时值：0x00\n\n**4.2.6.**       **Watchdog Raw Interrupt Status register [0x10]**\n\n看门狗模块未屏蔽中断状态寄存器，该寄存器指示看门狗模块产生的原始中断（WS0）的状态。\n\n地    址：0x10\n\n寄存器名：WDOGRIS\n\n位    宽：1位\n\n类    型：只读\n\n复位时值：1’b0\n\n                                   Table 7       WDOGRIS register bit assigments\n\n|      |                        |     |       |                                       |\n| ---- | ---------------------- | --- | ----- | ------------------------------------- |\n| Bit  | Name                   | R/W | Reset | Description                           |\n| 31-1 | reserved               | -   | -     | -                                     |\n| 0    | raw watchdog interrupt | R   | 1’b0  | Raw interrupt status from the counter |\n\n**4.2.7.**       **Watchdog Interrupt Status register [0x14]**\n\n看门狗模块屏蔽中断状态寄存器，该寄存器bit[0]为WDOGRIS寄存器的WS0和WDOGCONTROL寄存器的INTEN的逻辑与，即WS0 & INTEN，与中断输出值相同。\n\n地    址：0x14\n\n寄存器名：WDOGMIS\n\n位    宽：1位\n\n类    型：只读\n\n复位时值：1’b0\n\n                                   Table 8       WDOGMIS register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-1|reserved|-|-|-|\n|0|watchdog interrupt|R|1’b0|Enable interrupt status from the counter|\n\n**4.2.8.**       **Watchdog Lock register [0xC00]**\n\n看门狗模块LOCK寄存器，该寄存器控制其他寄存器的写访问权限，保护失控软件对看门狗模块寄存器的恶意更改。当写入0x1ACCE551时使能其他寄存器的写权限；当写入其他值时使其他寄存器丧失写访问权限。读该寄存器时根据写入值是否为0x1ACCE551返回LOCK状态：\n\nØ  0 -- 寄存器写权限使能，unlock；\n\nØ  1 -- 寄存器写权限失效，lock。\n\n地    址：0xC00\n\n寄存器名：WDOGLOCK\n\n位    宽：32位\n\n类    型：读写\n\n复位时值：32’h00000000\n\n                                   Table 9       WDOGMIS register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-0|wdog_lock|R/W|32’h00000000|Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value.<br><br>A read return the lock status:<br><br>0x0 -- write access to all other registers is enable, unlock;<br><br>0x1 -- write access to all other registers is disable, lock.|\n\n**4.2.9.**       **Watchdog Integration Test Control register [0xF00]**\n\n看门狗模块集成测试模式控制寄存器，该寄存器控制集成测试模式的使能。\n\n地    址：0xF00\n\n寄存器名：WDOGITCR\n\n位    宽：1位\n\n类    型：读写\n\n复位时值：1’b0\n\n                                Table 10      WDOGITCR register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-1|reserved|-|-|-|\n|0|Integration test mode enable|R/W|1’b0|1 --进入集成测试模式；<br><br>0 --处于正常递减计数模式。|\n\n**4.2.10.**    **Watchdog Integration Test Output Set register [0xF04]**\n\n看门狗模块集成测试模式输出寄存器，当进入集成测试模式时，该寄存器直接驱动使能看门狗的中断和复位输出。\n\n地    址：0xF04\n\n寄存器名：WDOGITOP\n\n位    宽：2位\n\n类    型：只写\n\n复位时值：2’b00\n\n                                 Table 11      WDOGITOP register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-1|reserved|-|-|-|\n|1|Integration test mode WDOGINT value|W|1’b0|集成测试模式下看门狗中断输出值|\n|0|Integration test mode WDOGRES value|W|1’b0|集成测试模式下看门狗复位输出值|\n\n**4.2.11.**    **Watchdog Peripheral Identification register 4 [0xFD0]**\n\n看门狗模块外围设备寄存器4\n\n地    址：0xFD0\n\n寄存器名：WDOGPERIPHID4\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h04\n\n                          Table 12      WDOGPERIPHID4 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID4|R|0x04|[7:4] --block count；<br><br>[3:0] --JEP106_c_code.|\n\n**4.2.12.**    **Watchdog Peripheral Identification register 5 [0xFD4]**\n\n看门狗模块外围设备寄存器5\n\n地    址：0xFD4\n\n寄存器名：WDOGPERIPHID5\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h00\n\n                          Table 13      WDOGPERIPHID5 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID5|R|0x00|peripheral ID register 5, not used|\n\n**4.2.13.**    **Watchdog Peripheral Identification register 6 [0xFD8]**\n\n看门狗模块外围设备寄存器6\n\n地    址：0xFD8\n\n寄存器名：WDOGPERIPHID6\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h00\n\n                          Table 14      WDOGPERIPHID6 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID6|R|0x00|peripheral ID register 6, not used|\n\n**4.2.14.**    **Watchdog Peripheral Identification register 7 [0xFDC]**\n\n看门狗模块外围设备寄存器7\n\n地    址：0xFDC\n\n寄存器名：WDOGPERIPHID7\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h00\n\n                          Table 15      WDOGPERIPHID7 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID7|R|0x00|peripheral ID register 7, not used|\n\n**4.2.15.**    **Watchdog Peripheral Identification register 0 [0xFE0]**\n\n看门狗模块外围设备寄存器0\n\n地    址：0xFE0\n\n寄存器名：WDOGPERIPHID0\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h24\n\n                          Table 16      WDOGPERIPHID0 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID0|R|0x24|part number[7:0]|\n\n**4.2.16.**    **Watchdog Peripheral Identification register 1 [0xFE4]**\n\n看门狗模块外围设备寄存器1\n\n地    址：0xFE4\n\n寄存器名：WDOGPERIPHID1\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’hB8\n\n                          Table 17      WDOGPERIPHID1 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID1|R|0xB8|[7:4]--JEP106_id_3_0<br><br>[3:0]--part number[11:8]|\n\n**4.2.17.**    **Watchdog Peripheral Identification register 2 [0xFE8]**\n\n看门狗模块外围设备寄存器2\n\n地    址：0xFE8\n\n寄存器名：WDOGPERIPHID2\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h1B\n\n                          Table 18      WDOGPERIPHID2 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PERIPH_ID2|R|0x1B|[7:4]--Revision<br><br>[3]--JEDEC_used<br><br>[2:0]--JEP106_id_6_4|\n\n**4.2.18.**    **Watchdog Peripheral Identification register 3 [0xFEC]**\n\n看门狗模块外围设备寄存器3\n\n地    址：0xFEC\n\n寄存器名：WDOGPERIPHID3\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h00\n\n                          Table 19      WDOGPERIPHID3 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-4|ECOREVNUM|R|0x0|ECO revision number|\n|3-0|WDOG_PERIPH_ID3|R|0x0|Customer modification number|\n\n**4.2.19.**    **Watchdog Prime Cell register 0 [0xFF0]**\n\n看门狗模块Prime Cell寄存器0\n\n地    址：0xFF0\n\n寄存器名：WDOGPECELLID0\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h0D\n\n                           Table 20      WDOGPCELLID0 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PCELL_ID0|R|0x0D|Component ID register 0|\n\n**4.2.20.**    **Watchdog Prime Cell register 0 [0xFF4]**\n\n看门狗模块Prime Cell寄存器1\n\n地    址：0xFF4\n\n寄存器名：WDOGPECELLID1\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’hF0\n\n                           Table 21      WDOGPCELLID1 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PCELL_ID1|R|0xF0|Component ID register 1|\n\n**4.2.21.**    **Watchdog Prime Cell register 2 [0xFF8]**\n\n看门狗模块Prime Cell寄存器2\n\n地    址：0xFF8\n\n寄存器名：WDOGPECELLID2\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’h05\n\n                           Table 22      WDOGPCELLID2 register bit assigments\n\n|   |   |   |   |   |\n|---|---|---|---|---|\n|Bit|Name|R/W|Reset|Description|\n|31-8|reserved|-|-|-|\n|7-0|WDOG_PCELL_ID2|R|0x05|Component ID register 2|\n\n**4.2.22.**    **Watchdog Prime Cell register 3 [0xFFC]**\n\n看门狗模块Prime Cell寄存器3\n\n地    址：0xFFC\n\n寄存器名：WDOGPECELLID3\n\n位    宽：8位\n\n类    型：只读\n\n复位时值：8’hB1\n\n                           Table 23      WDOGPCELLID3 register bit assigments\n\n|      |                |     |       |                         |\n| ---- | -------------- | --- | ----- | ----------------------- |\n| Bit  | Name           | R/W | Reset | Description             |\n| 31-8 | reserved       | -   | -     | -                       |\n| 7-0  | WDOG_PCELL_ID3 | R   | 0xB1  | Component ID register 3 |\n|      |                |     |       |                         |\n\n",
+                "file_path": "wdt.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "dd184d9c-427c-492a-ad13-0fd2cda1c7b2",
+      "timestamp": 1767682536.705088
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now I'll check if there are any other important files in the project to understand the full context:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_956c8effce1e4a33ae81f403",
+              "args": {
+                "command": "find . -name \"*.py\" -o -name \"*.dml\" -o -name \"*.xml\" -o -name \"*.md\" | head -20"
+              },
+              "name": "bash_command"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 76,
+        "prompt_token_count": 25565,
+        "total_token_count": 25641
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "b14b37ae-5b42-4a34-a4cb-7e0672d625fc",
+      "timestamp": 1767682536.725684
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_956c8effce1e4a33ae81f403",
+              "name": "bash_command",
+              "response": {
+                "stdout": "./.adk/commands/analyze.md\n./.adk/commands/clarify.md\n./.adk/commands/constitution.md\n./.adk/commands/implement.md\n./.adk/commands/plan.md\n./.adk/commands/specify.md\n./.adk/commands/tasks.md\n./.specify/templates/agent-file-template.md\n./.specify/templates/plan-template.md\n./.specify/templates/register-template.md\n./.specify/templates/spec-template.md\n./.specify/templates/tasks-template.md\n./.specify/memory/DML_Device_Development_Best_Practices.md\n./.specify/memory/DML_grammar.md\n./.specify/memory/Simics_Model_Test_Best_Practices.md\n./.specify/memory/constitution.md\n./openspec/AGENTS.md\n./openspec/project.md\n./AGENTS.md\n./wdt.xml\n",
+                "stderr": "",
+                "return_code": 0,
+                "command": "find . -name \"*.py\" -o -name \"*.dml\" -o -name \"*.xml\" -o -name \"*.md\" | head -20",
+                "working_directory": ".",
+                "stdout_truncated": false,
+                "stderr_truncated": false,
+                "original_stdout_size": 637,
+                "original_stderr_size": 0
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "e080d01d-eda9-4a63-968e-8e5e3dc8ff0e",
+      "timestamp": 1767682541.257514
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Let me look at the wdt.xml file to understand the register definitions:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_88b8048593054b97906d74f0",
+              "args": {
+                "file_path": "wdt.xml"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 39,
+        "prompt_token_count": 25943,
+        "total_token_count": 25982
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "f9efe4ae-54bf-4efe-bb6a-ce378518596e",
+      "timestamp": 1767682541.278942
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_88b8048593054b97906d74f0",
+              "name": "read_file",
+              "response": {
+                "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ipxact:component\n    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n    xmlns:ipxact=\"http://www.accellera.org/XMLSchema/IPXACT/1685-2022\"\n    xsi:schemaLocation=\"http://www.accellera.org/XMLSchema/IPXACT/1685-2022 http://www.accellera.org/XMLSchema/IPXACT/1685-2022/index.xsd\">\n\n    <ipxact:vendor>ARM</ipxact:vendor>\n    <ipxact:library>AMBA_Devices</ipxact:library>\n    <ipxact:name>Watchdog_Timer</ipxact:name>\n    <ipxact:version>1.0</ipxact:version>\n\n    <ipxact:busInterfaces>\n        <ipxact:busInterface>\n            <ipxact:name>APB</ipxact:name>\n            <ipxact:busType vendor=\"AMBA\" library=\"AMBA4\" name=\"APB4\" version=\"r0p0\"/>\n            <ipxact:abstractionType vendor=\"AMBA\" library=\"AMBA4\" name=\"APB4\" version=\"r0p0\"/>\n            <ipxact:slave>\n                <ipxact:memoryMapRef memoryMapRef=\"WatchdogRegisters\"/>\n            </ipxact:slave>\n        </ipxact:busInterface>\n    </ipxact:busInterfaces>\n\n    <ipxact:memoryMaps>\n        <ipxact:memoryMap>\n            <ipxact:name>WatchdogRegisters</ipxact:name>\n            <ipxact:addressBlock>\n                <ipxact:name>MainBlock</ipxact:name>\n                <ipxact:baseAddress>0x0</ipxact:baseAddress>\n                <ipxact:range>0x1000</ipxact:range>  <!-- 4KB address space -->\n                <ipxact:width>32</ipxact:width>      <!-- 32-bit registers -->\n\n                <ipxact:register>\n                    <ipxact:name>WDOGLOAD</ipxact:name>\n                    <ipxact:description>Watchdog load register. Writing this register sets the initial value for the countdown timer. The counter will start counting down from this value. This register can be written multiple times to reset the countdown. Writing to this register when the lock register is locked (WDOGLOCK != 0x1ACCE551) is ignored.</ipxact:description>\n                    <ipxact:addressOffset>0x0</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-write</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0xFFFFFFFF</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_LOAD</ipxact:name>\n                        <ipxact:description>Watchdog decrement timer reload value. Sets the initial value for the countdown timer.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>32</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGVALUE</ipxact:name>\n                    <ipxact:description>Watchdog value register. This register shows the current value of the watchdog counter. It is read-only and reflects the current countdown value. Register writes are ignored. This register is volatile as its value changes during operation.</ipxact:description>\n                    <ipxact:addressOffset>0x4</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>true</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0xFFFFFFFF</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>COUNT_READ</ipxact:name>\n                        <ipxact:description>The current value of watchdog counter. Hardware-updated value that shows the current countdown value.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>32</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGCONTROL</ipxact:name>\n                    <ipxact:description>Watchdog control register. Controls the decrement step value and enables reset/interrupt generation. Writing to this register when locked (WDOGLOCK != 0x1ACCE551) is ignored. Writing INTEN=1 reloads counter from WDOGLOAD if it was previously disabled.</ipxact:description>\n                    <ipxact:addressOffset>0x8</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-write</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>STEP_VALUE</ipxact:name>\n                        <ipxact:description>Step value for the counter. Configures the clock division rate: 000=÷1, 001=÷2, 010=÷4, 011=÷8, 100=÷16. Values other than 0-4 are invalid.</ipxact:description>\n                        <ipxact:bitOffset>2</ipxact:bitOffset>\n                        <ipxact:bitWidth>3</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                        <ipxact:enumeratedValues>\n                            <ipxact:enumeratedValue>\n                                <ipxact:name>STEP_1</ipxact:name>\n                                <ipxact:description>Step value = 1 (÷1, 1 GHz equivalent)</ipxact:description>\n                                <ipxact:value>0</ipxact:value>\n                            </ipxact:enumeratedValue>\n                            <ipxact:enumeratedValue>\n                                <ipxact:name>STEP_2</ipxact:name>\n                                <ipxact:description>Step value = 2 (÷2, 500 MHz equivalent)</ipxact:description>\n                                <ipxact:value>1</ipxact:value>\n                            </ipxact:enumeratedValue>\n                            <ipxact:enumeratedValue>\n                                <ipxact:name>STEP_4</ipxact:name>\n                                <ipxact:description>Step value = 4 (÷4, 250 MHz equivalent)</ipxact:description>\n                                <ipxact:value>2</ipxact:value>\n                            </ipxact:enumeratedValue>\n                            <ipxact:enumeratedValue>\n                                <ipxact:name>STEP_8</ipxact:name>\n                                <ipxact:description>Step value = 8 (÷8, 125 MHz equivalent)</ipxact:description>\n                                <ipxact:value>3</ipxact:value>\n                            </ipxact:enumeratedValue>\n                            <ipxact:enumeratedValue>\n                                <ipxact:name>STEP_16</ipxact:name>\n                                <ipxact:description>Step value = 16 (÷16, 62.5 MHz equivalent)</ipxact:description>\n                                <ipxact:value>4</ipxact:value>\n                            </ipxact:enumeratedValue>\n                        </ipxact:enumeratedValues>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESEN</ipxact:name>\n                        <ipxact:description>Enable watchdog reset output (WDOGRES). Acts as a mask for the reset output. Set to 1 to enable the reset, or to 0 to disable the reset. Only affects behavior on the second timeout.</ipxact:description>\n                        <ipxact:bitOffset>1</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>INTEN</ipxact:name>\n                        <ipxact:description>Enable the interrupt event (WDOGINT). Set to 1 to enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enabled after previously being disabled.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>5</ipxact:bitOffset>\n                        <ipxact:bitWidth>27</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGINTCLR</ipxact:name>\n                    <ipxact:description>Watchdog interrupt clear register. Writing any value to this register clears the watchdog interrupt signal and reloads the counter from the WDOGLOAD register. Writing to this register when locked (WDOGLOCK != 0x1ACCE551) is ignored. Write-only register, reading returns 0.</ipxact:description>\n                    <ipxact:addressOffset>0xC</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>write-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>INT_CLR</ipxact:name>\n                        <ipxact:description>Write any value to this field to clear interrupt and reload counter from WDOGLOAD.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>32</ipxact:bitWidth>\n                        <ipxact:access>write-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGRIS</ipxact:name>\n                    <ipxact:description>Watchdog raw interrupt status register. This register indicates the raw interrupt status from the counter, without masking. Reading this register returns the current raw interrupt status. Writing to this register has no effect.</ipxact:description>\n                    <ipxact:addressOffset>0x10</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>true</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>RAW_WDOG_INT</ipxact:name>\n                        <ipxact:description>Raw interrupt status from the counter. 1 when counter has reached zero, 0 otherwise.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>1</ipxact:bitOffset>\n                        <ipxact:bitWidth>31</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGMIS</ipxact:name>\n                    <ipxact:description>Watchdog masked interrupt status register. This register shows the masked interrupt status, which is the logical AND of WDOGRIS and INTEN. It reflects the actual interrupt signal state (WDOGRIS bit 0 AND INTEN bit 0).</ipxact:description>\n                    <ipxact:addressOffset>0x14</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>true</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_INT</ipxact:name>\n                        <ipxact:description>Enable interrupt status from the counter. This is the logical AND of WDOGRIS[0] and WDOGCONTROL[0], representing the actual interrupt output signal.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>1</ipxact:bitOffset>\n                        <ipxact:bitWidth>31</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGLOCK</ipxact:name>\n                    <ipxact:description>Watchdog lock register. Controls write access to all other registers. Writing 0x1ACCE551 enables write access to all other registers. Writing any other value disables write access to all other registers. Reading returns 0x00000000 if unlocked (0x1ACCE551 written), 0x00000001 if locked (any other value written).</ipxact:description>\n                    <ipxact:addressOffset>0xC00</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-write</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_LOCK</ipxact:name>\n                        <ipxact:description>Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value. A read returns the lock status: 0x0 when write access is enabled (unlocked), 0x1 when write access is disabled (locked).</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>32</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGITCR</ipxact:name>\n                    <ipxact:description>Watchdog integration test control register. Controls whether the device operates in integration test mode. In integration test mode, direct control of interrupt and reset outputs is possible through WDOGITOP register. Writing to this register when locked (WDOGLOCK != 0x1ACCE551) is ignored.</ipxact:description>\n                    <ipxact:addressOffset>0xF00</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-write</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>INT_TEST_MODE_ENABLE</ipxact:name>\n                        <ipxact:description>Integration test mode enable. 1 = enter integration test mode, 0 = operate in normal decrement counting mode.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>read-write</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>1</ipxact:bitOffset>\n                        <ipxact:bitWidth>31</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGITOP</ipxact:name>\n                    <ipxact:description>Watchdog integration test output register. In integration test mode, this register allows direct control of interrupt and reset outputs. Writing to this register when locked (WDOGLOCK != 0x1ACCE551) is ignored. This register has no effect when not in integration test mode.</ipxact:description>\n                    <ipxact:addressOffset>0xF04</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>write-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOGINT_VAL</ipxact:name>\n                        <ipxact:description>Integration test mode WDOGINT value. Direct control of the interrupt output during integration test mode.</ipxact:description>\n                        <ipxact:bitOffset>1</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>write-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOGRES_VAL</ipxact:name>\n                        <ipxact:description>Integration test mode WDOGRES value. Direct control of the reset output during integration test mode.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>1</ipxact:bitWidth>\n                        <ipxact:access>write-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>2</ipxact:bitOffset>\n                        <ipxact:bitWidth>30</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID4</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 4. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFD0</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000004</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID4</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 4. [7:4] - block count; [3:0] - JEP106_c_code.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID5</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 5. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFD4</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID5</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 5. Not used.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID6</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 6. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFD8</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID6</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 6. Not used.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID7</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 7. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFDC</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID7</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 7. Not used.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID0</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 0. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFE0</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000024</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID0</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 0. Part number [7:0].</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID1</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 1. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFE4</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x000000B8</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID1</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 1. [7:4] - JEP106_id_3_0; [3:0] - part number [11:8].</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID2</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 2. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFE8</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x0000001B</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID2</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 2. [7:4] - revision; [3] - JEDEC_used; [2:0] - JEP106_id_6_4.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPERIPHID3</ipxact:name>\n                    <ipxact:description>Watchdog Peripheral Identification Register 3. Fixed value for peripheral identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFEC</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000000</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PERIPH_ID3</ipxact:name>\n                        <ipxact:description>Watchdog peripheral ID register 3. [7:4] - ECO revision number; [3:0] - customer modification number.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPCELLID0</ipxact:name>\n                    <ipxact:description>Watchdog PrimeCell Identification Register 0. Fixed value for component identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFF0</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x0000000D</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PCELL_ID0</ipxact:name>\n                        <ipxact:description>Component ID register 0.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPCELLID1</ipxact:name>\n                    <ipxact:description>Watchdog PrimeCell Identification Register 1. Fixed value for component identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFF4</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x000000F0</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PCELL_ID1</ipxact:name>\n                        <ipxact:description>Component ID register 1.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPCELLID2</ipxact:name>\n                    <ipxact:description>Watchdog PrimeCell Identification Register 2. Fixed value for component identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFF8</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x00000005</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PCELL_ID2</ipxact:name>\n                        <ipxact:description>Component ID register 2.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n                <ipxact:register>\n                    <ipxact:name>WDOGPCELLID3</ipxact:name>\n                    <ipxact:description>Watchdog PrimeCell Identification Register 3. Fixed value for component identification. This register is read-only and returns a fixed value. Reading this register when locked (WDOGLOCK != 0x1ACCE551) has no effect on device operation.</ipxact:description>\n                    <ipxact:addressOffset>0xFFC</ipxact:addressOffset>\n                    <ipxact:size>32</ipxact:size>\n                    <ipxact:access>read-only</ipxact:access>\n                    <ipxact:volatile>false</ipxact:volatile>\n                    <ipxact:reset>\n                        <ipxact:value>0x000000B1</ipxact:value>\n                        <ipxact:mask>0xFFFFFFFF</ipxact:mask>\n                    </ipxact:reset>\n\n                    <ipxact:field>\n                        <ipxact:name>WDOG_PCELL_ID3</ipxact:name>\n                        <ipxact:description>Component ID register 3.</ipxact:description>\n                        <ipxact:bitOffset>0</ipxact:bitOffset>\n                        <ipxact:bitWidth>8</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n\n                    <ipxact:field>\n                        <ipxact:name>RESERVED</ipxact:name>\n                        <ipxact:description>Reserved bits. Reads return 0. Writing to these bits has no effect.</ipxact:description>\n                        <ipxact:bitOffset>8</ipxact:bitOffset>\n                        <ipxact:bitWidth>24</ipxact:bitWidth>\n                        <ipxact:access>read-only</ipxact:access>\n                    </ipxact:field>\n                </ipxact:register>\n\n            </ipxact:addressBlock>\n        </ipxact:memoryMap>\n    </ipxact:memoryMaps>\n\n    <ipxact:ports>\n        <ipxact:port>\n            <ipxact:name>wclk</ipxact:name>\n            <ipxact:description>Working clock input for the timer operation. The timer operates on wclk rising edges when wclk_en is high.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>in</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n\n        <ipxact:port>\n            <ipxact:name>wclk_en</ipxact:name>\n            <ipxact:description>Clock enable for the working clock domain. Timer operates only when wclk_en is high.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>in</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n\n        <ipxact:port>\n            <ipxact:name>wrst_n</ipxact:name>\n            <ipxact:description>Working clock domain reset, active-low asynchronous reset. Resets all registers to default values and stops counter.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>in</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n\n        <ipxact:port>\n            <ipxact:name>prst_n</ipxact:name>\n            <ipxact:description>APB bus reset signal, active-low asynchronous reset. Resets all registers to default values.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>in</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n\n        <ipxact:port>\n            <ipxact:name>wdogint</ipxact:name>\n            <ipxact:description>Watchdog interrupt signal, edge-triggered. Generated when counter reaches zero and INTEN=1. Remains asserted until cleared by writing to WDOGINTCLR.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>out</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n\n        <ipxact:port>\n            <ipxact:name>wdogres</ipxact:name>\n            <ipxact:description>Watchdog reset signal, edge-triggered. Generated when counter reaches zero twice consecutively with RESEN=1. Remains asserted until system reset.</ipxact:description>\n            <ipxact:wire>\n                <ipxact:direction>out</ipxact:direction>\n                <ipxact:wireTypeDefs>\n                    <ipxact:wireTypeDef>\n                        <ipxact:typeName>std_logic</ipxact:typeName>\n                    </ipxact:wireTypeDef>\n                </ipxact:wireTypeDefs>\n            </ipxact:wire>\n        </ipxact:port>\n    </ipxact:ports>\n\n</ipxact:component>",
+                "file_path": "wdt.xml"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "d87441f2-b443-41d9-b836-5f8f277fdc5d",
+      "timestamp": 1767682544.460215
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now I'll check the current Simics version and packages to understand the environment:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_a4442df6d43f4661a4e3bcd8",
+              "args": {},
+              "name": "get_simics_version"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 30,
+        "prompt_token_count": 38184,
+        "total_token_count": 38214
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "1fe7f6c0-1cf4-49a5-af49-fa151bce3d5e",
+      "timestamp": 1767682544.488928
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_a4442df6d43f4661a4e3bcd8",
+              "name": "get_simics_version",
+              "response": {
+                "result": {
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "{\n  \"package_name\": \"Simics-Base\",\n  \"package_number\": \"1000\",\n  \"package_version\": \"7.57.0\"\n}"
+                    }
+                  ],
+                  "structuredContent": {
+                    "result": "{\n  \"package_name\": \"Simics-Base\",\n  \"package_number\": \"1000\",\n  \"package_version\": \"7.57.0\"\n}"
+                  },
+                  "isError": false
+                }
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "42f4dd52-4919-4867-aba9-8ef50dfb991e",
+      "timestamp": 1767682548.251902
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now I'll create a comprehensive update to the openspec/project.md file based on all the information I've gathered about the Simics device model project:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_c2ea830d17e642de83bdcc99",
+              "args": {
+                "file_path": "openspec/project.md",
+                "old_string": "# Project Context\n\n## Purpose\n[Describe your project's purpose and goals]\n\n## Tech Stack\n- [List your primary technologies]\n- [e.g., TypeScript, React, Node.js]\n\n## Project Conventions\n\n### Code Style\n[Describe your code style preferences, formatting rules, and naming conventions]\n\n### Architecture Patterns\n[Document your architectural decisions and patterns]\n\n### Testing Strategy\n[Explain your testing approach and requirements]\n\n### Git Workflow\n[Describe your branching strategy and commit conventions]\n\n## Domain Context\n[Add domain-specific knowledge that AI assistants need to understand]\n\n## Important Constraints\n[List any technical, business, or regulatory constraints]\n\n## External Dependencies\n[Document key external services, APIs, or systems]",
+                "new_string": "# Project Context\n\n## Purpose\nThis project is a Simics device model development environment focused on creating functional simulation models for embedded systems hardware. The primary goal is to develop accurate, high-performance Simics device models using DML (Device Modeling Language) to enable virtual platform development for hardware-software co-design and testing. The initial focus is on implementing an ARM PrimeCell-compatible watchdog timer (WDT) device model that can be integrated into QSP-x86 and other platform configurations.\n\n## Tech Stack\n- **Simics Base**: Version 7.57.0 - Complete virtual platform simulation environment\n- **DML 1.4**: Device Modeling Language for creating functional device models\n- **Python**: Test automation, build scripts, and validation frameworks\n- **IP-XACT**: XML-based register and interface specifications for hardware design\n- **APB4 Bus Interface**: Advanced Peripheral Bus v4 for device connectivity\n- **APB4**: AMBA 4 Peripheral Bus interface for register access\n- **XML**: IP-XACT register definitions and component specifications\n- **Make/CMake**: Build system integration for Simics modules\n- **Git**: Version control for device model source code\n\n## Project Conventions\n\n### Code Style\n- **DML 1.4**: Use proper session state management for checkpoint/restore compatibility\n- **Register Access**: Follow standard read/write handler patterns with appropriate side effect handling\n- **Event Management**: Implement event-based timing rather than cycle-accurate updates (avoid performance penalties)\n- **Signal Interfaces**: Use proper signal connection patterns for interrupt and reset signals\n- **Module Structure**: Keep device implementations in single .dml file with separate -registers.dml auto-generated files\n- **File Names**: Use descriptive names matching device functionality (e.g., wdt.dml, wdt-registers.dml)\n- **Documentation**: Include comprehensive comments explaining device behavior and register side effects\n\n### Architecture Patterns\n- **Functional Modeling**: Focus on functional correctness over cycle-accurate behavior for optimal simulation performance\n- **Register Abstraction**: Implement all device registers with proper address decoding and access control\n- **State Machine Modeling**: Use DML events and state variables to model device operational states\n- **Protection Mechanisms**: Implement lock registers and access control as specified in hardware documentation\n- **Integration Test Mode**: Support special test modes as defined in device specifications\n- **Modular Design**: Separate register definitions from functional behavior while maintaining single file structure\n- **Signal Routing**: Use standard APB and interrupt signal patterns for platform integration\n\n### Testing Strategy\n- **Test-Driven Development**: Write failing tests first, then implement functionality to pass tests\n- **Register Testing**: Validate all register read/write operations with expected reset values and side effects\n- **State Transition Testing**: Verify device state changes and state machine behavior\n- **Integration Testing**: Test device behavior in complete platform context\n- **Functional Validation**: Test complete watchdog functionality including interrupt and reset generation\n- **Edge Case Testing**: Validate boundary conditions, overflow, and special operational modes\n- **Lock/Protection Testing**: Verify register lock mechanisms prevent unauthorized access\n\n### Git Workflow\n- **Feature Branches**: Use descriptive branch names with format `feature/device-name-description`\n- **Commit Messages**: Follow format \"Implement/Register/Update [component] for [functionality]\"\n- **Change Tracking**: Use OpenSpec changes directory for tracking design decisions and requirements\n- **Spec Integration**: Link implementation commits to specification requirements in specs/ directory\n- **Module Organization**: Keep each device implementation in dedicated modules/[device-name]/ directory\n\n## Domain Context\n- **Simics Simulation**: Virtual platform simulators that model complete systems including processors, memory, and peripherals\n- **DML Device Models**: Functional models that simulate hardware behavior without cycle-accurate timing\n- **Watchdog Timers**: Critical safety devices that reset systems if not periodically \"fed\" by software\n- **ARM PrimeCell**: ARM's family of peripheral IP cores with standardized interfaces and identification\n- **APB Interface**: Low-cost, low-latency bus for connecting peripheral devices to system controllers\n- **Platform Integration**: Device models must work within Simics platform frameworks and connect to interrupt controllers\n- **Functional vs. Cycle-Accurate**: Prioritize functional correctness for development velocity over detailed timing accuracy\n- **Checkpoint/Restore**: Simics capability to save/restore simulation state without needing to model this explicitly\n\n## Important Constraints\n- **Performance**: Avoid cycle-accurate modeling patterns that cause exponential slowdown (use events, not continuous updates)\n- **Register Protection**: Must implement lock register mechanism with magic value 0x1ACCE551 as specified\n- **Interrupt Behavior**: Must follow ARM PrimeCell specification for single-bit interrupt status and clearing behavior\n- **Reset Handling**: Support dual reset domains (APB and working clock) with proper reset value assignments\n- **Timing**: Functional timing only - no specific clock frequency requirements, but must maintain correct logical behavior\n- **Compatibility**: Maintain compatibility with Simics 7.x APIs and DML 1.4 language features\n- **ID Registers**: Must implement fixed peripheral/PrimeCell identification registers with specified values\n\n## External Dependencies\n- **Simics Platform**: Complete Simics Base 7.57.0 installation with DML compiler\n- **ARM PrimeCell Specifications**: Reference documentation for WDT register maps and behavior\n- **APB4 Bus Specification**: For register interface compatibility\n- **QSP-x86 Platform**: Target platform for device integration and testing\n- **Python Simics API**: For test automation and validation scripts\n- **IP-XACT Tools**: For register specification validation and documentation"
+              },
+              "name": "replace_string_in_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 1383,
+        "prompt_token_count": 38348,
+        "total_token_count": 39731
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "06deb689-149e-4d75-b858-468ce9cdca7b",
+      "timestamp": 1767682548.277587
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_c2ea830d17e642de83bdcc99",
+              "name": "replace_string_in_file",
+              "response": {
+                "success": true,
+                "file_path": "openspec/project.md",
+                "replacements": 1,
+                "old_string_preview": "# Project Context\n\n## Purpose\n[Describe your project's purpose and goals]\n\n## Tech Stack\n- [List you...",
+                "new_string_preview": "# Project Context\n\n## Purpose\nThis project is a Simics device model development environment focused ...",
+                "message": "Successfully replaced 1 occurrence(s) in openspec/project.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "c8e832c7-8ba4-42e4-9dff-32dc43f28f98",
+      "timestamp": 1767682599.73409
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Now I'll verify the updated project.md file to ensure the content was properly updated:\n\n"
+          },
+          {
+            "function_call": {
+              "id": "call_d30110a107c648e6981bf0b4",
+              "args": {
+                "file_path": "openspec/project.md"
+              },
+              "name": "read_file"
+            }
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 42,
+        "prompt_token_count": 39842,
+        "total_token_count": 39884
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "long_running_tool_ids": [],
+      "id": "caf9cf50-b5b7-45e7-8a51-826e0e216627",
+      "timestamp": 1767682599.762808
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "function_response": {
+              "id": "call_d30110a107c648e6981bf0b4",
+              "name": "read_file",
+              "response": {
+                "content": "# Project Context\n\n## Purpose\nThis project is a Simics device model development environment focused on creating functional simulation models for embedded systems hardware. The primary goal is to develop accurate, high-performance Simics device models using DML (Device Modeling Language) to enable virtual platform development for hardware-software co-design and testing. The initial focus is on implementing an ARM PrimeCell-compatible watchdog timer (WDT) device model that can be integrated into QSP-x86 and other platform configurations.\n\n## Tech Stack\n- **Simics Base**: Version 7.57.0 - Complete virtual platform simulation environment\n- **DML 1.4**: Device Modeling Language for creating functional device models\n- **Python**: Test automation, build scripts, and validation frameworks\n- **IP-XACT**: XML-based register and interface specifications for hardware design\n- **APB4 Bus Interface**: Advanced Peripheral Bus v4 for device connectivity\n- **APB4**: AMBA 4 Peripheral Bus interface for register access\n- **XML**: IP-XACT register definitions and component specifications\n- **Make/CMake**: Build system integration for Simics modules\n- **Git**: Version control for device model source code\n\n## Project Conventions\n\n### Code Style\n- **DML 1.4**: Use proper session state management for checkpoint/restore compatibility\n- **Register Access**: Follow standard read/write handler patterns with appropriate side effect handling\n- **Event Management**: Implement event-based timing rather than cycle-accurate updates (avoid performance penalties)\n- **Signal Interfaces**: Use proper signal connection patterns for interrupt and reset signals\n- **Module Structure**: Keep device implementations in single .dml file with separate -registers.dml auto-generated files\n- **File Names**: Use descriptive names matching device functionality (e.g., wdt.dml, wdt-registers.dml)\n- **Documentation**: Include comprehensive comments explaining device behavior and register side effects\n\n### Architecture Patterns\n- **Functional Modeling**: Focus on functional correctness over cycle-accurate behavior for optimal simulation performance\n- **Register Abstraction**: Implement all device registers with proper address decoding and access control\n- **State Machine Modeling**: Use DML events and state variables to model device operational states\n- **Protection Mechanisms**: Implement lock registers and access control as specified in hardware documentation\n- **Integration Test Mode**: Support special test modes as defined in device specifications\n- **Modular Design**: Separate register definitions from functional behavior while maintaining single file structure\n- **Signal Routing**: Use standard APB and interrupt signal patterns for platform integration\n\n### Testing Strategy\n- **Test-Driven Development**: Write failing tests first, then implement functionality to pass tests\n- **Register Testing**: Validate all register read/write operations with expected reset values and side effects\n- **State Transition Testing**: Verify device state changes and state machine behavior\n- **Integration Testing**: Test device behavior in complete platform context\n- **Functional Validation**: Test complete watchdog functionality including interrupt and reset generation\n- **Edge Case Testing**: Validate boundary conditions, overflow, and special operational modes\n- **Lock/Protection Testing**: Verify register lock mechanisms prevent unauthorized access\n\n### Git Workflow\n- **Feature Branches**: Use descriptive branch names with format `feature/device-name-description`\n- **Commit Messages**: Follow format \"Implement/Register/Update [component] for [functionality]\"\n- **Change Tracking**: Use OpenSpec changes directory for tracking design decisions and requirements\n- **Spec Integration**: Link implementation commits to specification requirements in specs/ directory\n- **Module Organization**: Keep each device implementation in dedicated modules/[device-name]/ directory\n\n## Domain Context\n- **Simics Simulation**: Virtual platform simulators that model complete systems including processors, memory, and peripherals\n- **DML Device Models**: Functional models that simulate hardware behavior without cycle-accurate timing\n- **Watchdog Timers**: Critical safety devices that reset systems if not periodically \"fed\" by software\n- **ARM PrimeCell**: ARM's family of peripheral IP cores with standardized interfaces and identification\n- **APB Interface**: Low-cost, low-latency bus for connecting peripheral devices to system controllers\n- **Platform Integration**: Device models must work within Simics platform frameworks and connect to interrupt controllers\n- **Functional vs. Cycle-Accurate**: Prioritize functional correctness for development velocity over detailed timing accuracy\n- **Checkpoint/Restore**: Simics capability to save/restore simulation state without needing to model this explicitly\n\n## Important Constraints\n- **Performance**: Avoid cycle-accurate modeling patterns that cause exponential slowdown (use events, not continuous updates)\n- **Register Protection**: Must implement lock register mechanism with magic value 0x1ACCE551 as specified\n- **Interrupt Behavior**: Must follow ARM PrimeCell specification for single-bit interrupt status and clearing behavior\n- **Reset Handling**: Support dual reset domains (APB and working clock) with proper reset value assignments\n- **Timing**: Functional timing only - no specific clock frequency requirements, but must maintain correct logical behavior\n- **Compatibility**: Maintain compatibility with Simics 7.x APIs and DML 1.4 language features\n- **ID Registers**: Must implement fixed peripheral/PrimeCell identification registers with specified values\n\n## External Dependencies\n- **Simics Platform**: Complete Simics Base 7.57.0 installation with DML compiler\n- **ARM PrimeCell Specifications**: Reference documentation for WDT register maps and behavior\n- **APB4 Bus Specification**: For register interface compatibility\n- **QSP-x86 Platform**: Target platform for device integration and testing\n- **Python Simics API**: For test automation and validation scripts\n- **IP-XACT Tools**: For register specification validation and documentation\n",
+                "file_path": "openspec/project.md"
+              }
+            }
+          }
+        ],
+        "role": "user"
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "17627814-fcee-4835-a76a-883ac025847b",
+      "timestamp": 1767682603.426424
+    },
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Perfect! I have successfully updated the openspec/project.md file with comprehensive details about the Simics device model development project. The updated file now includes:\n\n1. **Purpose**: Clear description of the project as a Simics device model development environment focused on creating functional simulation models, specifically implementing an ARM PrimeCell-compatible watchdog timer.\n\n2. **Tech Stack**: Detailed list of technologies including Simics Base 7.57.0, DML 1.4, Python, IP-XACT, APB4, XML, Make/CMake, and Git.\n\n3. **Project Conventions**: Specific guidelines for:\n   - Code style in DML 1.4 with event-based timing\n   - Architecture patterns for functional modeling and state machines\n   - Testing strategy with TDD approach and comprehensive test coverage\n   - Git workflow with proper branch naming and commit conventions\n\n4. **Domain Context**: Important domain knowledge about Simics simulation, DML models, watchdog timers, ARM PrimeCell specifications, and functional vs. cycle-accurate modeling.\n\n5. **Important Constraints**: Critical constraints including performance requirements, register protection, interrupt behavior, reset handling, and ID register specifications.\n\n6. **External Dependencies**: All required dependencies for the Simics platform, specifications, and development tools.\n\nThe project documentation now provides a comprehensive overview of the Simics device model development environment with all the necessary context for AI assistants to understand and work effectively on the project."
+          }
+        ],
+        "role": "model"
+      },
+      "partial": false,
+      "usage_metadata": {
+        "candidates_token_count": 293,
+        "prompt_token_count": 41091,
+        "total_token_count": 41384
+      },
+      "invocation_id": "e-466a19d4-040d-4a2e-8da4-3691db79451a",
+      "author": "openspec_simics_agent",
+      "actions": {
+        "state_delta": {},
+        "artifact_delta": {},
+        "requested_auth_configs": {}
+      },
+      "id": "9cdd4837-6569-405f-9d75-c17e0f0e47ba",
+      "timestamp": 1767682603.454589
+    }
+  ],
+  "last_update_time": 1767682603.454589
+}
