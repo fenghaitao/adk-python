@@ -1,0 +1,1 @@
+/nfs/site/disks/ssm_yongzhuo_001/ai_agents/adk-openspec/openspec-scripts/../contributing/samples/openspec_integration/apply_agent_instruction.md
