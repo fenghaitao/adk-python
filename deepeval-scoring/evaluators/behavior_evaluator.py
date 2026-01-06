@@ -32,11 +32,17 @@ from parsers.session_parser import SessionParser
 class BehaviorEvaluator:
   """Evaluates agent behavior using DeepEval metrics."""
   
-  def __init__(self, workdir: str, device_name: str, model: str, agent: Optional[str] = None):
+  def __init__(self, workdir: str, device_name: str, model: str, agent: str):
     self.workdir = Path(workdir)
     self.device_name = device_name
     self.model = model
     self.agent = agent
+    
+    # Validate that agent is provided
+    if not self.agent:
+      print("❌ Error: Agent type is required for behavior evaluation")
+      print("   Use --agent parameter to specify agent type (e.g., rovodev, copilot-cli, kiro-cli, adk-python)")
+      exit(1)
     
     # Initialize parsers
     self.session_parser = SessionParser()
@@ -102,77 +108,53 @@ class BehaviorEvaluator:
   
   def _load_session_log(self) -> str:
     """Load agent session log."""
-    if self.agent:
-      # Agent-specific session log paths
-      if self.agent == "rovodev":
-        # Look for rovodev-apply session logs
-        rovodev_dir = self.workdir / "rovodev-apply"
-        if rovodev_dir.exists():
-          # Find the most recent session log matching the pattern
-          session_logs = sorted(rovodev_dir.glob("rovodev-apply_*.txt"), reverse=True)
-          if session_logs:
-            return session_logs[0].read_text()
-      
-      elif self.agent == "copilot-cli":
-        # Look for copilot-cli session logs in log directory
-        log_dir = self.workdir / "log"
-        if log_dir.exists():
-          # Find the most recent session log matching the pattern apply-*.txt
-          session_logs = sorted(log_dir.glob("apply-*.txt"), reverse=True)
-          if session_logs:
-            return session_logs[0].read_text()
-      
-      elif self.agent == "kiro-cli":
-        # Look for kiro-cli session logs in kiro-apply directory
-        kiro_apply_dir = self.workdir / "kiro-apply"
-        if kiro_apply_dir.exists():
-          # Find the most recent session log matching the pattern kiro-apply-session_*.txt
-          session_logs = sorted(kiro_apply_dir.glob("kiro-apply-session_*.txt"), reverse=True)
-          if session_logs:
-            return session_logs[0].read_text()
-      
-      elif self.agent == "adk-python":
-        # Look for adk-python session logs in adk_openspec_apply_agent directory
-        adk_apply_dir = self.workdir / "adk_openspec_apply_agent"
-        if adk_apply_dir.exists():
-          # Find the most recent session log matching apply_*.session.txt pattern
-          session_logs = sorted(adk_apply_dir.glob("apply_*.session.txt"), reverse=True)
-          if session_logs:
-            return session_logs[0].read_text()
-      
-      elif self.agent == "qodercli":
-        # Look for qodercli session logs in qodercli-apply directory
-        qodercli_dir = self.workdir / "qodercli-apply"
-        if qodercli_dir.exists():
-          # Find the most recent session log matching qodercli-apply-session_*.txt
-          session_logs = sorted(qodercli_dir.glob("qodercli-apply-session_*.txt"), reverse=True)
-          if session_logs:
-            return session_logs[0].read_text()
+    # Agent-specific session log paths
+    if self.agent == "rovodev":
+      # Look for rovodev-apply session logs
+      rovodev_dir = self.workdir / "rovodev-apply"
+      if rovodev_dir.exists():
+        # Find the most recent session log matching the pattern
+        session_logs = sorted(rovodev_dir.glob("rovodev-apply_*.txt"), reverse=True)
+        if session_logs:
+          return session_logs[0].read_text()
     
-    # Fallback to generic loading
-    return self._load_generic_session_log()
-  
-  def _load_generic_session_log(self) -> str:
-    """Load agent session log."""
-    # Look for session logs in common locations (only .txt files)
-    log_paths = [
-      self.workdir / "apply.txt",
-      self.workdir / "session.txt",
-      self.workdir / "openspec" / "session.txt",
-    ]
+    elif self.agent == "copilot-cli":
+      # Look for copilot-cli session logs in log directory
+      log_dir = self.workdir / "log"
+      if log_dir.exists():
+        # Find the most recent session log matching the pattern apply-*.txt
+        session_logs = sorted(log_dir.glob("apply-*.txt"), reverse=True)
+        if session_logs:
+          return session_logs[0].read_text()
     
-    # Also check qodercli-apply directory for session logs
-    qodercli_apply_dir = self.workdir / "qodercli-apply"
-    if qodercli_apply_dir.exists():
-      # Find the most recent session log (only .txt files)
-      session_logs = sorted(qodercli_apply_dir.glob("*session*.txt"), reverse=True)
-      if session_logs:
-        log_paths.insert(0, session_logs[0])
+    elif self.agent == "kiro-cli":
+      # Look for kiro-cli session logs in kiro-apply directory
+      kiro_apply_dir = self.workdir / "kiro-apply"
+      if kiro_apply_dir.exists():
+        # Find the most recent session log matching the pattern kiro-apply-session_*.txt
+        session_logs = sorted(kiro_apply_dir.glob("kiro-apply-session_*.txt"), reverse=True)
+        if session_logs:
+          return session_logs[0].read_text()
     
-    for log_path in log_paths:
-      if log_path.exists():
-        return log_path.read_text()
+    elif self.agent == "adk-python":
+      # Look for adk-python session logs in adk_openspec_apply_agent directory
+      adk_apply_dir = self.workdir / "adk_openspec_apply_agent"
+      if adk_apply_dir.exists():
+        # Find the most recent session log matching apply_*.session.txt pattern
+        session_logs = sorted(adk_apply_dir.glob("apply_*.session.txt"), reverse=True)
+        if session_logs:
+          return session_logs[0].read_text()
     
+    elif self.agent == "qodercli":
+      # Look for qodercli session logs in qodercli-apply directory
+      qodercli_dir = self.workdir / "qodercli-apply"
+      if qodercli_dir.exists():
+        # Find the most recent session log matching qodercli-apply-session_*.txt
+        session_logs = sorted(qodercli_dir.glob("qodercli-apply-session_*.txt"), reverse=True)
+        if session_logs:
+          return session_logs[0].read_text()
+    
+    # No session log found for this agent
     return ""
   
   def _process_results(self, results) -> Dict:
