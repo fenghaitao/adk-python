@@ -20,7 +20,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from deepeval import evaluate
-from deepeval.test_case import LLMTestCase
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.metrics import GEval
+from deepeval.metrics.g_eval import Rubric
 
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
@@ -47,8 +49,174 @@ class BehaviorEvaluator:
     # Initialize parsers
     self.session_parser = SessionParser()
   
+  def _create_g_eval_metrics(self) -> List[GEval]:
+    """Create G-Eval metrics for agent behavior evaluation."""
+    
+    # Handle iflow models properly for G-Eval
+    model_for_g_eval = self._get_model_for_g_eval()
+    
+    # Standard rubric for behavioral assessment
+    behavior_rubric = [
+      Rubric(score_range=(9, 10), expected_outcome="Excellent performance with clear evidence of best practices"),
+      Rubric(score_range=(7, 8), expected_outcome="Good performance with minor areas for improvement"),
+      Rubric(score_range=(5, 6), expected_outcome="Adequate performance meeting basic requirements"),
+      Rubric(score_range=(3, 4), expected_outcome="Below average performance with notable issues"),
+      Rubric(score_range=(0, 2), expected_outcome="Poor performance failing to meet requirements")
+    ]
+    
+    # Strict rubric for critical aspects (safety, compliance) - commented out for future use
+    # strict_rubric = [
+    #   Rubric(score_range=(8, 10), expected_outcome="Fully compliant with all requirements and best practices"),
+    #   Rubric(score_range=(5, 7), expected_outcome="Mostly compliant with minor deviations"),
+    #   Rubric(score_range=(0, 4), expected_outcome="Non-compliant or significant deviations from requirements")
+    # ]
+    
+    metrics = []
+    
+    # Instruction Following - Core behavioral metric (mandatory)
+    metrics.append(GEval(
+      name="Instruction Following",
+      evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+      criteria="""Evaluate how well the agent followed the given instructions and guidelines. 
+      Consider: adherence to specified workflow steps, proper execution sequence, 
+      completion of required tasks, and following procedural requirements.""",
+      rubric=behavior_rubric,
+      model=model_for_g_eval,
+      threshold=0.7
+    ))
+    
+    # Additional metrics commented out for now - can be enabled later if needed
+    # 
+    # # 2. Tool and Resource Usage
+    # metrics.append(GEval(
+    #   name="Tool Usage Effectiveness",
+    #   evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    #   criteria="""Evaluate the agent's effectiveness in using available tools, commands, and resources.
+    #   Consider: appropriate tool selection, correct usage patterns, efficient resource utilization,
+    #   and proper integration of tool outputs into the workflow.""",
+    #   rubric=behavior_rubric,
+    #   model=model_for_g_eval,
+    #   threshold=0.7
+    # ))
+    # 
+    # # 3. Documentation and Knowledge Usage
+    # metrics.append(GEval(
+    #   name="Documentation Usage",
+    #   evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.CONTEXT],
+    #   criteria="""Evaluate how effectively the agent used available documentation and knowledge resources.
+    #   Consider: proactive reading before implementation, consulting relevant sections,
+    #   applying documented best practices, and efficient information gathering.""",
+    #   rubric=behavior_rubric,
+    #   model=model_for_g_eval,
+    #   threshold=0.7
+    # ))
+    # 
+    # # 4. Problem Solving and Error Handling
+    # metrics.append(GEval(
+    #   name="Problem Solving",
+    #   evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    #   criteria="""Evaluate the agent's problem-solving approach and error handling capabilities.
+    #   Consider: systematic debugging approach, appropriate error recovery,
+    #   learning from failures, and adaptive problem-solving strategies.""",
+    #   rubric=behavior_rubric,
+    #   model=model_for_g_eval,
+    #   threshold=0.6
+    # ))
+    # 
+    # # 5. Process Efficiency and Quality
+    # metrics.append(GEval(
+    #   name="Process Efficiency",
+    #   evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    #   criteria="""Evaluate the efficiency and quality of the agent's execution process.
+    #   Consider: minimal unnecessary steps, logical progression, time management,
+    #   and overall workflow optimization.""",
+    #   rubric=behavior_rubric,
+    #   model=model_for_g_eval,
+    #   threshold=0.6
+    # ))
+    # 
+    # # 6. Safety and Compliance (Strict evaluation)
+    # metrics.append(GEval(
+    #   name="Safety and Compliance",
+    #   evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    #   criteria="""Evaluate the agent's adherence to safety protocols and compliance requirements.
+    #   Consider: following security best practices, avoiding risky operations,
+    #   proper validation and verification, and maintaining system integrity.""",
+    #   rubric=strict_rubric,
+    #   model=model_for_g_eval,
+    #   threshold=0.8,
+    #   strict_mode=True
+    # ))
+    
+    return metrics
+  
+  def _get_model_for_g_eval(self):
+    """Get appropriate model instance for G-Eval metrics.
+    
+    G-Eval requires a DeepEvalBaseLLM instance, so we need to convert
+    iflow and GitHub Copilot model strings to proper LiteLLMModel instances.
+    """
+    if self.model.startswith("iflow/"):
+      # Import here to avoid circular imports
+      from deepeval.models import LiteLLMModel
+      import os
+      
+      # Convert iflow model to LiteLLM format
+      model_name = self.model.replace("iflow/", "dashscope/")
+      
+      # Check if API key is available
+      api_key = os.getenv("IFLOW_API_KEY")
+      if not api_key:
+        raise ValueError(
+          "IFLOW_API_KEY environment variable not set. "
+          "Please set it with: export IFLOW_API_KEY='your-key'"
+        )
+      
+      # Create LiteLLMModel instance for iflow
+      return LiteLLMModel(
+        model=model_name,
+        api_key=api_key,
+        base_url="https://apis.iflow.cn/v1/"
+      )
+    elif self.model.startswith("github_copilot/"):
+      # Import here to avoid circular imports
+      from deepeval.models import LiteLLMModel
+      import os
+      
+      # GitHub Copilot models use the model name as-is
+      model_name = self.model
+      
+      # Create LiteLLMModel instance for GitHub Copilot (no API key required)
+      return LiteLLMModel(
+        model=model_name,
+        generation_kwargs={
+          "extra_headers": {
+            "Editor-Version": "vscode/1.85.0",
+            "Copilot-Integration-Id": "vscode-chat"
+          }
+        }
+      )
+    else:
+      # For standard models (GPT-4, etc.), return the model string and let DeepEval handle it
+      # DeepEval will check for appropriate API keys (OPENAI_API_KEY, etc.)
+      return self.model
+  
+  def _create_test_case(self, instructions: str, session_log: str, context: Optional[List[str]] = None) -> LLMTestCase:
+    """Create LLMTestCase from our agent behavior data.
+    
+    Mapping:
+    - instructions -> INPUT (what the agent was supposed to do)
+    - session_log -> ACTUAL_OUTPUT (what the agent actually did)
+    - context -> CONTEXT (additional context like documentation, specs)
+    """
+    return LLMTestCase(
+      input=instructions,
+      actual_output=session_log,
+      context=context or []
+    )
+  
   def evaluate(self) -> Optional[Dict]:
-    """Run agent behavior evaluation."""
+    """Run agent behavior evaluation with G-Eval metrics."""
     # Load agent instructions and session log
     instructions = self._load_agent_instructions()
     session_log = self._load_session_log()
@@ -57,21 +225,25 @@ class BehaviorEvaluator:
       print(f"⚠️  Skipping behavior evaluation: missing instructions or session log")
       return None
     
-    # Create test case - no additional context needed for behavior evaluation
-    # We only need instructions (what agent should do) and session log (what agent did)
-    test_case = LLMTestCase(
-      input=instructions,
-      actual_output=session_log,
-      context=[]  # No additional context needed for process evaluation
-    )
+    # Create test case with proper mapping
+    test_case = self._create_test_case(instructions, session_log)
     
-    # Create metrics
-    metrics = [
-      AgentBehaviorMetric(
-        model=self.model,
-        threshold=0.7
-      )
-    ]
+    # Create metrics list
+    metrics = []
+    
+    # Add our custom AgentBehaviorMetric (for comparison and detailed criteria)
+    metrics.append(AgentBehaviorMetric(
+      model=self.model,
+      threshold=0.7
+    ))
+    
+    # Add G-Eval metrics (now mandatory - only Instruction Following)
+    print("🔍 Adding G-Eval Instruction Following metric...")
+    g_eval_metrics = self._create_g_eval_metrics()
+    metrics.extend(g_eval_metrics)
+    print(f"   Added {len(g_eval_metrics)} G-Eval metric")
+    
+    print(f"📊 Running evaluation with {len(metrics)} metrics...")
     
     # Run evaluation
     results = evaluate([test_case], metrics)

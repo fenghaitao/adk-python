@@ -110,3 +110,6 @@ demo/
 
 # Qoder configuration directory
 .qoder/
+
+# DeepEval
+.deepeval/

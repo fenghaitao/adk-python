@@ -16,7 +16,14 @@
 """DeepEval-based scoring system for apply_agent implementations.
 
 Usage:
-  python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus
+  # Full evaluation (code + behavior)
+  python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus --agent kiro-cli
+  
+  # Code evaluation only
+  python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus --result-only
+  
+  # Behavior evaluation only
+  python score.py --workdir /path/to/project --device wdt --model iflow/qwen3-coder-plus --agent kiro-cli --behavior-only
 """
 
 from __future__ import annotations
@@ -64,9 +71,14 @@ def main():
     help="Output format (default: markdown)"
   )
   parser.add_argument(
-    "--skip-behavior",
+    "--result-only",
     action="store_true",
-    help="Skip agent behavior evaluation (if no session logs)"
+    help="Skip agent behavior evaluation and only evaluate code results"
+  )
+  parser.add_argument(
+    "--behavior-only",
+    action="store_true",
+    help="Skip code evaluation and only evaluate agent behavior"
   )
   parser.add_argument(
     "--scoring-mode",
@@ -81,40 +93,50 @@ def main():
   
   args = parser.parse_args()
   
-  # Initialize evaluators based on scoring mode
+  # Validate mutually exclusive options
+  if args.result_only and args.behavior_only:
+    print("❌ Error: --result-only and --behavior-only are mutually exclusive")
+    sys.exit(1)
+  
+  # Initialize evaluators based on scoring mode and options
   code_results = None
   deterministic_results = None
   
-  if args.scoring_mode in ["llm", "hybrid"]:
-    # LLM-based evaluation
-    code_eval = CodeEvaluator(
+  # Skip code evaluation if behavior-only mode
+  if not args.behavior_only:
+    if args.scoring_mode in ["llm", "hybrid"]:
+      # LLM-based evaluation
+      code_eval = CodeEvaluator(
+        workdir=args.workdir,
+        device_name=args.device,
+        model=args.model
+      )
+      print("🔍 Evaluating code quality with LLM...")
+      code_results = code_eval.evaluate()
+    
+    if args.scoring_mode in ["deterministic", "hybrid"]:
+      # Deterministic evaluation
+      deterministic_scorer = DeterministicScorer(
+        workdir=args.workdir,
+        device_name=args.device
+      )
+      print("🔍 Evaluating code quality with deterministic scoring...")
+      deterministic_results = deterministic_scorer.score_implementation()
+  
+  # Skip behavior evaluation if result-only mode or deterministic-only mode
+  behavior_eval = None
+  if not args.result_only and args.scoring_mode != "deterministic":
+    behavior_eval = BehaviorEvaluator(
       workdir=args.workdir,
       device_name=args.device,
-      model=args.model
+      model=args.model,
+      agent=args.agent
     )
-    print("🔍 Evaluating code quality with LLM...")
-    code_results = code_eval.evaluate()
   
-  if args.scoring_mode in ["deterministic", "hybrid"]:
-    # Deterministic evaluation
-    deterministic_scorer = DeterministicScorer(
-      workdir=args.workdir,
-      device_name=args.device
-    )
-    print("🔍 Evaluating code quality with deterministic scoring...")
-    deterministic_results = deterministic_scorer.score_implementation()
-  
-  behavior_eval = BehaviorEvaluator(
-    workdir=args.workdir,
-    device_name=args.device,
-    model=args.model,
-    agent=args.agent
-  ) if not args.skip_behavior and args.scoring_mode != "deterministic" else None
-  
-  # Run behavior evaluation (only for LLM modes)
+  # Run behavior evaluation (only for LLM modes and when not skipped)
   behavior_results = None
   if behavior_eval:
-    print("🔍 Evaluating agent behavior...")
+    print("🔍 Evaluating agent behavior with G-Eval...")
     behavior_results = behavior_eval.evaluate()
   
   # Generate report
