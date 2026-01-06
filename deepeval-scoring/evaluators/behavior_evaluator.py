@@ -178,7 +178,7 @@ class BehaviorEvaluator:
         api_key=api_key,
         base_url="https://apis.iflow.cn/v1/",
         generation_kwargs={
-          "temperature": 0.0,
+          "temperature": 0.1,  # Slightly higher for more consistent JSON
           # Disable problematic parameters for iFlow/Dashscope
           "logprobs": False,
           "top_logprobs": None
@@ -292,7 +292,7 @@ class BehaviorEvaluator:
       rovodev_dir = self.workdir / "rovodev-apply"
       if rovodev_dir.exists():
         # Find the most recent session log matching the pattern
-        session_logs = sorted(rovodev_dir.glob("rovodev-apply_*.txt"), reverse=True)
+        session_logs = sorted(rovodev_dir.glob("rovodev-apply*.txt"), reverse=True)
         if session_logs:
           return session_logs[0].read_text()
     

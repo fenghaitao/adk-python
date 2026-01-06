@@ -424,7 +424,7 @@ class CodeEvaluator:
         api_key=api_key,
         base_url="https://apis.iflow.cn/v1/",
         generation_kwargs={
-          "temperature": 0.0,
+          "temperature": 0.1,  # Slightly higher for more consistent JSON
           # Disable problematic parameters for iFlow/Dashscope
           "logprobs": False,
           "top_logprobs": None
