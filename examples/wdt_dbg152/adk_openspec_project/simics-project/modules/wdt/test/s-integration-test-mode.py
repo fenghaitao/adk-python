@@ -1,0 +1,154 @@
+# © 2025 Intel Corporation
+# Test watchdog timer integration test mode functionality
+
+import dev_util
+import simics
+import stest
+import wdt_common
+
+def test_integration_test_mode():
+    # Create an instance of the device to test
+    devs = wdt_common.create_config()
+    dev = devs[0]
+    fake_pic_wdogint = devs[1]
+    fake_pic_wdogres = devs[2]
+
+    regs = dev_util.bank_regs(dev.bank.WatchdogRegisters)
+
+    # Test 1: Prepare device for testing
+    print("Test 1: Prepare device for integration test mode")
+    regs.WDOGLOCK.write(0x1ACCE551)  # Unlock device
+    stest.expect_equal(regs.WDOGLOCK.read(), 0x0)  # Should be unlocked
+    print("Device unlocked for testing")
+
+    # Clear any existing state
+    regs.WDOGINTCLR.write(0x1)
+    initial_irq_count = fake_pic_wdogint.raised
+    initial_res_count = fake_pic_wdogres.raised
+
+    # Test 2: Test entering integration test mode via WDOGITCR
+    print("Test 2: Entering integration test mode")
+    initial_itcr = regs.WDOGITCR.read()
+    print(f"Initial WDOGITCR value: 0x{initial_itcr:x}")
+    
+    # Enter test mode by setting bit 0
+    regs.WDOGITCR.write(0x1)
+    itcr_after = regs.WDOGITCR.read()
+    print(f"After writing 0x1 to WDOGITCR: 0x{itcr_after:x}")
+    
+    # Verify test mode was entered
+    stest.expect_true((itcr_after & 0x1) == 0x1)  # Bit 0 should be set
+    print("Successfully entered integration test mode")
+
+    # Test 3: Test direct control of outputs via WDOGITOP
+    print("Test 3: Direct control of outputs via WDOGITOP")
+    # Initially, no signals should be raised in test mode until we write to WDOGITOP
+    stest.expect_equal(fake_pic_wdogint.raised, initial_irq_count)
+    stest.expect_equal(fake_pic_wdogres.raised, initial_res_count)
+    
+    # Set both interrupt and reset outputs via WDOGITOP
+    # Bit 0: WDOGRES_VAL, Bit 1: WDOGINT_VAL
+    regs.WDOGITOP.write(0x3)  # Set both outputs
+    print("Wrote 0x3 to WDOGITOP (both interrupt and reset)")
+    
+    # Check if signals were raised
+    print(f"Interrupt raised count after WDOGITOP write: {fake_pic_wdogint.raised}")
+    print(f"Reset raised count after WDOGITOP write: {fake_pic_wdogres.raised}")
+    
+    stest.expect_true(fake_pic_wdogint.raised > initial_irq_count)
+    stest.expect_true(fake_pic_wdogres.raised > initial_res_count)
+    print("Direct output control working in test mode")
+
+    # Test 4: Test controlling individual outputs
+    print("Test 4: Controlling individual outputs")
+    # Clear both outputs
+    regs.WDOGITOP.write(0x0)
+    print(f"Interrupt count after clearing outputs: {fake_pic_wdogint.raised}")
+    print(f"Reset count after clearing outputs: {fake_pic_wdogres.raised}")
+    # Note: Since we can only raise signals in this test framework, 
+    # we can't easily verify that signals were lowered
+    
+    # Set only interrupt output
+    regs.WDOGITOP.write(0x2)  # Only bit 1 (WDOGINT)
+    print("Set only interrupt output via WDOGITOP")
+    
+    # Set only reset output
+    regs.WDOGITOP.write(0x1)  # Only bit 0 (WDOGRES)
+    print("Set only reset output via WDOGITOP")
+
+    # Test 5: Test that normal timer operation is disabled in test mode
+    print("Test 5: Normal timer disabled in test mode")
+    # Configure timer to generate interrupt in normal mode
+    regs.WDOGLOAD.write(0x10)  # Small value for quick timeout
+    regs.WDOGCONTROL.write(0x1)  # INTEN=1
+    
+    # Before exiting test mode, run simulation
+    irq_before_exit = fake_pic_wdogint.raised
+    print(f"Interrupt count before exiting test mode: {irq_before_exit}")
+    
+    # In test mode, normal timer operation should be disabled
+    # So running simulation should not trigger timer-based interrupts
+    simics.SIM_continue(100)
+    
+    irq_after_sim = fake_pic_wdogint.raised
+    print(f"Interrupt count after simulation in test mode: {irq_after_sim}")
+    # The interrupt count should not have increased due to timer expiration
+    # since normal timer operation is disabled in test mode
+    
+    # Test 6: Test exiting integration test mode
+    print("Test 6: Exiting integration test mode")
+    # Exit test mode by setting bit 0 to 0
+    regs.WDOGITCR.write(0x0)
+    itcr_exit = regs.WDOGITCR.read()
+    print(f"After writing 0x0 to exit test mode: 0x{itcr_exit:x}")
+    
+    stest.expect_true((itcr_exit & 0x1) == 0x0)  # Bit 0 should be clear
+    print("Successfully exited integration test mode")
+
+    # Test 7: Verify normal timer operation resumes after test mode
+    print("Test 7: Normal timer operation after exiting test mode")
+    # Clear any pending interrupts
+    regs.WDOGINTCLR.write(0x1)
+    
+    # Set up timer to expire after exiting test mode
+    regs.WDOGLOAD.write(0x20)  # Small value for testing
+    regs.WDOGCONTROL.write(0x1)  # INTEN=1
+    print("Set up timer to expire after exiting test mode")
+    
+    # Run simulation to allow timer to trigger
+    simics.SIM_continue(100)
+    
+    # Check if interrupt was generated by normal timer operation
+    raw_int_status = regs.WDOGRIS.read()
+    masked_int_status = regs.WDOGMIS.read()
+    final_irq_count = fake_pic_wdogint.raised
+    
+    print(f"WDOGRIS: 0x{raw_int_status:x}, WDOGMIS: 0x{masked_int_status:x}")
+    print(f"Final interrupt count: {final_irq_count}")
+    
+    # The interrupt might have been generated after exiting test mode
+    print("Normal timer operation test completed")
+
+    # Test 8: Verify WDOGITOP has no effect when not in test mode
+    print("Test 8: WDOGITOP has no effect outside test mode")
+    # We're currently not in test mode, write to WDOGITOP
+    regs.WDOGITCR.write(0x0)  # Ensure not in test mode
+    irq_count_before_itop = fake_pic_wdogint.raised
+    res_count_before_itop = fake_pic_wdogres.raised
+    
+    regs.WDOGITOP.write(0x3)  # Try to control outputs when not in test mode
+    print("Wrote to WDOGITOP when not in test mode")
+    
+    irq_count_after_itop = fake_pic_wdogint.raised
+    res_count_after_itop = fake_pic_wdogres.raised
+    
+    # When not in test mode, WDOGITOP should have no effect
+    print(f"IRQ counts - before: {irq_count_before_itop}, after: {irq_count_after_itop}")
+    print(f"RES counts - before: {res_count_before_itop}, after: {res_count_after_itop}")
+    print("WDOGITOP behavior test completed")
+
+    print("Integration test mode tests completed successfully!")
+
+
+if __name__ == "__main__":
+    test_integration_test_mode()

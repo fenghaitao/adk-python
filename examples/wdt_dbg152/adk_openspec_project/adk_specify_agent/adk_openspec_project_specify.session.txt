@@ -1,0 +1,1111 @@
+================================================================================
+📋 SESSION: adk_specify_agent/adk_openspec_project_specify.session.json
+================================================================================
+App Name: adk_specify_agent
+User ID: test_user
+Session ID: 9dea1b76-04b3-4955-8d0e-bb2a47c288da
+Created: N/A
+Updated: N/A
+Last Update: 2025-12-27 10:44:27 UTC
+Events: 18 total
+
+================================================================================
+💬 CONVERSATION
+================================================================================
+[94m👤 [user] 2025-12-27 10:40:36 UTC[0m
+   /specify Read the Simics WDT specification from /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/simics-wdt-spec.md and the hardware specifications from /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/wdt.md to create a comprehensive Simics wdt device implementation.
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:36 UTC (+0.0 seconds)[0m
+   I'll help you create a comprehensive Simics WDT (Watchdog Timer) device implementation by reading both the Simics WDT specification and the hardware specifications. Let me start by reading the command file to understand the exact process I need to follow.
+   🔧 read_file(file_path=.adk/commands/specify.md)
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:38 UTC (+2.4 seconds)[0m
+   📤 read_file → {'content': '---\ndescription: Create hardware IP functional specification and register description from IP hardware specification document.\n---\n\nUser input: $ARGUMENTS\n\nYou **MUST** consider the...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:38 UTC (+0.0 seconds)[0m
+   Now I'll read the Simics WDT specification and the hardware specifications to create a comprehensive Simics WDT device implementation.
+   🔧 read_file(file_path=/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/simics-wdt-spec.md)
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:41 UTC (+2.3 seconds)[0m
+   📤 read_file → {'content': '# Simics Watchdog Timer Device Implementation Specification\n\n## Feature Description\n\nCreate a comprehensive Simics watchdog timer device implementation with the following requirements...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:41 UTC (+0.0 seconds)[0m
+   Now I'll read the hardware specifications from the wdt.md file.
+   🔧 read_file(file_path=/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/wdt.md)
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:43 UTC (+2.0 seconds)[0m
+   📤 read_file → {'content': '\n# 1.\xa0\xa0\xa0\xa0\xa0 范围\n\n本文件描述CPU v3项目MSCP侧watchdog模块一些设计说明信息，方便在项目组范围内理解、使用该模块，着重描述watchdog模块的功能、接口、寄存器和使用事项等一些关键信息。\n\n# 3.\xa0\xa0\xa0\xa0\xa0 模块功能\n\n## 3.1.\xa0\xa0\xa0\xa0\x...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:43 UTC (+0.0 seconds)[0m
+   Now I'll run the setup script to create the branch and spec file as mentioned in Step 1.
+   🔧 bash_command(command=.specify/scripts/bash/create-new-feature.sh --json "/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/simics-wdt-spec.md")
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:45 UTC (+2.9 seconds)[0m
+   📤 bash_command → {'stdout': '{"BRANCH_NAME":"001-nfs-site-disks","SPEC_FILE":"/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/sp...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:40:45 UTC (+0.0 seconds)[0m
+   Now I have the branch name and spec file path from the setup script. Let me proceed with Step 2: parsing the hardware specification. I'll extract device information, registers, and behaviors from the specifications.
+   ## Step 2: Parse Hardware Specification
+   ### 2.1 Device Overview
+   Based on the specifications, I can extract the following information:
+   - Device name: Watchdog Timer (WDT)
+   - Base address: 0x1000 (as mentioned in the Simics spec)
+   - Category: Timer/Counter
+   - Memory address range: 0x1000 - 0x1FFF (4KB address space)
+   - Function: 32-bit decrementing counter that generates interrupts and reset signals upon timeout
+   ### 2.2 Register Map
+   #### Part A: Register Map Overview Table
+   | Offset | Register Name | Type | Width | Reset Value | Description |
+   |--------|---------------|------|-------|-------------|-------------|
+   | 0x00 | WDOGLOAD | R/W | 32 | 0xFFFFFFFF | Watchdog decrement timer reload value |
+   | 0x04 | WDOGVALUE | R | 32 | 0xFFFFFFFF | Current value of watchdog counter |
+   | 0x08 | WDOGCONTROL | R/W | 32 | 0x00 | Control register for step value and enable bits |
+   | 0x0C | WDOGINTCLR | W | 32 | 0x00 | Interrupt clear register |
+   | 0x10 | WDOGRIS | R | 32 | 0x00 | Raw interrupt status register |
+   | 0x14 | WDOGMIS | R | 32 | 0x00 | Masked interrupt status register |
+   | 0xC00 | WDOGLOCK | R/W | 32 | 0x00000000 | Register lock/unlock protection |
+   | 0xF00 | WDOGITCR | R/W | 32 | 0x00 | Integration test mode control |
+   | 0xF04 | WDOGITOP | W | 32 | 0x00 | Integration test output control |
+   | 0xFD0 | WDOGPERIPHID4 | R | 8 | 0x04 | Peripheral ID register 4 |
+   | 0xFD4 | WDOGPERIPHID5 | R | 8 | 0x00 | Peripheral ID register 5 |
+   | 0xFD8 | WDOGPERIPHID6 | R | 8 | 0x00 | Peripheral ID register 6 |
+   | 0xFDC | WDOGPERIPHID7 | R | 8 | 0x00 | Peripheral ID register 7 |
+   | 0xFE0 | WDOGPERIPHID0 | R | 8 | 0x24 | Peripheral ID register 0 |
+   | 0xFE4 | WDOGPERIPHID1 | R | 8 | 0xB8 | Peripheral ID register 1 |
+   | 0xFE8 | WDOGPERIPHID2 | R | 8 | 0x1B | Peripheral ID register 2 |
+   | 0xFEC | WDOGPERIPHID3 | R | 8 | 0x00 | Peripheral ID register 3 |
+   | 0xFF0 | WDOGPECELLID0 | R | 8 | 0x0D | PrimeCell ID register 0 |
+   | 0xFF4 | WDOGPECELLID1 | R | 8 | 0xF0 | PrimeCell ID register 1 |
+   | 0xFF8 | WDOGPECELLID2 | R | 8 | 0x05 | PrimeCell ID register 2 |
+   | 0xFFC | WDOGPECELLID3 | R | 8 | 0xB1 | PrimeCell ID register 3 |
+   #### Part B: Detailed Descriptions (Only for Side-Effect Registers)
+   **WDOGLOAD (0x00)**
+   - Access Type: R/W
+   - Side effects: Writing to this register with INTEN=1 reloads the counter from the value in WDOGLOAD when the interrupt is enabled after previously being disabled
+   **WDOGVALUE (0x04)**
+   - Access Type: R only
+   - Side effects: None (read-only status register showing current counter value)
+   **WDOGCONTROL (0x08)**
+   - Access Type: R/W
+   - Side effects: 
+     - Changing INTEN bit [0] from 0 to 1 reloads the counter from the value in WDOGLOAD
+     - Changing INTEN bit [0] enables/disables the interrupt and timer
+   **WDOGINTCLR (0x0C)**
+   - Access Type: W only
+   - Side effects: Writing any value clears the watchdog interrupt signal and reloads the counter from WDOGLOAD register
+   **WDOGRIS (0x10)**
+   - Access Type: R only
+   - Side effects: Read-only register showing raw interrupt status (value changes based on timer state)
+   **WDOGMIS (0x14)**
+   - Access Type: R only
+   - Side effects: Read-only register showing masked interrupt status (value changes based on timer state and INTEN setting)
+   **WDOGLOCK (0xC00)**
+   - Access Type: R/W
+   - Side effects: 
+     - Writing 0x1ACCE551 unlocks other registers for write access
+     - Writing any other value locks other registers from write access
+     - Reading returns lock status (0=unlocked, 1=locked)
+   **WDOGITCR (0xF00)**
+   - Access Type: R/W
+   - Side effects: 
+     - Writing 1 enables integration test mode (disables normal timer operation)
+     - Writing 0 disables integration test mode (enables normal timer operation)
+   **WDOGITOP (0xF04)**
+   - Access Type: W only
+   - Side effects: 
+     - When in integration test mode, directly controls wdogint and wdogres signals
+     - Bit 1 controls WDOGINT output value
+     - Bit 0 controls WDOGRES output value
+   **WDOGPERIPHIDx and WDOGPCELLIDx (0xFD0-0xFFC)**
+   - Access Type: R only
+   - Side effects: None (read-only identification registers)
+   ### 2.3 I/O Ports & Signals
+   Based on the specification:
+   - wclk: Work clock input
+   - wclk_en: Work clock gate (timer works on rising edge when set to 1)
+   - wrst_n: Work clock domain reset (active low, asynchronous)
+   - wdogint: Watchdog interrupt output (edge-triggered, stays asserted until cleared)
+   - wdogres: Watchdog reset output (stays asserted until system reset)
+   ### 2.4 Register Side-Effects & Behaviors
+   **Counter/Timer Behavior**:
+   - Trigger: When timer reaches zero with INTEN=1
+   - Action: WDOGRIS[0] and WDOGMIS[0] set to 1, wdogint signal asserted
+   - Dependencies: WDOGCONTROL.INTEN
+   - Trigger: When timer reaches zero again while interrupt asserted and RESEN=1
+   - Action: wdogres signal asserted
+   - Dependencies: WDOGCONTROL.RESEN, wdogint previously asserted
+   **State Machine**:
+   - Normal operation: Counter decrements by step_value on wclk_en enabled wclk rising edges
+   - Integration test mode: Direct control of outputs via WDOGITOP register
+   - Lock protection state: Registers protected until magic unlock value written to WDOGLOCK
+   ### 2.5 Device Operational Model
+   **Device States**:
+   State: RESET
+   - Entry conditions: wrst_n is low (asserted)
+   - Observable indicators: All registers have reset values
+   - Exit conditions: wrst_n goes high (deasserted)
+   - Test Scenario: Verify reset behavior
+   State: IDLE
+   - Entry conditions: Device is reset and INTEN=0 in WDOGCONTROL
+   - Observable indicators: Counter is not decrementing, no interrupts asserted
+   - Exit conditions: INTEN is set to 1
+   - Test Scenario: Basic timer operation test
+   State: COUNTING
+   - Entry conditions: Device is initialized and INTEN=1 in WDOGCONTROL
+   - Observable indicators: Counter value in WDOGVALUE is decrementing
+   - Exit conditions: Counter reaches zero or INTEN is set to 0
+   - Test Scenario: Basic timer operation test
+   State: INTERRUPT_PENDING
+   - Entry conditions: Counter reaches zero and INTEN=1
+   - Observable indicators: WDOGRIS[0]=1, WDOGMIS[0]=1, wdogint asserted
+   - Exit conditions: WDOGINTCLR is written or RESET occurs
+   - Test Scenario: Interrupt and reset generation test
+   State: RESET_GENERATION
+   - Entry conditions: Counter reaches zero again while wdogint asserted and RESEN=1
+   - Observable indicators: wdogres asserted
+   - Exit conditions: System reset occurs
+   - Test Scenario: Interrupt and reset generation test
+   State: INTEGRATION_TEST
+   - Entry conditions: WDOGITCR[0]=1
+   - Observable indicators: Normal timer operation disabled, direct control via WDOGITOP possible
+   - Exit conditions: WDOGITCR[0]=0
+   - Test Scenario: Integration test mode test
+   **State Transitions**:
+   [RESET] → [IDLE]: wrst_n deasserted
+   - Validate: Registers show reset values, no activity
+   [IDLE] → [COUNTING]: INTEN set to 1
+   - Validate: Counter starts decrementing from WDOGLOAD value
+   [COUNTING] → [INTERRUPT_PENDING]: Counter reaches zero with INTEN=1
+   - Validate: WDOGRIS[0]=1, WDOGMIS[0]=1, wdogint asserted
+   [INTERRUPT_PENDING] → [COUNTING]: WDOGINTCLR written
+   - Validate: Counter reloads from WDOGLOAD, interrupt cleared
+   [INTERRUPT_PENDING] → [RESET_GENERATION]: Counter reaches zero again with RESEN=1
+   - Validate: wdogres signal asserted
+   [COUNTING/INTERRUPT_PENDING] → [INTEGRATION_TEST]: WDOGITCR[0] set to 1
+   - Validate: Normal timer operation disabled
+   [INTEGRATION_TEST] → [COUNTING]: WDOGITCR[0] set to 0
+   - Validate: Normal timer operation resumed
+   **SW/HW Interaction Flows**:
+   Flow: Basic Timer Operation (maps to Test Scenario 1)
+   State Transition: [IDLE] → [COUNTING] → [INTERRUPT_PENDING]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write value to WDOGLOAD | Load value stored | WDOGLOAD shows value |
+   | 2. Write control settings to WDOGCONTROL (INTEN=1) | Counter starts counting | WDOGVALUE shows decreasing values |
+   | 3. Wait for counter to reach zero | wdogint asserted, WDOGRIS[0]=1 | WDOGMIS[0]=1 |
+   Flow: Interrupt Clear (maps to Test Scenario 1)
+   State Transition: [INTERRUPT_PENDING] → [COUNTING]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write any value to WDOGINTCLR | Counter reloads from WDOGLOAD | WDOGVALUE shows reload value |
+   | 2. wdogint signal cleared | Interrupt cleared | WDOGMIS[0]=0, WDOGRIS[0]=0 |
+   Flow: Lock Protection (maps to Test Scenario 3)
+   State Transition: [LOCKED] ↔ [UNLOCKED]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write 0x1ACCE551 to WDOGLOCK | Other registers unlocked | WDOGLOCK returns 0x0 |
+   | 2. Write other value to WDOGLOCK | Other registers locked | WDOGLOCK returns 0x1 |
+   Flow: Integration Test Mode (maps to Test Scenario 5)
+   State Transition: [COUNTING] ↔ [INTEGRATION_TEST]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write 0x1 to WDOGITCR[0] | Normal timer disabled | Timer stops counting |
+   | 2. Write values to WDOGITOP | Direct control of outputs | wdogint/wdogres follow WDOGITOP |
+   ## Step 3: Generate Hardware Behavior Specification
+   Now I'll create the spec.md file with all the required sections:
+   🔧 write_file(file_path=/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/spec.md, content=# Simics Watchdog Timer (WDT) Device Specification
+   ## 1. Device Overview
+   The Watchdog Timer (WDT) is a 32-bit decrementing counter device compatible with ARM PrimeCell specification. The device generates an interrupt when the counter reaches zero and can generate a system reset if the interrupt is not cleared before the counter reaches zero again. The device includes lock protection to prevent unauthorized access to configuration registers and supports integration test mode for validation.
+   - Device Name: Watchdog Timer (WDT)
+   - Base Address: 0x1000
+   - Address Range: 0x1000 - 0x1FFF (4KB)
+   - Category: Timer/Counter
+   - Interface: APB bus
+   - Primary Function: System monitoring and reset generation
+   ## 2. Register Map
+   ### 2.1 Register Map Overview
+   | Offset | Register Name | Type | Width | Reset Value | Description |
+   |--------|---------------|------|-------|-------------|-------------|
+   | 0x00 | WDOGLOAD | R/W | 32 | 0xFFFFFFFF | Watchdog decrement timer reload value |
+   | 0x04 | WDOGVALUE | R | 32 | 0xFFFFFFFF | Current value of watchdog counter |
+   | 0x08 | WDOGCONTROL | R/W | 32 | 0x00 | Control register for step value and enable bits |
+   | 0x0C | WDOGINTCLR | W | 32 | 0x00 | Interrupt clear register |
+   | 0x10 | WDOGRIS | R | 32 | 0x00 | Raw interrupt status register |
+   | 0x14 | WDOGMIS | R | 32 | 0x00 | Masked interrupt status register |
+   | 0xC00 | WDOGLOCK | R/W | 32 | 0x00000000 | Register lock/unlock protection |
+   | 0xF00 | WDOGITCR | R/W | 32 | 0x00 | Integration test mode control |
+   | 0xF04 | WDOGITOP | W | 32 | 0x00 | Integration test output control |
+   | 0xFD0 | WDOGPERIPHID4 | R | 8 | 0x04 | Peripheral ID register 4 |
+   | 0xFD4 | WDOGPERIPHID5 | R | 8 | 0x00 | Peripheral ID register 5 |
+   | 0xFD8 | WDOGPERIPHID6 | R | 8 | 0x00 | Peripheral ID register 6 |
+   | 0xFDC | WDOGPERIPHID7 | R | 8 | 0x00 | Peripheral ID register 7 |
+   | 0xFE0 | WDOGPERIPHID0 | R | 8 | 0x24 | Peripheral ID register 0 |
+   | 0xFE4 | WDOGPERIPHID1 | R | 8 | 0xB8 | Peripheral ID register 1 |
+   | 0xFE8 | WDOGPERIPHID2 | R | 8 | 0x1B | Peripheral ID register 2 |
+   | 0xFEC | WDOGPERIPHID3 | R | 8 | 0x00 | Peripheral ID register 3 |
+   | 0xFF0 | WDOGPECELLID0 | R | 8 | 0x0D | PrimeCell ID register 0 |
+   | 0xFF4 | WDOGPECELLID1 | R | 8 | 0xF0 | PrimeCell ID register 1 |
+   | 0xFF8 | WDOGPECELLID2 | R | 8 | 0x05 | PrimeCell ID register 2 |
+   | 0xFFC | WDOGPECELLID3 | R | 8 | 0xB1 | PrimeCell ID register 3 |
+   ### 2.2 Side-Effect Register Descriptions
+   #### WDOGLOAD (Offset: 0x00)
+   - Width: 32 bits
+   - Access: Read/Write
+   - Reset: 0xFFFFFFFF
+   - Description: This register sets the initial value for the watchdog decrementing counter.
+   - Side effects: When INTEN bit is set to 1 after previously being 0, the counter reloads from this value.
+   #### WDOGVALUE (Offset: 0x04)
+   - Width: 32 bits
+   - Access: Read Only
+   - Reset: 0xFFFFFFFF
+   - Description: Shows the current value of the watchdog counter.
+   - Side effects: [NEEDS CLARIFICATION: Does reading this register have side effects?]
+   #### WDOGCONTROL (Offset: 0x08)
+   - Width: 32 bits
+   - Access: Read/Write
+   - Reset: 0x00000000
+   - Description: Controls the behavior of the watchdog timer.
+   - Side effects: Setting INTEN bit [0] to 1 reloads the counter from WDOGLOAD if previously disabled.
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-5 | Reserved | - | - | Reserved |
+   | 4-2 | step_value | R/W | 3'b000 | Clock divider value: 000 (÷1), 001 (÷2), 010 (÷4), 011 (÷8), 100 (÷16) |
+   | 1 | RESEN | R/W | 1'b0 | Enable watchdog reset output. Set to 1 to enable reset, 0 to disable |
+   | 0 | INTEN | R/W | 1'b0 | Enable interrupt. Set to 1 to enable timer and interrupt |
+   #### WDOGINTCLR (Offset: 0x0C)
+   - Width: 32 bits
+   - Access: Write Only
+   - Reset: 0x00000000
+   - Description: Writing any value to this register clears the watchdog interrupt and reloads the counter from WDOGLOAD.
+   - Side effects: Clears the interrupt and reloads the counter.
+   #### WDOGRIS (Offset: 0x10)
+   - Width: 32 bits
+   - Access: Read Only
+   - Reset: 0x00000000
+   - Description: Shows the raw interrupt status from the counter.
+   - Side effects: Value changes based on timer state (read-only status register).
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-1 | Reserved | - | - | Reserved |
+   | 0 | raw_watchdog_int | R | 1'b0 | Raw interrupt status from the counter |
+   #### WDOGMIS (Offset: 0x14)
+   - Width: 32 bits
+   - Access: Read Only
+   - Reset: 0x00000000
+   - Description: Shows the masked interrupt status (WDOGRIS[0] AND WDOGCONTROL.INTEN).
+   - Side effects: Value changes based on timer state and INTEN setting.
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-1 | Reserved | - | - | Reserved |
+   | 0 | masked_watchdog_int | R | 1'b0 | Masked interrupt status from the counter |
+   #### WDOGLOCK (Offset: 0xC00)
+   - Width: 32 bits
+   - Access: Read/Write
+   - Reset: 0x00000000
+   - Description: Lock register to protect other registers from unauthorized access.
+   - Side effects: Writing 0x1ACCE551 enables write access to all other registers; any other value disables write access.
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-0 | wdog_lock | R/W | 32'h00000000 | Write 0x1ACCE551 to enable write access, any other value to disable. Read returns 0 if unlocked, 1 if locked. |
+   #### WDOGITCR (Offset: 0xF00)
+   - Width: 32 bits
+   - Access: Read/Write
+   - Reset: 0x00000000
+   - Description: Integration test mode control register.
+   - Side effects: Writing 1 enables integration test mode (disables normal timer operation), writing 0 disables test mode.
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-1 | Reserved | - | - | Reserved |
+   | 0 | int_test_enable | R/W | 1'b0 | 1 = enter integration test mode, 0 = normal decrementing counter mode |
+   #### WDOGITOP (Offset: 0xF04)
+   - Width: 32 bits
+   - Access: Write Only
+   - Reset: 0x00000000
+   - Description: Integration test output register, used when in integration test mode.
+   - Side effects: Directly drives wdogint and wdogres outputs when in test mode.
+   | Bit(s) | Name | Type | Reset | Description |
+   |--------|------|------|-------|-------------|
+   | 31-2 | Reserved | - | - | Reserved |
+   | 1 | int_test_wdogint | W | 1'b0 | Integration test mode WDOGINT value |
+   | 0 | int_test_wdogres | W | 1'b0 | Integration test mode WDOGRES value |
+   #### WDOGPERIPHID4-7 (Offset: 0xFD0-0xFDC)
+   - Width: 8 bits each
+   - Access: Read Only
+   - Description: Peripheral identification registers.
+   - Side effects: None (read-only identification registers).
+   #### WDOGPERIPHID0-3 (Offset: 0xFE0-0xFEC)
+   - Width: 8 bits each
+   - Access: Read Only
+   - Description: Peripheral identification registers.
+   - Side effects: None (read-only identification registers).
+   #### WDOGPCELLID0-3 (Offset: 0xFF0-0xFFC)
+   - Width: 8 bits each
+   - Access: Read Only
+   - Description: PrimeCell identification registers.
+   - Side effects: None (read-only identification registers).
+   ## 3. External Interfaces & Signals
+   | Signal | Direction | Width | Description |
+   |--------|-----------|-------|-------------|
+   | wclk | Input | 1 | Work clock input |
+   | wclk_en | Input | 1 | Work clock gate (timer works on rising edge when enabled) |
+   | wrst_n | Input | 1 | Work clock domain reset (active low, asynchronous) |
+   | wdogint | Output | 1 | Watchdog interrupt signal (edge-triggered, stays asserted until cleared) |
+   | wdogres | Output | 1 | Watchdog reset signal (stays asserted until system reset) |
+   ## 4. Register Side-Effects & Behaviors
+   ### 4.1 Counter/Timer Behavior
+   - When the counter reaches zero and WDOGCONTROL.INTEN=1, the hardware sets WDOGRIS[0] and WDOGMIS[0] to 1 and asserts the wdogint signal.
+   - If the counter reaches zero again while the interrupt is still asserted and WDOGCONTROL.RESEN=1, the hardware asserts the wdogres signal.
+   - The counter decrements by the value specified in WDOGCONTROL.step_value on each enabled wclk rising edge.
+   ### 4.2 State Machine Behavior
+   - The device operates in different states based on control register settings and counter values.
+   - In integration test mode (WDOGITCR[0]=1), normal timer operation is disabled and outputs are directly controlled via WDOGITOP register.
+   - In locked state, register writes to most registers are ignored.
+   ## 5. Device Operational Model
+   ### 5.1 Device States
+   State: RESET
+   - Entry conditions: wrst_n is low (asserted)
+   - Observable indicators: All registers have reset values
+   - Exit conditions: wrst_n goes high (deasserted)
+   - Test Scenario: Verify reset behavior
+   State: IDLE
+   - Entry conditions: Device is reset and INTEN=0 in WDOGCONTROL
+   - Observable indicators: Counter is not decrementing, no interrupts asserted
+   - Exit conditions: INTEN is set to 1
+   - Test Scenario: Basic timer operation test
+   State: COUNTING
+   - Entry conditions: Device is initialized and INTEN=1 in WDOGCONTROL
+   - Observable indicators: Counter value in WDOGVALUE is decrementing
+   - Exit conditions: Counter reaches zero or INTEN is set to 0
+   - Test Scenario: Basic timer operation test
+   State: INTERRUPT_PENDING
+   - Entry conditions: Counter reaches zero and INTEN=1
+   - Observable indicators: WDOGRIS[0]=1, WDOGMIS[0]=1, wdogint asserted
+   - Exit conditions: WDOGINTCLR is written or RESET occurs
+   - Test Scenario: Interrupt and reset generation test
+   State: RESET_GENERATION
+   - Entry conditions: Counter reaches zero again while wdogint asserted and RESEN=1
+   - Observable indicators: wdogres asserted
+   - Exit conditions: System reset occurs
+   - Test Scenario: Interrupt and reset generation test
+   State: INTEGRATION_TEST
+   - Entry conditions: WDOGITCR[0]=1
+   - Observable indicators: Normal timer operation disabled, direct control via WDOGITOP possible
+   - Exit conditions: WDOGITCR[0]=0
+   - Test Scenario: Integration test mode test
+   ### 5.2 State Transitions
+   [RESET] → [IDLE]: wrst_n deasserted
+   - Validate: Registers show reset values, no activity
+   [IDLE] → [COUNTING]: INTEN set to 1
+   - Validate: Counter starts decrementing from WDOGLOAD value
+   [COUNTING] → [INTERRUPT_PENDING]: Counter reaches zero with INTEN=1
+   - Validate: WDOGRIS[0]=1, WDOGMIS[0]=1, wdogint asserted
+   [INTERRUPT_PENDING] → [COUNTING]: WDOGINTCLR written
+   - Validate: Counter reloads from WDOGLOAD, interrupt cleared
+   [INTERRUPT_PENDING] → [RESET_GENERATION]: Counter reaches zero again with RESEN=1
+   - Validate: wdogres signal asserted
+   [COUNTING/INTERRUPT_PENDING] → [INTEGRATION_TEST]: WDOGITCR[0] set to 1
+   - Validate: Normal timer operation disabled
+   [INTEGRATION_TEST] → [COUNTING]: WDOGITCR[0] set to 0
+   - Validate: Normal timer operation resumed
+   ### 5.3 SW/HW Interaction Flows
+   Flow: Basic Timer Operation (maps to Test Scenario 1)
+   State Transition: [IDLE] → [COUNTING] → [INTERRUPT_PENDING]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write value to WDOGLOAD | Load value stored | WDOGLOAD shows value |
+   | 2. Write control settings to WDOGCONTROL (INTEN=1) | Counter starts counting | WDOGVALUE shows decreasing values |
+   | 3. Wait for counter to reach zero | wdogint asserted, WDOGRIS[0]=1 | WDOGMIS[0]=1 |
+   Flow: Interrupt Clear (maps to Test Scenario 1)
+   State Transition: [INTERRUPT_PENDING] → [COUNTING]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write any value to WDOGINTCLR | Counter reloads from WDOGLOAD | WDOGVALUE shows reload value |
+   | 2. wdogint signal cleared | Interrupt cleared | WDOGMIS[0]=0, WDOGRIS[0]=0 |
+   Flow: Lock Protection (maps to Test Scenario 3)
+   State Transition: [LOCKED] ↔ [UNLOCKED]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write 0x1ACCE551 to WDOGLOCK | Other registers unlocked | WDOGLOCK returns 0x0 |
+   | 2. Write other value to WDOGLOCK | Other registers locked | WDOGLOCK returns 0x1 |
+   Flow: Integration Test Mode (maps to Test Scenario 5)
+   State Transition: [COUNTING] ↔ [INTEGRATION_TEST]
+   | Software Actions | Hardware Responses | Observable State |
+   |------------------|-------------------|------------------|
+   | 1. Write 0x1 to WDOGITCR[0] | Normal timer disabled | Timer stops counting |
+   | 2. Write values to WDOGITOP | Direct control of outputs | wdogint/wdogres follow WDOGITOP |
+   ## 6. Functional Requirements
+   ### 6.1 Timer Functionality Requirements
+   **FUNC-001**: The watchdog timer shall be a 32-bit decrementing counter.
+   **FUNC-002**: The timer shall decrement at a rate determined by the step_value field in the control register.
+   **FUNC-003**: The timer shall reload from WDOGLOAD register when WDOGINTCLR is written.
+   **FUNC-004**: The timer shall support 5 different clock divider values: ÷1, ÷2, ÷4, ÷8, ÷16.
+   ### 6.2 Interrupt and Reset Requirements
+   **FUNC-005**: When counter reaches zero and INTEN=1, device shall assert wdogint.
+   **FUNC-006**: When wdogint is asserted, WDOGRIS[0] and WDOGMIS[0] shall be set to 1.
+   **FUNC-007**: If counter reaches zero again while interrupt asserted and RESEN=1, device shall assert wdogres.
+   **FUNC-008**: Writing any value to WDOGINTCLR shall clear the wdogint signal.
+   **FUNC-009**: The wdogint signal shall remain asserted until WDOGINTCLR is written.
+   ### 6.3 Register Access Requirements
+   **FUNC-010**: Register access shall be performed via APB bus interface.
+   **FUNC-011**: All registers except WDOGLOCK shall be write-protected when locked.
+   **FUNC-012**: WDOGLOCK register shall accept 0x1ACCE551 to unlock other registers.
+   **FUNC-013**: WDOGLOCK register shall lock other registers when any value except 0x1ACCE551 is written.
+   **FUNC-014**: WDOGRIS register shall be read-only showing raw interrupt status.
+   **FUNC-015**: WDOGMIS register shall be read-only showing masked interrupt status.
+   **FUNC-016**: WDOGVALUE register shall be read-only showing current counter value.
+   ### 6.4 Clock Divider Requirements
+   **FUNC-017**: Clock divider setting shall determine timer decrement rate according to step_value mapping.
+   **FUNC-018**: The step_value field shall support 5 valid settings: 000 (÷1), 001 (÷2), 010 (÷4), 011 (÷8), 100 (÷16).
+   **FUNC-019**: Other step_value settings shall be invalid.
+   **FUNC-020**: The timer shall decrement by the specified step_value on each enabled clock cycle.
+   ### 6.5 Integration Test Mode Requirements
+   **FUNC-021**: When WDOGITCR[0]=1, device shall enter integration test mode.
+   **FUNC-022**: In integration test mode, normal timer operation shall be disabled.
+   **FUNC-023**: When in test mode, WDOGITOP register shall allow direct control of wdogint and wdogres outputs.
+   **FUNC-024**: When WDOGITCR[0]=0, device shall return to normal mode.
+   ### 6.6 Identification Requirements
+   **FUNC-025**: Device shall implement all PrimeCell identification registers (WDOGPCELLID0-3).
+   **FUNC-026**: Device shall implement all peripheral identification registers (WDOGPERIPHID0-7).
+   ## 7. Behavioral Requirements
+   **BEHAV-001**: When INTEN=0, timer shall decrement without generating interrupts.
+   **BEHAV-002**: When INTEN=1 and timer reaches zero, WDOGRIS[0] shall be set to 1.
+   **BEHAV-003**: When INTEN=1 and timer reaches zero, WDOGMIS[0] shall be set to 1.
+   **BEHAV-004**: When RESEN=0 and timer reaches zero again, wdogres shall not be asserted.
+   **BEHAV-005**: When wdogres is asserted, it shall remain asserted until system reset occurs.
+   **BEHAV-006**: Reading WDOGLOCK register shall return 0 when unlocked and 1 when locked.
+   **BEHAV-007**: When WDOGINTCLR is written, counter shall reload from WDOGLOAD value.
+   **BEHAV-008**: Counter shall stop when INTEN is changed from 1 to 0.
+   ## 8. Test Scenarios
+   ### 8.1 Basic Timer Operation Test
+   **TEST-001**: Verify basic timer countdown functionality.
+   - Setup: Write small value to WDOGLOAD, set INTEN=1 in WDOGCONTROL
+   - Action: Verify counter decrements in WDOGVALUE register
+   - Expected: Counter value decreases, interrupt is generated at zero
+   ### 8.2 Interrupt and Reset Generation Test
+   **TEST-002**: Verify interrupt and reset generation sequence.
+   - Setup: Write value to WDOGLOAD, set INTEN=1, RESEN=1
+   - Action: Allow timer to count to zero twice without clearing interrupt
+   - Expected: First zero generates interrupt, second generates reset
+   ### 8.3 Lock Protection Test
+   **TEST-003**: Verify lock protection mechanism.
+   - Setup: Write 0x1ACCE551 to WDOGLOCK to unlock
+   - Action: Write to WDOGLOAD (should succeed), then lock, then try again
+   - Expected: First write succeeds, second write fails (locked)
+   ### 8.4 Clock Divider Test
+   **TEST-004**: Verify different clock divider settings.
+   - Setup: Configure timer with same value but different step_value
+   - Action: Measure time to reach zero for each setting
+   - Expected: Larger divider → proportionally longer countdown
+   ### 8.5 Integration Test Mode Test
+   **TEST-005**: Verify integration test mode functionality.
+   - Setup: Set WDOGITCR[0]=1 to enable test mode
+   - Action: Write different values to WDOGITOP register
+   - Expected: Direct control of wdogint and wdogres outputs
+   ### 8.6 Register Read/Write Test
+   **TEST-006**: Verify register access behaviors.
+   - Setup: Configure timer and check various register values
+   - Action: Read and write to different registers
+   - Expected: All registers behave according to their access types and descriptions
+   ### 8.7 Reset Behavior Test
+   **TEST-007**: Verify reset behavior.
+   - Setup: Configure timer with various settings
+   - Action: Assert and deassert wrst_n signal
+   - Expected: All registers return to reset values during reset
+   ### 8.8 Counter Reload Test
+   **TEST-008**: Verify counter reload functionality.
+   - Setup: Set up timer with specific WDOGLOAD value
+   - Action: Write to WDOGINTCLR after interrupt
+   - Expected: Counter reloads from WDOGLOAD value)
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:42:40 UTC (+1.9 minutes)[0m
+   📤 write_file → {'success': True, 'file_path': '/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/spec.md', 'mode': 'append', 'by...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:42:40 UTC (+0.0 seconds)[0m
+   Now I'll create the IP-XACT register XML as specified in Step 4. I'll generate a comprehensive XML file that includes all the registers and ports for the WDT device.
+   🔧 write_file(file_path=/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/wdt-register.xml, content=<?xml version="1.0" encoding="UTF-8"?>
+   <ipxact:component xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2014">
+     <ipxact:vendor>ARM</ipxact:vendor>
+     <ipxact:library>watchdog</ipxact:library>
+     <ipxact:name>wdt</ipxact:name>
+     <ipxact:version>1.0</ipxact:version>
+     <ipxact:memoryMaps>
+       <ipxact:memoryMap>
+         <ipxact:name>APB</ipxact:name>
+         <ipxact:addressBlock>
+           <ipxact:name>wdt_regs</ipxact:name>
+           <ipxact:baseAddress>0x0</ipxact:baseAddress>
+           <ipxact:range>0x1000</ipxact:range>
+           <ipxact:width>32</ipxact:width>
+           <ipxact:register>
+             <ipxact:name>WDOGLOAD</ipxact:name>
+             <ipxact:description>Watchdog decrement timer reload value. Read side-effects: None. Write side-effects: When INTEN bit is set to 1 after previously being 0, the counter reloads from this value.</ipxact:description>
+             <ipxact:addressOffset>0x0</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_write</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0xFFFFFFFF</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>wdog_load</ipxact:name>
+               <ipxact:description>Watchdog decrement timer reload value</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>32</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGVALUE</ipxact:name>
+             <ipxact:description>Current value of watchdog counter. Read side-effects: Value changes as timer decrements. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0x4</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>true</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0xFFFFFFFF</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>count_read</ipxact:name>
+               <ipxact:description>The current value of watchdog counter</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>32</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGCONTROL</ipxact:name>
+             <ipxact:description>Control register for step value and enable bits. Read side-effects: None. Write side-effects: Setting INTEN bit [0] to 1 reloads the counter from WDOGLOAD if previously disabled.</ipxact:description>
+             <ipxact:addressOffset>0x8</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_write</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>step_value</ipxact:name>
+               <ipxact:description>Clock divider value: 000 (÷1), 001 (÷2), 010 (÷4), 011 (÷8), 100 (÷16), Other: invalid</ipxact:description>
+               <ipxact:bitOffset>2</ipxact:bitOffset>
+               <ipxact:bitWidth>3</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+             <ipxact:field>
+               <ipxact:name>RESEN</ipxact:name>
+               <ipxact:description>Enable watchdog reset output. Set to 1 to enable reset, 0 to disable</ipxact:description>
+               <ipxact:bitOffset>1</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+             <ipxact:field>
+               <ipxact:name>INTEN</ipxact:name>
+               <ipxact:description>Enable interrupt. Set to 1 enable the counter and the interrupt. Reloads the counter from the value in WDOGLOAD when the interrupt is enable after previously being disable.</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGINTCLR</ipxact:name>
+             <ipxact:description>Interrupt clear register. Read side-effects: None. Write side-effects: Writing any value clears the watchdog interrupt signal and reloads the counter from WDOGLOAD register.</ipxact:description>
+             <ipxact:addressOffset>0xC</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>write_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGRIS</ipxact:name>
+             <ipxact:description>Raw interrupt status register. Read side-effects: Value changes based on timer state. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0x10</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>true</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>raw_watchdog_int</ipxact:name>
+               <ipxact:description>Raw interrupt status from the counter</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGMIS</ipxact:name>
+             <ipxact:description>Masked interrupt status register. Read side-effects: Value changes based on timer state and INTEN setting. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0x14</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>true</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>masked_watchdog_int</ipxact:name>
+               <ipxact:description>Enable interrupt status from the counter</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGLOCK</ipxact:name>
+             <ipxact:description>Register lock/unlock protection. Read side-effects: Returns 0 if unlocked, 1 if locked. Write side-effects: Writing 0x1ACCE551 enables write access to all other registers; any other value disables write access.</ipxact:description>
+             <ipxact:addressOffset>0xC00</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_write</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>wdog_lock</ipxact:name>
+               <ipxact:description>Enable write access to all other registers by writing 0x1ACCE551. Disable write access by writing any other value. A read return the lock status: 0x0 -- write access to all other registers is enable, unlock; 0x1 -- write access to all other registers is disable, lock.</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>32</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGITCR</ipxact:name>
+             <ipxact:description>Integration test mode control register. Read side-effects: Value changes based on test mode state. Write side-effects: Writing 1 enables integration test mode (disables normal timer operation), writing 0 disables test mode.</ipxact:description>
+             <ipxact:addressOffset>0xF00</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_write</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>int_test_enable</ipxact:name>
+               <ipxact:description>1 -- enter integration test mode; 0 -- normal decrementing counter mode.</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>read_write</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGITOP</ipxact:name>
+             <ipxact:description>Integration test output register. Read side-effects: None. Write side-effects: When in integration test mode, directly drives wdogint and wdogres outputs.</ipxact:description>
+             <ipxact:addressOffset>0xF04</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>write_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0</ipxact:value>
+               <ipxact:mask>0xFFFFFFFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>int_test_wdogint</ipxact:name>
+               <ipxact:description>Integration test mode WDOGINT value</ipxact:description>
+               <ipxact:bitOffset>1</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>write_only</ipxact:access>
+             </ipxact:field>
+             <ipxact:field>
+               <ipxact:name>int_test_wdogres</ipxact:name>
+               <ipxact:description>Integration test mode WDOGRES value</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>1</ipxact:bitWidth>
+               <ipxact:access>write_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID4</ipxact:name>
+             <ipxact:description>Peripheral ID register 4. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFD0</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x04</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID4</ipxact:name>
+               <ipxact:description>[7:4] -- block count; [3:0] -- JEP106_c_code.</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID5</ipxact:name>
+             <ipxact:description>Peripheral ID register 5. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFD4</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x00</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID5</ipxact:name>
+               <ipxact:description>peripheral ID register 5, not used</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID6</ipxact:name>
+             <ipxact:description>Peripheral ID register 6. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFD8</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x00</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID6</ipxact:name>
+               <ipxact:description>peripheral ID register 6, not used</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID7</ipxact:name>
+             <ipxact:description>Peripheral ID register 7. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFDC</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x00</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID7</ipxact:name>
+               <ipxact:description>peripheral ID register 7, not used</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID0</ipxact:name>
+             <ipxact:description>Peripheral ID register 0. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFE0</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x24</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID0</ipxact:name>
+               <ipxact:description>part number[7:0]</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID1</ipxact:name>
+             <ipxact:description>Peripheral ID register 1. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFE4</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0xB8</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID1</ipxact:name>
+               <ipxact:description>[7:4]--JEP106_id_3_0 [3:0]--part number[11:8]</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID2</ipxact:name>
+             <ipxact:description>Peripheral ID register 2. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFE8</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x1B</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID2</ipxact:name>
+               <ipxact:description>[7:4]--Revision [3]--JEDEC_used [2:0]--JEP106_id_6_4</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPERIPHID3</ipxact:name>
+             <ipxact:description>Peripheral ID register 3. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFEC</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x00</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>ECOREVNUM</ipxact:name>
+               <ipxact:description>ECO revision number</ipxact:description>
+               <ipxact:bitOffset>4</ipxact:bitOffset>
+               <ipxact:bitWidth>4</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+             <ipxact:field>
+               <ipxact:name>WDOG_PERIPH_ID3</ipxact:name>
+               <ipxact:description>Customer modification number</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>4</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPECELLID0</ipxact:name>
+             <ipxact:description>PrimeCell ID register 0. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFF0</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x0D</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PCELL_ID0</ipxact:name>
+               <ipxact:description>Component ID register 0</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPECELLID1</ipxact:name>
+             <ipxact:description>PrimeCell ID register 1. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFF4</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0xF0</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PCELL_ID1</ipxact:name>
+               <ipxact:description>Component ID register 1</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPECELLID2</ipxact:name>
+             <ipxact:description>PrimeCell ID register 2. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFF8</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0x05</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PCELL_ID2</ipxact:name>
+               <ipxact:description>Component ID register 2</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+           <ipxact:register>
+             <ipxact:name>WDOGPECELLID3</ipxact:name>
+             <ipxact:description>PrimeCell ID register 3. Read side-effects: None. Write side-effects: None.</ipxact:description>
+             <ipxact:addressOffset>0xFFC</ipxact:addressOffset>
+             <ipxact:size>32</ipxact:size>
+             <ipxact:access>read_only</ipxact:access>
+             <ipxact:volatile>false</ipxact:volatile>
+             <ipxact:reset>
+               <ipxact:value>0xB1</ipxact:value>
+               <ipxact:mask>0xFF</ipxact:mask>
+             </ipxact:reset>
+             <ipxact:field>
+               <ipxact:name>WDOG_PCELL_ID3</ipxact:name>
+               <ipxact:description>Component ID register 3</ipxact:description>
+               <ipxact:bitOffset>0</ipxact:bitOffset>
+               <ipxact:bitWidth>8</ipxact:bitWidth>
+               <ipxact:access>read_only</ipxact:access>
+             </ipxact:field>
+           </ipxact:register>
+         </ipxact:addressBlock>
+       </ipxact:memoryMap>
+     </ipxact:memoryMaps>
+     <ipxact:ports>
+       <ipxact:port>
+         <ipxact:name>wclk</ipxact:name>
+         <ipxact:description>Work clock input for the watchdog timer</ipxact:description>
+         <ipxact:wire>
+           <ipxact:direction>in</ipxact:direction>
+           <ipxact:wireTypeDefs>
+             <ipxact:wireTypeDef>
+               <ipxact:typeName>std_logic</ipxact:typeName>
+             </ipxact:wireTypeDef>
+           </ipxact:wireTypeDefs>
+         </ipxact:wire>
+       </ipxact:port>
+       <ipxact:port>
+         <ipxact:name>wclk_en</ipxact:name>
+         <ipxact:description>Work clock gate for the watchdog timer. Timer operates on enabled clock</ipxact:description>
+         <ipxact:wire>
+           <ipxact:direction>in</ipxact:direction>
+           <ipxact:wireTypeDefs>
+             <ipxact:wireTypeDef>
+               <ipxact:typeName>std_logic</ipxact:typeName>
+             </ipxact:wireTypeDef>
+           </ipxact:wireTypeDefs>
+         </ipxact:wire>
+       </ipxact:port>
+       <ipxact:port>
+         <ipxact:name>wrst_n</ipxact:name>
+         <ipxact:description>Work clock domain reset input (active low, asynchronous)</ipxact:description>
+         <ipxact:wire>
+           <ipxact:direction>in</ipxact:direction>
+           <ipxact:wireTypeDefs>
+             <ipxact:wireTypeDef>
+               <ipxact:typeName>std_logic</ipxact:typeName>
+             </ipxact:wireTypeDef>
+           </ipxact:wireTypeDefs>
+         </ipxact:wire>
+       </ipxact:port>
+       <ipxact:port>
+         <ipxact:name>wdogint</ipxact:name>
+         <ipxact:description>Watchdog interrupt output signal. Asserted when counter reaches zero with INTEN=1</ipxact:description>
+         <ipxact:wire>
+           <ipxact:direction>out</ipxact:direction>
+           <ipxact:wireTypeDefs>
+             <ipxact:wireTypeDef>
+               <ipxact:typeName>std_logic</ipxact:typeName>
+             </ipxact:wireTypeDef>
+           </ipxact:wireTypeDefs>
+         </ipxact:wire>
+       </ipxact:port>
+       <ipxact:port>
+         <ipxact:name>wdogres</ipxact:name>
+         <ipxact:description>Watchdog reset output signal. Asserted when counter reaches zero again with RESEN=1</ipxact:description>
+         <ipxact:wire>
+           <ipxact:direction>out</ipxact:direction>
+           <ipxact:wireTypeDefs>
+             <ipxact:wireTypeDef>
+               <ipxact:typeName>std_logic</ipxact:typeName>
+             </ipxact:wireTypeDef>
+           </ipxact:wireTypeDefs>
+         </ipxact:wire>
+       </ipxact:port>
+     </ipxact:ports>
+   </ipxact:component>)
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:18 UTC (+1.6 minutes)[0m
+   📤 write_file → {'success': True, 'file_path': '/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/wdt-register.xml', 'mode': 'cre...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:18 UTC (+0.0 seconds)[0m
+   Now I need to verify that the XML file is well-formed as specified in the instructions:
+   🔧 bash_command(command=python3 -c "import xml.etree.ElementTree as ET; ET.parse('/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks/wdt-register.xml'); print('XML is well-formed')")
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:23 UTC (+4.9 seconds)[0m
+   📤 bash_command → {'stdout': 'XML is well-formed\n', 'stderr': '', 'return_code': 0, 'command': 'python3 -c "import xml.etree.ElementTree as ET; ET.parse(\'/nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:23 UTC (+0.0 seconds)[0m
+   Perfect! The XML is well-formed. Now I'll proceed with Step 5: Git commit.
+   🔧 bash_command(command=cd /nfs/site/disks/ssm_yongzhuo_001/ai_agents/tests/adk-mcp-rag/g5m_openspec_osdml/wdt_dbg152/adk_openspec_project/specs/001-nfs-site-disks && git add spec.md wdt-register.xml && git commit -m "specify: wdt - Add hardware specification and register definitions")
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:27 UTC (+3.7 seconds)[0m
+   📤 bash_command → {'stdout': '[001-nfs-site-disks b81314e] specify: wdt - Add hardware specification and register definitions\n 2 files changed, 1299 insertions(+)\n create mode 100644 specs/001-nfs-site-disks/spec.md\...
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+[92m🤖 [specify_agent] 2025-12-27 10:44:27 UTC (+0.0 seconds)[0m
+   ## Step 6: Report Completion
+   ✅ /specify command complete
+   Device: wdt | Category: Timer/Counter
+   Files: spec.md (26 reqs), wdt-register.xml (21 registers)
+   Git Commit: b81314e
+   Ready For: /plan command
+   🆔 Invocation: e-eca11e0b-b437-47a5-a760-713eafdaccc5
+
+================================================================================
+⏱️  SESSION TIMING SUMMARY
+================================================================================
+Session Start: 2025-12-27 10:40:36 UTC
+Session End: 2025-12-27 10:44:27 UTC
+Session Duration: 3.9 minutes
+Total Events: 18
+Average Events per Minute: 4.7
+
+🐌 TIME-CONSUMING EVENTS
+========================================
+Found 8 events taking >1 second:
+
+  1. 🤖  1.9 minutes - 📤 write_file → {'success': True, 'file_path': '/nfs/site/disks/ssm_yongzhuo_0...
+      Event #11 at 2025-12-27 10:42:40 UTC
+
+  2. 🤖  1.6 minutes - 📤 write_file → {'success': True, 'file_path': '/nfs/site/disks/ssm_yongzhuo_0...
+      Event #13 at 2025-12-27 10:44:18 UTC
+
+  3. 🤖  4.9 seconds - 📤 bash_command → {'stdout': 'XML is well-formed\n', 'stderr': '', 'return_cod...
+      Event #15 at 2025-12-27 10:44:23 UTC
+
+  4. 🤖  3.7 seconds - 📤 bash_command → {'stdout': '[001-nfs-site-disks b81314e] specify: wdt - Add ...
+      Event #17 at 2025-12-27 10:44:27 UTC
+
+  5. 🤖  2.9 seconds - 📤 bash_command → {'stdout': '{"BRANCH_NAME":"001-nfs-site-disks","SPEC_FILE":...
+      Event #9 at 2025-12-27 10:40:45 UTC
+
+  6. 🤖  2.4 seconds - 📤 read_file → {'content': '---\ndescription: Create hardware IP functional sp...
+      Event #3 at 2025-12-27 10:40:38 UTC
+
+  7. 🤖  2.3 seconds - 📤 read_file → {'content': '# Simics Watchdog Timer Device Implementation Spec...
+      Event #5 at 2025-12-27 10:40:41 UTC
+
+  8. 🤖  2.0 seconds - 📤 read_file → {'content': '\n# 1.\xa0\xa0\xa0\xa0\xa0 范围\n\n本文件描述CPU v3项目MSCP...
+      Event #7 at 2025-12-27 10:40:43 UTC
+
+Total time in slow events: 3.8 minutes
+Average slow event duration: 28.9 seconds
+Percentage of session time: 99.9%
+================================================================================
+✅ Session view complete
+================================================================================

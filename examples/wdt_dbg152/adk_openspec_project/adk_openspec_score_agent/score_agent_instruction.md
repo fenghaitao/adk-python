@@ -1,0 +1,1 @@
+/nfs/site/disks/ssm_yongzhuo_001/ai_agents/adk-python-dev/openspec-scripts/../contributing/samples/openspec_integration/score_agent_instruction.md
