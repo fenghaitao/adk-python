@@ -38,22 +38,41 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
   - Example: If change affects multiple capabilities, read all delta files:
     - `openspec/changes/<id>/specs/capability1/spec.md`
     - `openspec/changes/<id>/specs/capability2/spec.md`
-- **BEFORE writing ANY DML code**: Read `openspec-memories/02_DML_Anti_Patterns.md` to understand what NOT to do
-  - This prevents 90%+ of compilation errors by avoiding common mistakes
-  - Focus on CRITICAL Anti-Patterns 1-6 which cause build failures
+- **BEFORE writing ANY DML code - MANDATORY reading order**:
+  1. **FIRST**: Read `openspec-memories/07_DML_Register_Access_Scope.md` (CRITICAL - prevents 100% of scope/access errors)
+     - Explains HOW to reference banks, registers, and fields in DML code
+     - Shows correct patterns:
+       - Field access: `bank_name.register_name.field_name.val`
+       - Register access: `bank_name.register_name.val`
+       - Example: `regs.CONTROL.ENABLE.val = 1;` or `regs.STATUS.val = 0x00;`
+         - `regs` is the bank name (typically in global namespace, accessible everywhere in DML code)
+         - `CONTROL` and `STATUS` are register names within the `regs` bank
+         - `ENABLE` is a field name within the `CONTROL` register
+     - **AVOID using `this` keyword** - only use when absolutely necessary for name conflicts (very rare)
+     - Prevents "reference to unknown object" compilation errors
+     - **This is the #1 cause of DML compilation failures - READ THIS FIRST**
+  2. **SECOND**: Read `openspec-memories/02_DML_Anti_Patterns.md` (prevents common mistakes)
+     - Shows WHAT NOT to do - common anti-patterns that cause build failures
+     - Focus on CRITICAL Anti-Patterns 1-6 which cause build failures
+     - Complements the scope document by showing additional error patterns
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
-- **DML Error-Driven Development Workflow**:
-  1. Write DML code following anti-pattern guidelines
-  2. Build using `build_simics_project()`
-  3. **IF build fails**: 
-     - **STOP** - do NOT make random changes
-     - **MATCH** error message to anti-pattern in `02_DML_Anti_Patterns.md` (see error mapping below)
-     - **READ** the complete anti-pattern section (wrong code + correct code + explanation)
-     - **APPLY** the exact correction shown in anti-pattern doc
-     - **REBUILD** to verify single fix
-     - **REPEAT** for next error (fix ONE error at a time)
+- **DML Development Workflow**:
+  1. **Before writing DML code**: Read DML best practices documents
+     - **FIRST**: Read `openspec-memories/00_DML_Best_Practices_Index.md` (index file - provides roadmap)
+     - **THEN**: Based on index, read the 2 critical documents:
+       - `openspec-memories/07_DML_Register_Access_Scope.md` (MANDATORY for ALL DML code - prevents scope errors)
+       - `openspec-memories/02_DML_Anti_Patterns.md` (MANDATORY - prevents common mistakes)
+     - **OPTIONALLY**: Read other `0*_DML_*.md` files as needed based on device type (timer, register side-effects, etc.)
+  2. Write DML code following spec requirements and best practices from the documents
+  3. Build using `build_simics_project()`
   4. **IF build succeeds**: Proceed to testing
+  5. **IF build fails with syntax errors**:
+     - **DO NOT make random changes** - consult documentation first
+     - Check error mapping section below to identify which document addresses the error
+     - Fix ALL related errors of the same type together (e.g., all scope errors, then all type errors)
+     - Rebuild after fixing each category of errors
+     - Repeat until build succeeds
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
 
@@ -89,7 +108,12 @@ You will work with TWO completely different programming languages:
 - ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
 
 - When encountering build failures (DML compilation errors):
-  - **MANDATORY FIRST STEP**: Match error message to `openspec-memories/02_DML_Anti_Patterns.md` anti-patterns:
+  - **MANDATORY FIRST STEP**: Check for scope/access errors by consulting `openspec-memories/07_DML_Register_Access_Scope.md`:
+    * `error: reference to unknown object 'bank_name.register_name'` → Wrong scope/access pattern
+    * `error: reference to unknown object 'register_name.field_name'` → Missing bank name in path
+    * Any "reference to unknown object" error → Likely incorrect bank/register/field access pattern
+    * This document explains the correct hierarchical access: `bank_name.register_name.field_name.val`
+  - **SECOND STEP**: If not a scope error, match to `openspec-memories/02_DML_Anti_Patterns.md` anti-patterns:
     * `error: unknown identifier: 'uint32'` or `'uint64'` → CRITICAL Anti-Pattern 6 (incorrect cast() syntax)
     * `error: reference to unknown object 'device.bank'` or `'this.bank'` or `'this.register'` or `'this.field'` → CRITICAL Anti-Pattern 1 (using DML keywords as references)
     * `error: too few arguments to function 'SIM_cycle_count'` or `'SIM_time'` → Anti-Pattern 7 (missing required parameters)
@@ -98,16 +122,15 @@ You will work with TWO completely different programming languages:
     * `error: reference to unknown object 'regs.CONTROL_r'` or `'field_ENABLE'` → Anti-Pattern 8 (adding prefixes/suffixes)
     * `object 'dev' has no valid queue attribute` → CRITICAL Anti-Pattern 4 (SIM_cycle_count in init)
     * `Segmentation fault in _DML_M_init` → CRITICAL Anti-Pattern 3 (interface methods in init)
-  - **SECOND**: Read the matched anti-pattern section completely - it contains:
+  - **THIRD STEP**: Read the matched document section completely - it contains:
     * The EXACT error message you're seeing
     * The WRONG code pattern causing it
     * The CORRECT code pattern to use
     * Explanation of why it fails
-  - **THIRD**: Apply the CORRECT pattern from anti-pattern doc - do NOT guess or try variations
-  - **Additional resources** (only after checking anti-patterns):
+  - **FOURTH STEP**: Apply the CORRECT pattern from the document - do NOT guess or try variations
+  - **Additional resources** (only after checking scope and anti-patterns):
     * `openspec-memories/05_DML_Troubleshooting.md` for general compilation issues
-    * `openspec-memories/07_DML_Register_Access_Scope.md` for scope/access pattern errors
-  - **CRITICAL**: Fix errors ONE AT A TIME - do not try to fix multiple errors simultaneously
+  - **Fix errors by category**: Group similar errors together (e.g., all scope errors, all type errors) and fix them as a batch
   - These are DML-specific issues - do NOT apply Python patterns
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
@@ -164,11 +187,17 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 3. Load ONLY the specific documents needed (avoid loading all documents - be token-efficient)
 
 4. CRITICAL ANTI-PATTERN PREVENTION:
-   - For timer/counter/watchdog devices: MUST read `openspec-memories/02_DML_Anti_Patterns.md` FIRST before any DML implementation
+   - **For ANY DML implementation**: MUST read `openspec-memories/07_DML_Register_Access_Scope.md` FIRST before writing any DML code
+     - This is the #1 cause of DML compilation failures
+     - Teaches HOW to correctly reference banks, registers, and fields
+     - Prevents "reference to unknown object" errors
+     - Without this, 100% of implementations will have scope/access errors
+
+   - For timer/counter/watchdog devices: MUST read `openspec-memories/02_DML_Anti_Patterns.md` SECOND (after reading 07_DML_Register_Access_Scope.md)
      - Anti-Pattern #1 (clock signal modeling) causes 100-1000x performance degradation
      - Anti-Pattern #2 (SIM_cycle_count in init) causes runtime crashes
      - Anti-Pattern #3 (incomplete timer) causes non-functional devices
-     - Reading anti-patterns first prevents generating "obvious but wrong" code that needs fixing
+     - Reading anti-patterns prevents generating "obvious but wrong" code that needs fixing
 
    - For test creation: MUST read `openspec-memories/01_Test_File_Location_Requirements.md` FIRST before creating any test files
      - Wrong location causes test failures

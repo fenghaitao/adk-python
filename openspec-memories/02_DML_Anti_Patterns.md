@@ -171,7 +171,7 @@ If you see ANY of these patterns, it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 3: Calling Interface Methods on Connect Objects in init() or post_init()
+## CRITICAL Anti-Pattern 3: Calling Interface Methods on Connect Objects in device init() method
 
 ### The Problem
 
@@ -195,11 +195,6 @@ method init() {
     interrupt_out.signal.signal_lower();
     reset_out.signal.signal_lower();
 }
-
-method post_init() {
-    // ❌ WRONG! Connections not established yet
-    interrupt_out.signal.signal_lower();
-}
 ```
 
 ### Runtime Error
@@ -212,7 +207,7 @@ The simulation state has been corrupted. Simulation cannot continue.
 
 ### Why This CAUSES SEGFAULT
 
-1. **Connection Timing**: Connect objects are wired up AFTER `init()` and `post_init()` complete
+1. **Connection Timing**: Connect objects are wired up AFTER `init()` complete
 2. **Null Reference**: Interface methods are called on uninitialized/null connect objects
 3. **Default State**: All Simics signals are created in the LOWERED state by default - no initialization needed
 4. **Crash Risk**: Calling interface methods before connections are established causes immediate segmentation fault
@@ -252,23 +247,22 @@ register CONTROL {
 ### Key Facts About Simics Signals
 
 1. **Default State**: All signals are created in the LOWERED state automatically
-2. **No Init Needed**: Never need to call `signal_lower()` in `init()` or `post_init()`
+2. **No Init Needed**: Never need to call `signal_lower()` in `init()`
 3. **Runtime Only**: Only call interface methods during normal device operation (register access, events, etc.)
 4. **Connection Order**: Connections are established by test configuration AFTER device initialization
 
 ### Detection Rules
 
-If you see ANY of these patterns in init()/post_init(), it's WRONG and will SEGFAULT:
-- Calling `.signal.signal_raise()` in `method init()` or `method post_init()`
-- Calling `.signal.signal_lower()` in `method init()` or `method post_init()`
+If you see ANY of these patterns in init(), it's WRONG and will SEGFAULT:
+- Calling `.signal.signal_raise()` in `method init()`
+- Calling `.signal.signal_lower()` in `method init()`
 - Calling ANY interface method on ANY connect object in initialization methods
-- Trying to "initialize" signal states in `init()` or `post_init()`
 
 **Correct Pattern**: Only call interface methods during runtime (register access, event handlers, etc.), NEVER in init().
 
 ---
 
-## CRITICAL Anti-Pattern 4: Calling SIM_cycle_count/SIM_time in init() or post_init()
+## CRITICAL Anti-Pattern 4: Calling SIM_cycle_count/SIM_time in device init() method
 
 ### The Problem
 
@@ -280,11 +274,6 @@ method init() {
     reload_value = 0xffffffff;
     start_cycle = SIM_cycle_count(dev.obj);  // ❌ WRONG! Queue not ready yet
     enabled = 0;
-}
-
-// ❌ FORBIDDEN - Timing APIs in post_init():
-method post_init() {
-    start_time = SIM_time(dev.obj);  // ❌ WRONG! Queue dependency not satisfied
 }
 ```
 
@@ -330,9 +319,9 @@ register CONTROL {
 
 ### Detection Rules
 
-If you see ANY of these patterns in init()/post_init(), it's WRONG:
-- `SIM_cycle_count(dev.obj)` in `method init()` or `method post_init()`
-- `SIM_time(dev.obj)` in `method init()` or `method post_init()`
+If you see ANY of these patterns in init(), it's WRONG:
+- `SIM_cycle_count(dev.obj)` in `method init()`
+- `SIM_time(dev.obj)` in `method init()`
 - Any timing API that depends on queue in initialization methods
 
 **Correct Pattern**: Initialize timing state on first register access or when timer is enabled, NOT in init().
@@ -948,9 +937,9 @@ register counter {
 2. **ALWAYS** read `07_DML_Register_Access_Scope.md` to understand correct scope patterns
 3. **NEVER** use `dev.bank.*` or `this.bank.*` or `this.register.*` or `this.field.*` syntax
 4. **NEVER** model clock signals or update counters every cycle
-5. **NEVER** call interface methods on connect objects in `init()` or `post_init()` - causes SEGFAULT
+5. **NEVER** call interface methods on connect objects in `init()` - causes SEGFAULT
 6. **REMEMBER** all Simics signals default to LOWERED state - no manual initialization needed
-7. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
+7. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()`
 8. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
 9. **ALWAYS** use correct `cast()` syntax: `cast(value, type)` - value FIRST, type SECOND
 10. **ALWAYS** use MCP RAG tool when unsure about DML library method syntax
