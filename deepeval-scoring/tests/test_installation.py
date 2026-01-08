@@ -18,6 +18,10 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_imports():
@@ -29,7 +33,7 @@ def test_imports():
     from metrics.code_correctness import CodeCorrectnessMetric
     from metrics.test_coverage import TestCoverageMetric
     from metrics.code_style import CodeStyleMetric
-    from metrics.documentation_usage import DocumentationUsageMetric
+    from metrics.agent_behavior import AgentBehaviorMetric
     print("✅ Metrics imported successfully")
     
     # Test evaluators
@@ -47,6 +51,14 @@ def test_imports():
     # Test report generator
     from report_generator import ReportGenerator
     print("✅ Report generator imported successfully")
+    
+    # Test MLflow tracking (optional)
+    try:
+      from tracking.mlflow_tracker import MLflowTracker
+      from tracking.experiment_manager import ExperimentManager
+      print("✅ MLflow tracking imported successfully")
+    except ImportError as e:
+      print(f"⚠️  MLflow tracking not available: {e}")
     
     return True
     
@@ -147,3 +159,31 @@ def main():
 
 if __name__ == "__main__":
   main()
+
+
+def test_installation():
+  """Pytest-compatible test function."""
+  import sys
+  from io import StringIO
+  
+  # Capture stdout
+  old_stdout = sys.stdout
+  sys.stdout = captured_output = StringIO()
+  
+  try:
+    deps_ok = test_dependencies()
+    imports_ok = test_imports()
+    pkg_ok = test_package_info()
+    
+    # Restore stdout
+    sys.stdout = old_stdout
+    
+    # Assert that all tests passed
+    assert deps_ok, "Dependencies test failed"
+    assert imports_ok, "Imports test failed"
+    assert pkg_ok, "Package info test failed"
+    
+  except Exception:
+    # Restore stdout in case of exception
+    sys.stdout = old_stdout
+    raise

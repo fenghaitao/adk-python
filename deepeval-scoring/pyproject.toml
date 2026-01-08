@@ -164,11 +164,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--verbose",
-    "--cov=metrics",
-    "--cov=evaluators",
-    "--cov=parsers",
-    "--cov-report=term-missing",
-    "--cov-report=html",
 ]
 
 [tool.coverage.run]
