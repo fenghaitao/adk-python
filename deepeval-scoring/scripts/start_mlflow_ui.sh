@@ -47,15 +47,10 @@ cd "$PROJECT_DIR"
 
 echo "🚀 Starting MLflow UI server..."
 echo "📁 Project directory: $PROJECT_DIR"
-echo "🗄️  Database: sqlite:///mlflow.db"
 echo "🌐 Port: $PORT"
 echo ""
-echo "📊 MLflow UI will be available at: http://localhost:$PORT"
-echo ""
-echo "Press Ctrl+C to stop the server"
-echo ""
 
-# Start MLflow UI (use resolved database path from config)
+# Start MLflow UI (use resolved tracking URI from config)
 PYTHON_SCRIPT="
 import yaml
 from pathlib import Path
@@ -73,7 +68,11 @@ print(tracking_uri)
 "
 
 RESOLVED_URI=$(python -c "$PYTHON_SCRIPT")
-echo "🗄️  Resolved database URI: $RESOLVED_URI"
+echo "🗄️  MLflow tracking URI: $RESOLVED_URI"
+echo "📊 MLflow UI will be available at: http://localhost:$PORT"
+echo ""
+echo "Press Ctrl+C to stop the server"
+echo ""
 
-# Start MLflow UI
+# Start MLflow UI with the resolved tracking URI
 mlflow ui --backend-store-uri "$RESOLVED_URI" --port "$PORT"
