@@ -259,8 +259,6 @@ class MLflowTracker:
   def log_artifacts(
       self,
       workdir: str,
-      report_content: str,
-      report_format: str = "markdown",
       code_results: Optional[Dict] = None,
       behavior_results: Optional[Dict] = None,
       deterministic_results: Optional[Dict] = None
@@ -269,8 +267,6 @@ class MLflowTracker:
     
     Args:
       workdir: Working directory path
-      report_content: Generated report content
-      report_format: Report format (markdown, json, html)
       code_results: Code evaluation results
       behavior_results: Behavior evaluation results
       deterministic_results: Deterministic evaluation results
@@ -283,12 +279,11 @@ class MLflowTracker:
     with tempfile.TemporaryDirectory() as temp_dir:
       temp_path = Path(temp_dir)
       
-      # Log evaluation report
-      if artifacts_config.get("log_reports", True):
-        report_ext = {"markdown": "md", "json": "json", "html": "html"}[report_format]
-        report_file = temp_path / f"evaluation_report.{report_ext}"
-        report_file.write_text(report_content)
-        mlflow.log_artifact(str(report_file), "reports")
+      # Log the actual score.md file if it exists in workdir
+      if artifacts_config.get("log_score_file", True):
+        score_file_path = Path(workdir) / "score.md"
+        if score_file_path.exists():
+          mlflow.log_artifact(str(score_file_path), "reports")
       
       # Log raw results as JSON
       if artifacts_config.get("log_raw_results", True):

@@ -41,7 +41,7 @@ mlflow:
   
   # Artifact configuration
   artifacts:
-    log_reports: true
     log_raw_results: true
     log_session_logs: true
     log_config_files: true
+    log_score_file: true  # Include the actual score.md file from workdir

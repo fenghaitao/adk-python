@@ -229,8 +229,6 @@ def main():
       # Log artifacts
       mlflow_tracker.log_artifacts(
         workdir=args.workdir,
-        report_content=report,
-        report_format=args.format,
         code_results=code_results,
         behavior_results=behavior_results,
         deterministic_results=deterministic_results
