@@ -110,19 +110,19 @@ if [[ "${run_stage[0]}" == "1" ]]; then
     echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir}.0.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.0.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-openspec-copilot.sh adk_openspec_project $mcp_server_port --init-only" "$log_dir/${proj_dir}.0.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-openspec-copilot.sh . $mcp_server_port --init-only" "$log_dir/${proj_dir}.0.log"
 fi
 
 if [[ "${run_stage[1]}" == "1" ]]; then
     echo "=== Stage 1: proposal initialization ===" | tee "$log_dir/${proj_dir}.1.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-copilot-proposal.sh adk_openspec_project $mcp_server_port" "$log_dir/${proj_dir}.1.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-copilot-proposal.sh . $mcp_server_port" "$log_dir/${proj_dir}.1.log"
 fi
 
 if [[ "${run_stage[2]}" == "1" ]]; then
     echo "=== Stage 2: appy the changes ===" | tee "$log_dir/${proj_dir}.2.log"
     echo "Using model: claude-sonnet-4.5" | tee -a "$log_dir/${proj_dir}.2.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-copilot-apply.sh adk_openspec_project $mcp_server_port" "$log_dir/${proj_dir}.2.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run-copilot-apply.sh . $mcp_server_port" "$log_dir/${proj_dir}.2.log"
 fi
