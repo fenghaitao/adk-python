@@ -16,7 +16,7 @@
 
 mlflow:
   # Tracking URI - can be overridden via CLI or environment variable
-  tracking_uri: "file:///tmp/mlruns"  # Default local storage
+  tracking_uri: "sqlite:///mlflow.db"  # Local SQLite database in project directory
   
   # Experiment naming pattern
   experiment_naming: "{device_name}-evaluation"

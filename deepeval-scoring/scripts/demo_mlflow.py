@@ -43,8 +43,8 @@ def demo_mlflow_integration():
   
   # Create temporary tracking directory
   with tempfile.TemporaryDirectory() as temp_dir:
-    tracking_uri = f"file://{temp_dir}/mlruns"
-    print(f"📁 Using temporary tracking URI: {tracking_uri}")
+    tracking_uri = f"sqlite:///{Path(__file__).parent.parent}/mlflow.db"
+    print(f"📁 Using local tracking URI: {tracking_uri}")
     
     # Initialize tracker
     tracker = MLflowTracker(tracking_uri=tracking_uri)
@@ -133,8 +133,8 @@ def demo_mlflow_integration():
     
     print("\n✅ Demo completed successfully!")
     print("💡 To view results in MLflow UI:")
-    print(f"   mlflow ui --backend-store-uri {tracking_uri}")
-    print("   Then open http://localhost:5000")
+    print("   Already running at http://localhost:5002")
+    print("   Or start manually: mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5002")
 
 
 if __name__ == "__main__":

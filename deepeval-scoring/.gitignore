@@ -40,6 +40,12 @@ htmlcov/
 # DeepEval
 .deepeval/
 
+# MLflow
+mlflow.db
+mlflow.db-*
+mlruns/
+mlartifacts/
+
 # Reports
 *.md
 *.json
