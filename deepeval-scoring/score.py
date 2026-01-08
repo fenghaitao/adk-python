@@ -41,6 +41,8 @@ from evaluators.code_evaluator import CodeEvaluator
 from evaluators.behavior_evaluator import BehaviorEvaluator
 from metrics.deterministic_scoring import DeterministicScorer
 from report_generator import ReportGenerator
+from tracking.mlflow_tracker import MLflowTracker
+from tracking.utils import is_mlflow_available
 
 
 def main():
@@ -97,6 +99,19 @@ def main():
     "--reference-dir",
     help="Directory containing golden reference implementation for LLM-powered comparison"
   )
+  parser.add_argument(
+    "--mlflow",
+    action="store_true",
+    help="Enable MLflow experiment tracking"
+  )
+  parser.add_argument(
+    "--mlflow-tracking-uri",
+    help="MLflow tracking URI (overrides config)"
+  )
+  parser.add_argument(
+    "--mlflow-experiment-name",
+    help="MLflow experiment name (overrides config pattern)"
+  )
   
   args = parser.parse_args()
   
@@ -105,9 +120,43 @@ def main():
     print("❌ Error: --result-only and --behavior-only are mutually exclusive")
     sys.exit(1)
   
+  # Check MLflow availability if requested
+  mlflow_tracker = None
+  if args.mlflow:
+    if not is_mlflow_available():
+      print("❌ Error: MLflow is not available. Install with: pip install mlflow")
+      sys.exit(1)
+    
+    try:
+      mlflow_tracker = MLflowTracker(
+        tracking_uri=args.mlflow_tracking_uri,
+        experiment_name=args.mlflow_experiment_name
+      )
+      print(f"🔬 MLflow tracking enabled: {mlflow_tracker.get_tracking_uri()}")
+    except Exception as e:
+      print(f"❌ Error initializing MLflow: {e}")
+      sys.exit(1)
+  
   # Initialize evaluators based on scoring mode and options
   code_results = None
   deterministic_results = None
+  
+  # Start MLflow run if enabled
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.start_run(
+        device_name=args.device,
+        model=args.model,
+        scoring_mode=args.scoring_mode,
+        workdir=args.workdir,
+        agent=args.agent,
+        result_only=args.result_only,
+        behavior_only=args.behavior_only,
+        reference_dir=args.reference_dir
+      )
+    except Exception as e:
+      print(f"❌ Error starting MLflow run: {e}")
+      mlflow_tracker = None  # Disable tracking on error
   
   # Skip code evaluation if behavior-only mode
   if not args.behavior_only:
@@ -166,11 +215,46 @@ def main():
   
   print(f"✅ Report saved to: {output_path}")
   
+  # Log to MLflow if enabled
+  if mlflow_tracker:
+    try:
+      # Log metrics
+      mlflow_tracker.log_metrics(
+        code_results=code_results,
+        behavior_results=behavior_results,
+        deterministic_results=deterministic_results,
+        scoring_mode=args.scoring_mode
+      )
+      
+      # Log artifacts
+      mlflow_tracker.log_artifacts(
+        workdir=args.workdir,
+        report_content=report,
+        report_format=args.format,
+        code_results=code_results,
+        behavior_results=behavior_results,
+        deterministic_results=deterministic_results
+      )
+      
+      print(f"🔬 Results logged to MLflow run: {mlflow_tracker.get_run_id()}")
+      
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to log to MLflow: {e}")
+  
   # Print summary
   print_summary(code_results, behavior_results, deterministic_results, args.scoring_mode)
   
   # Exit with appropriate code
   overall_score = calculate_overall_score(code_results, behavior_results, deterministic_results, args.scoring_mode)
+  
+  # End MLflow run
+  if mlflow_tracker:
+    try:
+      status = "FINISHED" if overall_score >= 0.7 else "FAILED"
+      mlflow_tracker.end_run(status=status)
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to end MLflow run: {e}")
+  
   sys.exit(0 if overall_score >= 0.7 else 1)
 
 

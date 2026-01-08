@@ -127,11 +127,129 @@ python score.py \
   --device wdt \
   --format html \
   --output report.html
+
+# Enable MLflow experiment tracking
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --mlflow
+
+# Use custom MLflow tracking URI
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --mlflow \
+  --mlflow-tracking-uri http://localhost:5000
+
+# Use custom experiment name
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --mlflow \
+  --mlflow-experiment-name "wdt-evaluation-v2"
+```
+
+## MLflow Integration
+
+DeepEval Scoring now includes MLflow integration for experiment tracking and result management.
+
+### Features
+
+- **Experiment Tracking**: Automatically organize runs by device and configuration
+- **Metrics Logging**: Track all evaluation scores and component metrics
+- **Artifact Storage**: Store reports, raw results, and session logs
+- **Run Comparison**: Compare performance across different models and configurations
+- **Historical Analysis**: Track performance trends over time
+
+### Setup
+
+MLflow integration requires the local MLflow installation:
+
+```bash
+# MLflow is already included as a dependency via the submodule
+# No additional installation needed
+```
+
+### Usage
+
+Enable MLflow tracking with the `--mlflow` flag:
+
+```bash
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --model iflow/qwen3-coder-plus \
+  --mlflow
+```
+
+### Configuration
+
+MLflow settings can be configured in `config/mlflow_config.yaml`:
+
+```yaml
+mlflow:
+  tracking_uri: "file:///tmp/mlruns"  # Local storage
+  experiment_naming: "{device_name}-evaluation"
+  auto_log_artifacts: true
+  log_system_metrics: true
+```
+
+### Experiment Management
+
+Use the provided utilities to manage experiments:
+
+```bash
+# List all experiments
+python scripts/compare_experiments.py --list-experiments
+
+# List runs in an experiment
+python scripts/compare_experiments.py \
+  --experiment "wdt-evaluation" \
+  --list-runs
+
+# Compare specific runs
+python scripts/compare_experiments.py \
+  --runs run_id_1 run_id_2 run_id_3
+
+# Find best run by metric
+python scripts/compare_experiments.py \
+  --experiment "wdt-evaluation" \
+  --metric overall_score
+
+# Export results to CSV
+python scripts/export_results.py \
+  --experiment "wdt-evaluation" \
+  --output results.csv \
+  --format csv
+```
+
+### MLflow UI
+
+Start the MLflow UI to view experiments in a web interface:
+
+```bash
+# Start MLflow UI (assumes local file storage)
+mlflow ui --backend-store-uri file:///tmp/mlruns
+
+# Access at http://localhost:5000
+```
+
+### Environment Variables
+
+Configure MLflow using environment variables:
+
+```bash
+# Set tracking URI
+export MLFLOW_TRACKING_URI="http://localhost:5000"
+
+# Set default experiment
+export MLFLOW_EXPERIMENT_NAME="my-evaluation"
 ```
 
 ## Scoring Criteria
-
-### Deterministic Scoring (90 points)
 
 When using `--scoring-mode deterministic` or `hybrid`:
 
