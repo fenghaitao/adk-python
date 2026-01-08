@@ -61,12 +61,23 @@ class MLflowTracker:
     
     try:
       with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+      
+      # Resolve PROJECT_ROOT placeholder in tracking_uri
+      if "{{ PROJECT_ROOT }}" in config["mlflow"]["tracking_uri"]:
+        project_root = Path(__file__).parent.parent.parent  # Go up to adk-python root
+        tracking_uri = config["mlflow"]["tracking_uri"].replace(
+          "{{ PROJECT_ROOT }}", str(project_root)
+        )
+        config["mlflow"]["tracking_uri"] = tracking_uri
+      
+      return config
     except FileNotFoundError:
       # Return default configuration if file not found
+      project_root = Path(__file__).parent.parent.parent
       return {
         "mlflow": {
-          "tracking_uri": "file:///tmp/mlruns",
+          "tracking_uri": f"sqlite:///{project_root}/deepeval-scoring/mlflow.db",
           "experiment_naming": "{device_name}-evaluation",
           "auto_log_artifacts": True,
           "log_system_metrics": True,
@@ -214,8 +225,10 @@ class MLflowTracker:
       
       # Log individual metric scores
       for metric_name, result in code_results["metrics"].items():
-        metrics[f"llm_code_{metric_name}_score"] = result["score"]
-        metrics[f"llm_code_{metric_name}_success"] = 1.0 if result["success"] else 0.0
+        # Sanitize metric name for MLflow (remove invalid characters)
+        clean_name = metric_name.replace("[", "").replace("]", "").replace(" ", "_")
+        metrics[f"llm_code_{clean_name}_score"] = result["score"]
+        metrics[f"llm_code_{clean_name}_success"] = 1.0 if result["success"] else 0.0
     
     # Log behavior metrics
     if behavior_results:
@@ -223,8 +236,10 @@ class MLflowTracker:
       
       # Log individual behavior metric scores
       for metric_name, result in behavior_results["metrics"].items():
-        metrics[f"behavior_{metric_name}_score"] = result["score"]
-        metrics[f"behavior_{metric_name}_success"] = 1.0 if result["success"] else 0.0
+        # Sanitize metric name for MLflow (remove invalid characters)
+        clean_name = metric_name.replace("[", "").replace("]", "").replace(" ", "_")
+        metrics[f"behavior_{clean_name}_score"] = result["score"]
+        metrics[f"behavior_{clean_name}_success"] = 1.0 if result["success"] else 0.0
     
     # Calculate and log overall score
     overall_score = self._calculate_overall_score(

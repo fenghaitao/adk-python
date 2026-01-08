@@ -16,7 +16,8 @@
 
 mlflow:
   # Tracking URI - can be overridden via CLI or environment variable
-  tracking_uri: "sqlite:///mlflow.db"  # Local SQLite database in project directory
+  # Use absolute path to avoid confusion about database location
+  tracking_uri: "sqlite:///{{ PROJECT_ROOT }}/deepeval-scoring/mlflow.db"
   
   # Experiment naming pattern
   experiment_naming: "{device_name}-evaluation"
