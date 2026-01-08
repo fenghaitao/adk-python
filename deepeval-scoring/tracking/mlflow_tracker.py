@@ -52,6 +52,11 @@ class MLflowTracker:
     
     # Set up MLflow
     mlflow.set_tracking_uri(self.tracking_uri)
+    
+    # Set artifact root if specified
+    if "artifact_root" in self.config["mlflow"]:
+      import os
+      os.environ["MLFLOW_DEFAULT_ARTIFACT_ROOT"] = self.config["mlflow"]["artifact_root"]
   
   def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
     """Load MLflow configuration."""
@@ -70,6 +75,14 @@ class MLflowTracker:
           "{{ PROJECT_ROOT }}", str(project_root)
         )
         config["mlflow"]["tracking_uri"] = tracking_uri
+      
+      # Resolve PROJECT_ROOT placeholder in artifact_root
+      if "artifact_root" in config["mlflow"] and "{{ PROJECT_ROOT }}" in config["mlflow"]["artifact_root"]:
+        project_root = Path(__file__).parent.parent.parent  # Go up to adk-python root
+        artifact_root = config["mlflow"]["artifact_root"].replace(
+          "{{ PROJECT_ROOT }}", str(project_root)
+        )
+        config["mlflow"]["artifact_root"] = artifact_root
       
       return config
     except FileNotFoundError:
