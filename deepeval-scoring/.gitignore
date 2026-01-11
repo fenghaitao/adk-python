@@ -46,11 +46,15 @@ mlflow.db-*
 mlruns/
 mlartifacts/
 
-# Reports
-*.md
-*.json
-*.html
+# Reports (exclude generated reports but keep documentation)
+score.md
+results.json
+report.html
 !README.md
+!QUICKSTART.md
+!IMPLEMENTATION_SUMMARY.md
+!MEMORY_FILE_OPTIMIZATION_GUIDE.md
+!MLFLOW_INTEGRATION.md
 
 # Logs
 *.log

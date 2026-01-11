@@ -154,100 +154,101 @@ python score.py \
 
 ## MLflow Integration
 
-DeepEval Scoring now includes MLflow integration for experiment tracking and result management.
+DeepEval Scoring includes MLflow integration for experiment tracking, artifact storage, and seamless integration with the optimization workflow.
 
 ### Features
 
 - **Experiment Tracking**: Automatically organize runs by device and configuration
 - **Metrics Logging**: Track all evaluation scores and component metrics
-- **Artifact Storage**: Store reports, raw results, and session logs
+- **Artifact Storage**: Store reports, raw results, session logs, and implementation files
+- **Session Data for Optimizer**: Automatically log session data in format compatible with optimization tools
 - **Run Comparison**: Compare performance across different models and configurations
 - **Historical Analysis**: Track performance trends over time
 
-### Setup
-
-MLflow integration requires the local MLflow installation:
+### Quick Start
 
 ```bash
-# MLflow is already included as a dependency via the submodule
-# No additional installation needed
-```
-
-### Usage
-
-Enable MLflow tracking with the `--mlflow` flag:
-
-```bash
+# Enable MLflow tracking
 python score.py \
   --workdir /path/to/project \
   --device wdt \
   --model iflow/qwen3-coder-plus \
   --mlflow
+
+# View results in MLflow UI
+cd deepeval-scoring
+mlflow ui
+# Open http://localhost:5000
+```
+
+### Artifacts Logged
+
+Each MLflow run automatically logs:
+- **Session Data**: `session_data/session_data.json` - For use with optimizer tools
+- **Implementation Files**: `implementation/{device}/` - DML and test files
+- **Session Logs**: `logs/*.session.txt` - Agent session logs
+- **Score Report**: `reports/score.md` - Evaluation report
+- **Raw Results**: `results/raw_results.json` - Detailed evaluation data
+- **Configuration**: `config/mlflow_config.yaml` - MLflow settings
+
+### Integration with Optimizer
+
+Extract session data from MLflow runs for optimization:
+
+```bash
+# Extract low-scoring sessions for instruction optimization
+python extract_mlflow_sessions.py \
+  --experiment wdt-evaluation \
+  --max-score 0.8 \
+  --output sessions.json
+
+# Optimize instructions using extracted sessions
+python optimize_instructions.py \
+  --sessions sessions.json \
+  --instructions ../contributing/samples/openspec_integration/apply_agent_instruction.md \
+  --output optimized_instructions.md
+
+# Optimize memory files
+python optimize_memory_file.py \
+  --sessions sessions.json \
+  --memory-file ../openspec-memories/dml/01_dml_syntax_errors.md \
+  --output optimized_memory.md
 ```
 
 ### Configuration
 
-MLflow settings can be configured in `config/mlflow_config.yaml`:
+MLflow settings are in `config/mlflow_config.yaml`:
 
 ```yaml
 mlflow:
-  tracking_uri: "file:///tmp/mlruns"  # Local storage
+  tracking_uri: "file://{{ PROJECT_ROOT }}/deepeval-scoring/mlruns"
   experiment_naming: "{device_name}-evaluation"
-  auto_log_artifacts: true
-  log_system_metrics: true
+  artifacts:
+    log_session_data: true  # For optimizer
+    log_implementation_files: true  # DML and tests
+    log_session_logs: true
+    log_score_file: true
 ```
 
-### Experiment Management
-
-Use the provided utilities to manage experiments:
+### Advanced Usage
 
 ```bash
-# List all experiments
-python scripts/compare_experiments.py --list-experiments
+# Use custom tracking URI
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --mlflow \
+  --mlflow-tracking-uri file:///custom/path/mlruns
 
-# List runs in an experiment
-python scripts/compare_experiments.py \
-  --experiment "wdt-evaluation" \
-  --list-runs
-
-# Compare specific runs
-python scripts/compare_experiments.py \
-  --runs run_id_1 run_id_2 run_id_3
-
-# Find best run by metric
-python scripts/compare_experiments.py \
-  --experiment "wdt-evaluation" \
-  --metric overall_score
-
-# Export results to CSV
-python scripts/export_results.py \
-  --experiment "wdt-evaluation" \
-  --output results.csv \
-  --format csv
+# Use custom experiment name
+python score.py \
+  --workdir /path/to/project \
+  --device wdt \
+  --mlflow \
+  --mlflow-experiment-name my-experiment
 ```
 
-### MLflow UI
-
-Start the MLflow UI to view experiments in a web interface:
-
-```bash
-# Start MLflow UI (assumes local file storage)
-mlflow ui --backend-store-uri file:///tmp/mlruns
-
-# Access at http://localhost:5000
-```
-
-### Environment Variables
-
-Configure MLflow using environment variables:
-
-```bash
-# Set tracking URI
-export MLFLOW_TRACKING_URI="http://localhost:5000"
-
-# Set default experiment
-export MLFLOW_EXPERIMENT_NAME="my-evaluation"
-```
+For complete documentation, see [MLFLOW_INTEGRATION.md](MLFLOW_INTEGRATION.md).
 
 ## Scoring Criteria
 

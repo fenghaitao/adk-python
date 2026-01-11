@@ -45,3 +45,5 @@ mlflow:
     log_session_logs: true
     log_config_files: true
     log_score_file: true  # Include the actual score.md file from workdir
+    log_session_data: true  # Session data for optimizer (collect_session_data.py format)
+    log_implementation_files: true  # DML and test files

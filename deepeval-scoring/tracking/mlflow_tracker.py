@@ -305,12 +305,31 @@ class MLflowTracker:
         results_file.write_text(json.dumps(raw_results, indent=2))
         mlflow.log_artifact(str(results_file), "results")
       
+      # Log session data for optimizer (NEW)
+      if artifacts_config.get("log_session_data", True):
+        session_data = self._collect_session_data(
+          workdir, code_results, behavior_results, deterministic_results
+        )
+        if session_data:
+          session_file = temp_path / "session_data.json"
+          session_file.write_text(json.dumps(session_data, indent=2))
+          mlflow.log_artifact(str(session_file), "session_data")
+          print("📊 Logged session data for optimizer")
+      
       # Log session logs if they exist
       if artifacts_config.get("log_session_logs", True):
         session_logs_dir = Path(workdir) / ".deepeval"
         if session_logs_dir.exists():
           for log_file in session_logs_dir.glob("*.log"):
             mlflow.log_artifact(str(log_file), "logs")
+        
+        # Also look for session logs in workdir root
+        for log_file in Path(workdir).glob("*.session.txt"):
+          mlflow.log_artifact(str(log_file), "logs")
+      
+      # Log implementation files (NEW)
+      if artifacts_config.get("log_implementation_files", True):
+        self._log_implementation_files(workdir, temp_path)
       
       # Log configuration files
       if artifacts_config.get("log_config_files", True):
@@ -319,6 +338,146 @@ class MLflowTracker:
         mlflow.log_artifact(str(config_file), "config")
     
     print("📁 Logged artifacts to MLflow")
+  
+  def _collect_session_data(
+      self,
+      workdir: str,
+      code_results: Optional[Dict],
+      behavior_results: Optional[Dict],
+      deterministic_results: Optional[Dict]
+  ) -> Optional[Dict]:
+    """Collect session data in format needed for optimizer.
+    
+    This creates a session data structure compatible with collect_session_data.py
+    output, so MLflow artifacts can be used directly for optimization.
+    
+    Args:
+      workdir: Working directory path
+      code_results: Code evaluation results
+      behavior_results: Behavior evaluation results
+      deterministic_results: Deterministic evaluation results
+      
+    Returns:
+      Session data dictionary or None if data incomplete
+    """
+    workdir_path = Path(workdir)
+    
+    # Try to find device name from workdir or results
+    device_name = None
+    if code_results and 'device_name' in code_results:
+      device_name = code_results['device_name']
+    else:
+      # Try to extract from workdir path
+      # Assuming workdir contains simics-project/modules/<device>
+      modules_dir = workdir_path / "simics-project" / "modules"
+      if modules_dir.exists():
+        device_dirs = [d for d in modules_dir.iterdir() if d.is_dir()]
+        if device_dirs:
+          device_name = device_dirs[0].name
+    
+    if not device_name:
+      return None
+    
+    # Find implementation file
+    dml_file = workdir_path / f"simics-project/modules/{device_name}/{device_name}.dml"
+    implementation = ""
+    if dml_file.exists():
+      implementation = dml_file.read_text()
+    
+    # Find test files
+    test_dir = workdir_path / f"simics-project/modules/{device_name}/test"
+    tests_content = ""
+    if test_dir.exists():
+      test_files = list(test_dir.glob("s-*.py"))
+      if test_files:
+        tests_content = "\n\n".join([f.read_text() for f in test_files])
+    
+    # Find spec file
+    spec_file = workdir_path / f"specs/{device_name}/spec.md"
+    spec_content = ""
+    if spec_file.exists():
+      spec_content = spec_file.read_text()
+    
+    # Find session log
+    session_log = ""
+    session_files = list(workdir_path.glob("*.session.txt"))
+    if session_files:
+      session_log = session_files[0].read_text()
+    
+    # Extract task description from spec or session log
+    task_description = f"Implement {device_name} device"
+    if spec_content:
+      # Try to extract overview from spec
+      lines = spec_content.split('\n')
+      for i, line in enumerate(lines):
+        if 'overview' in line.lower() or 'description' in line.lower():
+          # Take next few lines
+          task_description = '\n'.join(lines[i:min(i+5, len(lines))])
+          break
+    
+    # Calculate overall score
+    overall_score = self._calculate_overall_score(
+      code_results, behavior_results, deterministic_results, "hybrid"
+    )
+    
+    # Build session data structure
+    session_data = {
+      "device_name": device_name,
+      "task_description": task_description,
+      "implementation": implementation,
+      "tests": tests_content,
+      "spec": spec_content,
+      "session_log": session_log,
+      "score": overall_score,
+      "metrics": {
+        "code": code_results.get("metrics", {}) if code_results else {},
+        "behavior": behavior_results.get("metrics", {}) if behavior_results else {},
+        "deterministic": deterministic_results.get("component_scores", {}) if deterministic_results else {}
+      },
+      "dml_components": deterministic_results.get("details", {}) if deterministic_results else {},
+      "num_test_files": len(list(test_dir.glob("s-*.py"))) if test_dir.exists() else 0,
+      "timestamp": datetime.now().isoformat(),
+      "mlflow_run_id": self.run_id
+    }
+    
+    return session_data
+  
+  def _log_implementation_files(self, workdir: str, temp_path: Path):
+    """Log implementation and test files as artifacts.
+    
+    Args:
+      workdir: Working directory path
+      temp_path: Temporary directory for staging files
+    """
+    workdir_path = Path(workdir)
+    
+    # Find simics-project directory
+    simics_project = workdir_path / "simics-project"
+    if not simics_project.exists():
+      return
+    
+    # Find modules
+    modules_dir = simics_project / "modules"
+    if not modules_dir.exists():
+      return
+    
+    # Log each device module
+    for device_dir in modules_dir.iterdir():
+      if not device_dir.is_dir():
+        continue
+      
+      device_name = device_dir.name
+      
+      # Log DML file
+      dml_file = device_dir / f"{device_name}.dml"
+      if dml_file.exists():
+        mlflow.log_artifact(str(dml_file), f"implementation/{device_name}")
+      
+      # Log test files
+      test_dir = device_dir / "test"
+      if test_dir.exists():
+        for test_file in test_dir.glob("*.py"):
+          mlflow.log_artifact(str(test_file), f"implementation/{device_name}/test")
   
   def end_run(self, status: str = "FINISHED"):
     """End the current MLflow run.
