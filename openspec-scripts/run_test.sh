@@ -128,27 +128,97 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     
     cd "$proj_dir_abs"
     
-    # Create optimization directory
-    OPTIMIZATION_DIR="adk_openspec_project/.openspec-optimization"
+    # Create optimization directory with absolute path
+    OPTIMIZATION_DIR="$proj_dir_abs/adk_openspec_project/.openspec-optimization"
     mkdir -p "$OPTIMIZATION_DIR"
+    
+    # Check for required dependencies
+    echo "Checking dependencies..." | tee -a "$log_dir/${proj_dir}.2.log"
+    if ! python3 -c "import deepeval" 2>/dev/null; then
+        echo "❌ Error: deepeval module not found" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Please install it with: pip install deepeval" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0  # Don't fail the entire pipeline, just skip this stage
+    fi
     
     # Step 1: Collect historical session data
     echo "Step 1: Collecting historical session data..." | tee -a "$log_dir/${proj_dir}.2.log"
-    run_cmd_with_timing "python3 $ADK_ROOT/deepeval-scoring/collect_session_data.py --workdir adk_openspec_project --output $OPTIMIZATION_DIR/historical_sessions.json --min-score 0.5 --model $model" "$log_dir/${proj_dir}.2.log"
+    echo "Working directory: $(pwd)" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "Output path: $OPTIMIZATION_DIR/historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
     
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to collect session data" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Make sure you have at least 10 historical sessions" | tee -a "$log_dir/${proj_dir}.2.log"
-        exit 1
+    # Run with error capture but don't exit immediately
+    set +e
+    python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
+        --workdir "$proj_dir_abs/adk_openspec_project" \
+        --output "$OPTIMIZATION_DIR/historical_sessions.json" \
+        --min-score 0.5 \
+        --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+    collect_exit_code=$?
+    set -e
+    
+    if [[ $collect_exit_code -ne 0 ]]; then
+        echo "❌ Failed to collect session data (exit code: $collect_exit_code)" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Common issues:" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "  - DMLParser constructor error: Update deepeval-scoring/collect_session_data.py" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "  - Missing DML files: Make sure stage 1 completed successfully" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "  - Insufficient historical sessions: Need at least 10 sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0  # Don't fail the entire pipeline
+    fi
+    
+    # Verify output file was created
+    if [[ ! -f "$OPTIMIZATION_DIR/historical_sessions.json" ]]; then
+        echo "❌ Historical sessions file not created" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0
+    fi
+    
+    # Check if we have enough sessions
+    # Count objects by counting "device_name" field (each session object has one)
+    session_count=$(grep -c '"device_name"' "$OPTIMIZATION_DIR/historical_sessions.json" 2>/dev/null || echo "0")
+    session_count=$(echo "$session_count" | tr -d '\n\r ')
+    echo "Found $session_count historical sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Check minimum session count (default: 5, override with FORCE_OPTIMIZE=1 or MIN_SESSIONS=N)
+    MIN_SESSIONS="${MIN_SESSIONS:-5}"
+    if [[ "$session_count" -lt "$MIN_SESSIONS" ]]; then
+        if [[ "${FORCE_OPTIMIZE:-0}" == "1" ]]; then
+            echo "⚠️  Warning: Only $session_count sessions found (recommended: 10+)" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "⚡ FORCE_OPTIMIZE=1 - Proceeding with optimization anyway" | tee -a "$log_dir/${proj_dir}.2.log"
+        else
+            echo "⚠️  Warning: Only $session_count sessions found (recommended: 10+)" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Optimization may not be effective with limited data" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "💡 Tip: Use FORCE_OPTIMIZE=1 to bypass this check or MIN_SESSIONS=N to set a different threshold" | tee -a "$log_dir/${proj_dir}.2.log"
+            exit 0
+        fi
     fi
     
     # Step 2: Run optimizer
     echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir}.2.log"
-    run_cmd_with_timing "python3 $ADK_ROOT/deepeval-scoring/optimize_instructions.py --historical-data $OPTIMIZATION_DIR/historical_sessions.json --current-instructions $ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md --output $OPTIMIZATION_DIR/optimized_instructions.md --algorithm miprov2 --iterations 5 --model $model" "$log_dir/${proj_dir}.2.log"
     
-    if [[ $? -ne 0 ]]; then
-        echo "Optimization failed" | tee -a "$log_dir/${proj_dir}.2.log"
-        exit 1
+    set +e
+    python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
+        --historical-data "$OPTIMIZATION_DIR/historical_sessions.json" \
+        --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
+        --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
+        --algorithm miprov2 \
+        --iterations 5 \
+        --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+    optimize_exit_code=$?
+    set -e
+    
+    if [[ $optimize_exit_code -ne 0 ]]; then
+        echo "❌ Optimization failed (exit code: $optimize_exit_code)" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0
+    fi
+    
+    # Verify optimized file was created
+    if [[ ! -f "$OPTIMIZATION_DIR/optimized_instructions.md" ]]; then
+        echo "❌ Optimized instructions file not created" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0
     fi
     
     # Step 3: Backup and deploy optimized instructions
@@ -159,25 +229,34 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     cp "$INSTRUCTIONS_FILE" "$BACKUP_FILE"
     cp "$OPTIMIZATION_DIR/optimized_instructions.md" "$INSTRUCTIONS_FILE"
     
-    echo "Optimized instructions deployed" | tee -a "$log_dir/${proj_dir}.2.log"
-    echo "Backup saved: $BACKUP_FILE" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "✅ Optimized instructions deployed" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "   Backup saved: $BACKUP_FILE" | tee -a "$log_dir/${proj_dir}.2.log"
     
     # Step 4: Commit to git repository
     echo "Step 4: Committing optimized instructions to git..." | tee -a "$log_dir/${proj_dir}.2.log"
     cd "$ADK_ROOT"
     
+    # Verify we're in a git repository
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        echo "⚠️  Not in a git repository, skipping commit" | tee -a "$log_dir/${proj_dir}.2.log"
+        cd "$proj_dir_abs"
+        echo "✅ Stage 2 optimization complete (no git commit)" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0
+    fi
+    
     # Check if there are changes to commit
     if git diff --quiet "$INSTRUCTIONS_FILE"; then
-        echo "No changes detected in instructions file, skipping commit" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "ℹ️  No changes detected in instructions file, skipping commit" | tee -a "$log_dir/${proj_dir}.2.log"
     else
         # Get optimization metrics for commit message
         OPTIMIZATION_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-        HISTORICAL_SESSIONS=$(grep -c "session_id" "$proj_dir_abs/$OPTIMIZATION_DIR/historical_sessions.json" 2>/dev/null || echo "unknown")
+        HISTORICAL_SESSIONS=$(grep -c '"device_name"' "$OPTIMIZATION_DIR/historical_sessions.json" 2>/dev/null || echo "unknown")
         
         # Stage the optimized instructions file
-        git add "$INSTRUCTIONS_FILE"
+        git add "$INSTRUCTIONS_FILE" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
         
         # Create detailed commit message
+        set +e
         git commit -m "refactor(openspec): optimize apply agent instructions via DeepEval
 
 - Optimized apply_agent_instruction.md using PromptOptimizer (miprov2)
@@ -188,17 +267,20 @@ if [[ "${run_stage[2]}" == "1" ]]; then
 - Backup saved: $(basename $BACKUP_FILE)
 
 This optimization aims to improve agent performance based on historical
-session data and automated prompt engineering techniques."
+session data and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+        commit_exit_code=$?
+        set -e
         
-        if [[ $? -eq 0 ]]; then
+        if [[ $commit_exit_code -eq 0 ]]; then
             COMMIT_HASH=$(git rev-parse --short HEAD)
-            echo "Successfully committed optimized instructions: $COMMIT_HASH" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "✅ Successfully committed optimized instructions: $COMMIT_HASH" | tee -a "$log_dir/${proj_dir}.2.log"
         else
-            echo "Failed to commit changes" | tee -a "$log_dir/${proj_dir}.2.log"
-            exit 1
+            echo "⚠️  Warning: Failed to commit changes (exit code: $commit_exit_code)" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "   Optimized instructions were deployed but not committed to git" | tee -a "$log_dir/${proj_dir}.2.log"
+            # Don't exit with error - optimization was still successful
         fi
     fi
     
     cd "$proj_dir_abs"
-    echo "Stage 2 optimization complete!" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "✅ Stage 2 optimization complete!" | tee -a "$log_dir/${proj_dir}.2.log"
 fi

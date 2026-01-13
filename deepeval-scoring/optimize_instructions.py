@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from deepeval.optimizer import PromptOptimizer
-from deepeval.optimizer.algorithms import MIPROv2, GEPA, COPRO, SIMBA
+from deepeval.optimizer.algorithms import MIPROV2, GEPA, COPRO, SIMBA
 from deepeval.prompt import Prompt
 from deepeval.dataset import Golden
 from deepeval.test_case import LLMTestCase
@@ -132,23 +132,28 @@ def create_optimizer(
   
   # Select algorithm
   algorithm_map = {
-    "miprov2": MIPROv2(
-      iterations=iterations,
-      num_instructions=10,  # Generate 10 instruction variants
-      num_demos=5  # Use 5 best examples
+    "miprov2": MIPROV2(
+      num_candidates=10,     # Number of instruction candidates to propose
+      num_trials=iterations, # Number of Bayesian Optimization trials
+      minibatch_size=25,     # Examples per minibatch evaluation
+      num_demo_sets=5        # Number of demo sets to create
     ),
     "gepa": GEPA(
       iterations=iterations,
-      population_size=10,
-      mutation_rate=0.3
+      minibatch_size=8,      # Examples per iteration
+      pareto_size=3          # Size of Pareto validation subset
     ),
     "copro": COPRO(
       iterations=iterations,
-      num_candidates=5
+      minibatch_size=8,      # Examples per iteration
+      population_size=4,     # Maximum candidates in pool
+      proposals_per_step=4   # Child prompts per iteration
     ),
     "simba": SIMBA(
       iterations=iterations,
-      num_mutations=5
+      minibatch_size=8,      # Examples per iteration
+      population_size=4,     # Maximum candidates in pool
+      proposals_per_step=4   # Child prompts per iteration
     )
   }
   

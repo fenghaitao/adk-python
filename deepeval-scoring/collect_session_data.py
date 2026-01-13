@@ -208,8 +208,8 @@ def collect_session(
     return None
   
   # Parse implementation
-  dml_parser = DMLParser(str(dml_file))
-  dml_data = dml_parser.parse()
+  dml_parser = DMLParser()
+  dml_data = dml_parser.parse_file(dml_file)
   implementation = dml_file.read_text()
   
   # Find test files
