@@ -36,9 +36,10 @@ run_cmd_with_timing() {
 #   ./run_test.sh mcp_port model proj_dir stages    # 4 args: mcp_port model proj_dir stages
 #
 # stages format: comma or space separated stage numbers
-#   Examples: "0", "1", "0,1", "1,0", "0 1"
+#   Examples: "0", "1", "0,1", "1,0", "0 1", "0,1,2", "2"
 #   Stage 0 = bootstrap project
 #   Stage 1 = proposal initialization
+#   Stage 2 = prompt optimization (DeepEval) + git commit
 
 if [ $# -eq 1 ]; then
     # 1 argument: proj_dir
@@ -118,4 +119,86 @@ if [[ "${run_stage[1]}" == "1" ]]; then
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
     cd "$proj_dir_abs"
     run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --apply --archive --model $model" "$log_dir/${proj_dir}.1.log"
+fi
+
+if [[ "${run_stage[2]}" == "1" ]]; then
+    echo "=== Stage 2: prompt optimization ===" | tee "$log_dir/${proj_dir}.2.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "This will collect historical sessions and optimize instructions" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    cd "$proj_dir_abs"
+    
+    # Create optimization directory
+    OPTIMIZATION_DIR="adk_openspec_project/.openspec-optimization"
+    mkdir -p "$OPTIMIZATION_DIR"
+    
+    # Step 1: Collect historical session data
+    echo "Step 1: Collecting historical session data..." | tee -a "$log_dir/${proj_dir}.2.log"
+    run_cmd_with_timing "python3 $ADK_ROOT/deepeval-scoring/collect_session_data.py --workdir adk_openspec_project --output $OPTIMIZATION_DIR/historical_sessions.json --min-score 0.5 --model $model" "$log_dir/${proj_dir}.2.log"
+    
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to collect session data" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Make sure you have at least 10 historical sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 1
+    fi
+    
+    # Step 2: Run optimizer
+    echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir}.2.log"
+    run_cmd_with_timing "python3 $ADK_ROOT/deepeval-scoring/optimize_instructions.py --historical-data $OPTIMIZATION_DIR/historical_sessions.json --current-instructions $ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md --output $OPTIMIZATION_DIR/optimized_instructions.md --algorithm miprov2 --iterations 5 --model $model" "$log_dir/${proj_dir}.2.log"
+    
+    if [[ $? -ne 0 ]]; then
+        echo "Optimization failed" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 1
+    fi
+    
+    # Step 3: Backup and deploy optimized instructions
+    echo "Step 3: Deploying optimized instructions..." | tee -a "$log_dir/${proj_dir}.2.log"
+    INSTRUCTIONS_FILE="$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md"
+    BACKUP_FILE="$INSTRUCTIONS_FILE.backup.$(date +%Y%m%d_%H%M%S)"
+    
+    cp "$INSTRUCTIONS_FILE" "$BACKUP_FILE"
+    cp "$OPTIMIZATION_DIR/optimized_instructions.md" "$INSTRUCTIONS_FILE"
+    
+    echo "Optimized instructions deployed" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "Backup saved: $BACKUP_FILE" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Step 4: Commit to git repository
+    echo "Step 4: Committing optimized instructions to git..." | tee -a "$log_dir/${proj_dir}.2.log"
+    cd "$ADK_ROOT"
+    
+    # Check if there are changes to commit
+    if git diff --quiet "$INSTRUCTIONS_FILE"; then
+        echo "No changes detected in instructions file, skipping commit" | tee -a "$log_dir/${proj_dir}.2.log"
+    else
+        # Get optimization metrics for commit message
+        OPTIMIZATION_DATE=$(date +"%Y-%m-%d %H:%M:%S")
+        HISTORICAL_SESSIONS=$(grep -c "session_id" "$proj_dir_abs/$OPTIMIZATION_DIR/historical_sessions.json" 2>/dev/null || echo "unknown")
+        
+        # Stage the optimized instructions file
+        git add "$INSTRUCTIONS_FILE"
+        
+        # Create detailed commit message
+        git commit -m "refactor(openspec): optimize apply agent instructions via DeepEval
+
+- Optimized apply_agent_instruction.md using PromptOptimizer (miprov2)
+- Based on $HISTORICAL_SESSIONS historical sessions (min score: 0.5)
+- Optimization date: $OPTIMIZATION_DATE
+- Model used: $model
+- Algorithm: miprov2 with 5 iterations
+- Backup saved: $(basename $BACKUP_FILE)
+
+This optimization aims to improve agent performance based on historical
+session data and automated prompt engineering techniques."
+        
+        if [[ $? -eq 0 ]]; then
+            COMMIT_HASH=$(git rev-parse --short HEAD)
+            echo "Successfully committed optimized instructions: $COMMIT_HASH" | tee -a "$log_dir/${proj_dir}.2.log"
+        else
+            echo "Failed to commit changes" | tee -a "$log_dir/${proj_dir}.2.log"
+            exit 1
+        fi
+    fi
+    
+    cd "$proj_dir_abs"
+    echo "Stage 2 optimization complete!" | tee -a "$log_dir/${proj_dir}.2.log"
 fi
