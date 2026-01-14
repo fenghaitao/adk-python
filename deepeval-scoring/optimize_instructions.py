@@ -63,10 +63,12 @@ def load_historical_sessions(data_file: Path) -> List[Golden]:
   
   golden_dataset = []
   for session in sessions:
+    # Use expected_output for the reference implementation, not actual_output
+    # actual_output should be None initially (filled by model during optimization)
     golden = Golden(
       input=session["task_description"],
-      actual_output=session["implementation"],
-      expected_output=session.get("expected_output", ""),
+      actual_output=None,  # Will be filled by model during optimization
+      expected_output=session["implementation"],  # Reference implementation
       context=[
         session.get("session_log", ""),
         session.get("spec", ""),
@@ -83,57 +85,7 @@ def load_historical_sessions(data_file: Path) -> List[Golden]:
   return golden_dataset
 
 
-def create_deepeval_model(model: str) -> LiteLLMModel:
-  """Create DeepEval LiteLLMModel instance for optimizer.
-  
-  Args:
-    model: Model name (e.g., "iflow/qwen3-coder-plus" or "github_copilot/gpt-5-mini")
-    
-  Returns:
-    LiteLLMModel instance configured for the specified model
-  """
-  if model.startswith("iflow/"):
-    # Convert iflow model to LiteLLM format
-    model_name = model.replace("iflow/", "dashscope/")
-    
-    # Check if API key is available
-    api_key = os.getenv("IFLOW_API_KEY")
-    if not api_key:
-      raise ValueError(
-        "IFLOW_API_KEY environment variable not set. "
-        "Please set it with: export IFLOW_API_KEY='your-key'"
-      )
-    
-    # Create LiteLLMModel instance for iflow
-    return LiteLLMModel(
-      model=model_name,
-      api_key=api_key,
-      base_url="https://apis.iflow.cn/v1/",
-      generation_kwargs={
-        "temperature": 0.7,
-        "logprobs": False,
-        "top_logprobs": None
-      }
-    )
-  elif model.startswith("github_copilot/"):
-    # GitHub Copilot models use the model name as-is
-    return LiteLLMModel(
-      model=model,
-      generation_kwargs={
-        "extra_headers": {
-          "Editor-Version": "vscode/1.85.0",
-          "Editor-Plugin-Version": "copilot-chat/0.11.1",
-          "Openai-Organization": "github-copilot",
-          "Copilot-Integration-Id": "vscode-chat"
-        }
-      }
-    )
-  else:
-    # Generic LiteLLM model (OpenAI, Anthropic, etc.)
-    return LiteLLMModel(
-      model=model,
-      generation_kwargs={"temperature": 0.7}
-    )
+
 
 
 def create_model_callback(model: str):
@@ -143,31 +95,100 @@ def create_model_callback(model: str):
     model: Model name (e.g., "iflow/qwen3-coder-plus")
     
   Returns:
-    Callable that takes prompt and returns response
+    Callable that takes prompt and golden, returns response
   """
-  def model_callback(prompt: str) -> str:
-    """Call LLM with prompt."""
+  def model_callback(prompt, golden=None) -> str:
+    """Call LLM with prompt with exponential backoff retry.
+    
+    Args:
+      prompt: The prompt to send to the model (can be string or Prompt object)
+      golden: The golden/reference data (unused but required by interface)
+    """
     import litellm
+    import time
+    import copy
+    from deepeval.prompt import Prompt
     
-    # Configure litellm for iflow
-    if model.startswith("iflow/"):
-      litellm_model = model.replace("iflow/", "dashscope/")
-      api_key = os.getenv("IFLOW_API_KEY")
-      response = litellm.completion(
-        model=litellm_model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        api_key=api_key,
-        base_url="https://apis.iflow.cn/v1/"
-      )
+    # Convert Prompt object to string if needed
+    if isinstance(prompt, Prompt):
+      prompt_text = prompt.text_template or ""
     else:
-      response = litellm.completion(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-      )
+      prompt_text = str(prompt)
     
-    return response.choices[0].message.content
+    # Monkey-patch deepcopy to avoid pickle issues with thread locks
+    # Store original deepcopy
+    original_deepcopy = copy.deepcopy
+    
+    # Define a shallow copy function that avoids pickle issues
+    def safe_deepcopy(obj, memo=None):
+      try:
+        return original_deepcopy(obj, memo)
+      except (TypeError, AttributeError) as e:
+        if "pickle" in str(e) or "thread.lock" in str(e):
+          # Return a shallow copy for unpicklable objects
+          if isinstance(obj, list):
+            return [item if isinstance(item, (str, int, float, bool, type(None))) else item for item in obj]
+          elif isinstance(obj, dict):
+            return {k: v if isinstance(v, (str, int, float, bool, type(None))) else v for k, v in obj.items()}
+          else:
+            return obj
+        raise
+    
+    # Apply monkey patch
+    copy.deepcopy = safe_deepcopy
+    
+    max_retries = 1
+    base_delay = 30.0
+    
+    for attempt in range(max_retries):
+      try:
+        # Configure litellm for iflow
+        if model.startswith("iflow/"):
+          litellm_model = model.replace("iflow/", "dashscope/")
+          api_key = os.getenv("IFLOW_API_KEY")
+          response = litellm.completion(
+            model=litellm_model,
+            messages=[{"role": "user", "content": prompt_text}],
+            temperature=0.7,
+            api_key=api_key,
+            base_url="https://apis.iflow.cn/v1/"
+          )
+        elif model.startswith("github_copilot/"):
+          # GitHub Copilot models use litellm.completion with special headers
+          response = litellm.completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt_text}],
+            temperature=0.7,
+            extra_headers={
+              "Editor-Version": "vscode/1.85.0",
+              "Editor-Plugin-Version": "copilot-chat/0.11.1",
+              "Openai-Organization": "github-copilot",
+              "Copilot-Integration-Id": "vscode-chat"
+            }
+          )
+        else:
+          response = litellm.completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt_text}],
+            temperature=0.7
+          )
+        
+        return response.choices[0].message.content
+        
+      except Exception as e:
+        error_msg = str(e).lower()
+        # Check if it's a rate limit error
+        if "rate limit" in error_msg or "429" in error_msg or "449" in error_msg:
+          if attempt < max_retries - 1:
+            # Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            delay = base_delay * (2 ** attempt)
+            print(f"⚠️  Rate limit hit, waiting {delay}s before retry {attempt + 1}/{max_retries}...")
+            time.sleep(delay)
+            continue
+        # Re-raise non-rate-limit errors or final attempt
+        raise
+    
+    raise Exception(f"Failed after {max_retries} retries")
   
   return model_callback
 
@@ -176,7 +197,10 @@ def create_optimizer(
     model: str,
     algorithm: str,
     iterations: int,
-    weights: Dict[str, float]
+    weights: Dict[str, float],
+    max_concurrent: int = 5,
+    throttle_seconds: float = 2.0,
+    run_async: bool = False
 ) -> PromptOptimizer:
   """Create PromptOptimizer with specified configuration.
   
@@ -185,6 +209,9 @@ def create_optimizer(
     algorithm: Algorithm name (miprov2, gepa, copro, simba)
     iterations: Number of optimization iterations
     weights: Metric weights for weighted objective
+    max_concurrent: Maximum concurrent API calls (default: 5 for rate limiting)
+    throttle_seconds: Seconds to wait between batches (default: 2.0)
+    run_async: Whether to run async (default: False to avoid pickle issues)
     
   Returns:
     Configured PromptOptimizer
@@ -228,15 +255,23 @@ def create_optimizer(
   if not algo:
     raise ValueError(f"Unknown algorithm: {algorithm}")
   
-  # Create DeepEval model for optimizer (generates candidate prompts)
-  optimizer_model = create_deepeval_model(model)
+  # Pass model string directly to optimizer - DeepEval's initialize_model() will handle it
+  # This avoids pickle issues with LiteLLMModel objects containing thread locks
   
-  # Create optimizer with both model_callback (for eval) and optimizer_model (for generation)
+  # Import AsyncConfig for rate limiting
+  from deepeval.optimizer.configs import AsyncConfig
+  
+  # Create optimizer with rate limiting configuration
   optimizer = PromptOptimizer(
     model_callback=create_model_callback(model),
-    optimizer_model=optimizer_model,
+    optimizer_model=model,  # Pass string instead of LiteLLMModel object
     metrics=metrics,
-    algorithm=algo
+    algorithm=algo,
+    async_config=AsyncConfig(
+      run_async=run_async,  # Use parameter instead of hardcoded True
+      max_concurrent=max_concurrent,
+      throttle_value=throttle_seconds
+    )
   )
   
   return optimizer
@@ -336,6 +371,23 @@ def main():
     default=0.2,
     help="Weight for agent behavior metric (default: 0.2)"
   )
+  parser.add_argument(
+    "--max-concurrent",
+    type=int,
+    default=3,
+    help="Maximum concurrent API calls for rate limiting (default: 3)"
+  )
+  parser.add_argument(
+    "--throttle-seconds",
+    type=float,
+    default=2.0,
+    help="Seconds to wait between API call batches (default: 2.0)"
+  )
+  parser.add_argument(
+    "--no-async",
+    action="store_true",
+    help="Disable async mode to avoid pickle issues with thread locks (default: False)"
+  )
   
   args = parser.parse_args()
   
@@ -360,8 +412,9 @@ def main():
     current_instructions = f.read()
   print(f"✅ Loaded instructions ({len(current_instructions)} chars)")
   
-  # Create optimizer
+  # Create optimizer with rate limiting
   print(f"🔧 Creating optimizer with {args.algorithm} algorithm...")
+  print(f"⏱️  Rate limiting: max_concurrent={args.max_concurrent}, throttle={args.throttle_seconds}s")
   weights = {
     "Code Correctness": args.weight_correctness,
     "Test Coverage": args.weight_coverage,
@@ -372,7 +425,10 @@ def main():
     model=args.model,
     algorithm=args.algorithm,
     iterations=args.iterations,
-    weights=weights
+    weights=weights,
+    max_concurrent=args.max_concurrent,
+    throttle_seconds=args.throttle_seconds,
+    run_async=not args.no_async  # Invert the flag
   )
   print(f"✅ Optimizer created")
   

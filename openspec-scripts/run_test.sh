@@ -211,14 +211,23 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     # Step 2: Run optimizer
     echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir}.2.log"
     
+    # Rate limiting configuration (can be overridden with environment variables)
+    MAX_CONCURRENT="${MAX_CONCURRENT:-1}"
+    THROTTLE_SECONDS="${THROTTLE_SECONDS:-30.0}"
+    
+    echo "⏱️  Rate limiting: max_concurrent=$MAX_CONCURRENT, throttle=${THROTTLE_SECONDS}s" | tee -a "$log_dir/${proj_dir}.2.log"
+    
     set +e
     python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
         --historical-data "$OPTIMIZATION_DIR/historical_sessions.json" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
         --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
-        --algorithm miprov2 \
+        --algorithm copro \
         --iterations 5 \
-        --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+        --max-concurrent "$MAX_CONCURRENT" \
+        --throttle-seconds "$THROTTLE_SECONDS" \
+        --model "github_copilot/gpt-4o" \
+        --no-async 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
     optimize_exit_code=$?
     set -e
     
@@ -273,11 +282,11 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         set +e
         git commit -m "refactor(openspec): optimize apply agent instructions via DeepEval
 
-- Optimized apply_agent_instruction.md using PromptOptimizer (miprov2)
+- Optimized apply_agent_instruction.md using PromptOptimizer (copro)
 - Based on $HISTORICAL_SESSIONS historical sessions (min score: 0.5)
 - Optimization date: $OPTIMIZATION_DATE
 - Model used: $model
-- Algorithm: miprov2 with 5 iterations
+- Algorithm: copro with 5 iterations
 - Backup saved: $(basename $BACKUP_FILE)
 
 This optimization aims to improve agent performance based on historical
