@@ -142,35 +142,49 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     fi
     
     # Step 1: Collect historical session data
-    echo "Step 1: Collecting historical session data..." | tee -a "$log_dir/${proj_dir}.2.log"
-    echo "Working directory: $(pwd)" | tee -a "$log_dir/${proj_dir}.2.log"
-    echo "Output path: $OPTIMIZATION_DIR/historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
-    
-    # Run with error capture but don't exit immediately
-    set +e
-    python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
-        --workdir "$proj_dir_abs/adk_openspec_project" \
-        --output "$OPTIMIZATION_DIR/historical_sessions.json" \
-        --min-score 0.5 \
-        --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
-    collect_exit_code=$?
-    set -e
-    
-    if [[ $collect_exit_code -ne 0 ]]; then
-        echo "❌ Failed to collect session data (exit code: $collect_exit_code)" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Common issues:" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "  - DMLParser constructor error: Update deepeval-scoring/collect_session_data.py" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "  - Missing DML files: Make sure stage 1 completed successfully" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "  - Insufficient historical sessions: Need at least 10 sessions" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
-        exit 0  # Don't fail the entire pipeline
-    fi
-    
-    # Verify output file was created
-    if [[ ! -f "$OPTIMIZATION_DIR/historical_sessions.json" ]]; then
-        echo "❌ Historical sessions file not created" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
-        exit 0
+    if [[ "${SKIP_COLLECT:-0}" == "1" ]]; then
+        echo "Step 1: Skipping session data collection (SKIP_COLLECT=1)" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Using existing historical_sessions.json if available" | tee -a "$log_dir/${proj_dir}.2.log"
+        
+        # Verify existing file
+        if [[ ! -f "$OPTIMIZATION_DIR/historical_sessions.json" ]]; then
+            echo "❌ Error: historical_sessions.json not found and SKIP_COLLECT=1" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Either run without SKIP_COLLECT=1 or provide an existing historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+            exit 0
+        fi
+        echo "✅ Found existing historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
+    else
+        echo "Step 1: Collecting historical session data..." | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Working directory: $(pwd)" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "Output path: $OPTIMIZATION_DIR/historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
+        
+        # Run with error capture but don't exit immediately
+        set +e
+        python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
+            --workdir "$proj_dir_abs/adk_openspec_project" \
+            --output "$OPTIMIZATION_DIR/historical_sessions.json" \
+            --min-score 0.5 \
+            --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+        collect_exit_code=$?
+        set -e
+        
+        if [[ $collect_exit_code -ne 0 ]]; then
+            echo "❌ Failed to collect session data (exit code: $collect_exit_code)" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Common issues:" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "  - DMLParser constructor error: Update deepeval-scoring/collect_session_data.py" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "  - Missing DML files: Make sure stage 1 completed successfully" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "  - Insufficient historical sessions: Need at least 10 sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+            exit 0  # Don't fail the entire pipeline
+        fi
+        
+        # Verify output file was created
+        if [[ ! -f "$OPTIMIZATION_DIR/historical_sessions.json" ]]; then
+            echo "❌ Historical sessions file not created" | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+            exit 0
+        fi
     fi
     
     # Check if we have enough sessions

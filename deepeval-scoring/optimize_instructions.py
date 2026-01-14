@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import List, Dict, Any
@@ -40,6 +41,7 @@ from deepeval.optimizer.algorithms import MIPROV2, GEPA, COPRO, SIMBA
 from deepeval.prompt import Prompt
 from deepeval.dataset import Golden
 from deepeval.test_case import LLMTestCase
+from deepeval.models import LiteLLMModel
 
 from metrics.code_correctness import CodeCorrectnessMetric
 from metrics.test_coverage import TestCoverageMetric
@@ -81,8 +83,61 @@ def load_historical_sessions(data_file: Path) -> List[Golden]:
   return golden_dataset
 
 
+def create_deepeval_model(model: str) -> LiteLLMModel:
+  """Create DeepEval LiteLLMModel instance for optimizer.
+  
+  Args:
+    model: Model name (e.g., "iflow/qwen3-coder-plus" or "github_copilot/gpt-5-mini")
+    
+  Returns:
+    LiteLLMModel instance configured for the specified model
+  """
+  if model.startswith("iflow/"):
+    # Convert iflow model to LiteLLM format
+    model_name = model.replace("iflow/", "dashscope/")
+    
+    # Check if API key is available
+    api_key = os.getenv("IFLOW_API_KEY")
+    if not api_key:
+      raise ValueError(
+        "IFLOW_API_KEY environment variable not set. "
+        "Please set it with: export IFLOW_API_KEY='your-key'"
+      )
+    
+    # Create LiteLLMModel instance for iflow
+    return LiteLLMModel(
+      model=model_name,
+      api_key=api_key,
+      base_url="https://apis.iflow.cn/v1/",
+      generation_kwargs={
+        "temperature": 0.7,
+        "logprobs": False,
+        "top_logprobs": None
+      }
+    )
+  elif model.startswith("github_copilot/"):
+    # GitHub Copilot models use the model name as-is
+    return LiteLLMModel(
+      model=model,
+      generation_kwargs={
+        "extra_headers": {
+          "Editor-Version": "vscode/1.85.0",
+          "Editor-Plugin-Version": "copilot-chat/0.11.1",
+          "Openai-Organization": "github-copilot",
+          "Copilot-Integration-Id": "vscode-chat"
+        }
+      }
+    )
+  else:
+    # Generic LiteLLM model (OpenAI, Anthropic, etc.)
+    return LiteLLMModel(
+      model=model,
+      generation_kwargs={"temperature": 0.7}
+    )
+
+
 def create_model_callback(model: str):
-  """Create model callback for optimizer.
+  """Create model callback for test case evaluation.
   
   Args:
     model: Model name (e.g., "iflow/qwen3-coder-plus")
@@ -94,11 +149,23 @@ def create_model_callback(model: str):
     """Call LLM with prompt."""
     import litellm
     
-    response = litellm.completion(
-      model=model,
-      messages=[{"role": "user", "content": prompt}],
-      temperature=0.7
-    )
+    # Configure litellm for iflow
+    if model.startswith("iflow/"):
+      litellm_model = model.replace("iflow/", "dashscope/")
+      api_key = os.getenv("IFLOW_API_KEY")
+      response = litellm.completion(
+        model=litellm_model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        api_key=api_key,
+        base_url="https://apis.iflow.cn/v1/"
+      )
+    else:
+      response = litellm.completion(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+      )
     
     return response.choices[0].message.content
   
@@ -161,9 +228,13 @@ def create_optimizer(
   if not algo:
     raise ValueError(f"Unknown algorithm: {algorithm}")
   
-  # Create optimizer
+  # Create DeepEval model for optimizer (generates candidate prompts)
+  optimizer_model = create_deepeval_model(model)
+  
+  # Create optimizer with both model_callback (for eval) and optimizer_model (for generation)
   optimizer = PromptOptimizer(
     model_callback=create_model_callback(model),
+    optimizer_model=optimizer_model,
     metrics=metrics,
     algorithm=algo
   )
@@ -186,11 +257,10 @@ def optimize_instructions(
   Returns:
     Optimized instruction text
   """
-  # Create prompt template
-  # Extract variables from instructions (e.g., {device_name}, {change_id})
+  # Create prompt with text_template (not 'template')
+  # The prompt will be optimized based on historical data
   prompt = Prompt(
-    template=current_instructions,
-    variables=[]  # Auto-detect or specify manually
+    text_template=current_instructions
   )
   
   print(f"🔍 Optimizing instructions with {len(historical_data)} historical sessions...")
@@ -199,10 +269,11 @@ def optimize_instructions(
   # Run optimization
   optimized_prompt = optimizer.optimize(
     prompt=prompt,
-    dataset=historical_data
+    goldens=historical_data
   )
   
-  return optimized_prompt.template
+  # Return the optimized text template
+  return optimized_prompt.text_template
 
 
 def main():
