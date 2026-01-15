@@ -27,8 +27,14 @@ saved uint32 current_counter_value = 0xffffffff;
 saved bool timer_enabled = false;
 saved bool timer_expired = false;
 
+attribute freq_mhz is (double_attr, init) {
+    method init() {
+        val = 100.0; // by default, 100 Mhz
+    }
+}
+
 // Event for handling watchdog timeout
-event timeout_event is simple_cycle_event {
+event timeout_event is simple_time_event {
     method event() {
         // Timer has expired
         timer_expired = true;
@@ -50,6 +56,11 @@ event timeout_event is simple_cycle_event {
             wdogres.signal.signal_raise();
             reset_pending = true;
         }
+
+        // If count down to zero, need to reload and count down
+        // Reload counter from WDOGLOAD
+        local uint32 load_value = WatchdogRegisters.WDOGLOAD.WDOG_LOAD.val;
+        reload_counter(load_value);
     }
     
     method schedule_timeout(uint32 counter_val) {
@@ -71,7 +82,8 @@ event timeout_event is simple_cycle_event {
             }
             
             local cycles_t timeout_cycles = cast(counter_val, cycles_t) * cast(divider, cycles_t);
-            post(timeout_cycles);
+            local double timeout_secs = timeout_cycles / (freq_mhz.val * 1.0e6);
+            post(timeout_secs);
         }
     }
     
