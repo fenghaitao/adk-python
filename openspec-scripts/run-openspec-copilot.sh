@@ -29,6 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Set up paths
 SPEC_KIT_INTEGRATION_DIR="$SCRIPT_DIR/../contributing/samples/spec_kit_integration"
 MCP_SERVER_DIR="$SPEC_KIT_INTEGRATION_DIR/simics-mcp-server"
+ADK_ROOT="$SCRIPT_DIR/.."
 
 # Validate arguments
 if [ "$#" -lt 2 ]; then
@@ -412,8 +413,11 @@ if [ "$SKIP_INIT" = false ]; then
     echo -e "${BLUE}Step 8: Setting up Simics project...${NC}"
     SIMICS_SETUP_PROMPT="setup simics-project for device wdt"
 
-    echo "   Prompt: $SIMICS_SETUP_PROMPT"
-    if copilot --allow-all-tools --agent simics_project_setup -p "$SIMICS_SETUP_PROMPT"; then
+    # Get absolute path of current directory (already in WORKDIR from Step 2)
+    WORKDIR_ABS="$(pwd)"
+
+    echo "   Running: run_simics_setup.py for device $DEVICE_NAME"
+    if "$ADK_ROOT/.venv/bin/python3" "$ADK_ROOT/openspec-scripts/run_simics_setup.py" "$WORKDIR_ABS" "$DEVICE_NAME"; then
         echo -e "${GREEN}✅ Simics project setup completed${NC}"
     else
         echo -e "${YELLOW}⚠️  Simics project setup completed with warnings${NC}"
