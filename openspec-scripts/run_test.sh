@@ -40,6 +40,14 @@ run_cmd_with_timing() {
 #   Stage 0 = bootstrap project
 #   Stage 1 = proposal initialization
 #   Stage 2 = prompt optimization (DeepEval) + git commit
+#
+# Environment variables for Stage 2:
+#   SKIP_COLLECT=1       - Skip session data collection, use existing historical_sessions.json
+#   SKIP_OPTIMIZE=1      - Skip optimization step, only collect session data
+#   FORCE_OPTIMIZE=1     - Force optimization even with insufficient sessions
+#   MIN_SESSIONS=N       - Set minimum session threshold (default: 5)
+#   MAX_CONCURRENT=N     - Set max concurrent API calls (default: 1)
+#   THROTTLE_SECONDS=N   - Set throttle delay between batches (default: 30.0)
 
 if [ $# -eq 1 ]; then
     # 1 argument: proj_dir
@@ -210,6 +218,13 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     
     # Step 2: Run optimizer
     echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Check if optimization should be skipped
+    if [[ "${SKIP_OPTIMIZE:-0}" == "1" ]]; then
+        echo "⚠️  Skipping optimization (SKIP_OPTIMIZE=1)" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "✅ Stage 2 session data collection complete!" | tee -a "$log_dir/${proj_dir}.2.log"
+        exit 0
+    fi
     
     # Rate limiting configuration (can be overridden with environment variables)
     MAX_CONCURRENT="${MAX_CONCURRENT:-1}"
