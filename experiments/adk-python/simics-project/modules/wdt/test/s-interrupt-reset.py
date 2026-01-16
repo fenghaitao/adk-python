@@ -57,7 +57,6 @@ def test_interrupt_reset():
 
     # Test 3: Test interrupt clear and counter reload via WDOGINTCLR
     print("Test 3: Interrupt clear and counter reload")
-    irq_count_after_timeout = fake_pic_wdogint.raised
     # Save current counter value before clearing
     counter_before_clear = regs.WDOGVALUE.read()
     print(f"Counter value before clear: 0x{counter_before_clear:x}")
@@ -74,7 +73,7 @@ def test_interrupt_reset():
     
     stest.expect_equal((raw_int_after_clear & 0x1), 0x0)  # Raw interrupt should be cleared
     stest.expect_equal((masked_int_after_clear & 0x1), 0x0)  # Masked interrupt should be cleared
-    stest.expect_equal(fake_pic_wdogint.raised, irq_count_after_timeout - 1)  # Interrupt should be lowered now
+    stest.expect_equal(fake_pic_wdogint.raised, initial_irq_count)  # Interrupt should be lowered now
     print("Interrupt clear functionality verified!")
 
     # Test 4: Test reset generation on second timeout with RESEN=1

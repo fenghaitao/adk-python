@@ -22,13 +22,19 @@ saved bool test_mode = false;       // Integration test mode state
 saved uint32 test_output = 0;       // Test output values
 
 // Timer tracking variables
-saved cycles_t last_update_time = 0;
+saved double last_update_time = 0;
 saved uint32 current_counter_value = 0xffffffff;
 saved bool timer_enabled = false;
 saved bool timer_expired = false;
 
+attribute freq_mhz is (double_attr, init) {
+    method init() {
+        val = 100.0; // by default, 100 Mhz
+    }
+}
+
 // Event for handling watchdog timeout
-event timeout_event is simple_cycle_event {
+event timeout_event is simple_time_event {
     method event() {
         // Timer has expired
         timer_expired = true;
@@ -50,6 +56,11 @@ event timeout_event is simple_cycle_event {
             wdogres.signal.signal_raise();
             reset_pending = true;
         }
+
+        // If count down to zero, need to reload and count down
+        // Reload counter from WDOGLOAD
+        local uint32 load_value = WatchdogRegisters.WDOGLOAD.WDOG_LOAD.val;
+        reload_counter(load_value);
     }
     
     method schedule_timeout(uint32 counter_val) {
@@ -71,7 +82,8 @@ event timeout_event is simple_cycle_event {
             }
             
             local cycles_t timeout_cycles = cast(counter_val, cycles_t) * cast(divider, cycles_t);
-            post(timeout_cycles);
+            local double timeout_secs = timeout_cycles / (freq_mhz.val * 1.0e6);
+            post(timeout_secs);
         }
     }
     
@@ -95,10 +107,11 @@ method calculate_current_counter() -> (uint32) {
         // In test mode or when disabled, return the current stored value
         return current_counter_value;
     }
-    
-    local cycles_t now = SIM_cycle_count(dev.obj);
-    local cycles_t elapsed_cycles = now - last_update_time;
-    
+
+    local double now = SIM_time(dev.obj);
+    local double elapsed_time = now - last_update_time;
+    local cycles_t elapsed_cycles = cast(elapsed_time * freq_mhz.val * 1.0e6, cycles_t);
+
     // Calculate how much the counter should have decremented
     local uint32 divider;
     switch (step_value) {
@@ -130,7 +143,7 @@ method calculate_current_counter() -> (uint32) {
 // Reload the counter and schedule timeout event
 method reload_counter(uint32 new_value) {
     current_counter_value = new_value;
-    last_update_time = SIM_cycle_count(dev.obj);
+    last_update_time = SIM_time(dev.obj);
     
     // Cancel any pending timeout event
     timeout_event.cancel();
