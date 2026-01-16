@@ -179,70 +179,112 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         CACHE_DIR="$OPTIMIZATION_DIR/.cache"
         mkdir -p "$CACHE_DIR"
         
-        # Process EXTRA_WORKDIRS with caching
+        # Process EXTRA_WORKDIRS with intelligent caching
         EXTRA_SESSION_FILES=""
         if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
             echo "📁 Processing additional workdirs with caching..." | tee -a "$log_dir/${proj_dir}.2.log"
             
-            for extra_dir in $EXTRA_WORKDIRS; do
-                # Generate cache filename based on directory path
-                cache_name=$(echo "$extra_dir" | sed 's/[^a-zA-Z0-9]/_/g')
-                cache_file="$CACHE_DIR/extra_sessions_${cache_name}.json"
+q            # First pass: Check if ALL caches exist (unless FORCE_RECOLLECT=1)
+            ALL_CACHED=1
+            MISSING_CACHES=""
+            
+            if [[ "${FORCE_RECOLLECT:-0}" != "1" ]]; then
+                for extra_dir in $EXTRA_WORKDIRS; do
+                    cache_name=$(echo "$extra_dir" | sed 's/[^a-zA-Z0-9]/_/g')
+                    cache_file="$CACHE_DIR/extra_sessions_${cache_name}.json"
+                    
+                    if [[ ! -f "$cache_file" ]]; then
+                        ALL_CACHED=0
+                        MISSING_CACHES="$MISSING_CACHES $extra_dir"
+                    fi
+                done
+            else
+                ALL_CACHED=0  # Force recollection
+                echo "   🔄 FORCE_RECOLLECT=1 - Recollecting all extra workdirs" | tee -a "$log_dir/${proj_dir}.2.log"
+            fi
+            
+            # If all caches exist, just load them (fast path)
+            if [[ $ALL_CACHED -eq 1 ]]; then
+                echo "   ✅ All extra workdirs already cached, loading from cache..." | tee -a "$log_dir/${proj_dir}.2.log"
+                total_cached_sessions=0
+                for extra_dir in $EXTRA_WORKDIRS; do
+                    cache_name=$(echo "$extra_dir" | sed 's/[^a-zA-Z0-9]/_/g')
+                    cache_file="$CACHE_DIR/extra_sessions_${cache_name}.json"
+                    
+                    if [[ -f "$cache_file" ]]; then
+                        session_count=$(grep -c '"device_name"' "$cache_file" 2>/dev/null || echo "0")
+                        total_cached_sessions=$((total_cached_sessions + session_count))
+                        echo "      ♻️  $(basename $extra_dir): $session_count sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+                        EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
+                    fi
+                done
+                echo "   � Total from extra workdirs: $total_cached_sessions sessions (cached)" | tee -a "$log_dir/${proj_dir}.2.log"
+            else
+                # Need to collect from some/all extra workdirs (slow path)
+                if [[ -n "$MISSING_CACHES" ]]; then
+                    echo "   ⚠️  Missing caches for:$MISSING_CACHES" | tee -a "$log_dir/${proj_dir}.2.log"
+                fi
+                echo "   📥 Collecting session data..." | tee -a "$log_dir/${proj_dir}.2.log"
                 
-                # Check if cache exists and is recent (use FORCE_RECOLLECT=1 to override)
-                if [[ -f "$cache_file" ]] && [[ "${FORCE_RECOLLECT:-0}" != "1" ]]; then
-                    echo "   ♻️  Using cached data from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
-                    echo "      Cache file: $(basename $cache_file)" | tee -a "$log_dir/${proj_dir}.2.log"
-                    EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
-                else
-                    if [[ "${FORCE_RECOLLECT:-0}" == "1" ]]; then
-                        echo "   🔄 Force recollecting from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
-                    else
-                        echo "   📥 Collecting from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
-                    fi
+                # Build common arguments once
+                MLFLOW_ARGS=""
+                if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
+                    MLFLOW_ARGS="--mlflow"
+                fi
+                
+                SCORING_MODE="${SCORING_MODE:-hybrid}"
+                
+                AGENT_ARGS=""
+                if [[ -n "${AGENT_TYPE:-}" ]]; then
+                    AGENT_ARGS="--agent $AGENT_TYPE"
+                fi
+                
+                REFERENCE_ARGS=""
+                if [[ -n "${REFERENCE_DIR:-}" ]]; then
+                    REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
+                fi
+                
+                # Second pass: Collect or load each workdir
+                total_cached_sessions=0
+                for extra_dir in $EXTRA_WORKDIRS; do
+                    cache_name=$(echo "$extra_dir" | sed 's/[^a-zA-Z0-9]/_/g')
+                    cache_file="$CACHE_DIR/extra_sessions_${cache_name}.json"
                     
-                    # Build MLflow args
-                    MLFLOW_ARGS=""
-                    if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
-                        MLFLOW_ARGS="--mlflow"
-                    fi
-                    
-                    # Set scoring mode (default: hybrid)
-                    SCORING_MODE="${SCORING_MODE:-hybrid}"
-                    
-                    # Build optional arguments for agent and reference
-                    AGENT_ARGS=""
-                    if [[ -n "${AGENT_TYPE:-adk-python}" ]]; then
-                        AGENT_ARGS="--agent $AGENT_TYPE"
-                    fi
-                    
-                    REFERENCE_ARGS=""
-                    if [[ -n "${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}" ]]; then
-                        REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
-                    fi
-                    
-                    # Collect sessions from this extra workdir
-                    set +e
-                    python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
-                        --workdir "$extra_dir" \
-                        --output "$cache_file" \
-                        --min-score 0.5 \
-                        --model "$model" \
-                        --scoring-mode "$SCORING_MODE" \
-                        $AGENT_ARGS \
-                        $REFERENCE_ARGS \
-                        $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
-                    extra_collect_exit=$?
-                    set -e
-                    
-                    if [[ $extra_collect_exit -eq 0 ]] && [[ -f "$cache_file" ]]; then
-                        echo "      ✅ Cached to: $(basename $cache_file)" | tee -a "$log_dir/${proj_dir}.2.log"
+                    # Check if cache exists and we're not forcing recollection
+                    if [[ -f "$cache_file" ]] && [[ "${FORCE_RECOLLECT:-0}" != "1" ]]; then
+                        session_count=$(grep -c '"device_name"' "$cache_file" 2>/dev/null || echo "0")
+                        total_cached_sessions=$((total_cached_sessions + session_count))
+                        echo "      ♻️  Reusing cache: $(basename $extra_dir) ($session_count sessions)" | tee -a "$log_dir/${proj_dir}.2.log"
                         EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
                     else
-                        echo "      ⚠️  Failed to collect from $extra_dir, skipping" | tee -a "$log_dir/${proj_dir}.2.log"
+                        echo "      📥 Collecting: $(basename $extra_dir)" | tee -a "$log_dir/${proj_dir}.2.log"
+                        
+                        # Collect sessions from this extra workdir
+                        set +e
+                        python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
+                            --workdir "$extra_dir" \
+                            --output "$cache_file" \
+                            --min-score 0.5 \
+                            --model "$model" \
+                            --scoring-mode "$SCORING_MODE" \
+                            $AGENT_ARGS \
+                            $REFERENCE_ARGS \
+                            $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+                        extra_collect_exit=$?
+                        set -e
+                        
+                        if [[ $extra_collect_exit -eq 0 ]] && [[ -f "$cache_file" ]]; then
+                            session_count=$(grep -c '"device_name"' "$cache_file" 2>/dev/null || echo "0")
+                            total_cached_sessions=$((total_cached_sessions + session_count))
+                            echo "         ✅ Collected $session_count sessions → $(basename $cache_file)" | tee -a "$log_dir/${proj_dir}.2.log"
+                            EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
+                        else
+                            echo "         ⚠️  Failed to collect, skipping this workdir" | tee -a "$log_dir/${proj_dir}.2.log"
+                        fi
                     fi
-                fi
-            done
+                done
+                echo "   📊 Total from extra workdirs: $total_cached_sessions sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+            fi
         fi
         
         # Collect from current project directory
