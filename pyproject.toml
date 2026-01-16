@@ -47,6 +47,7 @@ dependencies = [
   "litellm>=1.75.5, <2.0.0",                                # For LiteLLM integration
   "httpx>=0.24.0, <1.0.0",                                  # HTTP client for async requests
   "mcp>=1.8.0, <2.0.0;python_version>='3.10'",              # For MCP Toolset
+  "mlflow>=2.10.0, <3.0.0",                                 # For experiment tracking and prompt optimization
   "opentelemetry-api>=1.31.0, <2.0.0",                      # OpenTelemetry
   "opentelemetry-exporter-gcp-trace>=1.9.0, <2.0.0",
   "opentelemetry-sdk>=1.31.0, <2.0.0",

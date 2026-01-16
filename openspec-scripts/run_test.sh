@@ -54,7 +54,7 @@ run_cmd_with_timing() {
 #                          Sessions are cached per workdir and reused across runs
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: hybrid)
-#   AGENT_TYPE           - Agent type for behavior evaluation (e.g., kiro-cli, rovodev, copilot-cli)
+#   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
 #   REFERENCE_DIR        - Directory containing golden reference implementation for comparison
 
 if [ $# -eq 1 ]; then
@@ -184,7 +184,7 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
             echo "📁 Processing additional workdirs with caching..." | tee -a "$log_dir/${proj_dir}.2.log"
             
-q            # First pass: Check if ALL caches exist (unless FORCE_RECOLLECT=1)
+            # First pass: Check if ALL caches exist (unless FORCE_RECOLLECT=1)
             ALL_CACHED=1
             MISSING_CACHES=""
             
@@ -232,17 +232,16 @@ q            # First pass: Check if ALL caches exist (unless FORCE_RECOLLECT=1)
                     MLFLOW_ARGS="--mlflow"
                 fi
                 
-                SCORING_MODE="${SCORING_MODE:-hybrid}"
+                SCORING_MODE="${SCORING_MODE:-llm}"
                 
-                AGENT_ARGS=""
-                if [[ -n "${AGENT_TYPE:-}" ]]; then
-                    AGENT_ARGS="--agent $AGENT_TYPE"
-                fi
+                # Set default agent type if not provided
+                AGENT_TYPE="${AGENT_TYPE:-adk-python}"
+                echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
+                AGENT_ARGS="--agent $AGENT_TYPE"
                 
-                REFERENCE_ARGS=""
-                if [[ -n "${REFERENCE_DIR:-}" ]]; then
-                    REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
-                fi
+                # Set reference directory if not provided
+                REFERENCE_DIR="${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}"
+                REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
                 
                 # Second pass: Collect or load each workdir
                 total_cached_sessions=0
@@ -299,21 +298,18 @@ q            # First pass: Check if ALL caches exist (unless FORCE_RECOLLECT=1)
         fi
         
         # Set scoring mode (default: hybrid)
-        SCORING_MODE="${SCORING_MODE:-hybrid}"
+        SCORING_MODE="${SCORING_MODE:-llm}"
         echo "🎯 Scoring mode: $SCORING_MODE" | tee -a "$log_dir/${proj_dir}.2.log"
         
         # Build optional arguments for agent and reference
-        AGENT_ARGS=""
-        if [[ -n "${AGENT_TYPE:-adk-python}" ]]; then
-            echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
-            AGENT_ARGS="--agent $AGENT_TYPE"
-        fi
-        
-        REFERENCE_ARGS=""
-        if [[ -n "${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}" ]]; then
-            echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.2.log"
-            REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
-        fi
+        # Set default agent type if not provided
+        AGENT_TYPE="${AGENT_TYPE:-adk-python}"
+        echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
+        AGENT_ARGS="--agent $AGENT_TYPE"
+
+        # Set reference directory if not provided
+        REFERENCE_DIR="${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}"
+        REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
         
         # Collect current project sessions
         set +e

@@ -22,6 +22,9 @@ PROJECT_PREFIX="wdt_dbg"
 DRY_RUN=0
 MODEL="${OPENSPEC_MODEL:-iflow/qwen3-coder-plus}"
 
+export EXTRA_WORKDIRS="/home/coder/wp5/ai_againts/adk-python/experiments/extra_workdirs/wdt_dbg132/adk_openspec_project /home/coder/wp5/ai_againts/adk-python/experiments/extra_workdirs/wdt_dbg137/adk_openspec_project /home/coder/wp5/ai_againts/adk-python/experiments/extra_workdirs/wdt_dbg138/adk_openspec_project /home/coder/wp5/ai_againts/adk-python/experiments/extra_workdirs/wdt_dbg140/adk_openspec_project /home/coder/wp5/ai_againts/adk-python/experiments/golden_samples/adk_openspec_project"
+export ENABLE_MLFLOW=1
+
 shift 2
 
 while [[ $# -gt 0 ]]; do
