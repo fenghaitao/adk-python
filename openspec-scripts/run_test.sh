@@ -51,6 +51,9 @@ run_cmd_with_timing() {
 #   EXTRA_WORKDIRS       - Space-separated additional workdirs to collect sessions from
 #                          Example: EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2"
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
+#   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: hybrid)
+#   AGENT_TYPE           - Agent type for behavior evaluation (e.g., kiro-cli, rovodev, copilot-cli)
+#   REFERENCE_DIR        - Directory containing golden reference implementation for comparison
 
 if [ $# -eq 1 ]; then
     # 1 argument: proj_dir
@@ -184,6 +187,23 @@ if [[ "${run_stage[2]}" == "1" ]]; then
             MLFLOW_ARGS="--mlflow"
         fi
         
+        # Set scoring mode (default: hybrid)
+        SCORING_MODE="${SCORING_MODE:-hybrid}"
+        echo "🎯 Scoring mode: $SCORING_MODE" | tee -a "$log_dir/${proj_dir}.2.log"
+        
+        # Build optional arguments for agent and reference
+        AGENT_ARGS=""
+        if [[ -n "${AGENT_TYPE:-}" ]]; then
+            echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
+            AGENT_ARGS="--agent $AGENT_TYPE"
+        fi
+        
+        REFERENCE_ARGS=""
+        if [[ -n "${REFERENCE_DIR:-}" ]]; then
+            echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.2.log"
+            REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
+        fi
+        
         # Run with error capture but don't exit immediately
         set +e
         python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
@@ -191,6 +211,9 @@ if [[ "${run_stage[2]}" == "1" ]]; then
             --output "$OPTIMIZATION_DIR/historical_sessions.json" \
             --min-score 0.5 \
             --model "$model" \
+            --scoring-mode "$SCORING_MODE" \
+            $AGENT_ARGS \
+            $REFERENCE_ARGS \
             $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
         collect_exit_code=$?
         set -e

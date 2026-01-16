@@ -76,8 +76,30 @@ EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2" ./run_test.sh my_project 2
 python collect_session_data.py \
   --workdirs /path/to/proj1 /path/to/proj2 \
   --output historical_sessions.json \
+  --scoring-mode hybrid \
   --mlflow \
   --mlflow-experiment-name "session-collection-2026-01"
+```
+
+**Different Scoring Modes:**
+```bash
+# Hybrid mode (default): 40% deterministic + 40% LLM code + 20% behavior
+python collect_session_data.py \
+  --workdirs /path/to/proj1 /path/to/proj2 \
+  --output sessions.json \
+  --scoring-mode hybrid
+
+# Deterministic only: Fast, parser-based scoring
+python collect_session_data.py \
+  --workdirs /path/to/proj1 /path/to/proj2 \
+  --output sessions.json \
+  --scoring-mode deterministic
+
+# LLM only: Comprehensive but slower
+python collect_session_data.py \
+  --workdirs /path/to/proj1 /path/to/proj2 \
+  --output sessions.json \
+  --scoring-mode llm
 ```
 
 **Optimization with MLflow:**
@@ -110,6 +132,7 @@ ENABLE_MLFLOW=1 EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2" ./run_test.sh my_
 ### New
 - `EXTRA_WORKDIRS="<paths>"`: Space-separated additional workdirs to collect from
 - `ENABLE_MLFLOW=1`: Enable MLflow tracking for both collection and optimization
+- `SCORING_MODE=<mode>`: Set scoring mode - llm, deterministic, or hybrid (default: hybrid)
 
 ## Example Workflows
 
@@ -136,11 +159,21 @@ ENABLE_MLFLOW=1 \
 # Only collect and track, skip optimization
 ENABLE_MLFLOW=1 \
   SKIP_OPTIMIZE=1 \
+  SCORING_MODE=hybrid \
   EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2 /path/to/proj3" \
   ./run_test.sh my_project 2
 ```
 
-### Workflow 4: Standalone Collection
+### Workflow 4: Fast Collection with Deterministic Scoring
+
+```bash
+# Use deterministic scoring for faster collection (no LLM calls)
+SCORING_MODE=deterministic \
+  EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2" \
+  ./run_test.sh my_project 2
+```
+
+### Workflow 5: Standalone Collection
 
 ```bash
 # Directly use collect_session_data.py for maximum control
@@ -164,6 +197,29 @@ python deepeval-scoring/collect_session_data.py \
 ✅ Aggregates successful sessions across multiple experiments
 ✅ Tracks source workdir for each session
 ✅ Provides detailed per-workdir statistics
+
+### Comprehensive Scoring Modes
+The scoring system now supports three modes, matching `score.py`:
+
+**1. Hybrid Mode (Default - Recommended)**
+- **Weight**: 40% deterministic + 40% LLM code + 20% behavior
+- **Best for**: Balanced evaluation with objective and subjective metrics
+- **Speed**: Moderate (includes LLM calls)
+- **Usage**: `--scoring-mode hybrid` or `SCORING_MODE=hybrid`
+
+**2. Deterministic Mode**
+- **Weight**: 100% parser-based metrics
+- **Best for**: Fast collection, objective metrics only
+- **Speed**: Very fast (no LLM calls)
+- **Metrics**: Register coverage, bank structure, connect implementation, import completeness, reset logic
+- **Usage**: `--scoring-mode deterministic` or `SCORING_MODE=deterministic`
+
+**3. LLM Mode**
+- **Weight**: 50% LLM code quality + 50% behavior
+- **Best for**: Comprehensive subjective evaluation
+- **Speed**: Slow (multiple LLM calls per session)
+- **Metrics**: Code correctness, test coverage, code style, agent behavior
+- **Usage**: `--scoring-mode llm` or `SCORING_MODE=llm`
 
 ### MLflow Tracking
 ✅ Complete experiment tracking and reproducibility

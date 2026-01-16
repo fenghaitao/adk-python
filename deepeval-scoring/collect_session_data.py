@@ -31,6 +31,13 @@ Usage:
     --output historical_sessions.json \\
     --min-score 0.5
   
+  # With agent type and reference comparison (same as score.py)
+  python collect_session_data.py \\
+    --workdirs /path/to/project1 /path/to/project2 \\
+    --output historical_sessions.json \\
+    --agent kiro-cli \\
+    --reference-dir ./experiments/golden_samples
+  
   # With MLflow tracking
   python collect_session_data.py \\
     --workdirs /path/to/project1 /path/to/project2 \\
@@ -125,67 +132,162 @@ def extract_task_description(session_log: str, spec_content: str) -> str:
 def score_session(
     workdir: Path,
     device_name: str,
-    model: str = "iflow/qwen3-coder-plus"
+    model: str = "iflow/qwen3-coder-plus",
+    scoring_mode: str = "hybrid",
+    agent: Optional[str] = None,
+    reference_dir: Optional[str] = None
 ) -> Dict[str, Any]:
-  """Score a session using our evaluation system.
+  """Score a session using our comprehensive evaluation system.
+  
+  This uses the same scoring logic as score.py with support for different
+  scoring modes (llm, deterministic, hybrid), agent type specification, and
+  golden reference comparison.
   
   Args:
     workdir: Working directory
     device_name: Device name
     model: LLM model for evaluation
+    scoring_mode: Scoring mode - "llm", "deterministic", or "hybrid" (default)
+    agent: Agent type for behavior evaluation (e.g., kiro-cli, rovodev, copilot-cli)
+    reference_dir: Directory containing golden reference implementation for comparison
     
   Returns:
-    Score results dictionary
+    Score results dictionary with overall_score, code_score, behavior_score, 
+    deterministic_score, and detailed metrics
   """
   from evaluators.code_evaluator import CodeEvaluator
   from evaluators.behavior_evaluator import BehaviorEvaluator
+  from metrics.deterministic_scoring import DeterministicScorer
   
   try:
-    # Run code evaluation
-    code_eval = CodeEvaluator(
-      workdir=str(workdir),
-      device_name=device_name,
-      model=model
-    )
-    code_results = code_eval.evaluate()
-    
-    # Run behavior evaluation (if session log exists)
+    code_results = None
     behavior_results = None
-    try:
-      behavior_eval = BehaviorEvaluator(
-        workdir=str(workdir),
-        device_name=device_name,
-        model=model
-      )
-      behavior_results = behavior_eval.evaluate()
-    except Exception:
-      pass  # Behavior evaluation optional
+    deterministic_results = None
     
-    # Calculate overall score
-    scores = [code_results["overall_score"]]
-    if behavior_results:
-      scores.append(behavior_results["overall_score"])
+    # Run code evaluation (LLM-based) with reference comparison if available
+    if scoring_mode in ["llm", "hybrid"]:
+      try:
+        code_eval = CodeEvaluator(
+          workdir=str(workdir),
+          device_name=device_name,
+          model=model,
+          reference_dir=reference_dir  # Pass reference directory for golden comparison
+        )
+        code_results = code_eval.evaluate()
+      except Exception as e:
+        print(f"    ⚠️  LLM code evaluation failed: {e}")
     
-    overall_score = sum(scores) / len(scores)
+    # Run deterministic evaluation (parser-based)
+    if scoring_mode in ["deterministic", "hybrid"]:
+      try:
+        deterministic_scorer = DeterministicScorer(
+          workdir=str(workdir),
+          device_name=device_name
+        )
+        deterministic_results = deterministic_scorer.score_implementation()
+      except Exception as e:
+        print(f"    ⚠️  Deterministic evaluation failed: {e}")
+    
+    # Run behavior evaluation (optional, LLM-based) with agent type
+    if scoring_mode in ["llm", "hybrid"]:
+      try:
+        behavior_eval = BehaviorEvaluator(
+          workdir=str(workdir),
+          device_name=device_name,
+          model=model,
+          agent=agent  # Pass agent type for behavior evaluation
+        )
+        behavior_results = behavior_eval.evaluate()
+      except Exception:
+        pass  # Behavior evaluation is optional
+    
+    # Calculate overall score based on scoring mode (same logic as score.py)
+    overall_score = _calculate_overall_score(
+      code_results, 
+      behavior_results, 
+      deterministic_results, 
+      scoring_mode
+    )
     
     return {
       "overall_score": overall_score,
-      "code_score": code_results["overall_score"],
+      "scoring_mode": scoring_mode,
+      "code_score": code_results["overall_score"] if code_results else None,
       "behavior_score": behavior_results["overall_score"] if behavior_results else None,
+      "deterministic_score": deterministic_results["overall_score"] if deterministic_results else None,
       "metrics": {
-        "code": code_results["metrics"],
-        "behavior": behavior_results["metrics"] if behavior_results else None
+        "code": code_results["metrics"] if code_results else None,
+        "behavior": behavior_results["metrics"] if behavior_results else None,
+        "deterministic": deterministic_results if deterministic_results else None
       }
     }
     
   except Exception as e:
     print(f"⚠️  Warning: Failed to score session for {device_name}: {e}")
+    import traceback
+    traceback.print_exc()
     return {
       "overall_score": 0.0,
+      "scoring_mode": scoring_mode,
       "code_score": 0.0,
       "behavior_score": None,
+      "deterministic_score": 0.0,
       "metrics": {}
     }
+
+
+def _calculate_overall_score(
+    code_results: Optional[Dict],
+    behavior_results: Optional[Dict],
+    deterministic_results: Optional[Dict],
+    scoring_mode: str
+) -> float:
+  """Calculate overall score based on scoring mode.
+  
+  This matches the logic in score.py's calculate_overall_score function.
+  
+  Args:
+    code_results: LLM-based code evaluation results
+    behavior_results: Behavior evaluation results
+    deterministic_results: Deterministic evaluation results
+    scoring_mode: Scoring mode (llm, deterministic, hybrid)
+    
+  Returns:
+    Overall score between 0.0 and 1.0
+  """
+  if scoring_mode == "deterministic":
+    if deterministic_results:
+      return deterministic_results["overall_score"]
+    return 0.0
+    
+  elif scoring_mode == "llm":
+    scores = []
+    if code_results:
+      scores.append(code_results["overall_score"])
+    if behavior_results:
+      scores.append(behavior_results["overall_score"])
+    return sum(scores) / len(scores) if scores else 0.0
+    
+  elif scoring_mode == "hybrid":
+    # Hybrid mode: 40% deterministic, 40% LLM code, 20% behavior
+    total_score = 0.0
+    total_weight = 0.0
+    
+    if deterministic_results:
+      total_score += deterministic_results["overall_score"] * 0.4
+      total_weight += 0.4
+    
+    if code_results:
+      total_score += code_results["overall_score"] * 0.4
+      total_weight += 0.4
+    
+    if behavior_results:
+      total_score += behavior_results["overall_score"] * 0.2
+      total_weight += 0.2
+    
+    return total_score / total_weight if total_weight > 0 else 0.0
+  
+  return 0.0
 
 
 def collect_session(
@@ -193,7 +295,10 @@ def collect_session(
     session_file: Path,
     model: str,
     min_score: float,
-    workdir_label: Optional[str] = None
+    scoring_mode: str = "hybrid",
+    workdir_label: Optional[str] = None,
+    agent: Optional[str] = None,
+    reference_dir: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
   """Collect data from a single session.
   
@@ -202,7 +307,10 @@ def collect_session(
     session_file: Session log file
     model: LLM model for scoring
     min_score: Minimum score threshold
+    scoring_mode: Scoring mode (llm, deterministic, hybrid)
     workdir_label: Label for the workdir (e.g., "project1") for tracking
+    agent: Agent type for behavior evaluation (e.g., kiro-cli, rovodev)
+    reference_dir: Directory containing golden reference implementation
     
   Returns:
     Session data dictionary or None if invalid
@@ -252,8 +360,15 @@ def collect_session(
   task_description = extract_task_description(session_log, spec_content)
   
   # Score this session
-  print(f"  🔍 Scoring implementation...")
-  score_result = score_session(workdir, device_name, model)
+  print(f"  🔍 Scoring implementation ({scoring_mode} mode)...")
+  score_result = score_session(
+    workdir, 
+    device_name, 
+    model, 
+    scoring_mode,
+    agent=agent,
+    reference_dir=reference_dir
+  )
   overall_score = score_result["overall_score"]
   
   print(f"  📊 Score: {overall_score:.1%}")
@@ -322,6 +437,20 @@ def main():
     help="Glob pattern for session files (default: **/*.session.txt)"
   )
   parser.add_argument(
+    "--scoring-mode",
+    choices=["llm", "deterministic", "hybrid"],
+    default="hybrid",
+    help="Scoring mode: llm (LLM-based), deterministic (parser-based), or hybrid (default: hybrid)"
+  )
+  parser.add_argument(
+    "--agent",
+    help="Agent type for behavior evaluation (e.g., kiro-cli, rovodev, copilot-cli, adk-python, qodercli)"
+  )
+  parser.add_argument(
+    "--reference-dir",
+    help="Directory containing golden reference implementation for LLM-powered comparison"
+  )
+  parser.add_argument(
     "--mlflow",
     action="store_true",
     help="Enable MLflow experiment tracking"
@@ -370,16 +499,25 @@ def main():
   # Start MLflow run if enabled
   if mlflow_tracker:
     try:
-      mlflow_tracker.start_run(
-        device_name="multi-device" if len(workdirs) > 1 else workdirs[0].name,
-        model=args.model,
-        scoring_mode="historical_collection",
-        workdir=str(workdirs[0]) if len(workdirs) == 1 else "multiple",
-        num_workdirs=len(workdirs),
-        workdir_paths=[str(w) for w in workdirs],
-        min_score=args.min_score,
-        pattern=args.pattern
-      )
+      # Build MLflow parameters
+      mlflow_params = {
+        "device_name": "multi-device" if len(workdirs) > 1 else workdirs[0].name,
+        "model": args.model,
+        "scoring_mode": args.scoring_mode,
+        "workdir": str(workdirs[0]) if len(workdirs) == 1 else "multiple",
+        "num_workdirs": len(workdirs),
+        "workdir_paths": [str(w) for w in workdirs],
+        "min_score": args.min_score,
+        "pattern": args.pattern
+      }
+      
+      # Add agent and reference_dir if provided
+      if args.agent:
+        mlflow_params["agent"] = args.agent
+      if args.reference_dir:
+        mlflow_params["reference_dir"] = args.reference_dir
+      
+      mlflow_tracker.start_run(**mlflow_params)
     except Exception as e:
       print(f"❌ Error starting MLflow run: {e}")
       mlflow_tracker = None
@@ -387,6 +525,11 @@ def main():
   print(f"🔍 Scanning {len(workdirs)} workspace(s) for session files")
   print(f"📋 Pattern: {args.pattern}")
   print(f"📊 Minimum score: {args.min_score:.1%}")
+  print(f"🎯 Scoring mode: {args.scoring_mode.upper()}")
+  if args.agent:
+    print(f"🤖 Agent type: {args.agent}")
+  if args.reference_dir:
+    print(f"📚 Reference directory: {args.reference_dir}")
   for i, workdir in enumerate(workdirs, 1):
     print(f"  {i}. {workdir}")
   print("="*60)
@@ -422,7 +565,10 @@ def main():
         session_file=session_file,
         model=args.model,
         min_score=args.min_score,
-        workdir_label=workdir_label
+        scoring_mode=args.scoring_mode,
+        workdir_label=workdir_label,
+        agent=args.agent,
+        reference_dir=args.reference_dir
       )
       
       if session_data:
