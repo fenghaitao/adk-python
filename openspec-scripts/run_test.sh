@@ -212,12 +212,12 @@ if [[ "${run_stage[2]}" == "1" ]]; then
                     
                     # Build optional arguments for agent and reference
                     AGENT_ARGS=""
-                    if [[ -n "${AGENT_TYPE:-}" ]]; then
+                    if [[ -n "${AGENT_TYPE:-adk-python}" ]]; then
                         AGENT_ARGS="--agent $AGENT_TYPE"
                     fi
                     
                     REFERENCE_ARGS=""
-                    if [[ -n "${REFERENCE_DIR:-}" ]]; then
+                    if [[ -n "${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}" ]]; then
                         REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
                     fi
                     
@@ -262,13 +262,13 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         
         # Build optional arguments for agent and reference
         AGENT_ARGS=""
-        if [[ -n "${AGENT_TYPE:-}" ]]; then
+        if [[ -n "${AGENT_TYPE:-adk-python}" ]]; then
             echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
             AGENT_ARGS="--agent $AGENT_TYPE"
         fi
         
         REFERENCE_ARGS=""
-        if [[ -n "${REFERENCE_DIR:-}" ]]; then
+        if [[ -n "${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}" ]]; then
             echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.2.log"
             REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
         fi
