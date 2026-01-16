@@ -45,11 +45,13 @@ run_cmd_with_timing() {
 #   SKIP_COLLECT=1       - Skip session data collection, use existing historical_sessions.json
 #   SKIP_OPTIMIZE=1      - Skip optimization step, only collect session data
 #   FORCE_OPTIMIZE=1     - Force optimization even with insufficient sessions
+#   FORCE_RECOLLECT=1    - Force recollection from EXTRA_WORKDIRS (ignore cache)
 #   MIN_SESSIONS=N       - Set minimum session threshold (default: 5)
 #   MAX_CONCURRENT=N     - Set max concurrent API calls (default: 1)
 #   THROTTLE_SECONDS=N   - Set throttle delay between batches (default: 30.0)
 #   EXTRA_WORKDIRS       - Space-separated additional workdirs to collect sessions from
 #                          Example: EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2"
+#                          Sessions are cached per workdir and reused across runs
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: hybrid)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., kiro-cli, rovodev, copilot-cli)
@@ -173,12 +175,79 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         echo "Working directory: $(pwd)" | tee -a "$log_dir/${proj_dir}.2.log"
         echo "Output path: $OPTIMIZATION_DIR/historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
         
-        # Build workdirs argument (support multiple workdirs for aggregation)
-        COLLECT_WORKDIRS="$proj_dir_abs/adk_openspec_project"
+        # Create cache directory for extra workdirs
+        CACHE_DIR="$OPTIMIZATION_DIR/.cache"
+        mkdir -p "$CACHE_DIR"
+        
+        # Process EXTRA_WORKDIRS with caching
+        EXTRA_SESSION_FILES=""
         if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
-            echo "📁 Additional workdirs: $EXTRA_WORKDIRS" | tee -a "$log_dir/${proj_dir}.2.log"
-            COLLECT_WORKDIRS="$COLLECT_WORKDIRS $EXTRA_WORKDIRS"
+            echo "📁 Processing additional workdirs with caching..." | tee -a "$log_dir/${proj_dir}.2.log"
+            
+            for extra_dir in $EXTRA_WORKDIRS; do
+                # Generate cache filename based on directory path
+                cache_name=$(echo "$extra_dir" | sed 's/[^a-zA-Z0-9]/_/g')
+                cache_file="$CACHE_DIR/extra_sessions_${cache_name}.json"
+                
+                # Check if cache exists and is recent (use FORCE_RECOLLECT=1 to override)
+                if [[ -f "$cache_file" ]] && [[ "${FORCE_RECOLLECT:-0}" != "1" ]]; then
+                    echo "   ♻️  Using cached data from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
+                    echo "      Cache file: $(basename $cache_file)" | tee -a "$log_dir/${proj_dir}.2.log"
+                    EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
+                else
+                    if [[ "${FORCE_RECOLLECT:-0}" == "1" ]]; then
+                        echo "   🔄 Force recollecting from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
+                    else
+                        echo "   📥 Collecting from: $extra_dir" | tee -a "$log_dir/${proj_dir}.2.log"
+                    fi
+                    
+                    # Build MLflow args
+                    MLFLOW_ARGS=""
+                    if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
+                        MLFLOW_ARGS="--mlflow"
+                    fi
+                    
+                    # Set scoring mode (default: hybrid)
+                    SCORING_MODE="${SCORING_MODE:-hybrid}"
+                    
+                    # Build optional arguments for agent and reference
+                    AGENT_ARGS=""
+                    if [[ -n "${AGENT_TYPE:-}" ]]; then
+                        AGENT_ARGS="--agent $AGENT_TYPE"
+                    fi
+                    
+                    REFERENCE_ARGS=""
+                    if [[ -n "${REFERENCE_DIR:-}" ]]; then
+                        REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
+                    fi
+                    
+                    # Collect sessions from this extra workdir
+                    set +e
+                    python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
+                        --workdir "$extra_dir" \
+                        --output "$cache_file" \
+                        --min-score 0.5 \
+                        --model "$model" \
+                        --scoring-mode "$SCORING_MODE" \
+                        $AGENT_ARGS \
+                        $REFERENCE_ARGS \
+                        $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+                    extra_collect_exit=$?
+                    set -e
+                    
+                    if [[ $extra_collect_exit -eq 0 ]] && [[ -f "$cache_file" ]]; then
+                        echo "      ✅ Cached to: $(basename $cache_file)" | tee -a "$log_dir/${proj_dir}.2.log"
+                        EXTRA_SESSION_FILES="$EXTRA_SESSION_FILES $cache_file"
+                    else
+                        echo "      ⚠️  Failed to collect from $extra_dir, skipping" | tee -a "$log_dir/${proj_dir}.2.log"
+                    fi
+                fi
+            done
         fi
+        
+        # Collect from current project directory
+        echo "📥 Collecting from current project: $proj_dir_abs/adk_openspec_project" | tee -a "$log_dir/${proj_dir}.2.log"
+        CURRENT_SESSION_FILE="$CACHE_DIR/current_sessions.json"
         
         # Enable MLflow tracking if requested
         MLFLOW_ARGS=""
@@ -204,11 +273,11 @@ if [[ "${run_stage[2]}" == "1" ]]; then
             REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
         fi
         
-        # Run with error capture but don't exit immediately
+        # Collect current project sessions
         set +e
         python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
-            --workdirs $COLLECT_WORKDIRS \
-            --output "$OPTIMIZATION_DIR/historical_sessions.json" \
+            --workdir "$proj_dir_abs/adk_openspec_project" \
+            --output "$CURRENT_SESSION_FILE" \
             --min-score 0.5 \
             --model "$model" \
             --scoring-mode "$SCORING_MODE" \
@@ -226,6 +295,52 @@ if [[ "${run_stage[2]}" == "1" ]]; then
             echo "  - Insufficient historical sessions: Need at least 10 sessions" | tee -a "$log_dir/${proj_dir}.2.log"
             echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
             exit 0  # Don't fail the entire pipeline
+        fi
+        
+        # Merge current sessions with extra workdir sessions (if any)
+        if [[ -n "$EXTRA_SESSION_FILES" ]]; then
+            echo "🔀 Merging session data from multiple sources..." | tee -a "$log_dir/${proj_dir}.2.log"
+            echo "   Current: $(basename $CURRENT_SESSION_FILE)" | tee -a "$log_dir/${proj_dir}.2.log"
+            
+            # Count sessions in each file
+            current_count=$(grep -c '"device_name"' "$CURRENT_SESSION_FILE" 2>/dev/null || echo "0")
+            echo "   - Current project: $current_count sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+            
+            for extra_file in $EXTRA_SESSION_FILES; do
+                extra_count=$(grep -c '"device_name"' "$extra_file" 2>/dev/null || echo "0")
+                echo "   - $(basename $extra_file): $extra_count sessions" | tee -a "$log_dir/${proj_dir}.2.log"
+            done
+            
+            # Use Python to merge JSON arrays
+            python3 -c "
+import json
+import sys
+
+# Read current sessions
+with open('$CURRENT_SESSION_FILE', 'r') as f:
+    all_sessions = json.load(f)
+
+# Merge extra sessions
+extra_files = '$EXTRA_SESSION_FILES'.split()
+for extra_file in extra_files:
+    if extra_file.strip():
+        try:
+            with open(extra_file.strip(), 'r') as f:
+                extra_sessions = json.load(f)
+                all_sessions.extend(extra_sessions)
+        except Exception as e:
+            print(f'Warning: Failed to read {extra_file}: {e}', file=sys.stderr)
+
+# Write merged sessions
+with open('$OPTIMIZATION_DIR/historical_sessions.json', 'w') as f:
+    json.dump(all_sessions, f, indent=2)
+
+print(f'✅ Merged {len(all_sessions)} total sessions')
+" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+            
+        else
+            # No extra workdirs, just copy current sessions
+            cp "$CURRENT_SESSION_FILE" "$OPTIMIZATION_DIR/historical_sessions.json"
         fi
         
         # Verify output file was created
