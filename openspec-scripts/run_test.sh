@@ -48,6 +48,9 @@ run_cmd_with_timing() {
 #   MIN_SESSIONS=N       - Set minimum session threshold (default: 5)
 #   MAX_CONCURRENT=N     - Set max concurrent API calls (default: 1)
 #   THROTTLE_SECONDS=N   - Set throttle delay between batches (default: 30.0)
+#   EXTRA_WORKDIRS       - Space-separated additional workdirs to collect sessions from
+#                          Example: EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2"
+#   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 
 if [ $# -eq 1 ]; then
     # 1 argument: proj_dir
@@ -167,13 +170,28 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         echo "Working directory: $(pwd)" | tee -a "$log_dir/${proj_dir}.2.log"
         echo "Output path: $OPTIMIZATION_DIR/historical_sessions.json" | tee -a "$log_dir/${proj_dir}.2.log"
         
+        # Build workdirs argument (support multiple workdirs for aggregation)
+        COLLECT_WORKDIRS="$proj_dir_abs/adk_openspec_project"
+        if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
+            echo "📁 Additional workdirs: $EXTRA_WORKDIRS" | tee -a "$log_dir/${proj_dir}.2.log"
+            COLLECT_WORKDIRS="$COLLECT_WORKDIRS $EXTRA_WORKDIRS"
+        fi
+        
+        # Enable MLflow tracking if requested
+        MLFLOW_ARGS=""
+        if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
+            echo "🔬 MLflow tracking enabled" | tee -a "$log_dir/${proj_dir}.2.log"
+            MLFLOW_ARGS="--mlflow"
+        fi
+        
         # Run with error capture but don't exit immediately
         set +e
         python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
-            --workdir "$proj_dir_abs/adk_openspec_project" \
+            --workdirs $COLLECT_WORKDIRS \
             --output "$OPTIMIZATION_DIR/historical_sessions.json" \
             --min-score 0.5 \
-            --model "$model" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+            --model "$model" \
+            $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
         collect_exit_code=$?
         set -e
         
@@ -223,6 +241,7 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     if [[ "${SKIP_OPTIMIZE:-0}" == "1" ]]; then
         echo "⚠️  Skipping optimization (SKIP_OPTIMIZE=1)" | tee -a "$log_dir/${proj_dir}.2.log"
         echo "✅ Stage 2 session data collection complete!" | tee -a "$log_dir/${proj_dir}.2.log"
+        cd "$proj_dir_abs"
         exit 0
     fi
     
@@ -231,6 +250,13 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     THROTTLE_SECONDS="${THROTTLE_SECONDS:-30.0}"
     
     echo "⏱️  Rate limiting: max_concurrent=$MAX_CONCURRENT, throttle=${THROTTLE_SECONDS}s" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Enable MLflow tracking if requested
+    MLFLOW_ARGS=""
+    if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
+        echo "🔬 MLflow tracking enabled for optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        MLFLOW_ARGS="--mlflow"
+    fi
     
     set +e
     python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
@@ -242,7 +268,8 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         --max-concurrent "$MAX_CONCURRENT" \
         --throttle-seconds "$THROTTLE_SECONDS" \
         --model "github_copilot/gpt-4o" \
-        --no-async 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+        --no-async \
+        $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
     optimize_exit_code=$?
     set -e
     

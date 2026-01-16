@@ -25,14 +25,26 @@ Usage:
     --output optimized_instructions.md \\
     --algorithm miprov2 \\
     --iterations 5
+  
+  # With MLflow tracking
+  python optimize_instructions.py \\
+    --historical-data sessions.json \\
+    --current-instructions apply_agent_instruction.md \\
+    --output optimized_instructions.md \\
+    --algorithm copro \\
+    --iterations 5 \\
+    --mlflow
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
+import litellm
 import os
 import sys
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -47,6 +59,8 @@ from metrics.code_correctness import CodeCorrectnessMetric
 from metrics.test_coverage import TestCoverageMetric
 from metrics.code_style import CodeStyleMetric
 from metrics.agent_behavior import AgentBehaviorMetric
+from tracking.mlflow_tracker import MLflowTracker
+from tracking.utils import is_mlflow_available
 
 
 def load_historical_sessions(data_file: Path) -> List[Golden]:
@@ -388,6 +402,19 @@ def main():
     action="store_true",
     help="Disable async mode to avoid pickle issues with thread locks (default: False)"
   )
+  parser.add_argument(
+    "--mlflow",
+    action="store_true",
+    help="Enable MLflow experiment tracking"
+  )
+  parser.add_argument(
+    "--mlflow-tracking-uri",
+    help="MLflow tracking URI (overrides config)"
+  )
+  parser.add_argument(
+    "--mlflow-experiment-name",
+    help="MLflow experiment name (overrides config pattern)"
+  )
   
   args = parser.parse_args()
   
@@ -401,6 +428,23 @@ def main():
   if abs(total_weight - 1.0) > 0.01:
     print(f"❌ Error: Weights must sum to 1.0 (got {total_weight})")
     sys.exit(1)
+  
+  # Initialize MLflow tracker if requested
+  mlflow_tracker = None
+  if args.mlflow:
+    if not is_mlflow_available():
+      print("❌ Error: MLflow is not available. Install with: pip install mlflow")
+      sys.exit(1)
+    
+    try:
+      mlflow_tracker = MLflowTracker(
+        tracking_uri=args.mlflow_tracking_uri,
+        experiment_name=args.mlflow_experiment_name
+      )
+      print(f"🔬 MLflow tracking enabled: {mlflow_tracker.get_tracking_uri()}")
+    except Exception as e:
+      print(f"❌ Error initializing MLflow: {e}")
+      sys.exit(1)
   
   # Load data
   print(f"📂 Loading historical data from {args.historical_data}...")
@@ -432,9 +476,33 @@ def main():
   )
   print(f"✅ Optimizer created")
   
+  # Start MLflow run if enabled
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.start_run(
+        device_name="prompt_optimization",
+        model=args.model,
+        scoring_mode="optimization",
+        workdir=str(Path(args.historical_data).parent),
+        algorithm=args.algorithm,
+        iterations=args.iterations,
+        num_sessions=len(historical_data),
+        max_concurrent=args.max_concurrent,
+        throttle_seconds=args.throttle_seconds,
+        weight_correctness=args.weight_correctness,
+        weight_coverage=args.weight_coverage,
+        weight_style=args.weight_style,
+        weight_behavior=args.weight_behavior
+      )
+    except Exception as e:
+      print(f"❌ Error starting MLflow run: {e}")
+      mlflow_tracker = None
+  
   # Run optimization
   print(f"\n🚀 Starting optimization ({args.iterations} iterations)...")
   print("="*60)
+  
+  start_time = time.time()
   
   optimized_instructions = optimize_instructions(
     current_instructions=current_instructions,
@@ -442,8 +510,10 @@ def main():
     optimizer=optimizer
   )
   
+  optimization_time = time.time() - start_time
+  
   print("="*60)
-  print(f"✅ Optimization complete!")
+  print(f"✅ Optimization complete in {optimization_time:.1f} seconds!")
   
   # Save optimized instructions
   output_path = Path(args.output)
@@ -459,11 +529,70 @@ def main():
   print(f"  Optimized: {len(optimized_lines)} lines, {len(optimized_instructions)} chars")
   print(f"  Change: {len(optimized_lines) - len(original_lines):+d} lines")
   
+  # Log to MLflow if enabled
+  if mlflow_tracker:
+    try:
+      import mlflow
+      import tempfile
+      
+      # Log metrics
+      mlflow.log_metrics({
+        "num_sessions": len(historical_data),
+        "iterations": args.iterations,
+        "optimization_time_seconds": optimization_time,
+        "original_lines": len(original_lines),
+        "optimized_lines": len(optimized_lines),
+        "original_chars": len(current_instructions),
+        "optimized_chars": len(optimized_instructions),
+        "lines_change": len(optimized_lines) - len(original_lines),
+        "chars_change": len(optimized_instructions) - len(current_instructions)
+      })
+      
+      # Log parameters/weights
+      mlflow.log_params({
+        "weight_correctness": args.weight_correctness,
+        "weight_coverage": args.weight_coverage,
+        "weight_style": args.weight_style,
+        "weight_behavior": args.weight_behavior
+      })
+      
+      # Log artifacts
+      mlflow.log_artifact(args.historical_data, "input_data")
+      mlflow.log_artifact(args.current_instructions, "original_instructions")
+      mlflow.log_artifact(str(output_path), "optimized_instructions")
+      
+      # Create and log a diff file
+      import difflib
+      diff = difflib.unified_diff(
+        original_lines,
+        optimized_lines,
+        fromfile="original_instructions.md",
+        tofile="optimized_instructions.md",
+        lineterm=""
+      )
+      with tempfile.NamedTemporaryFile(mode='w', suffix='.diff', delete=False) as f:
+        f.write('\n'.join(diff))
+        diff_file = f.name
+      mlflow.log_artifact(diff_file, "diff")
+      Path(diff_file).unlink()
+      
+      print(f"\n🔬 Results logged to MLflow run: {mlflow_tracker.get_run_id()}")
+      
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to log to MLflow: {e}")
+  
   print(f"\n💡 Next steps:")
   print(f"  1. Review optimized instructions: {output_path}")
   print(f"  2. Test with a new implementation")
   print(f"  3. Compare scores before/after optimization")
   print(f"  4. If improved, replace current instructions")
+  
+  # End MLflow run
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.end_run(status="FINISHED")
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to end MLflow run: {e}")
 
 
 if __name__ == "__main__":

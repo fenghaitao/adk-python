@@ -15,14 +15,28 @@
 
 """Collect historical session data for optimizer training.
 
-This script scans a workspace for past agent sessions and creates a dataset
-suitable for training DeepEval's PromptOptimizer.
+This script scans one or multiple workspaces for past agent sessions and creates 
+a dataset suitable for training DeepEval's PromptOptimizer.
 
 Usage:
+  # Single workdir
   python collect_session_data.py \\
     --workdir /path/to/project \\
     --output historical_sessions.json \\
     --min-score 0.5
+  
+  # Multiple workdirs (aggregate sessions)
+  python collect_session_data.py \\
+    --workdirs /path/to/project1 /path/to/project2 /path/to/project3 \\
+    --output historical_sessions.json \\
+    --min-score 0.5
+  
+  # With MLflow tracking
+  python collect_session_data.py \\
+    --workdirs /path/to/project1 /path/to/project2 \\
+    --output historical_sessions.json \\
+    --mlflow \\
+    --mlflow-experiment-name "session-collection"
 """
 
 from __future__ import annotations
@@ -31,6 +45,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -38,6 +53,8 @@ from parsers.dml_parser import DMLParser
 from parsers.test_parser import TestParser
 from parsers.spec_parser import SpecParser
 from parsers.session_parser import SessionParser
+from tracking.mlflow_tracker import MLflowTracker
+from tracking.utils import is_mlflow_available
 
 
 def extract_device_name_from_session(session_log: str) -> Optional[str]:
@@ -175,7 +192,8 @@ def collect_session(
     workdir: Path,
     session_file: Path,
     model: str,
-    min_score: float
+    min_score: float,
+    workdir_label: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
   """Collect data from a single session.
   
@@ -184,11 +202,13 @@ def collect_session(
     session_file: Session log file
     model: LLM model for scoring
     min_score: Minimum score threshold
+    workdir_label: Label for the workdir (e.g., "project1") for tracking
     
   Returns:
     Session data dictionary or None if invalid
   """
-  print(f"📄 Processing: {session_file.name}")
+  workdir_info = f" ({workdir_label})" if workdir_label else ""
+  print(f"📄 Processing{workdir_info}: {session_file.name}")
   
   # Read session log
   session_log = session_file.read_text()
@@ -255,7 +275,8 @@ def collect_session(
     "metrics": score_result["metrics"],
     "dml_components": dml_data,
     "num_test_files": len(test_files),
-    "session_file": str(session_file.relative_to(workdir))
+    "session_file": str(session_file.relative_to(workdir)),
+    "workdir": workdir_label or str(workdir.name)  # Track source workdir
   }
   
   print(f"  ✅ Session collected")
@@ -266,11 +287,19 @@ def main():
   parser = argparse.ArgumentParser(
     description="Collect historical session data for optimizer training"
   )
-  parser.add_argument(
+  
+  # Support both single and multiple workdirs
+  workdir_group = parser.add_mutually_exclusive_group(required=True)
+  workdir_group.add_argument(
     "--workdir",
-    required=True,
-    help="Working directory to scan for sessions"
+    help="Single working directory to scan for sessions"
   )
+  workdir_group.add_argument(
+    "--workdirs",
+    nargs="+",
+    help="Multiple working directories to scan and aggregate sessions"
+  )
+  
   parser.add_argument(
     "--output",
     required=True,
@@ -292,47 +321,134 @@ def main():
     default="**/*.session.txt",
     help="Glob pattern for session files (default: **/*.session.txt)"
   )
+  parser.add_argument(
+    "--mlflow",
+    action="store_true",
+    help="Enable MLflow experiment tracking"
+  )
+  parser.add_argument(
+    "--mlflow-tracking-uri",
+    help="MLflow tracking URI (overrides config)"
+  )
+  parser.add_argument(
+    "--mlflow-experiment-name",
+    help="MLflow experiment name (overrides config pattern)"
+  )
   
   args = parser.parse_args()
   
-  workdir = Path(args.workdir)
-  if not workdir.exists():
-    print(f"❌ Error: Workdir does not exist: {workdir}")
-    sys.exit(1)
+  # Determine workdirs to process
+  workdirs = []
+  if args.workdir:
+    workdirs = [Path(args.workdir)]
+  else:
+    workdirs = [Path(w) for w in args.workdirs]
   
-  print(f"🔍 Scanning for session files in: {workdir}")
+  # Validate all workdirs exist
+  for workdir in workdirs:
+    if not workdir.exists():
+      print(f"❌ Error: Workdir does not exist: {workdir}")
+      sys.exit(1)
+  
+  # Initialize MLflow tracker if requested
+  mlflow_tracker = None
+  if args.mlflow:
+    if not is_mlflow_available():
+      print("❌ Error: MLflow is not available. Install with: pip install mlflow")
+      sys.exit(1)
+    
+    try:
+      mlflow_tracker = MLflowTracker(
+        tracking_uri=args.mlflow_tracking_uri,
+        experiment_name=args.mlflow_experiment_name
+      )
+      print(f"� MLflow tracking enabled: {mlflow_tracker.get_tracking_uri()}")
+    except Exception as e:
+      print(f"❌ Error initializing MLflow: {e}")
+      sys.exit(1)
+  
+  # Start MLflow run if enabled
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.start_run(
+        device_name="multi-device" if len(workdirs) > 1 else workdirs[0].name,
+        model=args.model,
+        scoring_mode="historical_collection",
+        workdir=str(workdirs[0]) if len(workdirs) == 1 else "multiple",
+        num_workdirs=len(workdirs),
+        workdir_paths=[str(w) for w in workdirs],
+        min_score=args.min_score,
+        pattern=args.pattern
+      )
+    except Exception as e:
+      print(f"❌ Error starting MLflow run: {e}")
+      mlflow_tracker = None
+  
+  print(f"🔍 Scanning {len(workdirs)} workspace(s) for session files")
   print(f"📋 Pattern: {args.pattern}")
   print(f"📊 Minimum score: {args.min_score:.1%}")
+  for i, workdir in enumerate(workdirs, 1):
+    print(f"  {i}. {workdir}")
   print("="*60)
   
-  # Find all session files
-  session_files = list(workdir.glob(args.pattern))
-  print(f"\n📁 Found {len(session_files)} session files")
-  
-  if not session_files:
-    print("❌ No session files found")
-    sys.exit(1)
-  
-  # Collect data from each session
+  # Collect sessions from all workdirs
   collected_sessions = []
-  for session_file in session_files:
-    session_data = collect_session(
-      workdir=workdir,
-      session_file=session_file,
-      model=args.model,
-      min_score=args.min_score
-    )
+  workdir_stats = {}
+  start_time = time.time()
+  
+  for workdir_idx, workdir in enumerate(workdirs, 1):
+    workdir_label = f"workdir{workdir_idx}" if len(workdirs) > 1 else None
     
-    if session_data:
-      collected_sessions.append(session_data)
+    print(f"\n📁 Scanning workspace {workdir_idx}/{len(workdirs)}: {workdir}")
     
-    print()  # Blank line between sessions
+    # Find all session files in this workdir
+    session_files = list(workdir.glob(args.pattern))
+    print(f"   Found {len(session_files)} session files")
+    
+    workdir_stats[str(workdir)] = {
+      "total_sessions": len(session_files),
+      "collected_sessions": 0,
+      "skipped_sessions": 0
+    }
+    
+    if not session_files:
+      print(f"   ⚠️  No session files found in this workspace")
+      continue
+    
+    # Process each session file
+    for session_file in session_files:
+      session_data = collect_session(
+        workdir=workdir,
+        session_file=session_file,
+        model=args.model,
+        min_score=args.min_score,
+        workdir_label=workdir_label
+      )
+      
+      if session_data:
+        collected_sessions.append(session_data)
+        workdir_stats[str(workdir)]["collected_sessions"] += 1
+      else:
+        workdir_stats[str(workdir)]["skipped_sessions"] += 1
+      
+      print()  # Blank line between sessions
+  
+  elapsed_time = time.time() - start_time
   
   print("="*60)
-  print(f"\n✅ Collected {len(collected_sessions)} sessions")
+  print(f"\n✅ Collection complete in {elapsed_time:.1f} seconds")
+  print(f"📊 Total sessions collected: {len(collected_sessions)}")
   
   if not collected_sessions:
     print("❌ No sessions met the criteria")
+    
+    # End MLflow run with failure status
+    if mlflow_tracker:
+      try:
+        mlflow_tracker.end_run(status="FAILED")
+      except Exception as e:
+        print(f"⚠️  Warning: Failed to end MLflow run: {e}")
+    
     sys.exit(1)
   
   # Save to JSON
@@ -355,6 +471,16 @@ def main():
   print(f"  Min Score: {min_score_val:.1%}")
   print(f"  Max Score: {max_score_val:.1%}")
   print(f"  Total Sessions: {len(collected_sessions)}")
+  print(f"  Total Workspaces: {len(workdirs)}")
+  
+  # Per-workdir breakdown
+  if len(workdirs) > 1:
+    print(f"\n📁 Per-Workspace Breakdown:")
+    for workdir, stats in workdir_stats.items():
+      print(f"  {Path(workdir).name}:")
+      print(f"    ✅ Collected: {stats['collected_sessions']}")
+      print(f"    ⏭️  Skipped: {stats['skipped_sessions']}")
+      print(f"    📝 Total: {stats['total_sessions']}")
   
   # Device breakdown
   devices = {}
@@ -366,11 +492,63 @@ def main():
   for device, count in sorted(devices.items()):
     print(f"  {device}: {count} session(s)")
   
-  print(f"\n💡 Next step:")
+  # Log to MLflow if enabled
+  if mlflow_tracker:
+    try:
+      import mlflow
+      
+      # Log metrics
+      mlflow.log_metrics({
+        "total_sessions": len(collected_sessions),
+        "avg_score": avg_score,
+        "min_score": min_score_val,
+        "max_score": max_score_val,
+        "num_workspaces": len(workdirs),
+        "num_devices": len(devices),
+        "collection_time_seconds": elapsed_time
+      })
+      
+      # Log per-workdir stats
+      for workdir, stats in workdir_stats.items():
+        workdir_name = Path(workdir).name
+        mlflow.log_metrics({
+          f"workdir_{workdir_name}_collected": stats["collected_sessions"],
+          f"workdir_{workdir_name}_skipped": stats["skipped_sessions"],
+          f"workdir_{workdir_name}_total": stats["total_sessions"]
+        })
+      
+      # Log device distribution
+      for device, count in devices.items():
+        mlflow.log_metric(f"device_{device}_count", count)
+      
+      # Log artifacts
+      mlflow.log_artifact(str(output_path), "collected_data")
+      
+      # Log workdir stats as JSON
+      import tempfile
+      with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(workdir_stats, f, indent=2)
+        stats_file = f.name
+      mlflow.log_artifact(stats_file, "statistics")
+      Path(stats_file).unlink()
+      
+      print(f"\n� Results logged to MLflow run: {mlflow_tracker.get_run_id()}")
+      
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to log to MLflow: {e}")
+  
+  print(f"\n�💡 Next step:")
   print(f"  python optimize_instructions.py \\")
   print(f"    --historical-data {output_path} \\")
   print(f"    --current-instructions apply_agent_instruction.md \\")
   print(f"    --output optimized_instructions.md")
+  
+  # End MLflow run
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.end_run(status="FINISHED")
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to end MLflow run: {e}")
 
 
 if __name__ == "__main__":
