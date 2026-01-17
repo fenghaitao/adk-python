@@ -30,6 +30,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 from metrics.code_correctness import CodeCorrectnessMetric
 from metrics.test_coverage import TestCoverageMetric
 from metrics.code_style import CodeStyleMetric
+from metrics.compilation_metric import CompilationMetric
+from metrics.test_pass_rate_metric import TestPassRateMetric
 from parsers.dml_parser import DMLParser
 from parsers.test_parser import TestParser
 from parsers.spec_parser import SpecParser
@@ -98,8 +100,27 @@ class CodeEvaluator:
       test_files=test_files
     )
     
-    metrics_to_run.extend([correctness_metric, style_metric, coverage_metric])
-    test_cases_to_run.extend([correctness_test_case, style_test_case, test_coverage_test_case])
+    # Deterministic build/test metrics
+    compilation_metric = CompilationMetric(
+      workdir=str(self.workdir),
+      device_name=self.device_name,
+      threshold=1.0  # Must compile to pass
+    )
+    test_pass_rate_metric = TestPassRateMetric(
+      workdir=str(self.workdir),
+      device_name=self.device_name,
+      threshold=0.5,  # At least 50% tests must pass
+      min_passing_tests=2  # At least 2 tests must pass
+    )
+
+    # Dummy test case for deterministic metrics (they don't use LLM)
+    dummy_test_case = LLMTestCase(
+      input="Build and test execution",
+      actual_output=dml_code
+    )
+    
+    metrics_to_run.extend([correctness_metric, style_metric, coverage_metric, compilation_metric, test_pass_rate_metric])
+    test_cases_to_run.extend([correctness_test_case, style_test_case, test_coverage_test_case, dummy_test_case, dummy_test_case])
     
     # Add reference comparison metrics if reference is available
     if reference_code:

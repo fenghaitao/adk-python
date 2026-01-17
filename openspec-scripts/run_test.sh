@@ -310,7 +310,7 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         # Set reference directory if not provided
         REFERENCE_DIR="${REFERENCE_DIR:-$ADK_ROOT/experiments/golden_reference}"
         REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
-        
+
         # Collect current project sessions
         set +e
         python3 "$ADK_ROOT/deepeval-scoring/collect_session_data.py" \
