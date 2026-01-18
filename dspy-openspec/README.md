@@ -55,10 +55,57 @@ This ensures:
 cd dspy
 pip install -e .
 
-# Install dspy-openspec
+# Install dspy-openspec with memory support
 cd ../dspy-openspec
 pip install -e .
+pip install chromadb  # For memory retrieval
 ```
+
+## Memory Integration
+
+DSPy OpenSpec includes a memory retrieval system that provides relevant knowledge from past implementations during the apply phase.
+
+### Quick Start
+
+```bash
+# 1. Index memory documents
+python -m dspy_openspec.memory.cli index openspec-memories
+
+# 2. Test search
+python -m dspy_openspec.memory.cli search "timer implementation" --category DML
+
+# 3. Use with apply agent (memory enabled by default)
+python examples/apply_with_memory.py --change-id 001-watchdog-timer
+```
+
+### How It Works
+
+The memory system uses ChromaDB and semantic search to retrieve relevant implementation patterns, troubleshooting tips, and best practices:
+
+```python
+from dspy_openspec.modules.apply_module import ApplyModule
+
+# Memory enabled by default
+apply_module = ApplyModule(
+    interactive=True,
+    enable_memory=True,  # Default
+    memory_k=3           # Retrieve top 3 chunks
+)
+
+# The agent can call retrieve_memory during execution:
+# retrieve_memory("implement timer countdown logic", category="DML")
+```
+
+**Benefits:**
+- Avoid repeated mistakes from past sessions
+- Follow proven implementation patterns
+- Quick access to troubleshooting guidance
+- Category filtering (DML, Test, General)
+
+**Documentation:**
+- [Quick Start Guide](MEMORY_QUICKSTART.md)
+- [Integration Guide](docs/memory_integration.md)
+- [Summary](MEMORY_INTEGRATION_SUMMARY.md)
 
 ## Usage
 

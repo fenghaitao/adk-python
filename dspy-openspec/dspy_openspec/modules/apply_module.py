@@ -20,6 +20,7 @@ OpenSpec changes following the workflow defined in the instruction markdown.
 
 from __future__ import annotations
 
+from typing import Optional
 import dspy
 
 # Maximum iterations for apply agent
@@ -30,6 +31,12 @@ MAX_APPLY_ITERS = 50
 from dspy_openspec.signatures.apply import ApplySignature
 from dspy_openspec.tools import get_file_tools
 from dspy_openspec.modules.verbose_react import VerboseReAct
+
+try:
+  from dspy_openspec.memory.retriever import MemoryRetriever
+  MEMORY_AVAILABLE = True
+except ImportError:
+  MEMORY_AVAILABLE = False
 
 
 class ApplyModule(dspy.Module):
@@ -44,18 +51,49 @@ class ApplyModule(dspy.Module):
   
   The instruction content is embedded in the ApplySignature docstring.
   Uses ReAct to enable tool calling for file operations.
+  
+  Optionally integrates memory retrieval to provide relevant knowledge
+  from past implementations during the apply process.
   """
   
-  def __init__(self, interactive: bool = True):
+  def __init__(
+      self,
+      interactive: bool = True,
+      enable_memory: bool = True,
+      memory_persist_dir: str = ".chromadb",
+      memory_k: int = 3
+  ):
     """Initialize the apply module with ReAct and file tools.
     
     Args:
       interactive: Show tool calls and thoughts in real-time
+      enable_memory: Enable memory retrieval integration
+      memory_persist_dir: Directory where ChromaDB is persisted
+      memory_k: Number of memory chunks to retrieve
     """
     super().__init__()
     
+    # Initialize memory retriever if enabled
+    self.memory_retriever = None
+    if enable_memory and MEMORY_AVAILABLE:
+      try:
+        self.memory_retriever = MemoryRetriever(
+          persist_directory=memory_persist_dir,
+          k=memory_k
+        )
+        print(f"✅ Memory retrieval enabled (k={memory_k})")
+      except Exception as e:
+        print(f"⚠️  Memory retrieval disabled: {e}")
+        self.memory_retriever = None
+    elif enable_memory and not MEMORY_AVAILABLE:
+      print("⚠️  Memory retrieval disabled: chromadb not installed")
+    
     # Get base tools
     base_tools = get_file_tools()
+    
+    # Add memory retrieval tool if available
+    if self.memory_retriever:
+      base_tools = base_tools + [self._create_memory_tool()]
     
     # Don't wrap tools with monitoring since VerboseReAct shows everything
     tools = base_tools
@@ -73,6 +111,46 @@ class ApplyModule(dspy.Module):
         tools=tools,
         max_iters=MAX_APPLY_ITERS
       )
+  
+  def _create_memory_tool(self):
+    """Create a memory retrieval tool for the agent.
+    
+    Returns:
+      Tool function that retrieves relevant memories
+    """
+    def retrieve_memory(
+        task_description: str,
+        error_context: str = "",
+        category: Optional[str] = None
+    ) -> str:
+      """Retrieve relevant knowledge from past implementations.
+      
+      Use this tool to search for relevant examples, patterns, and
+      solutions from previous Simics device implementations.
+      
+      Args:
+        task_description: What you're trying to implement or solve
+        error_context: Any error messages or failures (optional)
+        category: Filter by DML, Test, or General (optional)
+      
+      Returns:
+        Relevant knowledge chunks from memory
+      """
+      result = self.memory_retriever.forward(
+        task_description=task_description,
+        error_context=error_context,
+        category=category
+      )
+      
+      if result.passages:
+        output = f"Found {len(result.passages)} relevant memories:\n\n"
+        for i, passage in enumerate(result.passages, 1):
+          output += f"--- Memory {i} ---\n{passage}\n\n"
+        return output
+      else:
+        return "No relevant memories found for this query."
+    
+    return retrieve_memory
   
   def forward(self, change_id: str) -> dspy.Prediction:
     """Apply the specified change.

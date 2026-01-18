@@ -41,6 +41,14 @@ openspec:
   # Changes directory
   changes_dir: "openspec/changes"
   
+  # Memory retrieval settings
+  memory:
+    enabled: true
+    persist_dir: ".chromadb"
+    collection_name: "openspec_memories"
+    k: 3  # Number of memory chunks to retrieve
+    auto_retrieve: true  # Automatically retrieve on errors
+  
   # Validation settings
   validation:
     strict: true

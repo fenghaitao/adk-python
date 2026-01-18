@@ -133,3 +133,48 @@ def test_category_filtering():
     test_result = retriever.retrieve_for_test("test creation")
     
     assert len(test_result) > 0
+
+
+
+def test_apply_module_memory_integration(temp_memory_dir, temp_chromadb):
+  """Test ApplyModule integration with memory retrieval."""
+  # Index memories first
+  indexer = MemoryIndexer(
+    memory_dir=temp_memory_dir,
+    persist_directory=temp_chromadb
+  )
+  indexer.index_memories()
+  
+  # Import here to avoid issues if chromadb not installed
+  from dspy_openspec.modules.apply_module import ApplyModule
+  
+  # Initialize with memory enabled
+  apply_module = ApplyModule(
+    interactive=False,
+    enable_memory=True,
+    memory_persist_dir=temp_chromadb,
+    memory_k=2
+  )
+  
+  # Verify memory retriever is initialized
+  assert apply_module.memory_retriever is not None
+  
+  # Verify memory tool is available
+  # The apply module should have the memory tool in its tools list
+  # We can't easily test the full ReAct execution without a real LM,
+  # but we can verify the setup is correct
+  assert hasattr(apply_module, 'apply')
+
+
+def test_apply_module_memory_disabled(temp_chromadb):
+  """Test ApplyModule with memory disabled."""
+  from dspy_openspec.modules.apply_module import ApplyModule
+  
+  # Initialize with memory disabled
+  apply_module = ApplyModule(
+    interactive=False,
+    enable_memory=False
+  )
+  
+  # Verify memory retriever is not initialized
+  assert apply_module.memory_retriever is None

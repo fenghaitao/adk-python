@@ -38,6 +38,14 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
   - Example: If change affects multiple capabilities, read all delta files:
     - `openspec/changes/<id>/specs/capability1/spec.md`
     - `openspec/changes/<id>/specs/capability2/spec.md`
+- **Use Memory Retrieval Tool for Implementation Guidance:**
+  - Call `retrieve_memory(task_description, error_context, category)` to search past implementations
+  - Categories: "DML" for device code, "Test" for test patterns, "General" for workflows
+  - Examples:
+    - `retrieve_memory("implement timer countdown logic", category="DML")`
+    - `retrieve_memory("test interrupt signal behavior", category="Test")`
+    - `retrieve_memory("register side-effect patterns", category="DML")`
+  - Use retrieved knowledge to avoid common mistakes and follow proven patterns
 - Use Simics-Specific Implementation Guidance below for device patterns and hardware specs
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
@@ -76,10 +84,17 @@ You will work with TWO completely different programming languages:
 - ❌ Consulting Test docs (`0*_Test_*.md`) when writing DML code
 
 - When encountering build failures (DML compilation errors):
+  - **First, retrieve relevant memories:** `retrieve_memory("DML compilation error: <error_message>", category="DML")`
   - Check `openspec-memories/05_DML_Troubleshooting.md`
   - Check `openspec-memories/07_DML_Register_Access_Scope.md` for scope errors
   - Verify register scope patterns (device/bank/register level)
   - These are DML-specific issues - do NOT apply Python patterns
+
+- When encountering test failures:
+  - **First, retrieve relevant memories:** `retrieve_memory("test failure: <error_message>", category="Test")`
+  - Review test patterns in `openspec-memories/0*_Test_*.md`
+  - Check if test expectations match spec requirements
+  - Verify Python test syntax (not DML syntax)
 
 **STEP 2.5: Implementation Completeness Check (MANDATORY BEFORE TESTING)**
 
