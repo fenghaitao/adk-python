@@ -42,6 +42,7 @@ You MUST execute these steps in EXACT order. Do NOT skip any step or jump ahead.
 - Follow TDD approach: tests first, then DML implementation
 - Build iteratively using these Simics MCP tools:
   - `build_simics_project(/absolute/path/to/workspace/simics-project, <device-name>)` - Build DML code after each change
+  - **If MCP tool fails**, use bash fallback: `bash_command("make <device-name>", working_directory="/absolute/path/to/workspace/simics-project")`
 
 **Why spec deltas are critical:**
 - proposal.md says "what" at high level (e.g., "implement watchdog timer")
@@ -98,6 +99,7 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
 
 **STEP 3: Test and Validate Quality**
 - Run tests using: `run_simics_test(/absolute/path/to/workspace/simics-project, <device-name>)`
+  - **If MCP tool fails**, use bash fallback: `bash_command("./bin/test-runner", working_directory="/absolute/path/to/workspace/simics-project")`
 - When encountering test failures (Python test errors):
   - Check troubleshooting table in `openspec-memories/00_Test_Best_Practices_Index.md`
   - Check `openspec-memories/03_Test_Register_Access.md` for register access patterns
