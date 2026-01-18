@@ -49,9 +49,9 @@ classifiers = [
 ]
 
 # NOTE: This project depends on the local deepeval installation from ../deepeval
-# Install deepeval first: cd ../deepeval && pip install -e .
+# The editable dependency is configured in [tool.uv.sources] below
 dependencies = [
-    "deepeval @ file:///${PROJECT_ROOT}/../deepeval",
+    "deepeval",
     "openai>=1.0.0",
     "litellm>=1.0.0",
     "pyyaml>=6.0",
@@ -184,3 +184,6 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
+
+[tool.uv.sources]
+deepeval = { path = "../deepeval", editable = true }
