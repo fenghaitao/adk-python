@@ -1086,8 +1086,11 @@ class CLIController(App):
 
         try:
             if self.agent_process:
-                # Send quit command
-                self.send_command("quit", log=False)
+                # Send appropriate quit command based on agent
+                if self.current_agent in ['kiro-cli', 'qodercli']:
+                    self.send_command("/quit", log=False)
+                else:
+                    self.send_command("/exit", log=False)
                 time.sleep(0.5)
                 
                 # Terminate process
@@ -1145,17 +1148,22 @@ class CLIController(App):
             logger.error(f"Error updating agent status: {e}")
 
     async def wait_for_prompt(self, timeout: float = 10.0) -> bool:
-        """Wait for the '!>' prompt to appear in the terminal.
+        """Wait for the '!>' prompt to appear as the last line in the terminal.
+        
+        Args:
+            timeout: Maximum time to wait in seconds
         
         Returns:
             True if prompt found, False if timeout
         """
         start_time = asyncio.get_event_loop().time()
+        terminal = self.query_one("#terminal-output", InteractiveTerminal)
         
+        # Wait for the prompt to appear as the last line
         while (asyncio.get_event_loop().time() - start_time) < timeout:
             try:
-                terminal = self.query_one("#terminal-output", InteractiveTerminal)
                 # Get the current terminal screen content
+                lines = []
                 for y in range(terminal.term_screen.lines):
                     line_chars = []
                     for x in range(terminal.term_screen.columns):
@@ -1165,10 +1173,13 @@ class CLIController(App):
                         else:
                             line_chars.append(char)
                     line = ''.join(line_chars).strip()
-                    # Check if line starts with '!>'
-                    if line.startswith('!>'):
-                        self.log_output("✅ Prompt detected, ready for input")
-                        return True
+                    if line:  # Only add non-empty lines
+                        lines.append(line)
+                
+                # Check if the last non-empty line is exactly '!>'
+                if lines and lines[-1] == '!>':
+                    self.log_output("✅ Prompt detected, ready for input")
+                    return True
                 
                 await asyncio.sleep(0.2)
             except Exception as e:
@@ -1292,6 +1303,10 @@ class CLIController(App):
             
             # Step 4: Session is now saved (done in workflow_run_agent)
             workflow_tab.update_step(2, "complete")
+            
+            # Step 5: Analyze session
+            workflow_tab.update_step(3, "running")
+            await self.workflow_analyze_session(workdir_path, session_name)
             workflow_tab.update_step(3, "complete")
             
             workflow_tab.workflow_status = "Complete"
@@ -1301,6 +1316,10 @@ class CLIController(App):
             if self.workflow_change_id:
                 workflow_tab.change_id = self.workflow_change_id
                 self.log_output(f"\n📋 Change ID captured: {self.workflow_change_id}")
+            
+            # Stop the agent after workflow completes
+            self.log_output("🚪 Stopping kiro-cli...")
+            self.stop_agent_process()
             
         except Exception as e:
             workflow_tab.workflow_status = "Error"
@@ -1412,18 +1431,12 @@ class CLIController(App):
             chat_tab = self.query_one(ChatTab)
             chat_tab.add_message("user", save_command)
             
-            # Send to kiro-cli character by character (this works, send_command doesn't)
+            # Send to kiro-cli
             self.log_output(f"💾 Issuing save command: {save_command}")
-            for char in save_command:
-                os.write(self.master_fd, char.encode('utf-8'))
-            os.write(self.master_fd, b'\r\n')
-            
-            # Note: send_command doesn't work here for unknown reasons, even though
-            # it works for the initial prompt. Keeping the character-by-character approach.
+            self.send_command(save_command, log=False)
             
             # Wait for save to complete and prompt to return
             self.log_output("⏳ Waiting for save to complete...")
-            await asyncio.sleep(2.0)
             save_prompt_found = await self.wait_for_prompt(timeout=30.0)
             
             if save_prompt_found:
@@ -1455,8 +1468,9 @@ class CLIController(App):
         analysis_file = session_file.with_suffix('.txt')
         
         try:
-            # Run view_kiro_session.py
-            view_script = workdir.parent / "view_kiro_session.py"
+            # Run view_kiro_session.py from the same directory as cli_tui.py
+            script_dir = Path(__file__).parent
+            view_script = script_dir / "view_kiro_session.py"
             if not view_script.exists():
                 self.log_output(f"⚠️  view_kiro_session.py not found: {view_script}")
                 return
@@ -1497,51 +1511,6 @@ class CLIController(App):
             self.log_output(f"⚠️  Analysis error: {e}")
         
         self.log_output("✅ Analysis complete")
-
-    def simulate_ai_response(self, user_message: str) -> None:
-        """Simulate AI response (placeholder for real AI integration)."""
-        chat = self.query_one(ChatTab)
-        
-        # Simple rule-based responses for now
-        message_lower = user_message.lower()
-        
-        if "help" in message_lower:
-            response = (
-                "I can help you with:\n"
-                "• Starting/stopping agents (F1/F2)\n"
-                "• Running commands in agents\n"
-                "• Switching between agents\n"
-                "• Theme switching (F3)"
-            )
-        elif "error" in message_lower or "problem" in message_lower:
-            response = (
-                "I can see you're experiencing an issue. "
-                "Try checking:\n"
-                "1. Is the agent running? (press F1)\n"
-                "2. Check the terminal output for errors"
-            )
-        elif "command" in message_lower:
-            response = (
-                "You can send commands using:\n"
-                "• Type directly in the terminal\n"
-                "• Press Enter to send"
-            )
-        else:
-            response = (
-                "I'm here to help! Ask me about:\n"
-                "• How to use the interface\n"
-                "• Troubleshooting agent issues\n"
-                "• Available commands and shortcuts"
-            )
-        
-        chat.add_message("assistant", response)
-        
-        # Save to session
-        self.session_data['chat_history'].append({
-            'user': user_message,
-            'assistant': response,
-            'timestamp': datetime.now().isoformat(),
-        })
 
     @work(exclusive=False, thread=True)
     def update_metrics(self) -> None:
