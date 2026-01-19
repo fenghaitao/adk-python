@@ -96,6 +96,12 @@ AGENTS = {
         'description': 'GitHub Copilot CLI',
         'color': 'yellow',
     },
+    'dspy-openspec': {
+        'name': 'DSPy OpenSpec',
+        'command': str(Path(__file__).parent / '.venv' / 'bin' / 'dspy-openspec') + ' --model iflow/qwen3-coder-plus --verbose',
+        'description': 'DSPy-based OpenSpec agent',
+        'color': 'purple',
+    },
     'kiro-cli': {
         'name': 'Kiro CLI',
         'command': str(Path.home() / '.local' / 'bin' / 'kiro-cli') + ' chat --trust-all-tools',
@@ -843,6 +849,9 @@ class CLIController(App):
         session_name = self.query_one("#workflow-session", Input).value.strip()
         change_id = self.query_one("#workflow-changeid", Input).value.strip()
         
+        # Use the currently selected agent from the agent panel
+        workflow_agent = self.current_agent
+        
         # Determine proposal method
         proposal_method = "simple"
         if proposal_set.pressed_button:
@@ -881,7 +890,7 @@ class CLIController(App):
             self.workflow_change_id = change_id
         
         # Start workflow
-        self.run_workflow(workdir, session_name, change_id)
+        self.run_workflow(workdir, session_name, change_id, workflow_agent)
 
     @on(RadioSet.Changed, "#proposal-method")
     def on_proposal_method_changed(self, event: RadioSet.Changed) -> None:
@@ -1006,8 +1015,13 @@ class CLIController(App):
                 os.close(self.master_fd)
                 self.master_fd = None
 
-    async def start_agent_in_workdir(self, workdir: str) -> None:
-        """Start agent process in a specific working directory."""
+    async def start_agent_in_workdir(self, workdir: str, extra_args: list = None) -> None:
+        """Start agent process in a specific working directory.
+        
+        Args:
+            workdir: Working directory path
+            extra_args: Additional command-line arguments for the agent
+        """
         if self.agent_running:
             self.log_output("Agent already running")
             return
@@ -1020,18 +1034,23 @@ class CLIController(App):
             agent_info = AGENTS[self.current_agent]
             agent_cmd = agent_info['command']
             
+            # Build full command with extra args
+            cmd_parts = agent_cmd.split()
+            if extra_args:
+                cmd_parts.extend(extra_args)
+            
             # Verify agent command exists
-            if not Path(agent_cmd.split()[0]).exists():
+            if not Path(cmd_parts[0]).exists():
                 # Try which command
                 result = subprocess.run(
-                    ['which', agent_cmd.split()[0]],
+                    ['which', cmd_parts[0]],
                     capture_output=True,
                     text=True
                 )
                 if result.returncode != 0:
-                    self.log_output(f"ERROR: {agent_cmd} not found")
+                    self.log_output(f"ERROR: {cmd_parts[0]} not found")
                     return
-                agent_cmd = result.stdout.strip()
+                cmd_parts[0] = result.stdout.strip()
 
             # Create PTY with proper size
             self.master_fd, slave_fd = pty.openpty()
@@ -1043,7 +1062,7 @@ class CLIController(App):
 
             # Start agent process in the specified working directory
             self.agent_process = subprocess.Popen(
-                agent_cmd.split(),
+                cmd_parts,
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
@@ -1087,7 +1106,10 @@ class CLIController(App):
         try:
             if self.agent_process:
                 # Send appropriate quit command based on agent
-                if self.current_agent in ['kiro-cli', 'qodercli']:
+                # DSPy OpenSpec is non-interactive, so just terminate
+                if self.current_agent == 'dspy-openspec':
+                    pass  # No quit command needed for non-interactive agents
+                elif self.current_agent in ['kiro-cli', 'qodercli']:
                     self.send_command("/quit", log=False)
                 else:
                     self.send_command("/exit", log=False)
@@ -1147,6 +1169,7 @@ class CLIController(App):
         except Exception as e:
             logger.error(f"Error updating agent status: {e}")
 
+    @work(exclusive=False, thread=True)
     async def wait_for_prompt(self, timeout: float = 10.0) -> bool:
         """Wait for the '!>' prompt to appear as the last line in the terminal.
         
@@ -1246,8 +1269,15 @@ class CLIController(App):
             logger.error(f"Failed to send command: {e}", exc_info=True)
 
     @work(exclusive=True)
-    async def run_workflow(self, workdir: str, session_name: str, change_id: str) -> None:
-        """Execute workflow automation."""
+    async def run_workflow(self, workdir: str, session_name: str, change_id: str, agent: str = "kiro-cli") -> None:
+        """Execute workflow automation.
+        
+        Args:
+            workdir: Working directory path
+            session_name: Session name for saving
+            change_id: Change ID for apply operations
+            agent: Agent to use ('kiro-cli' or 'dspy-openspec')
+        """
         self.workflow_running = True
         workflow_tab = self.query_one(WorkflowTab)
         workflow_tab.workflow_status = "Running"
@@ -1266,13 +1296,15 @@ class CLIController(App):
             # Generate session name if not provided
             if not session_name:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                agent_prefix = "dspy" if agent == "dspy-openspec" else "kiro"
                 if self.workflow_mode.startswith("propose"):
-                    session_name = f"kiro-propose-session_{timestamp}.json"
+                    session_name = f"{agent_prefix}-propose-session_{timestamp}.json"
                 else:
-                    session_name = f"kiro-apply-session_{timestamp}.json"
+                    session_name = f"{agent_prefix}-apply-session_{timestamp}.json"
             
             self.log_output("="*50)
             self.log_output(f"🚀 Starting Workflow: {self.workflow_mode}")
+            self.log_output(f"Agent: {agent}")
             self.log_output(f"Working Directory: {workdir}")
             self.log_output(f"Session Name: {session_name}")
             if change_id:
@@ -1284,21 +1316,50 @@ class CLIController(App):
             await self.workflow_setup_workspace(workdir_path, self.workflow_mode)
             workflow_tab.update_step(0, "complete")
             
-            # Step 2: Start kiro-cli if not running
+            # Step 2: Start agent if not running
             if not self.agent_running:
-                self.log_output("🚀 Starting kiro-cli in chat mode...")
-                self.current_agent = 'kiro-cli'
+                self.log_output(f"🚀 Starting {agent}...")
+                self.current_agent = agent
                 
-                # Start in the working directory
-                await self.start_agent_in_workdir(workdir)
+                # For DSPy OpenSpec, build command arguments upfront
+                extra_args = None
+                if agent == 'dspy-openspec':
+                    if self.workflow_mode.startswith("propose"):
+                        # Default proposal text
+                        proposal_text = "Propose to model a simple watchdog timer for Simics platform simulation"
+                        device_hint = "wdt"
+                        extra_args = ['proposal', proposal_text, '--device', device_hint]
+                    elif self.workflow_mode == "apply":
+                        extra_args = ['apply', '--id', change_id]
+                    
+                    self.log_output(f"📝 DSPy command: dspy-openspec {' '.join(extra_args)}")
                 
-                # Wait for the '>' prompt to appear
-                self.log_output("⏳ Waiting for kiro-cli to be ready...")
-                await self.wait_for_prompt(timeout=15.0)
+                # Start in the working directory with extra args
+                await self.start_agent_in_workdir(workdir, extra_args)
+                
+                # Wait for agent to be ready (only for interactive agents)
+                if agent == 'kiro-cli':
+                    self.log_output("⏳ Waiting for kiro-cli to be ready...")
+                    await self.wait_for_prompt(timeout=15.0)
+                elif agent == 'dspy-openspec':
+                    # DSPy is non-interactive, just wait for it to complete
+                    self.log_output("⏳ Waiting for DSPy OpenSpec to complete...")
             
-            # Step 3: Send prompt and wait for completion
+            # Step 3: Run agent workflow
             workflow_tab.update_step(1, "running")
-            await self.workflow_run_agent(workdir_path, session_name, change_id)
+            
+            if agent == 'dspy-openspec':
+                # For DSPy, just wait for process to complete
+                while self.agent_running and self.agent_process:
+                    if self.agent_process.poll() is not None:
+                        self.agent_running = False
+                        self.log_output("✅ DSPy OpenSpec completed!")
+                        break
+                    await asyncio.sleep(1.0)
+            else:
+                # For interactive agents like kiro-cli
+                await self.workflow_run_agent(workdir_path, session_name, change_id, agent)
+            
             workflow_tab.update_step(1, "complete")
             
             # Step 4: Session is now saved (done in workflow_run_agent)
@@ -1371,9 +1432,20 @@ class CLIController(App):
         
         self.log_output("✅ Workspace setup complete")
 
-    async def workflow_run_agent(self, workdir: Path, session_name: str, change_id: str) -> None:
-        """Run agent with appropriate prompt based on workflow mode."""
-        self.log_output("🤖 Sending prompt to kiro-cli...")
+    async def workflow_run_agent(self, workdir: Path, session_name: str, change_id: str, agent: str = "kiro-cli") -> None:
+        """Run interactive agent (kiro-cli) with appropriate prompt.
+        
+        Args:
+            workdir: Working directory path
+            session_name: Session name for saving
+            change_id: Change ID for apply operations
+            agent: Agent to use (only handles interactive agents like kiro-cli)
+        """
+        if agent != "kiro-cli":
+            # Non-interactive agents are handled in run_workflow
+            return
+        
+        self.log_output(f"🤖 Running {agent}...")
         
         # Construct prompt based on mode
         if self.workflow_mode == "propose-simple":
@@ -1586,37 +1658,6 @@ class CLIController(App):
             self.log_file.flush()
         except Exception as e:
             logger.error(f"Failed to write to log file: {e}")
-
-    @work(exclusive=True)
-    async def read_output(self) -> None:
-        """Read output from agent process."""
-        terminal = self.query_one("#terminal-output", InteractiveTerminal)
-        
-        while self.agent_running and self.master_fd:
-            try:
-                # Check if data is available
-                ready, _, _ = select.select([self.master_fd], [], [], 0.1)
-                
-                if ready:
-                    data = os.read(self.master_fd, 4096).decode('utf-8', errors='ignore')
-                    if data:
-                        # Process through pyte terminal emulator
-                        terminal.process_output(data)
-                
-                # Check if process is still alive
-                if self.agent_process and self.agent_process.poll() is not None:
-                    self.agent_running = False
-                    terminal.process_output("\n[Process ended]\n")
-                    self.update_agent_status()
-                    break
-                    
-                await asyncio.sleep(0.05)
-                
-            except OSError:
-                break
-            except Exception as e:
-                logger.error(f"Error reading output: {e}")
-                break
 
     def on_unmount(self) -> None:
         """Cleanup when app is closed."""
