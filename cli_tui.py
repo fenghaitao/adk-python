@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
 """
-Textual TUI application to control kiro-cli.
+Textual TUI application to control multiple CLI agents.
 
-This provides a clean terminal interface for interacting with kiro-cli,
-displaying the full kiro-cli screen without interference.
+This provides a clean terminal interface for interacting with various CLI
+agents (kiro-cli, adk, qodercli, etc.), displaying their output and enabling
+interactive control through a multi-pane layout.
 
 Architecture:
-- ProcessContainer: Manages PTY and process lifecycle
-- TerminalRestorer: Handles terminal state save/restore
-- KiroCLIApp: Main Textual application with multi-agent support
+- CLIController: Main Textual application managing agent lifecycle
+- InteractiveTerminal: Terminal emulation widget using pyte
+- AgentSelector: Widget for selecting and switching between agents
+- StatusPanel: Real-time metrics display
+- WorkflowTab: Automated workflow execution interface
+- ChatTab: AI assistant integration
 
-Phase 2-4 enhancements:
-- Multi-pane layout with agent sidebar
-- Status panel with metrics
+Features:
+- Multi-agent support with easy switching
+- PTY-based process management for proper terminal emulation
+- Workflow automation for propose/apply operations
+- Session management and history
 - Integrated chat interface
-- Command history and search
-- Session management
 """
 
 from __future__ import annotations
 
 import asyncio
-import atexit
 import fcntl
 import json
 import logging
@@ -30,7 +33,6 @@ import pty
 import pyte
 import re
 import select
-import shlex
 import shutil
 import signal
 import struct
@@ -38,11 +40,8 @@ import subprocess
 import sys
 import termios
 import time
-import traceback
-from collections import deque
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Optional
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -77,293 +76,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class TerminalRestorer:
-    """Context manager to save/restore terminal state around a fullscreen app."""
-
-    def __enter__(self):
-        # Save current terminal state only if running in an interactive terminal
-        if sys.stdin.isatty():
-            self.fd = sys.stdin.fileno()
-            self._orig_termios = termios.tcgetattr(self.fd)
-            try:
-                result = subprocess.run(
-                    ["stty", "-g"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    check=True,
-                    text=True
-                )
-                self._orig_stty = result.stdout.strip()
-            except subprocess.SubprocessError:
-                self._orig_stty = None
-        else:
-            self.fd = None
-            self._orig_termios = None
-            self._orig_stty = None
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._cleanup_terminal()
-        return False
-
-    def _cleanup_terminal(self):
-        """Restore terminal to original state and exit alternate screen."""
-        # Exit alternate screen buffer (restores original terminal content)
-        sys.stdout.write("\033[?1049l")
-        sys.stdout.flush()
-
-        # Restore low-level terminal attributes (input modes, special chars, etc.)
-        if self.fd is not None and self._orig_termios is not None:
-            try:
-                termios.tcsetattr(self.fd, termios.TCSADRAIN, self._orig_termios)
-            except Exception as e:
-                logger.error(f"Failed to restore termios attributes: {e}")
-
-        # Restore high-level terminal settings (echo, erase char, flow control)
-        if self._orig_stty:
-            try:
-                subprocess.run(
-                    ["stty"] + self._orig_stty.split(),
-                    stderr=subprocess.DEVNULL,
-                    check=False
-                )
-            except Exception as e:
-                logger.error(f"Failed to restore stty settings: {e}")
-
-        logger.info("Terminal state restored")
-
-
-class ProcessContainer:
-    """Manages PTY-based process execution for kiro-cli.
-    
-    Provides better process lifecycle management and error handling.
-    """
-
-    def __init__(
-        self,
-        cmd: str,
-        exit_callback: Optional[Callable] = None,
-    ) -> None:
-        self.read_buf_len = 32768
-        self.script_cmd = cmd
-        self.output_queue: asyncio.Queue = asyncio.Queue()
-        self.input_queue: asyncio.Queue = asyncio.Queue()
-        self.exit_callback = exit_callback
-        # Initialize attributes that will be set later
-        self.process = None
-        self.process_buffer = bytearray()
-        self.master_fd = None
-        self.slave_fd = None
-
-    def cleanup(self):
-        """Clean up resources when process exits or errors occur."""
-        try:
-            if self.master_fd:
-                try:
-                    os.close(self.master_fd.fileno())
-                    logger.debug("Master file descriptor closed")
-                except Exception as e:
-                    logger.warning(f"Error closing master file descriptor: {str(e)}")
-
-            if self.slave_fd:
-                try:
-                    os.close(self.slave_fd.fileno())
-                    logger.debug("Slave file descriptor closed")
-                except Exception as e:
-                    logger.warning(f"Error closing slave file descriptor: {str(e)}")
-
-            if self.process and self.process.returncode is None:
-                try:
-                    self.process.kill()
-                    logger.info("Process terminated")
-                except Exception as e:
-                    logger.warning(f"Error killing process: {str(e)}")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {str(e)}")
-
-    async def process_monitor(self):
-        """Monitor the process and call exit_callback when it terminates."""
-        try:
-            logger.debug("Starting process monitor")
-            while True:
-                if self.process is None:
-                    logger.error("Process is None in process_monitor")
-                    break
-
-                if self.process.returncode is not None:
-                    logger.info(
-                        f"Process exited with return code {self.process.returncode}"
-                    )
-                    break
-
-                await asyncio.sleep(1)
-
-            if self.exit_callback:
-                try:
-                    logger.debug("Calling exit callback")
-                    self.exit_callback()
-                except Exception as e:
-                    logger.error(f"Error in exit callback: {str(e)}")
-        except asyncio.CancelledError:
-            logger.info("Process monitor task cancelled")
-            raise
-        except Exception as e:
-            logger.error(f"Error monitoring process: {str(e)}")
-            logger.error(traceback.format_exc())
-        finally:
-            self.cleanup()
-
-    async def open_terminal(self):
-        """Open a pseudo-terminal and start the subprocess."""
-        try:
-            logger.debug("Opening terminal")
-            try:
-                master_fd, slave_fd = pty.openpty()
-            except OSError as e:
-                logger.error(f"Failed to open pseudo-terminal: {str(e)}")
-                raise
-
-            # Set terminal size
-            rows, cols = 40, 120
-            winsize = struct.pack('HHHH', rows, cols, 0, 0)
-            fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
-
-            argv = shlex.split(self.script_cmd)
-
-            try:
-                self.process = await asyncio.create_subprocess_exec(
-                    *argv,
-                    stdin=slave_fd,
-                    stdout=slave_fd,
-                    stderr=slave_fd,
-                    bufsize=0,
-                    close_fds=True,
-                )
-                logger.debug(f"Process started with PID {self.process.pid}")
-            except (OSError, ValueError) as e:
-                os.close(master_fd)
-                os.close(slave_fd)
-                logger.error(f"Failed to create subprocess: {str(e)}")
-                raise
-
-            try:
-                self.slave_fd = os.fdopen(slave_fd, "w+b", 0, closefd=True)
-                self.master_fd = os.fdopen(master_fd, "w+b", 0, closefd=True)
-            except OSError as e:
-                if self.process:
-                    self.process.kill()
-                os.close(master_fd)
-                os.close(slave_fd)
-                logger.error(f"Failed to open file descriptors: {str(e)}")
-                raise
-
-            logger.debug("Terminal opened successfully")
-        except Exception as e:
-            logger.error(f"Unexpected error opening terminal: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
-
-    async def start(self):
-        """Start the process and set up listeners."""
-        try:
-            logger.info(f"Starting process with command: {self.script_cmd}")
-            await self.open_terminal()
-
-            # Create tasks with proper error handling
-            asyncio.create_task(self.input_listener())
-            asyncio.create_task(self.output_listener())
-            asyncio.create_task(self.process_monitor())
-            atexit.register(lambda: self.cleanup())
-
-            logger.info("Process started successfully")
-        except Exception as e:
-            logger.error(f"Unexpected error starting process: {str(e)}")
-            self.cleanup()
-            raise
-
-    async def input_listener(self):
-        """Listen for input operations and process them."""
-        try:
-            logger.debug("Starting input listener")
-            while True:
-                try:
-                    data = await self.input_queue.get()
-                    if data is None:
-                        break
-                    
-                    if isinstance(data, str):
-                        # Send string to process
-                        self.master_fd.write(data.encode())
-                    elif isinstance(data, dict):
-                        # Handle special operations
-                        if data.get('type') == 'disconnect':
-                            logger.info("Disconnecting")
-                            break
-                        elif data.get('type') == 'sigint':
-                            if self.process and self.process.returncode is None:
-                                logger.debug("Sending SIGINT to process")
-                                self.process.send_signal(signal.SIGINT)
-                except Exception as e:
-                    logger.error(f"Error processing input: {str(e)}")
-        except asyncio.CancelledError:
-            logger.info("Input listener task cancelled")
-            raise
-        except Exception as e:
-            logger.error(f"Fatal error in input listener: {str(e)}")
-            logger.error(traceback.format_exc())
-
-    async def output_listener(self):
-        """Listen for output from the process."""
-        def process_output_callback(loop):
-            """Callback for processing output from the process."""
-            try:
-                data = self.master_fd.read(self.read_buf_len)
-                if not data:
-                    logger.warning("No data read from master file descriptor")
-                    self.output_queue.put_nowait({'type': 'disconnect'})
-                    loop.remove_reader(self.master_fd)
-                    return
-
-                self.process_buffer += data
-
-                try:
-                    decoded_output = self.process_buffer.decode()
-                    self.output_queue.put_nowait(decoded_output)
-                    self.process_buffer.clear()
-                except UnicodeDecodeError as e:
-                    logger.debug(
-                        f"Incomplete unicode sequence, "
-                        f"buffer size: {len(self.process_buffer)} bytes"
-                    )
-                    decoded_output = self.process_buffer[:e.start].decode()
-                    self.process_buffer = self.process_buffer[e.start:]
-                    if len(decoded_output):
-                        self.output_queue.put_nowait(decoded_output)
-            except OSError as e:
-                logger.error(f"OSError in output callback: {str(e)}")
-                self.output_queue.put_nowait({'type': 'disconnect'})
-                loop.remove_reader(self.master_fd)
-            except Exception as e:
-                logger.error(f"Unexpected error in output callback: {str(e)}")
-                loop.remove_reader(self.master_fd)
-
-        logger.debug("Starting output listener")
-        loop = asyncio.get_running_loop()
-        loop.add_reader(self.master_fd, process_output_callback, loop)
-
-    async def send_command(self, command: str):
-        """Send command to the process."""
-        await self.input_queue.put(f"{command}\r\n")
-
-    def stop(self):
-        """Stop the process."""
-        if self.process and self.process.returncode is None:
-            try:
-                self.process.terminate()
-            except Exception as e:
-                logger.error(f"Error terminating process: {e}")
-
 # Agent configuration
 AGENTS = {
     'acli': {
@@ -386,7 +98,7 @@ AGENTS = {
     },
     'kiro-cli': {
         'name': 'Kiro CLI',
-        'command': str(Path.home() / '.local' / 'bin' / 'kiro-cli'),
+        'command': str(Path.home() / '.local' / 'bin' / 'kiro-cli') + ' chat --trust-all-tools',
         'description': 'Main Kiro CLI agent',
         'color': 'cyan',
     },
@@ -538,7 +250,7 @@ class WorkflowTab(Static):
             # Configuration inputs
             yield Label("Working Directory:", classes="workflow-label")
             with Horizontal(id="workdir-container"):
-                yield Input(value="/home/hfeng1/demo/adk_openspec_project", id="workflow-workdir")
+                yield Input(value="/tmp/hfeng1/demo/adk_openspec_project", id="workflow-workdir")
                 yield Button("📁", id="browse-workdir", variant="primary")
             
             yield Label("Session Name (optional):", classes="workflow-label")
@@ -599,7 +311,7 @@ class WorkflowTab(Static):
                 pass
 
 
-class ChatInterface(Static):
+class ChatTab(Static):
     """Widget for AI chat interface."""
 
     def compose(self) -> ComposeResult:
@@ -639,8 +351,9 @@ class InteractiveTerminal(RichLog):
         self.can_focus = True
         self.master_fd = None
         
-        # Initialize pyte terminal emulator
-        self.term_screen = pyte.Screen(120, 40)
+        # Initialize pyte terminal emulator with history buffer
+        # HistoryScreen maintains a scrollback buffer (default 1000 lines)
+        self.term_screen = pyte.HistoryScreen(120, 40, history=5000)
         self.term_stream = pyte.Stream(self.term_screen)
         
         # Track last rendered content to avoid duplicate rendering
@@ -663,19 +376,35 @@ class InteractiveTerminal(RichLog):
             logger.error(f"Error processing terminal output: {e}")
 
     def _update_display(self):
-        """Update the RichLog display with current terminal content."""
+        """Update the RichLog display with current terminal content including history."""
         lines = []
         
-        # Get visible lines from screen
+        # Get history lines (scrollback buffer)
+        # history.top is a deque of lines, each line is a dict mapping column -> char
+        for line_dict in self.term_screen.history.top:
+            line_chars = []
+            # line_dict is a dictionary with column indices as keys
+            for col in range(self.term_screen.columns):
+                if col in line_dict:
+                    char = line_dict[col]
+                    if hasattr(char, 'data'):
+                        line_chars.append(str(char.data))
+                    else:
+                        line_chars.append(str(char))
+                else:
+                    line_chars.append(' ')
+            lines.append(''.join(line_chars).rstrip())
+        
+        # Get visible lines from current screen
         for y in range(self.term_screen.lines):
             line_chars = []
             for x in range(self.term_screen.columns):
                 char = self.term_screen.buffer[y][x]
                 # Handle character with attributes
                 if hasattr(char, 'data'):
-                    line_chars.append(char.data)
+                    line_chars.append(str(char.data))
                 else:
-                    line_chars.append(char)
+                    line_chars.append(str(char))
             
             line = ''.join(line_chars).rstrip()
             lines.append(line)
@@ -686,6 +415,7 @@ class InteractiveTerminal(RichLog):
         if content != self._last_content:
             self.clear()
             self.write(content)
+            self._last_content = content
             self._last_content = content
 
     def on_key(self, event: Key) -> None:
@@ -891,7 +621,7 @@ class CLIController(App):
         color: $text-muted;
     }
 
-    ChatInterface {
+    ChatTab {
         height: 1fr;
     }
 
@@ -1008,7 +738,7 @@ class CLIController(App):
         with Container(id="chat-panel"):
             with TabbedContent(id="chat-tabs"):
                 with TabPane("Chat", id="chat-tab"):
-                    yield ChatInterface()
+                    yield ChatTab()
                 with TabPane("Workflow", id="workflow-tab"):
                     yield WorkflowTab()
 
@@ -1069,8 +799,8 @@ class CLIController(App):
         chat_input = self.query_one("#chat-input")
         message = chat_input.value.strip()
         if message:
-            chat_interface = self.query_one(ChatInterface)
-            chat_interface.add_message("user", message)
+            chat_tab = self.query_one(ChatTab)
+            chat_tab.add_message("user", message)
             chat_input.value = ""
             
             # Send to kiro-cli
@@ -1081,8 +811,8 @@ class CLIController(App):
         """Handle Enter key in chat input."""
         message = event.value.strip()
         if message:
-            chat_interface = self.query_one(ChatInterface)
-            chat_interface.add_message("user", message)
+            chat_tab = self.query_one(ChatTab)
+            chat_tab.add_message("user", message)
             event.input.value = ""
             # Send to kiro-cli
             self.send_command(message)
@@ -1415,7 +1145,7 @@ class CLIController(App):
             logger.error(f"Error updating agent status: {e}")
 
     async def wait_for_prompt(self, timeout: float = 10.0) -> bool:
-        """Wait for the '>' prompt to appear in the terminal.
+        """Wait for the '!>' prompt to appear in the terminal.
         
         Returns:
             True if prompt found, False if timeout
@@ -1435,8 +1165,8 @@ class CLIController(App):
                         else:
                             line_chars.append(char)
                     line = ''.join(line_chars).strip()
-                    # Check if line starts with '>'
-                    if line.startswith('>'):
+                    # Check if line starts with '!>'
+                    if line.startswith('!>'):
                         self.log_output("✅ Prompt detected, ready for input")
                         return True
                 
@@ -1448,6 +1178,33 @@ class CLIController(App):
         self.log_output("⚠️ Timeout waiting for prompt")
         return False
 
+    @work(exclusive=False, thread=True)
+    def read_output(self) -> None:
+        """Read output from agent process."""
+        terminal = self.query_one("#terminal-output", InteractiveTerminal)
+        
+        while self.agent_running and self.master_fd:
+            try:
+                # Check if data is available
+                ready, _, _ = select.select([self.master_fd], [], [], 0.1)
+                
+                if ready:
+                    data = os.read(self.master_fd, 4096).decode('utf-8', errors='ignore')
+                    if data:
+                        # Process through pyte terminal emulator
+                        terminal.process_output(data)
+                
+                # Check if process is still alive
+                if self.agent_process and self.agent_process.poll() is not None:
+                    self.agent_running = False
+                    terminal.process_output("\n[Process ended]\n")
+                    self.update_agent_status()
+                    break
+                    
+            except Exception as e:
+                logger.error(f"Error reading output: {e}")
+                break
+
     def send_command(self, command: str, log: bool = True) -> None:
         """Send command to agent."""
         if not self.agent_running or not self.master_fd:
@@ -1455,7 +1212,10 @@ class CLIController(App):
             return
 
         try:
-            os.write(self.master_fd, f"{command}\r\n".encode('utf-8'))
+            # Send command with carriage return and newline
+            command_bytes = f"{command}\r\n".encode('utf-8')
+            bytes_written = os.write(self.master_fd, command_bytes)
+            logger.info(f"Sent command: {repr(command)}, bytes written: {bytes_written}")
             
             if log:
                 self.command_count += 1
@@ -1472,6 +1232,7 @@ class CLIController(App):
                 
         except Exception as e:
             self.log_output(f"ERROR: Failed to send command: {e}")
+            logger.error(f"Failed to send command: {e}", exc_info=True)
 
     @work(exclusive=True)
     async def run_workflow(self, workdir: str, session_name: str, change_id: str) -> None:
@@ -1524,21 +1285,12 @@ class CLIController(App):
                 self.log_output("⏳ Waiting for kiro-cli to be ready...")
                 await self.wait_for_prompt(timeout=15.0)
             
-            # Step 3: Send prompt through chat interface
+            # Step 3: Send prompt and wait for completion
             workflow_tab.update_step(1, "running")
             await self.workflow_run_agent(workdir_path, session_name, change_id)
-            
-            # User needs to wait for agent to complete before proceeding
-            self.log_output("⏳ Waiting for agent to complete...")
-            self.log_output("   Watch the terminal for progress...")
-            self.log_output("   You can manually save the session later with /chat save")
-            
             workflow_tab.update_step(1, "complete")
             
-            # Note: Removed automatic session save - user will do it manually
-            # The user can save with: /chat save {session_dir}/{session_name}
-            # and then analyze manually if needed
-            
+            # Step 4: Session is now saved (done in workflow_run_agent)
             workflow_tab.update_step(2, "complete")
             workflow_tab.update_step(3, "complete")
             
@@ -1561,26 +1313,40 @@ class CLIController(App):
         """Setup workspace for workflow."""
         self.log_output("⚙️  Setting up workspace...")
         
+        # Create powers symlink if needed
+        powers_link = workdir / "powers"
+        if not powers_link.exists():
+            # Look for powers in the same directory as cli_tui.py (adk-python repo)
+            script_dir = Path(__file__).parent
+            repo_powers = script_dir / "powers"
+            if repo_powers.exists():
+                powers_link.symlink_to(repo_powers)
+                self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
+            else:
+                self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
+        
         # Create openspec-memories symlink if needed for propose mode
         if mode.startswith("propose"):
             memories_link = workdir / "openspec-memories"
             if not memories_link.exists():
-                # Look for memories in parent directory
-                repo_memories = workdir.parent / "openspec-memories"
+                # Look for memories in the same directory as cli_tui.py (adk-python repo)
+                script_dir = Path(__file__).parent
+                repo_memories = script_dir / "openspec-memories"
                 if repo_memories.exists():
                     memories_link.symlink_to(repo_memories)
                     self.log_output(f"✅ Created symlink: {memories_link} -> {repo_memories}")
                 else:
-                    self.log_output(f"⚠️  openspec-memories not found, skipping symlink creation")
+                    self.log_output(f"⚠️  openspec-memories not found at {repo_memories}, skipping symlink creation")
         
         # Check/copy MCP config for apply mode
         if mode in ["apply", "full"]:
             mcp_config = workdir / ".kiro" / "settings" / "mcp.json"
             if not mcp_config.exists():
-                repo_mcp = workdir.parent / ".kiro" / "settings" / "mcp.json"
+                # Look for MCP config in the same directory as cli_tui.py (adk-python repo)
+                script_dir = Path(__file__).parent
+                repo_mcp = script_dir / ".kiro" / "settings" / "mcp.json"
                 if repo_mcp.exists():
                     mcp_config.parent.mkdir(parents=True, exist_ok=True)
-                    import shutil
                     shutil.copy(repo_mcp, mcp_config)
                     self.log_output(f"✅ Copied MCP config: {mcp_config}")
         
@@ -1605,8 +1371,8 @@ class CLIController(App):
             prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
         
         # Display prompt in chat window
-        chat_interface = self.query_one(ChatInterface)
-        chat_interface.add_message("user", prompt)
+        chat_tab = self.query_one(ChatTab)
+        chat_tab.add_message("user", prompt)
         
         # Send prompt to kiro-cli
         self.send_command(prompt)
@@ -1617,8 +1383,57 @@ class CLIController(App):
         self.log_output("✅ Prompt sent, waiting for agent to complete...")
         self.log_output("⏳ Agent is working... (this may take several minutes)")
         
-        # Note: The user will need to monitor progress in the terminal
-        # and manually proceed when the agent is done
+        # Wait for the agent to complete and return to prompt
+        self.log_output("⏳ Waiting for agent to finish (looking for !> prompt)...")
+        prompt_found = await self.wait_for_prompt(timeout=3600.0)  # 1 hour timeout
+        
+        if prompt_found:
+            self.log_output("✅ Agent completed!")
+            
+            # Wait a bit for the terminal to settle before sending the save command
+            self.log_output("⏳ Waiting for terminal to settle...")
+            await asyncio.sleep(3.0)
+            
+            self.log_output("💾 Preparing to save session...")
+            
+            # Determine session directory and save path
+            if self.workflow_mode.startswith("propose"):
+                session_dir = workdir / "kiro-propose"
+            else:
+                session_dir = workdir / "kiro-apply"
+            
+            session_dir.mkdir(parents=True, exist_ok=True)
+            session_path = session_dir / session_name
+            
+            # Send /chat save command
+            save_command = f"/chat save {session_path}"
+            
+            # Display in chat window
+            chat_tab = self.query_one(ChatTab)
+            chat_tab.add_message("user", save_command)
+            
+            # Send to kiro-cli character by character (this works, send_command doesn't)
+            self.log_output(f"💾 Issuing save command: {save_command}")
+            for char in save_command:
+                os.write(self.master_fd, char.encode('utf-8'))
+            os.write(self.master_fd, b'\r\n')
+            
+            # Note: send_command doesn't work here for unknown reasons, even though
+            # it works for the initial prompt. Keeping the character-by-character approach.
+            
+            # Wait for save to complete and prompt to return
+            self.log_output("⏳ Waiting for save to complete...")
+            await asyncio.sleep(2.0)
+            save_prompt_found = await self.wait_for_prompt(timeout=30.0)
+            
+            if save_prompt_found:
+                self.log_output(f"✅ Session saved to: {session_path}")
+            else:
+                self.log_output(f"⚠️  Save command sent, but prompt not detected")
+                self.log_output(f"   Session should be at: {session_path}")
+        else:
+            self.log_output("⚠️  Timeout waiting for agent to complete")
+            self.log_output("   You can manually save with: /chat save <path>")
 
     async def workflow_analyze_session(self, workdir: Path, session_name: str) -> None:
         """Analyze the workflow session."""
@@ -1685,7 +1500,7 @@ class CLIController(App):
 
     def simulate_ai_response(self, user_message: str) -> None:
         """Simulate AI response (placeholder for real AI integration)."""
-        chat = self.query_one(ChatInterface)
+        chat = self.query_one(ChatTab)
         
         # Simple rule-based responses for now
         message_lower = user_message.lower()
