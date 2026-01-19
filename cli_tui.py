@@ -86,8 +86,8 @@ AGENTS = {
     },
     'adk-python': {
         'name': 'Adk Python',
-        'command': str(Path.home() / 'adk-python' / '.venv' / 'bin' / 'adk'),
-        'description': 'Agent Development Kit Python',
+        'command': str(Path(__file__).parent / '.venv' / 'bin' / 'adk'),
+        'description': 'Agent Development Kit Python (OpenSpec workflow)',
         'color': 'blue',
     },
     'copilot-cli': {
@@ -115,6 +115,21 @@ AGENTS = {
         'color': 'magenta',
     },
 }
+
+# ADK environment configuration (from common-config.sh)
+ADK_ENV_CONFIG = {
+    'CONTEXT_ENABLE_CONDENSATION': 'true',
+    'CONTEXT_MAX_TOKENS': '200000',
+    'CONTEXT_KEEP_SYSTEM_MESSAGES': '2',
+    'CONTEXT_KEEP_RECENT_TURNS': '3',
+    'CONTEXT_SUMMARIZATION_MODEL': 'iflow/qwen3-coder-plus',
+    'CONTEXT_SUMMARY_PROMPT_TYPE': 'vscode',
+    'BUILTIN_MCP_SERVER': 'no',
+    'OPENSPEC_MODEL': 'iflow/qwen3-coder-plus',
+}
+
+# ADK samples directory for agent imports
+ADK_SAMPLES_DIR = Path(__file__).parent / 'contributing' / 'samples'
 
 
 class AgentSelector(Static):
@@ -259,11 +274,23 @@ class WorkflowTab(Static):
                 yield Input(value="/tmp/hfeng1/demo/adk_openspec_project", id="workflow-workdir")
                 yield Button("📁", id="browse-workdir", variant="primary")
             
+            # Proposal file/text input (for ADK)
+            yield Label("Proposal (file path or text):", classes="workflow-label")
+            yield Input(value="openspec-prompts/proposal-wdt.md", id="workflow-proposal")
+            
+            # Device hint (for ADK)
+            yield Label("Device Hint (optional):", classes="workflow-label")
+            yield Input(placeholder="wdt", id="workflow-device-hint")
+            
             yield Label("Session Name (optional):", classes="workflow-label")
             yield Input(placeholder="auto-generated", id="workflow-session")
             
             yield Label("Change ID (for Apply):", classes="workflow-label")
             yield Input(placeholder="001-implement-wdt", id="workflow-changeid")
+            
+            # MCP Port (for ADK)
+            yield Label("MCP Port (for ADK):", classes="workflow-label")
+            yield Input(value="8051", id="workflow-mcp-port")
             
             # Action button
             yield Button("🚀 Run Workflow", id="run-workflow", variant="primary")
@@ -612,7 +639,7 @@ class CLIController(App):
         min-width: 5;
     }
 
-    #workflow-workdir, #workflow-session, #workflow-changeid {
+    #workflow-workdir, #workflow-session, #workflow-changeid, #workflow-proposal, #workflow-device-hint, #workflow-mcp-port {
         margin-bottom: 1;
     }
 
@@ -846,11 +873,17 @@ class CLIController(App):
         proposal_set = self.query_one("#proposal-method", RadioSet)
         action_set = self.query_one("#workflow-action", RadioSet)
         workdir = self.query_one("#workflow-workdir", Input).value.strip()
+        proposal_input = self.query_one("#workflow-proposal", Input).value.strip()
+        device_hint = self.query_one("#workflow-device-hint", Input).value.strip()
         session_name = self.query_one("#workflow-session", Input).value.strip()
         change_id = self.query_one("#workflow-changeid", Input).value.strip()
+        mcp_port = self.query_one("#workflow-mcp-port", Input).value.strip()
         
         # Use the currently selected agent from the agent panel
         workflow_agent = self.current_agent
+        
+        # ADK agent type is always "initial"
+        adk_agent_type = "initial"
         
         # Determine proposal method
         proposal_method = "simple"
@@ -885,12 +918,25 @@ class CLIController(App):
             self.log_output("❌ Change ID is required for Apply mode")
             return
         
+        # For ADK propose/full mode, proposal is required
+        if workflow_agent == 'adk-python' and action != "apply" and not proposal_input:
+            self.log_output("❌ Proposal is required for ADK Propose mode")
+            return
+        
         # Store change ID if provided
         if change_id:
             self.workflow_change_id = change_id
         
+        # Build ADK-specific config
+        adk_config = {
+            'agent_type': adk_agent_type,
+            'proposal': proposal_input,
+            'device_hint': device_hint,
+            'mcp_port': mcp_port or '8051',
+        }
+        
         # Start workflow
-        self.run_workflow(workdir, session_name, change_id, workflow_agent)
+        self.run_workflow(workdir, session_name, change_id, workflow_agent, adk_config)
 
     @on(RadioSet.Changed, "#proposal-method")
     def on_proposal_method_changed(self, event: RadioSet.Changed) -> None:
@@ -1269,18 +1315,20 @@ class CLIController(App):
             logger.error(f"Failed to send command: {e}", exc_info=True)
 
     @work(exclusive=True)
-    async def run_workflow(self, workdir: str, session_name: str, change_id: str, agent: str = "kiro-cli") -> None:
+    async def run_workflow(self, workdir: str, session_name: str, change_id: str, agent: str = "kiro-cli", adk_config: dict = None) -> None:
         """Execute workflow automation.
         
         Args:
             workdir: Working directory path
             session_name: Session name for saving
             change_id: Change ID for apply operations
-            agent: Agent to use ('kiro-cli' or 'dspy-openspec')
+            agent: Agent to use ('kiro-cli', 'dspy-openspec', or 'adk-python')
+            adk_config: ADK-specific configuration (agent_type, proposal, device_hint, mcp_port)
         """
         self.workflow_running = True
         workflow_tab = self.query_one(WorkflowTab)
         workflow_tab.workflow_status = "Running"
+        adk_config = adk_config or {}
         
         try:
             # Resolve working directory
@@ -1289,14 +1337,18 @@ class CLIController(App):
             
             workdir_path = Path(workdir)
             if not workdir_path.exists():
-                self.log_output(f"❌ Working directory not found: {workdir}")
-                workflow_tab.workflow_status = "Error"
-                return
+                workdir_path.mkdir(parents=True, exist_ok=True)
+                self.log_output(f"📁 Created working directory: {workdir}")
             
             # Generate session name if not provided
             if not session_name:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                agent_prefix = "dspy" if agent == "dspy-openspec" else "kiro"
+                if agent == "dspy-openspec":
+                    agent_prefix = "dspy"
+                elif agent == "adk-python":
+                    agent_prefix = "adk"
+                else:
+                    agent_prefix = "kiro"
                 if self.workflow_mode.startswith("propose"):
                     session_name = f"{agent_prefix}-propose-session_{timestamp}.json"
                 else:
@@ -1309,65 +1361,37 @@ class CLIController(App):
             self.log_output(f"Session Name: {session_name}")
             if change_id:
                 self.log_output(f"Change ID: {change_id}")
+            if agent == 'adk-python' and adk_config:
+                self.log_output(f"ADK Agent Type: {adk_config.get('agent_type', 'initial')}")
+                self.log_output(f"ADK Proposal: {adk_config.get('proposal', 'N/A')}")
             self.log_output("="*50)
             
             # Step 1: Setup workspace
             workflow_tab.update_step(0, "running")
-            await self.workflow_setup_workspace(workdir_path, self.workflow_mode)
+            await self.workflow_setup_workspace(workdir_path, self.workflow_mode, agent, adk_config)
             workflow_tab.update_step(0, "complete")
             
-            # Step 2: Start agent if not running
-            if not self.agent_running:
-                self.log_output(f"🚀 Starting {agent}...")
-                self.current_agent = agent
-                
-                # For DSPy OpenSpec, build command arguments upfront
-                extra_args = None
-                if agent == 'dspy-openspec':
-                    if self.workflow_mode.startswith("propose"):
-                        # Default proposal text
-                        proposal_text = "Propose to model a simple watchdog timer for Simics platform simulation"
-                        device_hint = "wdt"
-                        extra_args = ['proposal', proposal_text, '--device', device_hint]
-                    elif self.workflow_mode == "apply":
-                        extra_args = ['apply', '--id', change_id]
-                    
-                    self.log_output(f"📝 DSPy command: dspy-openspec {' '.join(extra_args)}")
-                
-                # Start in the working directory with extra args
-                await self.start_agent_in_workdir(workdir, extra_args)
-                
-                # Wait for agent to be ready (only for interactive agents)
-                if agent == 'kiro-cli':
-                    self.log_output("⏳ Waiting for kiro-cli to be ready...")
-                    await self.wait_for_prompt(timeout=15.0)
-                elif agent == 'dspy-openspec':
-                    # DSPy is non-interactive, just wait for it to complete
-                    self.log_output("⏳ Waiting for DSPy OpenSpec to complete...")
-            
-            # Step 3: Run agent workflow
+            # Step 2: Run agent workflow based on agent type
             workflow_tab.update_step(1, "running")
             
-            if agent == 'dspy-openspec':
-                # For DSPy, just wait for process to complete
-                while self.agent_running and self.agent_process:
-                    if self.agent_process.poll() is not None:
-                        self.agent_running = False
-                        self.log_output("✅ DSPy OpenSpec completed!")
-                        break
-                    await asyncio.sleep(1.0)
+            if agent == 'adk-python':
+                # Run ADK-specific workflow
+                await self.run_adk_workflow(workdir_path, session_name, change_id, adk_config)
+            elif agent == 'dspy-openspec':
+                # DSPy OpenSpec workflow (existing code)
+                await self._run_dspy_workflow(workdir_path, session_name, change_id, adk_config)
             else:
-                # For interactive agents like kiro-cli
-                await self.workflow_run_agent(workdir_path, session_name, change_id, agent)
+                # Interactive agents like kiro-cli
+                await self._run_interactive_workflow(workdir_path, session_name, change_id, agent)
             
             workflow_tab.update_step(1, "complete")
             
-            # Step 4: Session is now saved (done in workflow_run_agent)
+            # Step 3: Session is now saved
             workflow_tab.update_step(2, "complete")
             
-            # Step 5: Analyze session
+            # Step 4: Analyze session
             workflow_tab.update_step(3, "running")
-            await self.workflow_analyze_session(workdir_path, session_name)
+            await self.workflow_analyze_session(workdir_path, session_name, agent)
             workflow_tab.update_step(3, "complete")
             
             workflow_tab.workflow_status = "Complete"
@@ -1378,35 +1402,275 @@ class CLIController(App):
                 workflow_tab.change_id = self.workflow_change_id
                 self.log_output(f"\n📋 Change ID captured: {self.workflow_change_id}")
             
-            # Stop the agent after workflow completes
-            self.log_output("🚪 Stopping kiro-cli...")
-            self.stop_agent_process()
-            
         except Exception as e:
             workflow_tab.workflow_status = "Error"
             self.log_output(f"❌ Workflow error: {e}")
             logger.error(f"Workflow error: {e}", exc_info=True)
         finally:
             self.workflow_running = False
+            # Stop the agent after workflow completes
+            if self.agent_running:
+                self.log_output("🚪 Stopping agent...")
+                self.stop_agent_process()
 
-    async def workflow_setup_workspace(self, workdir: Path, mode: str) -> None:
+    async def _run_dspy_workflow(self, workdir: Path, session_name: str, change_id: str, adk_config: dict) -> None:
+        """Run DSPy OpenSpec workflow."""
+        if not self.agent_running:
+            self.log_output("🚀 Starting dspy-openspec...")
+            self.current_agent = 'dspy-openspec'
+            
+            # Build command arguments
+            extra_args = None
+            if self.workflow_mode.startswith("propose"):
+                proposal_text = adk_config.get('proposal', "Propose to model a simple watchdog timer for Simics platform simulation")
+                device_hint = adk_config.get('device_hint', "wdt")
+                extra_args = ['proposal', proposal_text]
+                if device_hint:
+                    extra_args.extend(['--device', device_hint])
+            elif self.workflow_mode == "apply":
+                extra_args = ['apply', '--id', change_id]
+            
+            self.log_output(f"📝 DSPy command: dspy-openspec {' '.join(extra_args or [])}")
+            
+            # Start in the working directory with extra args
+            await self.start_agent_in_workdir(str(workdir), extra_args)
+            
+            # DSPy is non-interactive, just wait for it to complete
+            self.log_output("⏳ Waiting for DSPy OpenSpec to complete...")
+        
+        # Wait for process to complete
+        while self.agent_running and self.agent_process:
+            if self.agent_process.poll() is not None:
+                self.agent_running = False
+                self.log_output("✅ DSPy OpenSpec completed!")
+                break
+            await asyncio.sleep(1.0)
+
+    async def _run_interactive_workflow(self, workdir: Path, session_name: str, change_id: str, agent: str) -> None:
+        """Run interactive agent workflow (kiro-cli)."""
+        if not self.agent_running:
+            self.log_output(f"🚀 Starting {agent}...")
+            self.current_agent = agent
+            
+            # Start in the working directory
+            await self.start_agent_in_workdir(str(workdir), None)
+            
+            # Wait for agent to be ready
+            self.log_output(f"⏳ Waiting for {agent} to be ready...")
+            await self.wait_for_prompt(timeout=15.0)
+        
+        # Run agent workflow
+        await self.workflow_run_agent(workdir, session_name, change_id, agent)
+
+    async def run_adk_workflow(self, workdir: Path, session_name: str, change_id: str, adk_config: dict) -> None:
+        """Run ADK Python OpenSpec workflow using PTY (similar to DSPy).
+        
+        This starts the ADK agent with PTY so output is shown in terminal.
+        
+        Args:
+            workdir: Working directory path
+            session_name: Session name for saving
+            change_id: Change ID for apply operations
+            adk_config: ADK-specific configuration
+        """
+        agent_type = adk_config.get('agent_type', 'initial')
+        proposal = adk_config.get('proposal', '')
+        device_hint = adk_config.get('device_hint', '')
+        mcp_port = adk_config.get('mcp_port', '8051')
+        
+        # Prepare agent directories
+        proposal_dir = workdir / f"adk_openspec_proposal_{agent_type}_agent"
+        apply_dir = workdir / "adk_openspec_apply_agent"
+        
+        # Resolve proposal text
+        proposal_text = proposal
+        if proposal and Path(proposal).exists():
+            self.log_output(f"📄 Reading proposal from file: {proposal}")
+            proposal_text = Path(proposal).read_text()
+        elif proposal and (Path(__file__).parent / proposal).exists():
+            proposal_path = Path(__file__).parent / proposal
+            self.log_output(f"📄 Reading proposal from file: {proposal_path}")
+            proposal_text = proposal_path.read_text()
+        
+        resolved_change_id = change_id
+        
+        # Run proposal if not in apply-only mode
+        if self.workflow_mode != "apply":
+            self.log_output(f"🧩 Running /proposal with {agent_type} agent...")
+            
+            # Prepare proposal agent directory
+            self._prepare_adk_agent_dir(
+                proposal_dir, 
+                f"openspec_integration.proposal_{agent_type}_agent",
+                f"proposal_{agent_type}_agent"
+            )
+            
+            # Build proposal command
+            single_line_proposal = proposal_text.replace('\n', '\\n')
+            proposal_cmd = f"/proposal {single_line_proposal}"
+            if device_hint:
+                proposal_cmd += f" --device {device_hint}"
+            
+            session_id = f"proposal_{change_id or datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            self.log_output(f"📝 Proposal command: {proposal_cmd[:100]}...")
+            self.log_output(f"📁 Agent directory: {proposal_dir}")
+            
+            # Start ADK agent with PTY (like DSPy)
+            if not self.agent_running:
+                self.log_output("🚀 Starting ADK proposal agent...")
+                self.current_agent = 'adk-python'
+                
+                # Build ADK command with arguments
+                extra_args = ['run', str(proposal_dir), '--save_session', '--session_id', session_id]
+                
+                # Set environment variables for this agent
+                old_env = os.environ.copy()
+                os.environ.update(ADK_ENV_CONFIG)
+                os.environ['MCP_PORT'] = mcp_port
+                
+                try:
+                    await self.start_agent_in_workdir(str(workdir), extra_args)
+                    
+                    # Wait for agent to be ready
+                    self.log_output("⏳ Waiting for ADK agent to be ready...")
+                    await asyncio.sleep(2.0)
+                    
+                    # Send proposal command
+                    self.log_output(f"📝 Sending proposal command...")
+                    self.send_command(proposal_cmd)
+                    
+                    # Wait for agent to complete
+                    self.log_output("⏳ Waiting for ADK agent to complete...")
+                    while self.agent_running and self.agent_process:
+                        if self.agent_process.poll() is not None:
+                            self.agent_running = False
+                            self.log_output("✅ ADK proposal agent completed!")
+                            break
+                        await asyncio.sleep(1.0)
+                    
+                    # Try to extract change_id from terminal output
+                    # Note: This is best-effort since output is in terminal
+                    self.log_output("📋 Check terminal output for change_id")
+                    
+                finally:
+                    # Restore environment
+                    os.environ.clear()
+                    os.environ.update(old_env)
+        
+        # Run apply if requested
+        if self.workflow_mode in ["apply", "simple-full", "multi-delta-full"] and resolved_change_id:
+            self.log_output(f"🔧 Running /apply for {resolved_change_id}...")
+            
+            # Prepare apply agent directory
+            self._prepare_adk_agent_dir(
+                apply_dir,
+                "openspec_integration.apply_agent",
+                "apply_agent"
+            )
+            
+            apply_session_id = f"apply_{resolved_change_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Start ADK apply agent with PTY
+            if not self.agent_running:
+                self.log_output("🚀 Starting ADK apply agent...")
+                self.current_agent = 'adk-python'
+                
+                extra_args = ['run', str(apply_dir), '--save_session', '--session_id', apply_session_id]
+                
+                # Set environment variables
+                old_env = os.environ.copy()
+                os.environ.update(ADK_ENV_CONFIG)
+                os.environ['MCP_PORT'] = mcp_port
+                
+                try:
+                    await self.start_agent_in_workdir(str(workdir), extra_args)
+                    
+                    # Wait for agent to be ready
+                    self.log_output("⏳ Waiting for ADK agent to be ready...")
+                    await asyncio.sleep(2.0)
+                    
+                    # Send apply command
+                    apply_cmd = f"/apply --id {resolved_change_id}"
+                    self.log_output(f"📝 Sending apply command: {apply_cmd}")
+                    self.send_command(apply_cmd)
+                    
+                    # Wait for agent to complete
+                    self.log_output("⏳ Waiting for ADK agent to complete...")
+                    while self.agent_running and self.agent_process:
+                        if self.agent_process.poll() is not None:
+                            self.agent_running = False
+                            self.log_output("✅ ADK apply agent completed!")
+                            break
+                        await asyncio.sleep(1.0)
+                    
+                finally:
+                    # Restore environment
+                    os.environ.clear()
+                    os.environ.update(old_env)
+
+
+    def _prepare_adk_agent_dir(self, target_dir: Path, import_path: str, agent_name: str) -> None:
+        """Prepare ADK agent directory with agent.py wrapper.
+        
+        Args:
+            target_dir: Target directory for the agent
+            import_path: Python import path for the agent (e.g., openspec_integration.apply_agent)
+            agent_name: Name of the agent (e.g., apply_agent)
+        """
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create agent.py that imports from samples
+        samples_dir = ADK_SAMPLES_DIR
+        agent_py_content = f'''import sys, os
+sys.path.insert(0, '{samples_dir}')
+from {import_path} import root_agent
+'''
+        (target_dir / 'agent.py').write_text(agent_py_content)
+        self.log_output(f"✅ Created agent wrapper: {target_dir / 'agent.py'}")
+        
+        # Symlink instruction file if it exists
+        instruction_src = samples_dir / 'openspec_integration' / f'{agent_name}_instruction.md'
+        instruction_dst = target_dir / f'{agent_name}_instruction.md'
+        if instruction_src.exists() and not instruction_dst.exists():
+            instruction_dst.symlink_to(instruction_src)
+            self.log_output(f"✅ Symlinked instruction file: {instruction_dst}")
+
+    def _extract_change_id(self, output: str) -> str:
+        """Extract change_id from ADK agent output.
+        
+        Args:
+            output: Agent output text
+            
+        Returns:
+            Extracted change_id or empty string
+        """
+        # Look for JSON pattern: "change_id": "xxx"
+        match = re.search(r'"change_id"\s*:\s*"([^"]+)"', output)
+        if match:
+            return match.group(1)
+        return ""
+
+    async def workflow_setup_workspace(self, workdir: Path, mode: str, agent: str = "kiro-cli", adk_config: dict = None) -> None:
         """Setup workspace for workflow."""
         self.log_output("⚙️  Setting up workspace...")
+        adk_config = adk_config or {}
         
-        # Create powers symlink if needed
-        powers_link = workdir / "powers"
-        if not powers_link.exists():
-            # Look for powers in the same directory as cli_tui.py (adk-python repo)
-            script_dir = Path(__file__).parent
-            repo_powers = script_dir / "powers"
-            if repo_powers.exists():
-                powers_link.symlink_to(repo_powers)
-                self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
-            else:
-                self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
+        # Create powers symlink if needed (for kiro-cli)
+        if agent == 'kiro-cli':
+            powers_link = workdir / "powers"
+            if not powers_link.exists():
+                # Look for powers in the same directory as cli_tui.py (adk-python repo)
+                script_dir = Path(__file__).parent
+                repo_powers = script_dir / "powers"
+                if repo_powers.exists():
+                    powers_link.symlink_to(repo_powers)
+                    self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
+                else:
+                    self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
         
         # Create openspec-memories symlink if needed for propose mode
-        if mode.startswith("propose"):
+        if mode.startswith("propose") or mode.endswith("-full"):
             memories_link = workdir / "openspec-memories"
             if not memories_link.exists():
                 # Look for memories in the same directory as cli_tui.py (adk-python repo)
@@ -1418,8 +1682,8 @@ class CLIController(App):
                 else:
                     self.log_output(f"⚠️  openspec-memories not found at {repo_memories}, skipping symlink creation")
         
-        # Check/copy MCP config for apply mode
-        if mode in ["apply", "full"]:
+        # Check/copy MCP config for apply mode (kiro-cli only)
+        if agent == 'kiro-cli' and mode in ["apply", "simple-full", "multi-delta-full"]:
             mcp_config = workdir / ".kiro" / "settings" / "mcp.json"
             if not mcp_config.exists():
                 # Look for MCP config in the same directory as cli_tui.py (adk-python repo)
@@ -1520,11 +1784,49 @@ class CLIController(App):
             self.log_output("⚠️  Timeout waiting for agent to complete")
             self.log_output("   You can manually save with: /chat save <path>")
 
-    async def workflow_analyze_session(self, workdir: Path, session_name: str) -> None:
+    async def workflow_analyze_session(self, workdir: Path, session_name: str, agent: str = "kiro-cli") -> None:
         """Analyze the workflow session."""
         self.log_output("📊 Analyzing session...")
         
-        # Determine session directory based on mode
+        # For ADK, session files are in agent directories
+        if agent == 'adk-python':
+            # ADK sessions are saved in the agent directories
+            agent_type = "initial"  # Default
+            if self.workflow_mode.startswith("propose"):
+                session_dir = workdir / f"adk_openspec_proposal_{agent_type}_agent"
+            else:
+                session_dir = workdir / "adk_openspec_apply_agent"
+            
+            # Find session files in the directory
+            session_files = list(session_dir.glob("*.session.json"))
+            if session_files:
+                session_file = max(session_files, key=lambda f: f.stat().st_mtime)  # Most recent
+                self.log_output(f"📄 Found ADK session: {session_file}")
+                
+                # Generate human-readable dump using view_session.py
+                script_dir = Path(__file__).parent
+                view_script = script_dir / "view_session.py"
+                if view_script.exists():
+                    try:
+                        result = subprocess.run(
+                            [sys.executable, str(view_script), str(session_file)],
+                            capture_output=True,
+                            text=True,
+                            timeout=30
+                        )
+                        if result.returncode == 0:
+                            analysis_file = session_file.with_suffix('.txt')
+                            analysis_file.write_text(result.stdout)
+                            self.log_output(f"✅ Analysis saved: {analysis_file}")
+                    except Exception as e:
+                        self.log_output(f"⚠️  Analysis error: {e}")
+            else:
+                self.log_output(f"⚠️  No ADK session files found in {session_dir}")
+            
+            self.log_output("✅ Analysis complete")
+            return
+        
+        # For kiro-cli, session files are in kiro-propose/kiro-apply directories
         if self.workflow_mode.startswith("propose"):
             session_dir = workdir / "kiro-propose"
         else:
@@ -1565,11 +1867,10 @@ class CLIController(App):
                             self.log_output(f"  {line.strip()}")
                 
                 # Try to extract change ID from analysis for propose mode
-                if self.workflow_mode.startswith("propose") or self.workflow_mode == "full":
+                if self.workflow_mode.startswith("propose") or self.workflow_mode.endswith("-full"):
                     for line in result.stdout.split('\n'):
                         if "change" in line.lower() and "-" in line:
                             # Simple heuristic to find change IDs like "001-implement-wdt"
-                            import re
                             match = re.search(r'\b(\d{3}-[a-z-]+)\b', line)
                             if match:
                                 self.workflow_change_id = match.group(1)
