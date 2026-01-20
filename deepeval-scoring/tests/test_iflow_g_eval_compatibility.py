@@ -22,7 +22,7 @@ from deepeval.metrics import GEval
 from deepeval.metrics.g_eval import Rubric
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.models import LiteLLMModel
-from deepeval import evaluate
+from deepeval import evaluate, assert_test
 
 
 def test_iflow_g_eval_compatibility():
@@ -234,6 +234,115 @@ def test_litellm_github_copilot_basic():
     return False
 
 
+def test_iflow_assert_test_compatibility():
+  """Test assert_test with iflow models (pytest-style assertions)."""
+  
+  print("\n🔍 Testing assert_test with iflow models...")
+  
+  if not os.getenv("IFLOW_API_KEY"):
+    print("❌ IFLOW_API_KEY not set. Skipping assert_test test.")
+    return False
+  
+  try:
+    iflow_model = LiteLLMModel(
+      model="dashscope/qwen3-coder-plus",
+      api_key=os.getenv("IFLOW_API_KEY"),
+      base_url="https://apis.iflow.cn/v1/"
+    )
+    
+    g_eval_metric = GEval(
+      name="Code Quality",
+      evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+      criteria="Evaluate if the code is correct and follows best practices",
+      rubric=[
+        Rubric(score_range=(8, 10), expected_outcome="Excellent code quality"),
+        Rubric(score_range=(5, 7), expected_outcome="Good code quality"),
+        Rubric(score_range=(0, 4), expected_outcome="Poor code quality")
+      ],
+      model=iflow_model,
+      threshold=0.5
+    )
+    
+    test_case = LLMTestCase(
+      input="Write a function to check if a number is prime",
+      actual_output=(
+        "def is_prime(n):\n"
+        "    if n < 2:\n"
+        "        return False\n"
+        "    for i in range(2, int(n**0.5) + 1):\n"
+        "        if n % i == 0:\n"
+        "            return False\n"
+        "    return True"
+      )
+    )
+    
+    print("   Running assert_test with iflow model...")
+    assert_test(test_case, [g_eval_metric])
+    
+    print("✅ assert_test with iflow successful!")
+    return True
+    
+  except AssertionError as e:
+    print(f"❌ assert_test failed (metric threshold not met): {e}")
+    return False
+  except Exception as e:
+    print(f"❌ assert_test failed: {e}")
+    return False
+
+
+def test_github_copilot_assert_test_compatibility():
+  """Test assert_test with GitHub Copilot models (pytest-style assertions)."""
+  
+  print("\n🔍 Testing assert_test with GitHub Copilot models...")
+  
+  try:
+    copilot_model = LiteLLMModel(
+      model="github_copilot/gpt-4o",
+      generation_kwargs={
+        "extra_headers": {
+          "Editor-Version": "vscode/1.85.0",
+          "Copilot-Integration-Id": "vscode-chat"
+        }
+      }
+    )
+    
+    g_eval_metric = GEval(
+      name="Algorithm Correctness",
+      evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+      criteria="Evaluate if the algorithm is correct and efficient",
+      rubric=[
+        Rubric(score_range=(8, 10), expected_outcome="Correct and efficient algorithm"),
+        Rubric(score_range=(5, 7), expected_outcome="Correct but could be more efficient"),
+        Rubric(score_range=(0, 4), expected_outcome="Incorrect or very inefficient")
+      ],
+      model=copilot_model,
+      threshold=0.5
+    )
+    
+    test_case = LLMTestCase(
+      input="Write a function to find the maximum element in a list",
+      actual_output=(
+        "def find_max(lst):\n"
+        "    if not lst:\n"
+        "        return None\n"
+        "    return max(lst)"
+      )
+    )
+    
+    print("   Running assert_test with GitHub Copilot model...")
+    assert_test(test_case, [g_eval_metric])
+    
+    print("✅ assert_test with GitHub Copilot successful!")
+    return True
+    
+  except AssertionError as e:
+    print(f"❌ assert_test failed (metric threshold not met): {e}")
+    return False
+  except Exception as e:
+    print(f"❌ assert_test failed: {e}")
+    return False
+
+
 if __name__ == "__main__":
   print("🧪 Testing iflow and GitHub Copilot compatibility with G-Eval")
   print("=" * 60)
@@ -245,18 +354,28 @@ if __name__ == "__main__":
   results = []
   
   if iflow_basic_success:
-    # Test G-Eval compatibility with iflow
+    # Test G-Eval compatibility with iflow (evaluate method)
     iflow_g_eval_success = test_iflow_g_eval_compatibility()
-    results.append(("iflow", iflow_g_eval_success))
+    results.append(("iflow (evaluate)", iflow_g_eval_success))
+    
+    # Test assert_test with iflow
+    iflow_assert_success = test_iflow_assert_test_compatibility()
+    results.append(("iflow (assert_test)", iflow_assert_success))
   else:
-    results.append(("iflow", False))
+    results.append(("iflow (evaluate)", False))
+    results.append(("iflow (assert_test)", False))
   
   if copilot_basic_success:
-    # Test G-Eval compatibility with GitHub Copilot
+    # Test G-Eval compatibility with GitHub Copilot (evaluate method)
     copilot_g_eval_success = test_github_copilot_g_eval_compatibility()
-    results.append(("GitHub Copilot", copilot_g_eval_success))
+    results.append(("GitHub Copilot (evaluate)", copilot_g_eval_success))
+    
+    # Test assert_test with GitHub Copilot
+    copilot_assert_success = test_github_copilot_assert_test_compatibility()
+    results.append(("GitHub Copilot (assert_test)", copilot_assert_success))
   else:
-    results.append(("GitHub Copilot", False))
+    results.append(("GitHub Copilot (evaluate)", False))
+    results.append(("GitHub Copilot (assert_test)", False))
   
   # Summary
   print("\n" + "=" * 60)
@@ -265,12 +384,13 @@ if __name__ == "__main__":
   
   for model_type, success in results:
     status = "✅ Compatible" if success else "❌ Issues found"
-    print(f"{model_type:15} | {status}")
+    print(f"{model_type:30} | {status}")
   
   print("\n💡 RECOMMENDATIONS:")
   if any(success for _, success in results):
     print("✅ G-Eval works with supported models!")
     print("   Use LiteLLMModel with proper configuration for best results")
+    print("   Both evaluate() and assert_test() methods are supported")
   else:
     print("⚠️  Consider using GPT-4 or other supported models for G-Eval")
     print("   Check API keys and network connectivity")
@@ -278,3 +398,7 @@ if __name__ == "__main__":
   print("\n🔧 SETUP REQUIREMENTS:")
   print("   iflow: export IFLOW_API_KEY='your-key'")
   print("   GitHub Copilot: No API key required (uses built-in authentication)")
+  
+  print("\n📝 USAGE PATTERNS:")
+  print("   1. evaluate([test_case], [metrics]) - Returns detailed results")
+  print("   2. assert_test(test_case, [metrics]) - Raises AssertionError on failure")
