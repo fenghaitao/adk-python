@@ -77,9 +77,9 @@ def llm_app(query: str, context: list[str] | None = None) -> str:
           "designed for programming with language models."
       ),
       "How does ADK help with agent development?": (
-          "ADK (Agent Development Kit) is a Python toolkit that makes agent "
-          "development feel more like software development, providing tools "
-          "for building, evaluating, and deploying AI agents."
+          "ADK provides tools for building, evaluating, and deploying "
+          "AI agents with a code-first approach that makes agent development "
+          "feel more like software development."
       ),
   }
   return responses.get(query, "I don't have information about that.")

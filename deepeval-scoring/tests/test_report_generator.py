@@ -32,12 +32,18 @@ def test_calculate_overall_score():
   
   code_results = {"overall_score": 0.8}
   behavior_results = {"overall_score": 0.9}
+  deterministic_results = None
+  scoring_mode = "llm"
   
-  overall = generator._calculate_overall(code_results, behavior_results)
+  overall = generator._calculate_overall(
+      code_results, behavior_results, deterministic_results, scoring_mode
+  )
   assert abs(overall - 0.85) < 0.001  # Use approximate comparison
   
   # Test without behavior results
-  overall_code_only = generator._calculate_overall(code_results, None)
+  overall_code_only = generator._calculate_overall(
+      code_results, None, None, scoring_mode
+  )
   assert abs(overall_code_only - 0.8) < 0.001
 
 
@@ -57,12 +63,14 @@ def test_generate_json_report():
     }
   }
   
-  report = generator._generate_json(code_results, None)
+  report = generator._generate_json(
+      code_results, None, None, "llm"
+  )
   data = json.loads(report)
   
   assert "timestamp" in data
   assert "overall_score" in data
-  assert "code_quality" in data
+  assert "llm_code_quality" in data
   assert data["overall_score"] == 0.8
 
 
@@ -83,7 +91,7 @@ def test_generate_markdown_report():
   }
   
   report = generator._generate_markdown(
-    code_results, None, "wdt", "iflow/qwen3-coder-plus"
+      code_results, None, None, "wdt", "iflow/qwen3-coder-plus", "llm"
   )
   
   assert "# DeepEval Scoring Report" in report
@@ -108,7 +116,9 @@ def test_generate_recommendations():
     }
   }
   
-  recommendations = generator._generate_recommendations(code_results, None)
+  recommendations = generator._generate_recommendations(
+      code_results, None, None
+  )
   assert len(recommendations) > 0
   assert any("Code Correctness" in rec for rec in recommendations)
   
@@ -126,7 +136,7 @@ def test_generate_recommendations():
   }
   
   recommendations_passing = generator._generate_recommendations(
-    code_results_passing, None
+      code_results_passing, None, None
   )
   assert any("passed" in rec.lower() for rec in recommendations_passing)
 
