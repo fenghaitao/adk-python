@@ -53,6 +53,8 @@ fi
 
 # List of submodules from .gitmodules (excluding agent-os and agent_os_integration)
 SUBMODULES=(
+    "deepeval-scoring"
+    "dspy-openspec"
     "spec-kit"
     "contributing/samples/spec_kit_integration/simics-mcp-server"
 )
