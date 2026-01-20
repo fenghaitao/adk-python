@@ -42,16 +42,18 @@ run_cmd_with_timing() {
 #   Stage 2 = prompt optimization (DeepEval) + git commit
 #
 # Environment variables for Stage 2:
-#   SKIP_COLLECT=1       - Skip session data collection, use existing historical_sessions.json
-#   SKIP_OPTIMIZE=1      - Skip optimization step, only collect session data
+#   SKIP_COLLECT=1       - Skip session data collection (deprecated, use SKIP_OPTIMIZE instead)
+#   SKIP_OPTIMIZE=1      - Skip optimization step
 #   FORCE_OPTIMIZE=1     - Force optimization even with insufficient sessions
-#   FORCE_RECOLLECT=1    - Force recollection from EXTRA_WORKDIRS (ignore cache)
+#   FORCE_RECOLLECT=1    - Force recollection (deprecated with new directory-based approach)
 #   MIN_SESSIONS=N       - Set minimum session threshold (default: 5)
 #   MAX_CONCURRENT=N     - Set max concurrent API calls (default: 1)
 #   THROTTLE_SECONDS=N   - Set throttle delay between batches (default: 30.0)
-#   EXTRA_WORKDIRS       - Space-separated additional workdirs to collect sessions from
-#                          Example: EXTRA_WORKDIRS="/path/to/proj1 /path/to/proj2"
-#                          Sessions are cached per workdir and reused across runs
+#   EXTRA_WORKDIRS       - Path to directory containing multiple project folders for optimization
+#                          Example: EXTRA_WORKDIRS="/path/to/data"
+#                          The directory should contain folders like wdt_dbg132, wdt_dbg134, etc.
+#                          Each folder must have an adk_openspec_project subdirectory
+#                          If not set, uses parent directory of current project
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: hybrid)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
@@ -181,9 +183,22 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         MLFLOW_ARGS="--mlflow"
     fi
     
+    # Determine historical data path
+    # If EXTRA_WORKDIRS is set, use it as the data path containing multiple projects
+    # Otherwise use current working directory (parent of current project)
+    if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
+        # Use EXTRA_WORKDIRS as the directory containing all project folders
+        HISTORICAL_DATA_PATH="$EXTRA_WORKDIRS"
+        echo "📁 Using EXTRA_WORKDIRS for multi-project optimization: $HISTORICAL_DATA_PATH" | tee -a "$log_dir/${proj_dir}.2.log"
+    else
+        # Single project mode - use parent directory which should contain multiple test runs
+        HISTORICAL_DATA_PATH="$(dirname "$(pwd)")"
+        echo "📁 Using parent directory for optimization: $HISTORICAL_DATA_PATH" | tee -a "$log_dir/${proj_dir}.2.log"
+    fi
+    
     set +e
     python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
-        --historical-data "$OPTIMIZATION_DIR/historical_sessions.json" \
+        --historical-data "$HISTORICAL_DATA_PATH" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
         --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
         --algorithm copro \
@@ -238,7 +253,8 @@ if [[ "${run_stage[2]}" == "1" ]]; then
     else
         # Get optimization metrics for commit message
         OPTIMIZATION_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-        HISTORICAL_SESSIONS=$(grep -c '"device_name"' "$OPTIMIZATION_DIR/historical_sessions.json" 2>/dev/null || echo "unknown")
+        # Count project folders in HISTORICAL_DATA_PATH
+        HISTORICAL_SESSIONS=$(find "$HISTORICAL_DATA_PATH" -maxdepth 2 -type d -name "adk_openspec_project" 2>/dev/null | wc -l || echo "unknown")
         
         # Stage the optimized instructions file
         git add "$INSTRUCTIONS_FILE" 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
@@ -248,14 +264,14 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         git commit -m "refactor(openspec): optimize apply agent instructions via DeepEval
 
 - Optimized apply_agent_instruction.md using PromptOptimizer (copro)
-- Based on $HISTORICAL_SESSIONS historical sessions (min score: 0.5)
+- Based on $HISTORICAL_SESSIONS historical project folders from $HISTORICAL_DATA_PATH
 - Optimization date: $OPTIMIZATION_DATE
 - Model used: $model
 - Algorithm: copro with 5 iterations
 - Backup saved: $(basename $BACKUP_FILE)
 
 This optimization aims to improve agent performance based on historical
-session data and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
+project data and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
         commit_exit_code=$?
         set -e
         

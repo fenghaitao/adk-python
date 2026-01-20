@@ -19,8 +19,9 @@ This script uses DeepEval's PromptOptimizer with our custom metrics to
 automatically improve agent instructions based on historical session outcomes.
 
 Usage:
+  # From directory with multiple project folders
   python optimize_instructions.py \\
-    --historical-data sessions.json \\
+    --historical-data /path/to/data \\
     --current-instructions apply_agent_instruction.md \\
     --output optimized_instructions.md \\
     --algorithm miprov2 \\
@@ -28,12 +29,21 @@ Usage:
   
   # With MLflow tracking
   python optimize_instructions.py \\
-    --historical-data sessions.json \\
+    --historical-data /path/to/data \\
     --current-instructions apply_agent_instruction.md \\
     --output optimized_instructions.md \\
     --algorithm copro \\
     --iterations 5 \\
     --mlflow
+
+Expected directory structure:
+  /path/to/data/
+    wdt_dbg132/
+      adk_openspec_project/
+    wdt_dbg134/
+      adk_openspec_project/
+    wdt_dbg137/
+      adk_openspec_project/
 """
 
 from __future__ import annotations
@@ -65,43 +75,53 @@ from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
 
-def load_historical_sessions(data_file: Path) -> List[Golden]:
-  """Load historical session data as Golden dataset.
+def load_historical_sessions(data_path: Path) -> List[Golden]:
+  """Load historical session data as Golden dataset from multiple project folders.
   
   Args:
-    data_file: JSON file with session data
+    data_path: Path to directory containing multiple project folders 
+               (e.g., wdt_dbg132, wdt_dbg134, wdt_dbg137)
+               Each folder should contain an adk_openspec_project subdirectory
     
   Returns:
-    List of Golden test cases
+    List of Golden test cases with project paths
   """
-  with open(data_file) as f:
-    sessions = json.load(f)
-  
   golden_dataset = []
-  for session in sessions:
-    # Use expected_output for the reference implementation, not actual_output
-    # actual_output should be None initially (filled by model during optimization)
+  data_path = Path(data_path)
+
+  if not data_path.is_dir():
+    raise ValueError(f"Path does not exist or is not a directory: {data_path}")
+
+  print(f"📁 Scanning directory for project folders: {data_path}")
+
+  # Find all subdirectories that contain adk_openspec_project
+  project_folders = []
+  for item in sorted(data_path.iterdir()):
+    if item.is_dir():
+      project_path = item / "adk_openspec_project"
+      if project_path.exists():
+        project_folders.append((item.name, project_path))
+
+  if not project_folders:
+    raise ValueError(f"No project folders with 'adk_openspec_project' found in: {data_path}")
+
+  print(f"✅ Found {len(project_folders)} project folders")
+
+  # Create Golden dataset entries with project paths only
+  for folder_name, project_path in project_folders:
+    print(f"  📂 Adding {folder_name}/adk_openspec_project...")
+
+    # Input and expected_output both point to the project path
+    # The optimizer will use these paths to evaluate the agent's performance
     golden = Golden(
-      input=session["task_description"],
+      input=str(project_path),
       actual_output=None,  # Will be filled by model during optimization
-      expected_output=session["implementation"],  # Reference implementation
-      context=[
-        session.get("session_log", ""),
-        session.get("spec", ""),
-        session.get("tests", "")
-      ],
-      additional_metadata={
-        "device_name": session["device_name"],
-        "score": session.get("score", 0.0),
-        "metrics": session.get("metrics", {})
-      }
+      expected_output=str(project_path)  # Reference implementation path
     )
     golden_dataset.append(golden)
-  
+    print(f"    ✓ Added {folder_name}")
+
   return golden_dataset
-
-
-
 
 
 def create_model_callback(model: str):
@@ -336,7 +356,7 @@ def main():
   parser.add_argument(
     "--historical-data",
     required=True,
-    help="JSON file with historical session data"
+    help="Path to directory containing project folders (e.g., wdt_dbg132/adk_openspec_project, wdt_dbg134/adk_openspec_project)"
   )
   parser.add_argument(
     "--current-instructions",
