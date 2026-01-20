@@ -22,3 +22,6 @@
 [submodule "textual"]
         path = textual
         url = https://github.com/fenghaitao/textual
+[submodule "cognee"]
+	path = cognee
+	url = https://github.com/fenghaitao/cognee.git
