@@ -71,6 +71,7 @@ from metrics.code_style import CodeStyleMetric
 from metrics.agent_behavior import AgentBehaviorMetric
 from metrics.compilation_metric import CompilationMetric
 from metrics.test_pass_rate_metric import TestPassRateMetric
+from metrics.custom_scorer import CustomScorer
 from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
@@ -236,7 +237,8 @@ def create_optimizer(
     weights: Dict[str, float],
     max_concurrent: int = 5,
     throttle_seconds: float = 2.0,
-    run_async: bool = False
+    run_async: bool = False,
+    use_custom_scorer: bool = False
 ) -> PromptOptimizer:
   """Create PromptOptimizer with specified configuration.
   
@@ -248,11 +250,18 @@ def create_optimizer(
     max_concurrent: Maximum concurrent API calls (default: 5 for rate limiting)
     throttle_seconds: Seconds to wait between batches (default: 2.0)
     run_async: Whether to run async (default: False to avoid pickle issues)
+    use_custom_scorer: Use CustomScorer wrapper instead of individual metrics
     
   Returns:
     Configured PromptOptimizer
   """
   # Create metrics with weights
+  if use_custom_scorer:
+    # Use the CustomScorer which provides a unified interface
+    custom_scorer = CustomScorer(model=model, weights=weights)
+
+  # Use individual metrics (original approach)
+  # Cheat it when using custom_scorer
   metrics = [
     CodeCorrectnessMetric(model=model, threshold=0.8),
     TestCoverageMetric(model=model, threshold=0.7),
@@ -261,6 +270,7 @@ def create_optimizer(
     CompilationMetric(model=model, threshold=1.0),
     TestPassRateMetric(model=model, threshold=0.5)
   ]
+  print(f"📊 Using individual metrics: {len(metrics)} metrics")
   
   # Select algorithm
   algorithm_map = {
@@ -311,7 +321,9 @@ def create_optimizer(
       throttle_value=throttle_seconds
     )
   )
-  
+  if use_custom_scorer:
+    algo.scorer = custom_scorer
+
   return optimizer
 
 
@@ -439,6 +451,11 @@ def main():
     help="Disable async mode to avoid pickle issues with thread locks (default: False)"
   )
   parser.add_argument(
+    "--use-custom-scorer",
+    action="store_true",
+    help="Use CustomScorer wrapper for unified metric evaluation (default: False)"
+  )
+  parser.add_argument(
     "--mlflow",
     action="store_true",
     help="Enable MLflow experiment tracking"
@@ -512,7 +529,8 @@ def main():
     weights=weights,
     max_concurrent=args.max_concurrent,
     throttle_seconds=args.throttle_seconds,
-    run_async=not args.no_async  # Invert the flag
+    run_async=not args.no_async,  # Invert the flag
+    use_custom_scorer=args.use_custom_scorer
   )
   print(f"✅ Optimizer created")
   
@@ -523,12 +541,13 @@ def main():
         device_name="prompt_optimization",
         model=args.model,
         scoring_mode="optimization",
-        workdir=str(Path(args.historical_data).parent),
+        workdir=str(Path(args.historical_data)) if Path(args.historical_data).is_dir() else str(Path(args.historical_data).parent),
         algorithm=args.algorithm,
         iterations=args.iterations,
         num_sessions=len(historical_data),
         max_concurrent=args.max_concurrent,
         throttle_seconds=args.throttle_seconds,
+        use_custom_scorer=args.use_custom_scorer,
         weight_correctness=args.weight_correctness,
         weight_coverage=args.weight_coverage,
         weight_style=args.weight_style,
