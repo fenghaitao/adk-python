@@ -1061,7 +1061,7 @@ class CLIController(App):
                 os.close(self.master_fd)
                 self.master_fd = None
 
-    async def start_agent_in_workdir(self, workdir: str, extra_args: list = None) -> None:
+    def start_agent_in_workdir(self, workdir: str, extra_args: list = None) -> None:
         """Start agent process in a specific working directory.
         
         Args:
@@ -1215,7 +1215,6 @@ class CLIController(App):
         except Exception as e:
             logger.error(f"Error updating agent status: {e}")
 
-    @work(exclusive=False, thread=True)
     async def wait_for_prompt(self, timeout: float = 10.0) -> bool:
         """Wait for the '!>' prompt to appear as the last line in the terminal.
         
@@ -1433,7 +1432,7 @@ class CLIController(App):
             self.log_output(f"📝 DSPy command: dspy-openspec {' '.join(extra_args or [])}")
             
             # Start in the working directory with extra args
-            await self.start_agent_in_workdir(str(workdir), extra_args)
+            self.start_agent_in_workdir(str(workdir), extra_args)
             
             # DSPy is non-interactive, just wait for it to complete
             self.log_output("⏳ Waiting for DSPy OpenSpec to complete...")
@@ -1453,7 +1452,7 @@ class CLIController(App):
             self.current_agent = agent
             
             # Start in the working directory
-            await self.start_agent_in_workdir(str(workdir), None)
+            self.start_agent_in_workdir(str(workdir), None)
             
             # Wait for agent to be ready
             self.log_output(f"⏳ Waiting for {agent} to be ready...")
@@ -1530,7 +1529,7 @@ class CLIController(App):
                 os.environ['MCP_PORT'] = mcp_port
                 
                 try:
-                    await self.start_agent_in_workdir(str(workdir), extra_args)
+                    self.start_agent_in_workdir(str(workdir), extra_args)
                     
                     # Wait for agent to be ready
                     self.log_output("⏳ Waiting for ADK agent to be ready...")
@@ -1584,7 +1583,7 @@ class CLIController(App):
                 os.environ['MCP_PORT'] = mcp_port
                 
                 try:
-                    await self.start_agent_in_workdir(str(workdir), extra_args)
+                    self.start_agent_in_workdir(str(workdir), extra_args)
                     
                     # Wait for agent to be ready
                     self.log_output("⏳ Waiting for ADK agent to be ready...")
