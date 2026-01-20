@@ -59,6 +59,8 @@ from metrics.code_correctness import CodeCorrectnessMetric
 from metrics.test_coverage import TestCoverageMetric
 from metrics.code_style import CodeStyleMetric
 from metrics.agent_behavior import AgentBehaviorMetric
+from metrics.compilation_metric import CompilationMetric
+from metrics.test_pass_rate_metric import TestPassRateMetric
 from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
@@ -235,7 +237,9 @@ def create_optimizer(
     CodeCorrectnessMetric(model=model, threshold=0.8),
     TestCoverageMetric(model=model, threshold=0.7),
     CodeStyleMetric(model=model, threshold=0.9),
-    AgentBehaviorMetric(model=model, threshold=0.7)
+    AgentBehaviorMetric(model=model, threshold=0.7),
+    CompilationMetric(model=model, threshold=1.0),
+    TestPassRateMetric(model=model, threshold=0.5)
   ]
   
   # Select algorithm
@@ -253,7 +257,7 @@ def create_optimizer(
     ),
     "copro": COPRO(
       iterations=iterations,
-      minibatch_size=8,      # Examples per iteration
+      minibatch_size=3,      # Examples per iteration
       population_size=4,     # Maximum candidates in pool
       proposals_per_step=4   # Child prompts per iteration
     ),
@@ -364,26 +368,38 @@ def main():
   parser.add_argument(
     "--weight-correctness",
     type=float,
-    default=0.3,
-    help="Weight for code correctness metric (default: 0.3)"
+    default=0.25,
+    help="Weight for code correctness metric (default: 0.25)"
   )
   parser.add_argument(
     "--weight-coverage",
     type=float,
-    default=0.3,
-    help="Weight for test coverage metric (default: 0.3)"
+    default=0.20,
+    help="Weight for test coverage metric (default: 0.20)"
   )
   parser.add_argument(
     "--weight-style",
     type=float,
-    default=0.2,
-    help="Weight for code style metric (default: 0.2)"
+    default=0.15,
+    help="Weight for code style metric (default: 0.15)"
   )
   parser.add_argument(
     "--weight-behavior",
     type=float,
-    default=0.2,
-    help="Weight for agent behavior metric (default: 0.2)"
+    default=0.15,
+    help="Weight for agent behavior metric (default: 0.15)"
+  )
+  parser.add_argument(
+    "--weight-compilation",
+    type=float,
+    default=0.15,
+    help="Weight for compilation metric (default: 0.15)"
+  )
+  parser.add_argument(
+    "--weight-test-pass-rate",
+    type=float,
+    default=0.10,
+    help="Weight for test pass rate metric (default: 0.10)"
   )
   parser.add_argument(
     "--max-concurrent",
@@ -423,7 +439,9 @@ def main():
     args.weight_correctness +
     args.weight_coverage +
     args.weight_style +
-    args.weight_behavior
+    args.weight_behavior +
+    args.weight_compilation +
+    args.weight_test_pass_rate
   )
   if abs(total_weight - 1.0) > 0.01:
     print(f"❌ Error: Weights must sum to 1.0 (got {total_weight})")
@@ -463,7 +481,9 @@ def main():
     "Code Correctness": args.weight_correctness,
     "Test Coverage": args.weight_coverage,
     "Code Style": args.weight_style,
-    "Agent Behavior": args.weight_behavior
+    "Agent Behavior": args.weight_behavior,
+    "Compilation": args.weight_compilation,
+    "Test Pass Rate": args.weight_test_pass_rate
   }
   optimizer = create_optimizer(
     model=args.model,
@@ -492,7 +512,9 @@ def main():
         weight_correctness=args.weight_correctness,
         weight_coverage=args.weight_coverage,
         weight_style=args.weight_style,
-        weight_behavior=args.weight_behavior
+        weight_behavior=args.weight_behavior,
+        weight_compilation=args.weight_compilation,
+        weight_test_pass_rate=args.weight_test_pass_rate
       )
     except Exception as e:
       print(f"❌ Error starting MLflow run: {e}")
@@ -553,7 +575,9 @@ def main():
         "weight_correctness": args.weight_correctness,
         "weight_coverage": args.weight_coverage,
         "weight_style": args.weight_style,
-        "weight_behavior": args.weight_behavior
+        "weight_behavior": args.weight_behavior,
+        "weight_compilation": args.weight_compilation,
+        "weight_test_pass_rate": args.weight_test_pass_rate
       })
       
       # Log artifacts
