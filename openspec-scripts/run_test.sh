@@ -98,9 +98,12 @@ echo ""
 if [[ "$proj_dir" = /* ]]; then
     # Absolute path - use as is
     proj_dir_abs="$proj_dir"
+    # Extract just the directory name for log file naming
+    proj_dir_name="$(basename "$proj_dir")"
 else
     # Relative path - prepend current working directory
     proj_dir_abs="$(pwd)/$proj_dir"
+    proj_dir_name="$proj_dir"
 fi
 log_dir="$proj_dir_abs"
 device_name="wdt"
@@ -126,37 +129,37 @@ done
 
 # Execute stages based on parsed input
 if [[ "${run_stage[0]}" == "1" ]]; then
-    echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir}.0.log"
-    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.0.log"
+    echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir_name}.0.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.0.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --device $device_name --model $model --port $mcp_server_port" "$log_dir/${proj_dir}.0.log"
+    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --device $device_name --model $model --port $mcp_server_port" "$log_dir/${proj_dir_name}.0.log"
 fi
 
 if [[ "${run_stage[1]}" == "1" ]]; then
-    echo "=== Stage 1: proposal generation ===" | tee "$log_dir/${proj_dir}.1.log"
-    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.1.log"
+    echo "=== Stage 1: proposal generation ===" | tee "$log_dir/${proj_dir_name}.1.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.1.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --model $model" "$log_dir/${proj_dir}.1.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --proposal $ADK_ROOT/openspec-prompts/proposal-wdt.md --agent initial --port $mcp_server_port --model $model" "$log_dir/${proj_dir_name}.1.log"
 fi
 
 if [[ "${run_stage[2]}" == "1" ]]; then
-    echo "=== Stage 2: apply changes ===" | tee "$log_dir/${proj_dir}.2.log"
-    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "=== Stage 2: apply changes ===" | tee "$log_dir/${proj_dir_name}.2.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.2.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --agent initial --port $mcp_server_port --apply --model $model" "$log_dir/${proj_dir}.2.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --agent initial --port $mcp_server_port --apply --model $model" "$log_dir/${proj_dir_name}.2.log"
 fi
 
 if [[ "${run_stage[3]}" == "1" ]]; then
-    echo "=== Stage 3: archive session ===" | tee "$log_dir/${proj_dir}.3.log"
-    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.3.log"
+    echo "=== Stage 3: archive session ===" | tee "$log_dir/${proj_dir_name}.3.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.3.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --agent initial --port $mcp_server_port --archive --model $model" "$log_dir/${proj_dir}.3.log"
+    run_cmd_with_timing "$ADK_ROOT/openspec-scripts/run_openspec_subagents.sh --workdir adk_openspec_project --agent initial --port $mcp_server_port --archive --model $model" "$log_dir/${proj_dir_name}.3.log"
 fi
 
 if [[ "${run_stage[4]}" == "1" ]]; then
-    echo "=== Stage 4: prompt optimization ===" | tee "$log_dir/${proj_dir}.4.log"
-    echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.4.log"
-    echo "This will collect historical sessions and optimize instructions" | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "=== Stage 4: prompt optimization ===" | tee "$log_dir/${proj_dir_name}.4.log"
+    echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.4.log"
+    echo "This will collect historical sessions and optimize instructions" | tee -a "$log_dir/${proj_dir_name}.4.log"
     
     cd "$proj_dir_abs"
     
@@ -165,21 +168,21 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     mkdir -p "$OPTIMIZATION_DIR"
     
     # Check for required dependencies
-    echo "Checking dependencies..." | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "Checking dependencies..." | tee -a "$log_dir/${proj_dir_name}.2.log"
     if ! python3 -c "import deepeval" 2>/dev/null; then
-        echo "❌ Error: deepeval module not found" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Please install it with: pip install deepeval" | tee -a "$log_dir/${proj_dir}.2.log"
-        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir}.2.log"
+        echo "❌ Error: deepeval module not found" | tee -a "$log_dir/${proj_dir_name}.2.log"
+        echo "Please install it with: pip install deepeval" | tee -a "$log_dir/${proj_dir_name}.2.log"
+        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir_name}.2.log"
         exit 0  # Don't fail the entire pipeline, just skip this stage
     fi
     
     # Step 2: Run optimizer
-    echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir}.2.log"
+    echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir_name}.2.log"
     
     # Check if optimization should be skipped
     if [[ "${SKIP_OPTIMIZE:-0}" == "1" ]]; then
-        echo "⚠️  Skipping optimization (SKIP_OPTIMIZE=1)" | tee -a "$log_dir/${proj_dir}.4.log"
-        echo "✅ Stage 4 session data collection complete!" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "⚠️  Skipping optimization (SKIP_OPTIMIZE=1)" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "✅ Stage 4 session data collection complete!" | tee -a "$log_dir/${proj_dir_name}.4.log"
         cd "$proj_dir_abs"
         exit 0
     fi
@@ -187,7 +190,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     # Enable MLflow tracking if requested
     MLFLOW_ARGS=""
     if [[ "${ENABLE_MLFLOW:-0}" == "1" ]]; then
-        echo "🔬 MLflow tracking enabled for optimization" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "🔬 MLflow tracking enabled for optimization" | tee -a "$log_dir/${proj_dir_name}.4.log"
         MLFLOW_ARGS="--mlflow"
     fi
     
@@ -196,20 +199,20 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     # ACTUAL_OUT_PATH: Directory where actual test outputs will be stored
     if [[ -n "${GOLDENS_PATH:-}" ]]; then
         GOLDENS_DIR="$GOLDENS_PATH"
-        echo "📁 Using GOLDENS_PATH: $GOLDENS_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "📁 Using GOLDENS_PATH: $GOLDENS_DIR" | tee -a "$log_dir/${proj_dir_name}.4.log"
     else
-        echo "❌ Error: GOLDENS_PATH environment variable not set" | tee -a "$log_dir/${proj_dir}.4.log"
-        echo "   Please set GOLDENS_PATH to the directory containing golden test cases" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "❌ Error: GOLDENS_PATH environment variable not set" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Please set GOLDENS_PATH to the directory containing golden test cases" | tee -a "$log_dir/${proj_dir_name}.4.log"
         exit 1
     fi
     
     if [[ -n "${ACTUAL_OUT_PATH:-}" ]]; then
         ACTUAL_OUT_DIR="$ACTUAL_OUT_PATH"
-        echo "📁 Using ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "📁 Using ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir_name}.4.log"
     else
         # Default to optimization directory
         ACTUAL_OUT_DIR="$OPTIMIZATION_DIR/actual_out"
-        echo "📁 Using default ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "📁 Using default ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir_name}.4.log"
     fi
     
     # Create actual output directory if it doesn't exist
@@ -217,20 +220,20 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     
     # Set scoring mode (default: llm)
     SCORING_MODE="${SCORING_MODE:-llm}"
-    echo "📊 Scoring mode: $SCORING_MODE" | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "📊 Scoring mode: $SCORING_MODE" | tee -a "$log_dir/${proj_dir_name}.4.log"
     
     # Set agent type (default: adk-python)
     AGENT_TYPE="${AGENT_TYPE:-adk-python}"
-    echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir_name}.4.log"
     
     # Set reference directory for golden comparison if specified
     REFERENCE_ARGS=""
     if [[ -n "${REFERENCE_DIR:-}" ]]; then
         if [[ -d "$REFERENCE_DIR" ]]; then
-            echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+            echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir_name}.4.log"
             REFERENCE_ARGS="--reference $REFERENCE_DIR"
         else
-            echo "⚠️  Warning: REFERENCE_DIR not found: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+            echo "⚠️  Warning: REFERENCE_DIR not found: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir_name}.4.log"
         fi
     fi
     
@@ -249,49 +252,49 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         --agent "$AGENT_TYPE" \
         --use-custom-scorer \
         $REFERENCE_ARGS \
-        $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
+        $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir_name}.4.log"
     optimize_exit_code=$?
     set -e
     
     if [[ $optimize_exit_code -ne 0 ]]; then
-        echo "❌ Optimization failed (exit code: $optimize_exit_code)" | tee -a "$log_dir/${proj_dir}.4.log"
-        echo "Skipping stage 4 optimization" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "❌ Optimization failed (exit code: $optimize_exit_code)" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "Skipping stage 4 optimization" | tee -a "$log_dir/${proj_dir_name}.4.log"
         exit 0
     fi
     
     # Verify optimized file was created
     if [[ ! -f "$OPTIMIZATION_DIR/optimized_instructions.md" ]]; then
-        echo "❌ Optimized instructions file not created" | tee -a "$log_dir/${proj_dir}.4.log"
-        echo "Skipping stage 4 optimization" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "❌ Optimized instructions file not created" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "Skipping stage 4 optimization" | tee -a "$log_dir/${proj_dir_name}.4.log"
         exit 0
     fi
     
     # Step 3: Backup and deploy optimized instructions
-    echo "Step 3: Deploying optimized instructions..." | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "Step 3: Deploying optimized instructions..." | tee -a "$log_dir/${proj_dir_name}.4.log"
     INSTRUCTIONS_FILE="$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md"
     BACKUP_FILE="$INSTRUCTIONS_FILE.backup.$(date +%Y%m%d_%H%M%S)"
     
     cp "$INSTRUCTIONS_FILE" "$BACKUP_FILE"
     cp "$OPTIMIZATION_DIR/optimized_instructions.md" "$INSTRUCTIONS_FILE"
     
-    echo "✅ Optimized instructions deployed" | tee -a "$log_dir/${proj_dir}.4.log"
-    echo "   Backup saved: $BACKUP_FILE" | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "✅ Optimized instructions deployed" | tee -a "$log_dir/${proj_dir_name}.4.log"
+    echo "   Backup saved: $BACKUP_FILE" | tee -a "$log_dir/${proj_dir_name}.4.log"
     
     # Step 4: Commit to git repository
-    echo "Step 4: Committing optimized instructions to git..." | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "Step 4: Committing optimized instructions to git..." | tee -a "$log_dir/${proj_dir_name}.4.log"
     cd "$ADK_ROOT"
     
     # Verify we're in a git repository
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        echo "⚠️  Not in a git repository, skipping commit" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "⚠️  Not in a git repository, skipping commit" | tee -a "$log_dir/${proj_dir_name}.4.log"
         cd "$proj_dir_abs"
-        echo "✅ Stage 4 optimization complete (no git commit)" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "✅ Stage 4 optimization complete (no git commit)" | tee -a "$log_dir/${proj_dir_name}.4.log"
         exit 0
     fi
     
     # Check if there are changes to commit
     if git diff --quiet "$INSTRUCTIONS_FILE"; then
-        echo "ℹ️  No changes detected in instructions file, skipping commit" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "ℹ️  No changes detected in instructions file, skipping commit" | tee -a "$log_dir/${proj_dir_name}.4.log"
     else
         # Get optimization metrics for commit message
         OPTIMIZATION_DATE=$(date +"%Y-%m-%d %H:%M:%S")
@@ -299,7 +302,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         GOLDEN_COUNT=$(find "$GOLDENS_DIR" -maxdepth 1 -type d ! -path "$GOLDENS_DIR" 2>/dev/null | wc -l || echo "unknown")
         
         # Stage the optimized instructions file
-        git add "$INSTRUCTIONS_FILE" 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
+        git add "$INSTRUCTIONS_FILE" 2>&1 | tee -a "$log_dir/${proj_dir_name}.4.log"
         
         # Create detailed commit message
         set +e
@@ -313,20 +316,20 @@ if [[ "${run_stage[4]}" == "1" ]]; then
 - Backup saved: $(basename $BACKUP_FILE)
 
 This optimization aims to improve agent performance based on golden
-test cases and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
+test cases and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir_name}.4.log"
         commit_exit_code=$?
         set -e
         
         if [[ $commit_exit_code -eq 0 ]]; then
             COMMIT_HASH=$(git rev-parse --short HEAD)
-            echo "✅ Successfully committed optimized instructions: $COMMIT_HASH" | tee -a "$log_dir/${proj_dir}.4.log"
+            echo "✅ Successfully committed optimized instructions: $COMMIT_HASH" | tee -a "$log_dir/${proj_dir_name}.4.log"
         else
-            echo "⚠️  Warning: Failed to commit changes (exit code: $commit_exit_code)" | tee -a "$log_dir/${proj_dir}.4.log"
-            echo "   Optimized instructions were deployed but not committed to git" | tee -a "$log_dir/${proj_dir}.4.log"
+            echo "⚠️  Warning: Failed to commit changes (exit code: $commit_exit_code)" | tee -a "$log_dir/${proj_dir_name}.4.log"
+            echo "   Optimized instructions were deployed but not committed to git" | tee -a "$log_dir/${proj_dir_name}.4.log"
             # Don't exit with error - optimization was still successful
         fi
     fi
     
     cd "$proj_dir_abs"
-    echo "✅ Stage 4 optimization complete!" | tee -a "$log_dir/${proj_dir}.4.log"
+    echo "✅ Stage 4 optimization complete!" | tee -a "$log_dir/${proj_dir_name}.4.log"
 fi
