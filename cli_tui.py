@@ -87,7 +87,7 @@ logger.info(f"Logging initialized: {log_file}")
 AGENTS = {
     'acli': {
         'name': 'Atlassian CLI',
-        'command': 'acli',
+        'command': str(Path.home() / 'acli') + ' rovodev run --yolo',
         'description': 'Atlassian command-line interface',
         'color': 'green',
     },
@@ -1223,7 +1223,11 @@ class CLIController(App):
             logger.error(f"Error updating agent status: {e}")
 
     async def wait_for_prompt(self, timeout: float = 10.0) -> bool:
-        """Wait for the '!>' prompt to appear as the last line in the terminal.
+        """Wait for the prompt to appear as the last line in the terminal.
+        
+        Different agents use different prompts:
+        - kiro-cli: '!>'
+        - acli/rovodev: '> ' (may appear as '| > ')
         
         Args:
             timeout: Maximum time to wait in seconds
@@ -1251,10 +1255,15 @@ class CLIController(App):
                     if line:  # Only add non-empty lines
                         lines.append(line)
                 
-                # Check if the last non-empty line is exactly '!>'
-                if lines and lines[-1] == '!>':
-                    self.log_output("✅ Prompt detected, ready for input")
-                    return True
+                # Check if the last non-empty line contains a prompt
+                if lines:
+                    last_line = lines[-1]
+                    # Check for various prompt patterns
+                    if (last_line == '!>' or  # kiro-cli
+                        last_line.endswith('> ') or  # acli/rovodev
+                        '| > ' in last_line):  # acli/rovodev with pipe
+                        self.log_output("✅ Prompt detected, ready for input")
+                        return True
                 
                 await asyncio.sleep(0.2)
             except Exception as e:
