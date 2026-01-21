@@ -280,9 +280,9 @@ def create_optimizer(
     ),
     "copro": COPRO(
       iterations=iterations,
-      minibatch_size=3,      # Examples per iteration
-      population_size=4,     # Maximum candidates in pool
-      proposals_per_step=4   # Child prompts per iteration
+      minibatch_size=2,      # Examples per iteration
+      population_size=3,     # Maximum candidates in pool
+      proposals_per_step=3   # Child prompts per iteration
     ),
     "simba": SIMBA(
       iterations=iterations,

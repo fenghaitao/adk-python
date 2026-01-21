@@ -225,7 +225,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
         --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
         --algorithm copro \
-        --iterations 5 \
+        --iterations 3 \
         --model "$model" \
         --scoring-mode "$SCORING_MODE" \
         --agent "$AGENT_TYPE" \
