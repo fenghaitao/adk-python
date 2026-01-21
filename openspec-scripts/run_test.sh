@@ -168,17 +168,17 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     mkdir -p "$OPTIMIZATION_DIR"
     
     # Check for required dependencies
-    echo "Checking dependencies..." | tee -a "$log_dir/${proj_dir_name}.2.log"
+    echo "Step 1: Checking dependencies..." | tee -a "$log_dir/${proj_dir_name}.4.log"
     if ! python3 -c "import deepeval" 2>/dev/null; then
-        echo "❌ Error: deepeval module not found" | tee -a "$log_dir/${proj_dir_name}.2.log"
-        echo "Please install it with: pip install deepeval" | tee -a "$log_dir/${proj_dir_name}.2.log"
-        echo "Skipping stage 2 optimization" | tee -a "$log_dir/${proj_dir_name}.2.log"
+        echo "❌ Error: deepeval module not found" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "Please install it with: pip install deepeval" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "Skipping stage 4 optimization" | tee -a "$log_dir/${proj_dir_name}.4.log"
         exit 0  # Don't fail the entire pipeline, just skip this stage
     fi
     
     # Step 2: Run optimizer
-    echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir_name}.2.log"
-    
+    echo "Step 2: Running PromptOptimizer..." | tee -a "$log_dir/${proj_dir_name}.4.log"
+
     # Check if optimization should be skipped
     if [[ "${SKIP_OPTIMIZE:-0}" == "1" ]]; then
         echo "⚠️  Skipping optimization (SKIP_OPTIMIZE=1)" | tee -a "$log_dir/${proj_dir_name}.4.log"
