@@ -1114,6 +1114,9 @@ class CLIController(App):
             fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
             # Start agent process in the specified working directory
+            self.log_output(f"🔧 Starting process in directory: {workdir}")
+            self.log_output(f"🔧 Command: {' '.join(cmd_parts)}")
+            
             self.agent_process = subprocess.Popen(
                 cmd_parts,
                 stdin=slave_fd,
