@@ -94,8 +94,14 @@ echo "  Project Directory: $proj_dir"
 echo "  Stages: $stages"
 echo ""
 
-# Use current working directory + project directory name
-proj_dir_abs="$(pwd)/$proj_dir"
+# Handle both absolute and relative paths for proj_dir
+if [[ "$proj_dir" = /* ]]; then
+    # Absolute path - use as is
+    proj_dir_abs="$proj_dir"
+else
+    # Relative path - prepend current working directory
+    proj_dir_abs="$(pwd)/$proj_dir"
+fi
 log_dir="$proj_dir_abs"
 device_name="wdt"
 
