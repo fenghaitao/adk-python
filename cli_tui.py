@@ -1522,7 +1522,7 @@ class CLIController(App):
             await asyncio.sleep(1.0)
 
     async def _run_interactive_workflow(self, workdir: Path, session_name: str, change_id: str, agent: str) -> None:
-        """Run interactive agent workflow (kiro-cli)."""
+        """Run interactive agent workflow (kiro-cli, acli, qodercli)."""
         if not self.agent_running:
             self.log_output(f"🚀 Starting {agent}...")
             self.current_agent = agent
@@ -1531,8 +1531,12 @@ class CLIController(App):
             self.start_agent_in_workdir(str(workdir), None)
             
             # Wait for agent to be ready
+            # acli/qodercli may take longer to start than kiro-cli
             self.log_output(f"⏳ Waiting for {agent} to be ready...")
-            await self.wait_for_prompt(timeout=15.0)
+            timeout = 60.0 if agent in ['acli', 'qodercli'] else 15.0
+            prompt_found = await self.wait_for_prompt(timeout=timeout)
+            if not prompt_found:
+                self.log_output(f"⚠️  Prompt not detected, but continuing anyway...")
         
         # Run agent workflow
         await self.workflow_run_agent(workdir, session_name, change_id, agent)
