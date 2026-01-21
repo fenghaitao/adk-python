@@ -97,6 +97,7 @@ echo ""
 # Use current working directory + project directory name
 proj_dir_abs="$(pwd)/$proj_dir"
 log_dir="$proj_dir_abs"
+device_name="wdt"
 
 # Create project directory if it doesn't exist
 if [ ! -d "$proj_dir_abs" ]; then
@@ -122,7 +123,7 @@ if [[ "${run_stage[0]}" == "1" ]]; then
     echo "=== Stage 0: bootstrap ===" | tee "$log_dir/${proj_dir}.0.log"
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir}.0.log"
     cd "$proj_dir_abs"
-    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --model $model --port $mcp_server_port" "$log_dir/${proj_dir}.0.log"
+    run_cmd_with_timing "$ADK_ROOT/run_openspec.sh adk_openspec_project --device $device_name --model $model --port $mcp_server_port" "$log_dir/${proj_dir}.0.log"
 fi
 
 if [[ "${run_stage[1]}" == "1" ]]; then
@@ -237,6 +238,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         --iterations 3 \
         --mcp-port "$mcp_server_port" \
         --model "$model" \
+        --device "$device_name" \
         --scoring-mode "$SCORING_MODE" \
         --agent "$AGENT_TYPE" \
         --use-custom-scorer \

@@ -223,18 +223,45 @@ def create_model_callback(model: str, mcp_port: str = "8051"):
       print(f"✅ Copied folder with fallback method")
     
     # Step 3: Replace the apply_agent_instruction.md with optimized prompt
-    # The original file is a symlink, so we need to remove it and create a new file
+    # The original file might be a symlink (potentially broken or pointing outside), so handle carefully
     instruction_file = actual_output_path / "adk_openspec_apply_agent" / "apply_agent_instruction.md"
-    if instruction_file.exists():
+    
+    # Always ensure parent directory exists
+    instruction_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Force remove the file/symlink if it exists
+    # Use unlink(missing_ok=True) to handle race conditions
+    # is_symlink() will detect symlinks even if they point to non-existent targets
+    if instruction_file.exists() or instruction_file.is_symlink():
       print(f"📝 Replacing instruction file: {instruction_file}")
-      instruction_file.unlink()  # Remove the symlink or original file
+      if instruction_file.is_symlink():
+        print(f"   (Removing symlink pointing to: {instruction_file.resolve()})")
+      # Use missing_ok=True to avoid errors if file disappears between check and unlink
+      instruction_file.unlink(missing_ok=True)
     else:
       print(f"📝 Creating instruction file: {instruction_file}")
-      instruction_file.parent.mkdir(parents=True, exist_ok=True)
     
-    # Write the optimized prompt to the instruction file
-    instruction_file.write_text(str(prompt))
-    print(f"✅ Instruction file updated with optimized prompt")
+    # Ensure the symlink is really gone before writing
+    # Double-check with is_symlink() as exists() may return False for broken symlinks
+    if instruction_file.is_symlink():
+      print(f"⚠️  Symlink still exists after unlink, forcing removal with missing_ok")
+      instruction_file.unlink(missing_ok=True)
+    
+    # Write the optimized prompt to the instruction file (as a regular file, not symlink)
+    try:
+      instruction_file.write_text(str(prompt))
+      print(f"✅ Instruction file updated with optimized prompt")
+    except Exception as e:
+      print(f"❌ Failed to write instruction file: {e}")
+      print(f"   Parent exists: {instruction_file.parent.exists()}")
+      print(f"   File exists: {instruction_file.exists()}")
+      print(f"   Is symlink: {instruction_file.is_symlink()}")
+      if instruction_file.is_symlink():
+        try:
+          print(f"   Symlink target: {instruction_file.readlink()}")
+        except:
+          print(f"   Could not read symlink target")
+      raise
     
     # Step 4: Get ADK_ROOT from environment
     adk_root = os.getenv("ADK_ROOT")
@@ -278,6 +305,7 @@ def create_optimizer(
     algorithm: str,
     iterations: int,
     mcp_port: str = "8051",
+    device: str = "wdt",
     use_custom_scorer: bool = False,
     scoring_mode: str = "llm",
     agent: Optional[str] = None,
@@ -290,6 +318,7 @@ def create_optimizer(
     algorithm: Algorithm name (miprov2, gepa, copro, simba)
     iterations: Number of optimization iterations
     mcp_port: MCP server port (default: "8051")
+    device: Device name for evaluation (default: "wdt")
     use_custom_scorer: Use CustomScorer wrapper instead of individual metrics
     scoring_mode: Scoring mode for custom scorer (llm, deterministic, hybrid)
     agent: Agent type for behavior evaluation
@@ -374,6 +403,7 @@ def create_optimizer(
       throttle_seconds=throttle_seconds,
       evaluation_model=model,
       scoring_mode=scoring_mode,
+      device=device,
       agent=agent,
       mlflow_tracker=mlflow_tracker
     )
@@ -453,6 +483,11 @@ def main():
     "--mcp-port",
     default="8051",
     help="MCP server port (default: 8051)"
+  )
+  parser.add_argument(
+    "--device",
+    default="wdt",
+    help="Device name for evaluation (default: wdt)"
   )
   parser.add_argument(
     "--algorithm",
@@ -538,11 +573,13 @@ def main():
   print(f"🔧 Creating optimizer with {args.algorithm} algorithm...")
   print(f"⏱️  Rate limiting: max_concurrent=1, throttle=30.0s")
   print(f"🔌 MCP server port: {args.mcp_port}")
+  print(f"🎯 Device: {args.device}")
   optimizer = create_optimizer(
     model=args.model,
     algorithm=args.algorithm,
     iterations=args.iterations,
     mcp_port=args.mcp_port,
+    device=args.device,
     use_custom_scorer=args.use_custom_scorer,
     scoring_mode=args.scoring_mode,
     agent=args.agent,

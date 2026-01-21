@@ -56,6 +56,7 @@ class CustomScorer(Scorer):
         throttle_seconds: float = 0.0,
         evaluation_model: str = "iflow/qwen3-coder-plus",
         scoring_mode: str = "llm",
+        device: str = "wdt",
         agent: str = "adk-python",
         mlflow_tracker=None,
     ):
@@ -68,6 +69,7 @@ class CustomScorer(Scorer):
             throttle_seconds: Throttle between evaluations
             evaluation_model: LLM model to use for evaluation
             scoring_mode: Scoring mode (llm, deterministic, hybrid)
+            device: Device name for evaluation (e.g., wdt, uart, pci)
             agent: Agent type for behavior evaluation
             mlflow_tracker: Optional MLflow tracker for logging
         """
@@ -82,6 +84,7 @@ class CustomScorer(Scorer):
 
         self.evaluation_model = evaluation_model
         self.scoring_mode = scoring_mode
+        self.device = device
         self.agent = agent
         self.mlflow_tracker = mlflow_tracker
 
@@ -117,9 +120,8 @@ class CustomScorer(Scorer):
         # This should be the path to the adk_openspec_project folder
         workdir = actual_output
 
-        # Extract device name from the path
-        # Assuming path structure: .../itemX/adk_openspec_project
-        device_name = Path(workdir).parent.name
+        # Use the device name passed during initialization
+        device_name = self.device
 
         # Get reference path from golden.expected_output
         reference_dir = str(golden.expected_output) if golden.expected_output else None
