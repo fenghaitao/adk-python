@@ -19,17 +19,20 @@ This script uses DeepEval's PromptOptimizer with our custom metrics to
 automatically improve agent instructions based on historical session outcomes.
 
 Usage:
-  # From directory with multiple project folders
+  # From directory with goldens and actual_out folders
   python optimize_instructions.py \\
-    --historical-data /path/to/data \\
+    --goldens goldens/ \\
+    --actual-out actual_out/ \\
     --current-instructions apply_agent_instruction.md \\
     --output optimized_instructions.md \\
     --algorithm miprov2 \\
     --iterations 5
   
-  # With MLflow tracking
+  # With MLflow tracking and reference
   python optimize_instructions.py \\
-    --historical-data /path/to/data \\
+    --goldens goldens/ \\
+    --actual-out actual_out/ \\
+    --reference reference/ \\
     --current-instructions apply_agent_instruction.md \\
     --output optimized_instructions.md \\
     --algorithm copro \\
@@ -37,13 +40,18 @@ Usage:
     --mlflow
 
 Expected directory structure:
-  /path/to/data/
-    wdt_dbg132/
+  goldens/
+    item1/
+      adk_openspec_project/  # Actual project folder passed to evaluation
+    item2/
       adk_openspec_project/
-    wdt_dbg134/
+  actual_out/
+    item1/
+      adk_openspec_project/  # Created during optimization
+    item2/
       adk_openspec_project/
-    wdt_dbg137/
-      adk_openspec_project/
+  reference/
+    adk_openspec_project/ (optional golden reference)
 """
 
 from __future__ import annotations
@@ -76,89 +84,94 @@ from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
 
-def load_historical_sessions(data_path: Path, reference_dir: Optional[str] = None) -> List[Golden]:
-  """Load historical session data as Golden dataset from multiple project folders.
+def load_minibatch(goldens_path: Path, actual_out_path: Path, reference_path: Optional[Path] = None) -> List[Golden]:
+  """Load minibatch data as Golden dataset from organized folder structure.
+  
+  Each golden example points to the adk_openspec_project folder within the item folder.
   
   Args:
-    data_path: Path to directory containing multiple project folders 
-               (e.g., wdt_dbg132, wdt_dbg134, wdt_dbg137)
-               Each folder should contain an adk_openspec_project subdirectory
-    reference_dir: Optional path to golden reference implementation for comparison
+    goldens_path: Path to directory containing golden test folders (e.g., goldens/item1/adk_openspec_project)
+    actual_out_path: Path to directory where actual outputs will be stored (e.g., actual_out/item1/adk_openspec_project)
+    reference_path: Optional path to golden reference implementation for comparison
     
   Returns:
-    List of Golden test cases with project paths
+    List of Golden test cases with paths pointing to adk_openspec_project folders
   """
   golden_dataset = []
-  data_path = Path(data_path)
+  goldens_path = Path(goldens_path)
+  actual_out_path = Path(actual_out_path)
 
-  if not data_path.is_dir():
-    raise ValueError(f"Path does not exist or is not a directory: {data_path}")
+  if not goldens_path.is_dir():
+    raise ValueError(f"Goldens path does not exist or is not a directory: {goldens_path}")
 
-  print(f"📁 Scanning directory for project folders: {data_path}")
+  print(f"📁 Scanning goldens directory: {goldens_path}")
+  print(f"📁 Actual outputs will be in: {actual_out_path}")
   
-  if reference_dir:
-    print(f"📚 Using reference directory: {reference_dir}")
+  if reference_path:
+    reference_path = Path(reference_path)
+    print(f"📚 Using reference directory: {reference_path}")
 
-  # Find all subdirectories that contain adk_openspec_project
-  project_folders = []
-  for item in sorted(data_path.iterdir()):
+  # Find all subdirectories in goldens path
+  golden_folders = []
+  for item in sorted(goldens_path.iterdir()):
     if item.is_dir():
-      project_path = item / "adk_openspec_project"
-      if project_path.exists():
-        project_folders.append((item.name, project_path))
+      golden_folders.append(item)
 
-  if not project_folders:
-    raise ValueError(f"No project folders with 'adk_openspec_project' found in: {data_path}")
+  if not golden_folders:
+    raise ValueError(f"No folders found in goldens path: {goldens_path}")
 
-  print(f"✅ Found {len(project_folders)} project folders")
+  print(f"✅ Found {len(golden_folders)} golden folders")
 
-  # Create Golden dataset entries with project paths
-  for idx, (folder_name, project_path) in enumerate(project_folders):
-    print(f"  📂 Adding {folder_name}/adk_openspec_project...")
+  # Create Golden dataset entries with organized paths
+  for golden_folder in golden_folders:
+    folder_name = golden_folder.name
+    print(f"  📂 Adding golden: {folder_name}")
 
-    # Create a test folder for this optimization run
-    # Format: {folder_name}_opt_test_{idx}
-    parent_dir = project_path.parent
-    test_folder_name = f"{folder_name}_opt_test_{idx}"
-    actual_output_path = parent_dir.parent / test_folder_name / "adk_openspec_project"
+    # Input points to the golden project folder (goldens/itemX/adk_openspec_project)
+    # actual_output points to corresponding project folder in actual_out (actual_out/itemX/adk_openspec_project)
+    # expected_output points to reference project if provided, otherwise same as input
+    input_folder = golden_folder / "adk_openspec_project"
+    output_folder = actual_out_path / folder_name / "adk_openspec_project"
     
-    # Input points to the original project path
-    # actual_output points to where the test run will be executed
-    # expected_output points to reference implementation if provided, otherwise same as input
     golden = Golden(
-      input=str(project_path),
-      actual_output=str(actual_output_path),  # Target path for test execution
-      expected_output=reference_dir if reference_dir else str(project_path)
+      input=str(input_folder),
+      actual_output=str(output_folder),
+      expected_output=str(reference_path / "adk_openspec_project") if reference_path else str(input_folder)
     )
     golden_dataset.append(golden)
-    print(f"    ✓ Added {folder_name} -> test folder: {test_folder_name}")
+    print(f"    ✓ Input: {input_folder}")
+    print(f"    ✓ Output: {output_folder}")
 
   return golden_dataset
 
 
-def create_model_callback(model: str):
+def create_model_callback(model: str, mcp_port: str = "8051"):
   """Create model callback for test case evaluation.
   
   This callback runs the actual optimization test by:
-  1. Setting up the test project folder from the golden input
-  2. Running the run_test.sh script to execute the agent
-  3. Returning the project path for evaluation
+  1. Copying the golden folder (goldens/itemX) to actual_out folder
+  2. Replacing the instruction file in actual_out/itemX/adk_openspec_project
+  3. Running the run_test.sh script to execute the agent
+  4. Returning the project path (actual_out/itemX/adk_openspec_project) for evaluation
   
   Args:
     model: Model name (e.g., "iflow/qwen3-coder-plus")
+    mcp_port: MCP server port (default: "8051")
     
   Returns:
-    Callable that takes prompt and golden, returns project path
+    Callable that takes prompt and golden, returns project path for evaluation
   """
   def model_callback(prompt, golden=None) -> str:
     """Run optimization test with the given prompt and golden example.
     
     Args:
       prompt: The prompt to send to the model (instruction text)
-      golden: The golden example containing input/actual_output paths
+      golden: The golden example with paths:
+              - input: goldens/itemX/adk_openspec_project
+              - actual_output: actual_out/itemX/adk_openspec_project
       
     Returns:
-      Path to the actual_output folder (for evaluation)
+      Path to the actual_output project folder (actual_out/itemX/adk_openspec_project)
     """
     import subprocess
     import shutil
@@ -168,34 +181,51 @@ def create_model_callback(model: str):
       raise ValueError("Golden example is required for model callback")
     
     # Get input and actual_output paths from golden
-    input_path = Path(str(golden.input))  # Source project path
+    input_path = Path(str(golden.input))  # Source project path (goldens/itemX/adk_openspec_project)
     actual_output_path = Path(str(golden.actual_output)) if golden.actual_output else None
     
     if actual_output_path is None:
       raise ValueError("Golden actual_output must be set to the target project folder path")
     
-    # Step 1: Remove existing actual_output folder if it exists
-    if actual_output_path.exists():
-      print(f"🗑️  Removing existing folder: {actual_output_path}")
-      shutil.rmtree(actual_output_path)
+    # Get parent folder paths for copying
+    input_parent = input_path.parent  # goldens/itemX
+    actual_output_parent = actual_output_path.parent  # actual_out/itemX
     
-    # Step 2: Copy input folder to actual_output location
-    print(f"📁 Copying {input_path} -> {actual_output_path}")
-    shutil.copytree(input_path, actual_output_path)
+    # Step 1: Remove existing actual_output parent folder if it exists
+    if actual_output_parent.exists():
+      print(f"🗑️  Removing existing folder: {actual_output_parent}")
+      shutil.rmtree(actual_output_parent)
     
-    # Step 3: Get ADK_ROOT from environment
+    # Step 2: Copy input parent folder to actual_output parent location
+    print(f"📁 Copying {input_parent} -> {actual_output_parent}")
+    shutil.copytree(input_parent, actual_output_parent)
+    
+    # Step 3: Replace the apply_agent_instruction.md with optimized prompt
+    # The original file is a symlink, so we need to remove it and create a new file
+    instruction_file = actual_output_path / "adk_openspec_apply_agent" / "apply_agent_instruction.md"
+    if instruction_file.exists():
+      print(f"📝 Replacing instruction file: {instruction_file}")
+      instruction_file.unlink()  # Remove the symlink or original file
+    else:
+      print(f"📝 Creating instruction file: {instruction_file}")
+      instruction_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Write the optimized prompt to the instruction file
+    instruction_file.write_text(str(prompt))
+    print(f"✅ Instruction file updated with optimized prompt")
+    
+    # Step 4: Get ADK_ROOT from environment
     adk_root = os.getenv("ADK_ROOT")
     if not adk_root:
       raise ValueError("ADK_ROOT environment variable is not set")
     
-    # Step 4: Prepare the bash command
+    # Step 5: Prepare the bash command
     # Format: run_test.sh <mcp_port> <model> <proj_folder> <stages>
     run_test_script = f"{adk_root}/openspec-scripts/run_test.sh"
-    mcp_port = "8051"
-    proj_folder = str(actual_output_path.parent / actual_output_path.name)
+    proj_folder = str(actual_output_parent)  # Pass the parent folder (actual_out/itemX)
     stages = "2"  # Stage 2 is the apply stage
     
-    # Step 5: Run the test script
+    # Step 6: Run the test script
     cmd = [run_test_script, mcp_port, model, proj_folder, stages]
     print(f"🚀 Running: {' '.join(cmd)}")
     
@@ -205,7 +235,7 @@ def create_model_callback(model: str):
         check=True,
         capture_output=True,
         text=True,
-        cwd=actual_output_path.parent  # Run in parent directory
+        cwd=actual_output_parent.parent  # Run in parent directory of actual_out
       )
       print(f"✅ Test completed successfully")
       print(f"Output: {result.stdout[-500:]}")  # Print last 500 chars
@@ -215,7 +245,7 @@ def create_model_callback(model: str):
       print(f"Error output: {e.stderr[-500:]}")  # Print last 500 chars of error
       # Don't raise - let the scoring handle the failure
     
-    # Step 6: Return the actual_output path for evaluation
+    # Step 7: Return the actual_output path (adk_openspec_project) for evaluation
     return str(actual_output_path)
   
   return model_callback
@@ -225,7 +255,7 @@ def create_optimizer(
     model: str,
     algorithm: str,
     iterations: int,
-    run_async: bool = False,
+    mcp_port: str = "8051",
     use_custom_scorer: bool = False,
     scoring_mode: str = "llm",
     agent: Optional[str] = None,
@@ -237,7 +267,7 @@ def create_optimizer(
     model: LLM model name
     algorithm: Algorithm name (miprov2, gepa, copro, simba)
     iterations: Number of optimization iterations
-    run_async: Whether to run async (default: False to avoid pickle issues)
+    mcp_port: MCP server port (default: "8051")
     use_custom_scorer: Use CustomScorer wrapper instead of individual metrics
     scoring_mode: Scoring mode for custom scorer (llm, deterministic, hybrid)
     agent: Agent type for behavior evaluation
@@ -304,12 +334,12 @@ def create_optimizer(
   
   # Create optimizer with rate limiting configuration
   optimizer = PromptOptimizer(
-    model_callback=create_model_callback(model),
+    model_callback=create_model_callback(model, mcp_port),
     optimizer_model=model,  # Pass string instead of LiteLLMModel object
     metrics=metrics,
     algorithm=algo,
     async_config=AsyncConfig(
-      run_async=run_async,  # Use parameter instead of hardcoded True
+      run_async=False,  # Always False to avoid pickle issues with thread locks
       max_concurrent=max_concurrent,
       throttle_value=throttle_seconds
     )
@@ -318,7 +348,7 @@ def create_optimizer(
   # Replace the scorer if using custom scorer
   if use_custom_scorer:
     custom_scorer = CustomScorer(
-      model_callback=create_model_callback(model),
+      model_callback=create_model_callback(model, mcp_port),
       metrics=metrics,
       max_concurrent=max_concurrent,
       throttle_seconds=throttle_seconds,
@@ -371,9 +401,18 @@ def main():
     description="Optimize ApplyAgent instructions using DeepEval"
   )
   parser.add_argument(
-    "--historical-data",
+    "--goldens",
     required=True,
-    help="Path to directory containing project folders (e.g., wdt_dbg132/adk_openspec_project, wdt_dbg134/adk_openspec_project)"
+    help="Path to goldens directory containing test folders (e.g., goldens/item1, goldens/item2)"
+  )
+  parser.add_argument(
+    "--actual-out",
+    required=True,
+    help="Path to actual outputs directory where test results will be stored"
+  )
+  parser.add_argument(
+    "--reference",
+    help="Path to reference directory containing golden implementation for comparison"
   )
   parser.add_argument(
     "--current-instructions",
@@ -391,6 +430,11 @@ def main():
     help="LLM model for optimization (default: iflow/qwen3-coder-plus)"
   )
   parser.add_argument(
+    "--mcp-port",
+    default="8051",
+    help="MCP server port (default: 8051)"
+  )
+  parser.add_argument(
     "--algorithm",
     choices=["miprov2", "gepa", "copro", "simba"],
     default="miprov2",
@@ -401,11 +445,6 @@ def main():
     type=int,
     default=5,
     help="Number of optimization iterations (default: 5)"
-  )
-  parser.add_argument(
-    "--no-async",
-    action="store_true",
-    help="Disable async mode to avoid pickle issues with thread locks (default: False)"
   )
   parser.add_argument(
     "--use-custom-scorer",
@@ -422,10 +461,6 @@ def main():
     "--agent",
     default="adk-python",
     help="Agent type for behavior evaluation (default: adk-python)"
-  )
-  parser.add_argument(
-    "--reference-dir",
-    help="Directory containing golden reference implementation for comparison"
   )
   parser.add_argument(
     "--mlflow",
@@ -461,12 +496,18 @@ def main():
       sys.exit(1)
   
   # Load data
-  print(f"📂 Loading historical data from {args.historical_data}...")
-  historical_data = load_historical_sessions(
-    Path(args.historical_data),
-    reference_dir=args.reference_dir
+  print(f"📂 Loading minibatch data...")
+  print(f"   Goldens: {args.goldens}")
+  print(f"   Actual outputs: {args.actual_out}")
+  if args.reference:
+    print(f"   Reference: {args.reference}")
+  
+  minibatch_data = load_minibatch(
+    Path(args.goldens),
+    Path(args.actual_out),
+    Path(args.reference) if args.reference else None
   )
-  print(f"✅ Loaded {len(historical_data)} sessions")
+  print(f"✅ Loaded {len(minibatch_data)} test cases")
   
   print(f"📂 Loading current instructions from {args.current_instructions}...")
   with open(args.current_instructions) as f:
@@ -476,11 +517,12 @@ def main():
   # Create optimizer with rate limiting
   print(f"🔧 Creating optimizer with {args.algorithm} algorithm...")
   print(f"⏱️  Rate limiting: max_concurrent=1, throttle=30.0s")
+  print(f"🔌 MCP server port: {args.mcp_port}")
   optimizer = create_optimizer(
     model=args.model,
     algorithm=args.algorithm,
     iterations=args.iterations,
-    run_async=not args.no_async,  # Invert the flag
+    mcp_port=args.mcp_port,
     use_custom_scorer=args.use_custom_scorer,
     scoring_mode=args.scoring_mode,
     agent=args.agent,
@@ -495,14 +537,15 @@ def main():
         device_name="prompt_optimization",
         model=args.model,
         scoring_mode=args.scoring_mode if args.use_custom_scorer else "optimization",
-        workdir=str(Path(args.historical_data)) if Path(args.historical_data).is_dir() else str(Path(args.historical_data).parent),
+        workdir=str(Path(args.actual_out)),
         algorithm=args.algorithm,
         iterations=args.iterations,
-        num_sessions=len(historical_data),
+        num_sessions=len(minibatch_data),
         max_concurrent=1,
         throttle_seconds=30.0,
         use_custom_scorer=args.use_custom_scorer,
-        agent=args.agent
+        agent=args.agent,
+        mcp_port=args.mcp_port
       )
     except Exception as e:
       print(f"❌ Error starting MLflow run: {e}")
@@ -516,7 +559,7 @@ def main():
   
   optimized_instructions = optimize_instructions(
     current_instructions=current_instructions,
-    historical_data=historical_data,
+    historical_data=minibatch_data,
     optimizer=optimizer
   )
   
@@ -547,7 +590,7 @@ def main():
       
       # Log metrics
       mlflow.log_metrics({
-        "num_sessions": len(historical_data),
+        "num_sessions": len(minibatch_data),
         "iterations": args.iterations,
         "optimization_time_seconds": optimization_time,
         "original_lines": len(original_lines),
@@ -561,7 +604,7 @@ def main():
       })
       
       # Log artifacts
-      mlflow.log_artifact(args.historical_data, "input_data")
+      mlflow.log_artifact(args.goldens, "goldens")
       mlflow.log_artifact(args.current_instructions, "original_instructions")
       mlflow.log_artifact(str(output_path), "optimized_instructions")
       

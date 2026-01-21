@@ -45,11 +45,8 @@ run_cmd_with_timing() {
 #
 # Environment variables for Stage 4:
 #   SKIP_OPTIMIZE=1      - Skip optimization step
-#   EXTRA_WORKDIRS       - Path to directory containing multiple project folders for optimization
-#                          Example: EXTRA_WORKDIRS="/path/to/data"
-#                          The directory should contain folders like wdt_dbg132, wdt_dbg134, etc.
-#                          Each folder must have an adk_openspec_project subdirectory
-#                          If not set, uses parent directory of current project
+#   GOLDENS_PATH         - Path to goldens directory (goldens/item1, goldens/item2, ...)
+#   ACTUAL_OUT_PATH      - Path to actual outputs directory (default: optimization_dir/actual_out)
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: llm)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
@@ -187,18 +184,29 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         MLFLOW_ARGS="--mlflow"
     fi
     
-    # Determine historical data path
-    # If EXTRA_WORKDIRS is set, use it as the data path containing multiple projects
-    # Otherwise use current working directory (parent of current project)
-    if [[ -n "${EXTRA_WORKDIRS:-}" ]]; then
-        # Use EXTRA_WORKDIRS as the directory containing all project folders
-        HISTORICAL_DATA_PATH="$EXTRA_WORKDIRS"
-        echo "📁 Using EXTRA_WORKDIRS for multi-project optimization: $HISTORICAL_DATA_PATH" | tee -a "$log_dir/${proj_dir}.4.log"
+    # Determine goldens and actual output paths
+    # GOLDENS_PATH: Directory containing golden test cases (goldens/item1, goldens/item2, ...)
+    # ACTUAL_OUT_PATH: Directory where actual test outputs will be stored
+    if [[ -n "${GOLDENS_PATH:-}" ]]; then
+        GOLDENS_DIR="$GOLDENS_PATH"
+        echo "📁 Using GOLDENS_PATH: $GOLDENS_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
     else
-        # Single project mode - use parent directory which should contain multiple test runs
-        HISTORICAL_DATA_PATH="$(dirname "$(pwd)")"
-        echo "📁 Using parent directory for optimization: $HISTORICAL_DATA_PATH" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "❌ Error: GOLDENS_PATH environment variable not set" | tee -a "$log_dir/${proj_dir}.4.log"
+        echo "   Please set GOLDENS_PATH to the directory containing golden test cases" | tee -a "$log_dir/${proj_dir}.4.log"
+        exit 1
     fi
+    
+    if [[ -n "${ACTUAL_OUT_PATH:-}" ]]; then
+        ACTUAL_OUT_DIR="$ACTUAL_OUT_PATH"
+        echo "📁 Using ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+    else
+        # Default to optimization directory
+        ACTUAL_OUT_DIR="$OPTIMIZATION_DIR/actual_out"
+        echo "📁 Using default ACTUAL_OUT_PATH: $ACTUAL_OUT_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
+    fi
+    
+    # Create actual output directory if it doesn't exist
+    mkdir -p "$ACTUAL_OUT_DIR"
     
     # Set scoring mode (default: llm)
     SCORING_MODE="${SCORING_MODE:-llm}"
@@ -213,7 +221,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     if [[ -n "${REFERENCE_DIR:-}" ]]; then
         if [[ -d "$REFERENCE_DIR" ]]; then
             echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
-            REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
+            REFERENCE_ARGS="--reference $REFERENCE_DIR"
         else
             echo "⚠️  Warning: REFERENCE_DIR not found: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.4.log"
         fi
@@ -221,15 +229,16 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     
     set +e
     python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
-        --historical-data "$HISTORICAL_DATA_PATH" \
+        --goldens "$GOLDENS_DIR" \
+        --actual-out "$ACTUAL_OUT_DIR" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
         --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
         --algorithm copro \
         --iterations 3 \
+        --mcp-port "$mcp_server_port" \
         --model "$model" \
         --scoring-mode "$SCORING_MODE" \
         --agent "$AGENT_TYPE" \
-        --no-async \
         --use-custom-scorer \
         $REFERENCE_ARGS \
         $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
@@ -278,8 +287,8 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     else
         # Get optimization metrics for commit message
         OPTIMIZATION_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-        # Count project folders in HISTORICAL_DATA_PATH
-        HISTORICAL_SESSIONS=$(find "$HISTORICAL_DATA_PATH" -maxdepth 2 -type d -name "adk_openspec_project" 2>/dev/null | wc -l || echo "unknown")
+        # Count golden test cases
+        GOLDEN_COUNT=$(find "$GOLDENS_DIR" -maxdepth 1 -type d ! -path "$GOLDENS_DIR" 2>/dev/null | wc -l || echo "unknown")
         
         # Stage the optimized instructions file
         git add "$INSTRUCTIONS_FILE" 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
@@ -289,14 +298,14 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         git commit -m "refactor(openspec): optimize apply agent instructions via DeepEval
 
 - Optimized apply_agent_instruction.md using PromptOptimizer (copro)
-- Based on $HISTORICAL_SESSIONS historical project folders from $HISTORICAL_DATA_PATH
+- Based on $GOLDEN_COUNT golden test cases from $GOLDENS_DIR
 - Optimization date: $OPTIMIZATION_DATE
 - Model used: $model
-- Algorithm: copro with 5 iterations
+- Algorithm: copro with 3 iterations
 - Backup saved: $(basename $BACKUP_FILE)
 
-This optimization aims to improve agent performance based on historical
-project data and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
+This optimization aims to improve agent performance based on golden
+test cases and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir/${proj_dir}.4.log"
         commit_exit_code=$?
         set -e
         

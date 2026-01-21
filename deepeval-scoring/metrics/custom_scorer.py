@@ -110,15 +110,19 @@ class CustomScorer(Scorer):
             Overall score (0.0 to 1.0)
         """
         # Generate actual output using the model callback
+        # This returns the path to actual_out/itemX/adk_openspec_project
         actual_output = self.generate(prompt_configuration.prompts, golden)
         
-        # Extract workdir from golden input
-        # The golden.input should be the path to adk_openspec_project
-        workdir = str(golden.input)
+        # Use the actual_output path as workdir for evaluation
+        # This should be the path to the adk_openspec_project folder
+        workdir = actual_output
         
         # Extract device name from the path
-        # Assuming path structure: .../device_name/adk_openspec_project
+        # Assuming path structure: .../itemX/adk_openspec_project
         device_name = Path(workdir).parent.name
+        
+        # Get reference path from golden.expected_output
+        reference_dir = str(golden.expected_output) if golden.expected_output else None
         
         try:
             # Use evaluate_score to get comprehensive evaluation
@@ -132,7 +136,7 @@ class CustomScorer(Scorer):
                 behavior_only=False,
                 scoring_mode=self.scoring_mode,
                 agent=self.agent,
-                reference_dir=str(golden.expected_output) if golden.expected_output else None,
+                reference_dir=reference_dir,
                 mlflow_tracker=self.mlflow_tracker,  # Pass MLflow tracker
             )
             
@@ -178,8 +182,9 @@ class CustomScorer(Scorer):
             # Score the golden (this will populate self.results)
             self._score_one(prompt_configuration, golden)
             
-            # Extract workdir from golden
-            workdir = str(golden.input)
+            # The workdir is returned by model_callback and used in _score_one
+            # Extract it from golden.actual_output which points to the project path
+            workdir = str(golden.actual_output)
             
             # Collect reasons from results
             if workdir in self.results:
