@@ -1774,9 +1774,9 @@ from {import_path} import root_agent
             workdir: Working directory path
             session_name: Session name for saving
             change_id: Change ID for apply operations
-            agent: Agent to use ('kiro-cli', 'acli', etc.)
+            agent: Agent to use ('kiro-cli', 'acli', 'qodercli', etc.)
         """
-        if agent not in ["kiro-cli", "acli"]:
+        if agent not in ["kiro-cli", "acli", "qodercli"]:
             # Non-interactive agents are handled in run_workflow
             return
         
