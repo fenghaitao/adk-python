@@ -768,6 +768,9 @@ class CLIController(App):
         self.workflow_mode = "propose-simple"
         self.workflow_change_id = None
         
+        # Shutdown flag for threads
+        self._shutdown_requested = False
+        
         # Setup log file
         self.log_file_path = Path.home() / ".cli_controller" / "logs" / f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1012,18 +1015,25 @@ class CLIController(App):
 
     def action_request_quit(self) -> None:
         """Handle quit request - cleanup and exit."""
-        # Stop agent first - this sets agent_running=False
+        # Set shutdown flag first to stop background threads
+        self._shutdown_requested = True
+        
+        # Stop agent process
         self.stop_agent_process()
-        # Give worker thread time to see the flag and exit
-        time.sleep(0.5)
+        
+        # Give threads time to exit cleanly
+        time.sleep(0.3)
+        
         # Save session
         self.save_session()
+        
         # Close log file
         if hasattr(self, 'log_file') and self.log_file:
             try:
                 self.log_file.close()
-            except:
+            except Exception:
                 pass
+        
         # Exit cleanly
         self.exit()
 
@@ -1380,17 +1390,17 @@ class CLIController(App):
         """Read output from agent process."""
         terminal = self.query_one("#terminal-output", InteractiveTerminal)
         
-        while self.agent_running and self.master_fd is not None:
+        while self.agent_running and self.master_fd is not None and not self._shutdown_requested:
             try:
                 # Check if master_fd is still valid before using it
-                if self.master_fd is None:
+                if self.master_fd is None or self._shutdown_requested:
                     break
                 
                 # Use shorter timeout to check agent_running flag more frequently
                 ready, _, _ = select.select([self.master_fd], [], [], 0.1)
                 
                 # Check flag again after select
-                if not self.agent_running or self.master_fd is None:
+                if not self.agent_running or self.master_fd is None or self._shutdown_requested:
                     break
                 
                 if ready:
@@ -1407,7 +1417,8 @@ class CLIController(App):
                     break
                     
             except Exception as e:
-                logger.error(f"Error reading output: {e}")
+                if not self._shutdown_requested:
+                    logger.error(f"Error reading output: {e}")
                 break
 
     def send_command(self, command: str, log: bool = True) -> None:
@@ -2073,7 +2084,7 @@ from {import_path} import root_agent
             except Exception:
                 pass
         
-        while True:
+        while not self._shutdown_requested:
             if not self.is_mounted:
                 break
                 
@@ -2103,7 +2114,8 @@ from {import_path} import root_agent
                         status_panel.uptime = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
                 
             except Exception as e:
-                logger.error(f"Error updating metrics: {e}")
+                if not self._shutdown_requested:
+                    logger.error(f"Error updating metrics: {e}")
             
             time.sleep(1)
 
@@ -2138,7 +2150,13 @@ from {import_path} import root_agent
 
     def on_unmount(self) -> None:
         """Cleanup when app is closed."""
+        # Set shutdown flag
+        self._shutdown_requested = True
+        
+        # Stop agent process
         self.stop_agent_process()
+        
+        # Save session
         self.save_session()
         
         # Close log file
@@ -2153,7 +2171,33 @@ from {import_path} import root_agent
 def main():
     """Run the CLI TUI application."""
     app = CLIController()
-    app.run()
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        # Handle Ctrl+C gracefully during shutdown
+        pass
+    except Exception as e:
+        # Log any unexpected errors
+        logger.error(f"Unexpected error in main: {e}", exc_info=True)
+    finally:
+        # Ensure cleanup happens
+        if hasattr(app, '_shutdown_requested'):
+            app._shutdown_requested = True
+        
+        if hasattr(app, 'agent_running') and app.agent_running:
+            app.stop_agent_process()
+        
+        if hasattr(app, 'log_file') and app.log_file:
+            try:
+                app.log_file.close()
+            except Exception:
+                pass
+        
+        # Give background threads time to exit
+        import threading
+        for thread in threading.enumerate():
+            if thread != threading.current_thread() and thread.daemon is False:
+                thread.join(timeout=0.5)
 
 
 if __name__ == "__main__":
