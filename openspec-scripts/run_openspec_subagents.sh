@@ -176,11 +176,8 @@ case "$AGENT_TYPE" in
   *) echo -e "${RED}Invalid agent type: $AGENT_TYPE. Must be 'initial' or 'refine'.${NC}"; exit 1;;
 esac
 
-# Resolve change id via /proposal if not provided
-if [[ -z "$CHANGE_ID" ]]; then
-  if [[ -z "$PROPOSAL" ]]; then
-    echo -e "${RED}Either --change-id or --proposal must be provided.${NC}"; exit 1
-  fi
+# Resolve change id via /proposal if provided
+if [[ -n "$PROPOSAL" ]] && [[ -z "$CHANGE_ID" ]]; then
   echo -e "${BLUE}🧩 Running /proposal with ${AGENT_TYPE} agent to generate change id...${NC}"
   
   # Choose the appropriate agent based on type
@@ -247,6 +244,52 @@ if [[ -z "$CHANGE_ID" ]]; then
         echo -e "${GREEN}Human-readable proposal session saved: $PROPOSAL_DIR/${SESSION_ID}.session.txt${NC}"
       fi
     fi
+  fi
+fi
+
+# If CHANGE_ID is still not set, try to find the most recent proposal log
+if [[ -z "$CHANGE_ID" ]]; then
+  echo -e "${BLUE}🔍 No change_id or proposal provided, searching for most recent proposal...${NC}"
+  
+  # Determine which proposal directory to check based on agent type
+  if [[ "$AGENT_TYPE" == "initial" ]]; then
+    SEARCH_PROPOSAL_DIR="$PROPOSAL_INITIAL_DIR"
+  else
+    SEARCH_PROPOSAL_DIR="$PROPOSAL_REFINE_DIR"
+  fi
+  
+  # Look for the most recent proposal.log file
+  if [[ -f "$SEARCH_PROPOSAL_DIR/proposal.log" ]]; then
+    PROPOSAL_LOG="$SEARCH_PROPOSAL_DIR/proposal.log"
+    echo -e "${BLUE}📝 Found proposal log: $PROPOSAL_LOG${NC}"
+    
+    # Extract change_id from the log file
+    CHANGE_ID=$(grep -o '"change_id"[[:space:]]*:[[:space:]]*"[^"]\+"' "$PROPOSAL_LOG" | sed -n 's/.*"change_id"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' | head -n1)
+    
+    if [[ -n "$CHANGE_ID" ]]; then
+      echo -e "${GREEN}✅ Resolved change id from previous proposal: ${CHANGE_ID}${NC}"
+    else
+      echo -e "${YELLOW}⚠️  Could not extract change_id from proposal log${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  No previous proposal log found at $SEARCH_PROPOSAL_DIR/proposal.log${NC}"
+  fi
+fi
+
+# Final check: if CHANGE_ID is still not set, show error
+if [[ -z "$CHANGE_ID" ]]; then
+  echo -e "${RED}❌ Failed to resolve change_id${NC}"
+  echo -e "${RED}   Please provide either:${NC}"
+  echo -e "${RED}   - --change-id <id> to use a specific change_id${NC}"
+  echo -e "${RED}   - --proposal <text|file> to generate a new change_id${NC}"
+  echo -e "${RED}   - Or ensure a previous proposal log exists with a change_id${NC}"
+  exit 1
+else
+  # If CHANGE_ID was provided directly or resolved, log it
+  if [[ -n "$PROPOSAL" ]]; then
+    : # Already logged during proposal execution
+  else
+    echo -e "${GREEN}✅ Using change id: ${CHANGE_ID}${NC}"
   fi
 fi
 

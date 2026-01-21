@@ -63,7 +63,7 @@ for i in $(seq "$start_num" "$end_num"); do
 
 	echo "\n=== Running test for project: $proj_folder (iteration $i) ==="
 
-    run_test_cmd=("$ADK_ROOT/openspec-scripts/run_test.sh" "8051" "$MODEL" "$proj_folder" "0,1,2")
+    run_test_cmd=("$ADK_ROOT/openspec-scripts/run_test.sh" "8051" "$MODEL" "$proj_folder" "0,1,2,3,4")
 
 	if [[ $DRY_RUN -eq 1 ]]; then
 		echo "DRY RUN: ${run_test_cmd[*]}"

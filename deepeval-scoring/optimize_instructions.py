@@ -113,18 +113,25 @@ def load_historical_sessions(data_path: Path, reference_dir: Optional[str] = Non
   print(f"✅ Found {len(project_folders)} project folders")
 
   # Create Golden dataset entries with project paths
-  for folder_name, project_path in project_folders:
+  for idx, (folder_name, project_path) in enumerate(project_folders):
     print(f"  📂 Adding {folder_name}/adk_openspec_project...")
 
-    # Input points to the project path to be evaluated
+    # Create a test folder for this optimization run
+    # Format: {folder_name}_opt_test_{idx}
+    parent_dir = project_path.parent
+    test_folder_name = f"{folder_name}_opt_test_{idx}"
+    actual_output_path = parent_dir.parent / test_folder_name / "adk_openspec_project"
+    
+    # Input points to the original project path
+    # actual_output points to where the test run will be executed
     # expected_output points to reference implementation if provided, otherwise same as input
     golden = Golden(
       input=str(project_path),
-      actual_output=None,  # Will be filled by model during optimization
+      actual_output=str(actual_output_path),  # Target path for test execution
       expected_output=reference_dir if reference_dir else str(project_path)
     )
     golden_dataset.append(golden)
-    print(f"    ✓ Added {folder_name}")
+    print(f"    ✓ Added {folder_name} -> test folder: {test_folder_name}")
 
   return golden_dataset
 
@@ -132,104 +139,84 @@ def load_historical_sessions(data_path: Path, reference_dir: Optional[str] = Non
 def create_model_callback(model: str):
   """Create model callback for test case evaluation.
   
+  This callback runs the actual optimization test by:
+  1. Setting up the test project folder from the golden input
+  2. Running the run_test.sh script to execute the agent
+  3. Returning the project path for evaluation
+  
   Args:
     model: Model name (e.g., "iflow/qwen3-coder-plus")
     
   Returns:
-    Callable that takes prompt and golden, returns response
+    Callable that takes prompt and golden, returns project path
   """
   def model_callback(prompt, golden=None) -> str:
-    """Call LLM with prompt with exponential backoff retry.
+    """Run optimization test with the given prompt and golden example.
     
     Args:
-      prompt: The prompt to send to the model (can be string or Prompt object)
-      golden: The golden/reference data (unused but required by interface)
+      prompt: The prompt to send to the model (instruction text)
+      golden: The golden example containing input/actual_output paths
+      
+    Returns:
+      Path to the actual_output folder (for evaluation)
     """
-    import litellm
-    import time
-    import copy
+    import subprocess
+    import shutil
     from deepeval.prompt import Prompt
     
-    # Convert Prompt object to string if needed
-    if isinstance(prompt, Prompt):
-      prompt_text = prompt.text_template or ""
-    else:
-      prompt_text = str(prompt)
+    if golden is None:
+      raise ValueError("Golden example is required for model callback")
     
-    # Monkey-patch deepcopy to avoid pickle issues with thread locks
-    # Store original deepcopy
-    original_deepcopy = copy.deepcopy
+    # Get input and actual_output paths from golden
+    input_path = Path(str(golden.input))  # Source project path
+    actual_output_path = Path(str(golden.actual_output)) if golden.actual_output else None
     
-    # Define a shallow copy function that avoids pickle issues
-    def safe_deepcopy(obj, memo=None):
-      try:
-        return original_deepcopy(obj, memo)
-      except (TypeError, AttributeError) as e:
-        if "pickle" in str(e) or "thread.lock" in str(e):
-          # Return a shallow copy for unpicklable objects
-          if isinstance(obj, list):
-            return [item if isinstance(item, (str, int, float, bool, type(None))) else item for item in obj]
-          elif isinstance(obj, dict):
-            return {k: v if isinstance(v, (str, int, float, bool, type(None))) else v for k, v in obj.items()}
-          else:
-            return obj
-        raise
+    if actual_output_path is None:
+      raise ValueError("Golden actual_output must be set to the target project folder path")
     
-    # Apply monkey patch
-    copy.deepcopy = safe_deepcopy
+    # Step 1: Remove existing actual_output folder if it exists
+    if actual_output_path.exists():
+      print(f"🗑️  Removing existing folder: {actual_output_path}")
+      shutil.rmtree(actual_output_path)
     
-    max_retries = 1
-    base_delay = 30.0
+    # Step 2: Copy input folder to actual_output location
+    print(f"📁 Copying {input_path} -> {actual_output_path}")
+    shutil.copytree(input_path, actual_output_path)
     
-    for attempt in range(max_retries):
-      try:
-        # Configure litellm for iflow
-        if model.startswith("iflow/"):
-          litellm_model = model.replace("iflow/", "dashscope/")
-          api_key = os.getenv("IFLOW_API_KEY")
-          response = litellm.completion(
-            model=litellm_model,
-            messages=[{"role": "user", "content": prompt_text}],
-            temperature=0.7,
-            api_key=api_key,
-            base_url="https://apis.iflow.cn/v1/"
-          )
-        elif model.startswith("github_copilot/"):
-          # GitHub Copilot models use litellm.completion with special headers
-          response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt_text}],
-            temperature=0.7,
-            extra_headers={
-              "Editor-Version": "vscode/1.85.0",
-              "Editor-Plugin-Version": "copilot-chat/0.11.1",
-              "Openai-Organization": "github-copilot",
-              "Copilot-Integration-Id": "vscode-chat"
-            }
-          )
-        else:
-          response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt_text}],
-            temperature=0.7
-          )
-        
-        return response.choices[0].message.content
-        
-      except Exception as e:
-        error_msg = str(e).lower()
-        # Check if it's a rate limit error
-        if "rate limit" in error_msg or "429" in error_msg or "449" in error_msg:
-          if attempt < max_retries - 1:
-            # Exponential backoff: 2s, 4s, 8s, 16s, 32s
-            delay = base_delay * (2 ** attempt)
-            print(f"⚠️  Rate limit hit, waiting {delay}s before retry {attempt + 1}/{max_retries}...")
-            time.sleep(delay)
-            continue
-        # Re-raise non-rate-limit errors or final attempt
-        raise
+    # Step 3: Get ADK_ROOT from environment
+    adk_root = os.getenv("ADK_ROOT")
+    if not adk_root:
+      raise ValueError("ADK_ROOT environment variable is not set")
     
-    raise Exception(f"Failed after {max_retries} retries")
+    # Step 4: Prepare the bash command
+    # Format: run_test.sh <mcp_port> <model> <proj_folder> <stages>
+    run_test_script = f"{adk_root}/openspec-scripts/run_test.sh"
+    mcp_port = "8051"
+    proj_folder = str(actual_output_path.parent / actual_output_path.name)
+    stages = "2"  # Stage 2 is the apply stage
+    
+    # Step 5: Run the test script
+    cmd = [run_test_script, mcp_port, model, proj_folder, stages]
+    print(f"🚀 Running: {' '.join(cmd)}")
+    
+    try:
+      result = subprocess.run(
+        cmd,
+        check=True,
+        capture_output=True,
+        text=True,
+        cwd=actual_output_path.parent  # Run in parent directory
+      )
+      print(f"✅ Test completed successfully")
+      print(f"Output: {result.stdout[-500:]}")  # Print last 500 chars
+      
+    except subprocess.CalledProcessError as e:
+      print(f"❌ Test failed with exit code {e.returncode}")
+      print(f"Error output: {e.stderr[-500:]}")  # Print last 500 chars of error
+      # Don't raise - let the scoring handle the failure
+    
+    # Step 6: Return the actual_output path for evaluation
+    return str(actual_output_path)
   
   return model_callback
 
@@ -238,8 +225,6 @@ def create_optimizer(
     model: str,
     algorithm: str,
     iterations: int,
-    max_concurrent: int = 5,
-    throttle_seconds: float = 2.0,
     run_async: bool = False,
     use_custom_scorer: bool = False,
     scoring_mode: str = "llm",
@@ -252,8 +237,6 @@ def create_optimizer(
     model: LLM model name
     algorithm: Algorithm name (miprov2, gepa, copro, simba)
     iterations: Number of optimization iterations
-    max_concurrent: Maximum concurrent API calls (default: 5 for rate limiting)
-    throttle_seconds: Seconds to wait between batches (default: 2.0)
     run_async: Whether to run async (default: False to avoid pickle issues)
     use_custom_scorer: Use CustomScorer wrapper instead of individual metrics
     scoring_mode: Scoring mode for custom scorer (llm, deterministic, hybrid)
@@ -263,6 +246,9 @@ def create_optimizer(
   Returns:
     Configured PromptOptimizer
   """
+  # Hardcoded rate limiting configuration
+  max_concurrent = 1
+  throttle_seconds = 30.0
   # Use individual metrics (original approach)
   # These are needed even with custom_scorer for compatibility
   metrics = [
@@ -417,18 +403,6 @@ def main():
     help="Number of optimization iterations (default: 5)"
   )
   parser.add_argument(
-    "--max-concurrent",
-    type=int,
-    default=3,
-    help="Maximum concurrent API calls for rate limiting (default: 3)"
-  )
-  parser.add_argument(
-    "--throttle-seconds",
-    type=float,
-    default=2.0,
-    help="Seconds to wait between API call batches (default: 2.0)"
-  )
-  parser.add_argument(
     "--no-async",
     action="store_true",
     help="Disable async mode to avoid pickle issues with thread locks (default: False)"
@@ -501,13 +475,11 @@ def main():
   
   # Create optimizer with rate limiting
   print(f"🔧 Creating optimizer with {args.algorithm} algorithm...")
-  print(f"⏱️  Rate limiting: max_concurrent={args.max_concurrent}, throttle={args.throttle_seconds}s")
+  print(f"⏱️  Rate limiting: max_concurrent=1, throttle=30.0s")
   optimizer = create_optimizer(
     model=args.model,
     algorithm=args.algorithm,
     iterations=args.iterations,
-    max_concurrent=args.max_concurrent,
-    throttle_seconds=args.throttle_seconds,
     run_async=not args.no_async,  # Invert the flag
     use_custom_scorer=args.use_custom_scorer,
     scoring_mode=args.scoring_mode,
@@ -527,8 +499,8 @@ def main():
         algorithm=args.algorithm,
         iterations=args.iterations,
         num_sessions=len(historical_data),
-        max_concurrent=args.max_concurrent,
-        throttle_seconds=args.throttle_seconds,
+        max_concurrent=1,
+        throttle_seconds=30.0,
         use_custom_scorer=args.use_custom_scorer,
         agent=args.agent
       )
@@ -583,7 +555,9 @@ def main():
         "original_chars": len(current_instructions),
         "optimized_chars": len(optimized_instructions),
         "lines_change": len(optimized_lines) - len(original_lines),
-        "chars_change": len(optimized_instructions) - len(current_instructions)
+        "chars_change": len(optimized_instructions) - len(current_instructions),
+        "max_concurrent": 1,
+        "throttle_seconds": 30.0
       })
       
       # Log artifacts
