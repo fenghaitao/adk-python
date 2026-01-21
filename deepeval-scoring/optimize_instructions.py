@@ -286,8 +286,6 @@ def create_optimizer(
     TestCoverageMetric(model=model, threshold=0.7),
     CodeStyleMetric(model=model, threshold=0.9),
     AgentBehaviorMetric(model=model, threshold=0.7),
-    CompilationMetric(model=model, threshold=1.0),
-    TestPassRateMetric(model=model, threshold=0.5)
   ]
   
   if use_custom_scorer:
@@ -311,8 +309,8 @@ def create_optimizer(
     "copro": COPRO(
       iterations=iterations,
       minibatch_size=2,      # Examples per iteration
-      population_size=3,     # Maximum candidates in pool
-      proposals_per_step=3   # Child prompts per iteration
+      population_size=4,     # Maximum candidates in pool
+      proposals_per_step=2   # Child prompts per iteration
     ),
     "simba": SIMBA(
       iterations=iterations,
