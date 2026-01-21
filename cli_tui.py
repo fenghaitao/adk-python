@@ -1533,7 +1533,7 @@ class CLIController(App):
             # Wait for agent to be ready
             # acli/qodercli may take longer to start than kiro-cli
             self.log_output(f"⏳ Waiting for {agent} to be ready...")
-            timeout = 60.0 if agent in ['acli', 'qodercli'] else 15.0
+            timeout = 20.0 if agent in ['acli', 'qodercli'] else 15.0
             prompt_found = await self.wait_for_prompt(timeout=timeout)
             if not prompt_found:
                 self.log_output(f"⚠️  Prompt not detected, but continuing anyway...")
@@ -1735,30 +1735,30 @@ from {import_path} import root_agent
         self.log_output("⚙️  Setting up workspace...")
         adk_config = adk_config or {}
         
-        # Create powers symlink if needed (for both kiro-cli and acli)
-        powers_link = workdir / "powers"
-        if not powers_link.exists():
+        # Copy powers folder if needed (for all agents)
+        powers_dir = workdir / "powers"
+        if not powers_dir.exists():
             # Look for powers in the same directory as cli_tui.py (adk-python repo)
             script_dir = Path(__file__).parent
             repo_powers = script_dir / "powers"
             if repo_powers.exists():
-                powers_link.symlink_to(repo_powers)
-                self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
+                shutil.copytree(repo_powers, powers_dir)
+                self.log_output(f"✅ Copied powers: {repo_powers} -> {powers_dir}")
             else:
-                self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
+                self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping copy")
         
-        # Create openspec-memories symlink if needed for propose mode
+        # Copy openspec-memories if needed for propose mode
         if mode.startswith("propose") or mode.endswith("-full"):
-            memories_link = workdir / "openspec-memories"
-            if not memories_link.exists():
+            memories_dir = workdir / "openspec-memories"
+            if not memories_dir.exists():
                 # Look for memories in the same directory as cli_tui.py (adk-python repo)
                 script_dir = Path(__file__).parent
                 repo_memories = script_dir / "openspec-memories"
                 if repo_memories.exists():
-                    memories_link.symlink_to(repo_memories)
-                    self.log_output(f"✅ Created symlink: {memories_link} -> {repo_memories}")
+                    shutil.copytree(repo_memories, memories_dir)
+                    self.log_output(f"✅ Copied openspec-memories: {repo_memories} -> {memories_dir}")
                 else:
-                    self.log_output(f"⚠️  openspec-memories not found at {repo_memories}, skipping symlink creation")
+                    self.log_output(f"⚠️  openspec-memories not found at {repo_memories}, skipping copy")
         
         # Check/copy MCP config for apply mode (kiro-cli only)
         if agent == 'kiro-cli' and mode in ["apply", "simple-full", "multi-delta-full"]:
