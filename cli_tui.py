@@ -458,16 +458,21 @@ class InteractiveTerminal(RichLog):
         
         content = '\n'.join(lines)
         
-        # Only update if content has changed significantly
-        # This reduces flickering by avoiding unnecessary redraws
+        # Only update if content has changed
         if content != self._last_content:
-            # Clear and write in one operation to reduce flicker
-            self.clear()
-            self.write(content)
+            # Check if we can just append (content starts with old content)
+            if self._last_content and content.startswith(self._last_content):
+                # Just append the new part
+                new_content = content[len(self._last_content):]
+                if new_content:
+                    self.write(new_content)
+            else:
+                # Full refresh needed - clear and rewrite
+                self.clear()
+                self.write(content)
+            
             self._last_content = content
             self._last_update_time = current_time
-            # Ensure auto-scroll to bottom
-            self.scroll_end(animate=False)
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard input and send to PTY."""
