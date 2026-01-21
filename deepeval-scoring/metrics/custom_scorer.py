@@ -59,6 +59,7 @@ class CustomScorer(Scorer):
         device: str = "wdt",
         agent: str = "adk-python",
         mlflow_tracker=None,
+        dryrun: bool = False,
     ):
         """Initialize the custom scorer.
 
@@ -72,6 +73,7 @@ class CustomScorer(Scorer):
             device: Device name for evaluation (e.g., wdt, uart, pci)
             agent: Agent type for behavior evaluation
             mlflow_tracker: Optional MLflow tracker for logging
+            dryrun: If True, skip real evaluation and return dummy results
         """
         # Initialize parent class
         super().__init__(
@@ -87,6 +89,7 @@ class CustomScorer(Scorer):
         self.device = device
         self.agent = agent
         self.mlflow_tracker = mlflow_tracker
+        self.dryrun = dryrun
 
         # Store results for each (prompt_configuration_id, workdir) combination
         # Key: (prompt_config_id, workdir), Value: evaluation results
@@ -128,6 +131,30 @@ class CustomScorer(Scorer):
 
         # Create result key using prompt configuration ID and workdir
         result_key = (prompt_configuration.id, workdir)
+
+        # Handle dryrun mode
+        if self.dryrun:
+            print(f"🔍 DRYRUN: Skipping real evaluation for {workdir}")
+            # Return dummy results
+            dummy_results = {
+                "overall_score": 0.75,  # Dummy score
+                "code_results": {
+                    "metrics": {
+                        "correctness": {"score": 0.8, "reason": "Dryrun: mock correctness"},
+                        "completeness": {"score": 0.7, "reason": "Dryrun: mock completeness"},
+                    }
+                },
+                "behavior_results": {
+                    "metrics": {
+                        "behavior_match": {"score": 0.75, "reason": "Dryrun: mock behavior"},
+                    }
+                },
+                "deterministic_results": {
+                    "issues": ["Dryrun: mock issue 1", "Dryrun: mock issue 2"]
+                }
+            }
+            self.results[result_key] = dummy_results
+            return dummy_results["overall_score"]
 
         try:
             # Use evaluate_score to get comprehensive evaluation

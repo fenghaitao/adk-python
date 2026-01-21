@@ -145,18 +145,19 @@ def load_minibatch(goldens_path: Path, actual_out_path: Path, reference_path: Op
   return golden_dataset
 
 
-def create_model_callback(model: str, mcp_port: str = "8051"):
+def create_model_callback(model: str, mcp_port: str = "8051", dryrun: bool = False):
   """Create model callback for test case evaluation.
   
   This callback runs the actual optimization test by:
   1. Copying the golden folder (goldens/itemX) to actual_out folder
   2. Replacing the instruction file in actual_out/itemX/adk_openspec_project
-  3. Running the run_test.sh script to execute the agent
+  3. Running the run_test.sh script to execute the agent (skipped if dryrun=True)
   4. Returning the project path (actual_out/itemX/adk_openspec_project) for evaluation
   
   Args:
     model: Model name (e.g., "iflow/qwen3-coder-plus")
     mcp_port: MCP server port (default: "8051")
+    dryrun: If True, skip running the test script (step 6) for faster debugging
     
   Returns:
     Callable that takes prompt and golden, returns project path for evaluation
@@ -274,25 +275,29 @@ def create_model_callback(model: str, mcp_port: str = "8051"):
     proj_folder = str(actual_output_parent)  # Pass the parent folder (actual_out/itemX)
     stages = "2"  # Stage 2 is the apply stage
     
-    # Step 6: Run the test script
-    cmd = [run_test_script, mcp_port, model, proj_folder, stages]
-    print(f"🚀 Running: {' '.join(cmd)}")
-    
-    try:
-      result = subprocess.run(
-        cmd,
-        check=True,
-        capture_output=True,
-        text=True,
-        cwd=actual_output_parent.parent  # Run in parent directory of actual_out
-      )
-      print(f"✅ Test completed successfully")
-      print(f"Output: {result.stdout[-500:]}")  # Print last 500 chars
+    # Step 6: Run the test script (skip if dryrun)
+    if dryrun:
+      print(f"🔍 DRYRUN: Skipping test script execution")
+      print(f"   Would run: {run_test_script} {mcp_port} {model} {proj_folder} {stages}")
+    else:
+      cmd = [run_test_script, mcp_port, model, proj_folder, stages]
+      print(f"🚀 Running: {' '.join(cmd)}")
       
-    except subprocess.CalledProcessError as e:
-      print(f"❌ Test failed with exit code {e.returncode}")
-      print(f"Error output: {e.stderr[-500:]}")  # Print last 500 chars of error
-      # Don't raise - let the scoring handle the failure
+      try:
+        result = subprocess.run(
+          cmd,
+          check=True,
+          capture_output=True,
+          text=True,
+          cwd=actual_output_parent.parent  # Run in parent directory of actual_out
+        )
+        print(f"✅ Test completed successfully")
+        print(f"Output: {result.stdout[-500:]}")  # Print last 500 chars
+        
+      except subprocess.CalledProcessError as e:
+        print(f"❌ Test failed with exit code {e.returncode}")
+        print(f"Error output: {e.stderr[-500:]}")  # Print last 500 chars of error
+        # Don't raise - let the scoring handle the failure
     
     # Step 7: Return the actual_output path (adk_openspec_project) for evaluation
     return str(actual_output_path)
@@ -309,7 +314,8 @@ def create_optimizer(
     use_custom_scorer: bool = False,
     scoring_mode: str = "llm",
     agent: Optional[str] = None,
-    mlflow_tracker=None
+    mlflow_tracker=None,
+    dryrun: bool = False,
 ) -> PromptOptimizer:
   """Create PromptOptimizer with specified configuration.
   
@@ -323,6 +329,7 @@ def create_optimizer(
     scoring_mode: Scoring mode for custom scorer (llm, deterministic, hybrid)
     agent: Agent type for behavior evaluation
     mlflow_tracker: Optional MLflow tracker for logging
+    dryrun: If True, skip running test scripts and evaluation for faster debugging
     
   Returns:
     Configured PromptOptimizer
@@ -343,6 +350,9 @@ def create_optimizer(
     print(f"📊 Using CustomScorer with {scoring_mode} mode")
   else:
     print(f"📊 Using individual metrics: {len(metrics)} metrics")
+  
+  if dryrun:
+    print(f"🔍 DRYRUN MODE ENABLED: Skipping test execution and using dummy results")
   
   # Select algorithm
   algorithm_map = {
@@ -383,7 +393,7 @@ def create_optimizer(
   
   # Create optimizer with rate limiting configuration
   optimizer = PromptOptimizer(
-    model_callback=create_model_callback(model, mcp_port),
+    model_callback=create_model_callback(model, mcp_port, dryrun),
     optimizer_model=model,  # Pass string instead of LiteLLMModel object
     metrics=metrics,
     algorithm=algo,
@@ -397,7 +407,7 @@ def create_optimizer(
   # Replace the scorer if using custom scorer
   if use_custom_scorer:
     custom_scorer = CustomScorer(
-      model_callback=create_model_callback(model, mcp_port),
+      model_callback=create_model_callback(model, mcp_port, dryrun),
       metrics=metrics,
       max_concurrent=max_concurrent,
       throttle_seconds=throttle_seconds,
@@ -405,7 +415,8 @@ def create_optimizer(
       scoring_mode=scoring_mode,
       device=device,
       agent=agent,
-      mlflow_tracker=mlflow_tracker
+      mlflow_tracker=mlflow_tracker,
+      dryrun=dryrun,
     )
     algo.scorer = custom_scorer
 
@@ -530,6 +541,11 @@ def main():
     "--mlflow-experiment-name",
     help="MLflow experiment name (overrides config pattern)"
   )
+  parser.add_argument(
+    "--dryrun",
+    action="store_true",
+    help="Enable dry-run mode: skip test script execution and use dummy evaluation results for faster debugging"
+  )
   
   args = parser.parse_args()
   
@@ -574,6 +590,8 @@ def main():
   print(f"⏱️  Rate limiting: max_concurrent=1, throttle=30.0s")
   print(f"🔌 MCP server port: {args.mcp_port}")
   print(f"🎯 Device: {args.device}")
+  if args.dryrun:
+    print(f"🔍 DRYRUN MODE: Test execution and evaluation will be skipped")
   optimizer = create_optimizer(
     model=args.model,
     algorithm=args.algorithm,
@@ -583,7 +601,8 @@ def main():
     use_custom_scorer=args.use_custom_scorer,
     scoring_mode=args.scoring_mode,
     agent=args.agent,
-    mlflow_tracker=mlflow_tracker
+    mlflow_tracker=mlflow_tracker,
+    dryrun=args.dryrun,
   )
   print(f"✅ Optimizer created")
   
