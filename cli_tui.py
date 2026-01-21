@@ -1264,6 +1264,59 @@ class CLIController(App):
         self.log_output("⚠️ Timeout waiting for prompt")
         return False
 
+    async def extract_change_id_from_terminal(self) -> str:
+        """Extract change ID from terminal output (for acli/rovodev).
+        
+        Looks for patterns like:
+        - "Change ID: 001-implement-wdt"
+        - "change-id: 001-implement-wdt"
+        - Lines containing change IDs in format: NNN-description
+        
+        Returns:
+            Change ID string or empty string if not found
+        """
+        try:
+            terminal = self.query_one("#terminal-output", InteractiveTerminal)
+            
+            # Search through terminal history for change ID
+            # Look at the last 100 lines
+            lines_to_check = min(100, terminal.term_screen.lines)
+            
+            for y in range(terminal.term_screen.lines - lines_to_check, terminal.term_screen.lines):
+                if y < 0:
+                    continue
+                    
+                line_chars = []
+                for x in range(terminal.term_screen.columns):
+                    char = terminal.term_screen.buffer[y][x]
+                    if hasattr(char, 'data'):
+                        line_chars.append(char.data)
+                    else:
+                        line_chars.append(char)
+                line = ''.join(line_chars).strip()
+                
+                # Look for change ID patterns
+                # Pattern 1: "Change ID: 001-implement-wdt"
+                if "change" in line.lower() and "id" in line.lower():
+                    import re
+                    match = re.search(r'\b(\d{3}-[a-z0-9-]+)\b', line, re.IGNORECASE)
+                    if match:
+                        return match.group(1)
+                
+                # Pattern 2: Just a line with the change ID format
+                import re
+                match = re.search(r'\b(\d{3}-[a-z0-9-]+)\b', line, re.IGNORECASE)
+                if match:
+                    # Verify it looks like a real change ID (has at least one dash after the number)
+                    candidate = match.group(1)
+                    if len(candidate) > 4:  # At least "001-x"
+                        return candidate
+            
+            return ""
+        except Exception as e:
+            logger.error(f"Error extracting change ID: {e}")
+            return ""
+
     @work(exclusive=False, thread=True)
     def read_output(self) -> None:
         """Read output from agent process."""
@@ -1666,18 +1719,17 @@ from {import_path} import root_agent
         self.log_output("⚙️  Setting up workspace...")
         adk_config = adk_config or {}
         
-        # Create powers symlink if needed (for kiro-cli)
-        if agent == 'kiro-cli':
-            powers_link = workdir / "powers"
-            if not powers_link.exists():
-                # Look for powers in the same directory as cli_tui.py (adk-python repo)
-                script_dir = Path(__file__).parent
-                repo_powers = script_dir / "powers"
-                if repo_powers.exists():
-                    powers_link.symlink_to(repo_powers)
-                    self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
-                else:
-                    self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
+        # Create powers symlink if needed (for both kiro-cli and acli)
+        powers_link = workdir / "powers"
+        if not powers_link.exists():
+            # Look for powers in the same directory as cli_tui.py (adk-python repo)
+            script_dir = Path(__file__).parent
+            repo_powers = script_dir / "powers"
+            if repo_powers.exists():
+                powers_link.symlink_to(repo_powers)
+                self.log_output(f"✅ Created symlink: {powers_link} -> {repo_powers}")
+            else:
+                self.log_output(f"⚠️  powers folder not found at {repo_powers}, skipping symlink creation")
         
         # Create openspec-memories symlink if needed for propose mode
         if mode.startswith("propose") or mode.endswith("-full"):
@@ -1707,39 +1759,50 @@ from {import_path} import root_agent
         self.log_output("✅ Workspace setup complete")
 
     async def workflow_run_agent(self, workdir: Path, session_name: str, change_id: str, agent: str = "kiro-cli") -> None:
-        """Run interactive agent (kiro-cli) with appropriate prompt.
+        """Run interactive agent with appropriate prompt.
         
         Args:
             workdir: Working directory path
             session_name: Session name for saving
             change_id: Change ID for apply operations
-            agent: Agent to use (only handles interactive agents like kiro-cli)
+            agent: Agent to use ('kiro-cli', 'acli', etc.)
         """
-        if agent != "kiro-cli":
+        if agent not in ["kiro-cli", "acli"]:
             # Non-interactive agents are handled in run_workflow
             return
         
         self.log_output(f"🤖 Running {agent}...")
         
+        # Both agents use relative path to powers (symlink created in workspace setup)
+        power_base = "powers"
+        
         # Construct prompt based on mode
+        # Both kiro-cli and acli use the same prompt format:
+        # "Read <POWER.md> and [propose|apply] ..."
         if self.workflow_mode == "propose-simple":
-            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-propose/POWER.md"
+            prompt = f"Read {power_md} and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
         elif self.workflow_mode == "propose-multi-delta":
-            prompt = "Read powers/openspec-propose-multiple-spec-deltas/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-propose-multiple-spec-deltas/POWER.md"
+            prompt = f"Read {power_md} and propose to model a complex watchdog timer device for Simics platform simulation by following the instructions in POWER.md. This is a complex device with 50+ requirements that should be decomposed into multiple capabilities with separate spec deltas."
         elif self.workflow_mode == "apply":
-            prompt = f"Read powers/openspec-apply/POWER.md and apply change {change_id} by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-apply/POWER.md"
+            prompt = f"Read {power_md} and apply change {change_id} by following the instructions in POWER.md"
         elif self.workflow_mode == "simple-full":
-            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-propose/POWER.md"
+            prompt = f"Read {power_md} and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
         elif self.workflow_mode == "multi-delta-full":
-            prompt = "Read powers/openspec-propose-multiple-spec-deltas/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-propose-multiple-spec-deltas/POWER.md"
+            prompt = f"Read {power_md} and propose to model a complex watchdog timer device for Simics platform simulation by following the instructions in POWER.md. This is a complex device with 50+ requirements that should be decomposed into multiple capabilities with separate spec deltas."
         else:
-            prompt = "Read powers/openspec-propose/POWER.md and create a new OpenSpec change by following the instructions in POWER.md"
+            power_md = f"{power_base}/openspec-propose/POWER.md"
+            prompt = f"Read {power_md} and propose to model a simple watchdog timer for Simics platform simulation by following the instructions in POWER.md"
         
         # Display prompt in chat window
         chat_tab = self.query_one(ChatTab)
         chat_tab.add_message("user", prompt)
         
-        # Send prompt to kiro-cli
+        # Send prompt to agent
         self.send_command(prompt)
         
         # Give a moment for the command to be processed
@@ -1749,50 +1812,87 @@ from {import_path} import root_agent
         self.log_output("⏳ Agent is working... (this may take several minutes)")
         
         # Wait for the agent to complete and return to prompt
-        self.log_output("⏳ Waiting for agent to finish (looking for !> prompt)...")
+        self.log_output("⏳ Waiting for agent to finish (looking for prompt)...")
         prompt_found = await self.wait_for_prompt(timeout=3600.0)  # 1 hour timeout
         
         if prompt_found:
             self.log_output("✅ Agent completed!")
             
-            # Wait a bit for the terminal to settle before sending the save command
-            self.log_output("⏳ Waiting for terminal to settle...")
-            await asyncio.sleep(3.0)
-            
-            self.log_output("💾 Preparing to save session...")
-            
-            # Determine session directory and save path
+            # Extract change ID from terminal output if in propose mode
             if self.workflow_mode.startswith("propose"):
-                session_dir = workdir / "kiro-propose"
-            else:
-                session_dir = workdir / "kiro-apply"
+                self.log_output("📋 Extracting change ID from output...")
+                change_id = await self.extract_change_id_from_terminal()
+                if change_id:
+                    self.workflow_change_id = change_id
+                    self.log_output(f"✅ Captured change ID: {change_id}")
+                    
+                    # If full workflow, continue with apply
+                    if self.workflow_mode.endswith("-full"):
+                        self.log_output("")
+                        self.log_output("================================")
+                        self.log_output("⏸️  Ready for Apply Step")
+                        self.log_output("================================")
+                        self.log_output("")
+                        self.log_output(f"Change ID: {change_id}")
+                        self.log_output("Continuing with apply in 3 seconds...")
+                        await asyncio.sleep(3.0)
+                        
+                        # Send apply command with same format
+                        power_md = f"{power_base}/openspec-apply/POWER.md"
+                        apply_prompt = f"Read {power_md} and apply change {change_id} by following the instructions in POWER.md"
+                        chat_tab.add_message("user", apply_prompt)
+                        self.send_command(apply_prompt)
+                        
+                        # Wait for apply to complete
+                        self.log_output("⏳ Waiting for apply to complete...")
+                        await asyncio.sleep(0.5)
+                        apply_prompt_found = await self.wait_for_prompt(timeout=3600.0)
+                        
+                        if apply_prompt_found:
+                            self.log_output("✅ Apply completed!")
+                        else:
+                            self.log_output("⚠️  Timeout waiting for apply to complete")
             
-            session_dir.mkdir(parents=True, exist_ok=True)
-            session_path = session_dir / session_name
-            
-            # Send /chat save command
-            save_command = f"/chat save {session_path}"
-            
-            # Display in chat window
-            chat_tab = self.query_one(ChatTab)
-            chat_tab.add_message("user", save_command)
-            
-            # Send to kiro-cli
-            self.log_output(f"💾 Issuing save command: {save_command}")
-            self.send_command(save_command, log=False)
-            
-            # Wait for save to complete and prompt to return
-            self.log_output("⏳ Waiting for save to complete...")
-            save_prompt_found = await self.wait_for_prompt(timeout=30.0)
-            
-            if save_prompt_found:
-                self.log_output(f"✅ Session saved to: {session_path}")
-            else:
-                self.log_output(f"⚠️  Save command sent, but prompt not detected")
-                self.log_output(f"   Session should be at: {session_path}")
+            # For kiro-cli, save session
+            if agent == "kiro-cli":
+                # Wait a bit for the terminal to settle before sending the save command
+                self.log_output("⏳ Waiting for terminal to settle...")
+                await asyncio.sleep(3.0)
+                
+                self.log_output("💾 Preparing to save session...")
+                
+                # Determine session directory and save path
+                if self.workflow_mode.startswith("propose"):
+                    session_dir = workdir / "kiro-propose"
+                else:
+                    session_dir = workdir / "kiro-apply"
+                
+                session_dir.mkdir(parents=True, exist_ok=True)
+                session_path = session_dir / session_name
+                
+                # Send /chat save command
+                save_command = f"/chat save {session_path}"
+                
+                # Display in chat window
+                chat_tab.add_message("user", save_command)
+                
+                # Send to kiro-cli
+                self.log_output(f"💾 Issuing save command: {save_command}")
+                self.send_command(save_command, log=False)
+                
+                # Wait for save to complete and prompt to return
+                self.log_output("⏳ Waiting for save to complete...")
+                save_prompt_found = await self.wait_for_prompt(timeout=30.0)
+                
+                if save_prompt_found:
+                    self.log_output(f"✅ Session saved to: {session_path}")
+                else:
+                    self.log_output(f"⚠️  Save command sent, but prompt not detected")
+                    self.log_output(f"   Session should be at: {session_path}")
         else:
             self.log_output("⚠️  Timeout waiting for agent to complete")
-            self.log_output("   You can manually save with: /chat save <path>")
+            if agent == "kiro-cli":
+                self.log_output("   You can manually save with: /chat save <path>")
 
     async def workflow_analyze_session(self, workdir: Path, session_name: str, agent: str = "kiro-cli") -> None:
         """Analyze the workflow session."""
