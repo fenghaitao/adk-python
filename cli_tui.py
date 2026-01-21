@@ -398,6 +398,8 @@ class InteractiveTerminal(RichLog):
         
         # Track last rendered content to avoid duplicate rendering
         self._last_content = ""
+        self._last_update_time = 0.0
+        self._update_throttle = 0.05  # Minimum 50ms between updates
 
     def set_master_fd(self, master_fd):
         """Set the PTY master file descriptor for sending input."""
@@ -417,6 +419,11 @@ class InteractiveTerminal(RichLog):
 
     def _update_display(self):
         """Update the RichLog display with current terminal content including history."""
+        # Throttle updates to reduce flickering
+        current_time = time.time()
+        if current_time - self._last_update_time < self._update_throttle:
+            return
+        
         lines = []
         
         # Get history lines (scrollback buffer)
@@ -451,12 +458,16 @@ class InteractiveTerminal(RichLog):
         
         content = '\n'.join(lines)
         
-        # Only update if content has changed
+        # Only update if content has changed significantly
+        # This reduces flickering by avoiding unnecessary redraws
         if content != self._last_content:
+            # Clear and write in one operation to reduce flicker
             self.clear()
             self.write(content)
             self._last_content = content
-            self._last_content = content
+            self._last_update_time = current_time
+            # Ensure auto-scroll to bottom
+            self.scroll_end(animate=False)
 
     def on_key(self, event: Key) -> None:
         """Handle keyboard input and send to PTY."""
