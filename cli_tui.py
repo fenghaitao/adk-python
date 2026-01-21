@@ -1089,6 +1089,11 @@ class CLIController(App):
             
             # Build full command with extra args
             cmd_parts = agent_cmd.split()
+            
+            # Special handling for qodercli: add -w flag for working directory
+            if self.current_agent == 'qodercli':
+                cmd_parts.extend(['-w', workdir])
+            
             if extra_args:
                 cmd_parts.extend(extra_args)
             
