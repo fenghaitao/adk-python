@@ -120,6 +120,8 @@ import stest # stest is used to evaluate the test result
 cpu_freq = 2000*1000*1000
 timer_freq = 100*1000*1000
 
+simics.SIM_run_command("log-level 4") # You have to configure the log-level to allow DML debug print shows.
+
 def reset(dut):
     # ... dut reset logics ...
 
@@ -206,7 +208,7 @@ if __name__ == '__main__':
   - Restructure attribute (e.g., use sub-lists: `[o[i+]]`)
   - Split into multiple simpler attributes
 
-# Info and Status
+# Info and Status (info-status)
 - In `module_load.py`, you should implement working `info` and `status` commands for your device. Example:
 ```python
 # .. other things omitted ..
@@ -223,6 +225,7 @@ def get_status(obj):
              ("Device State", [ ("State 1", some_thing),])])]
 cli.new_status_command("device_name", get_status)
 ```
+- You should build the project again after modifying the `module_load.py`.
 
 # Modeling with Python (pyobj)
 
@@ -439,10 +442,12 @@ class foo(pyobj.ConfObject):
 ### Configuration
 - Use:
   ```python
-  my_dev = pre_conf_object('dev', 'my_dev_class_name')
+  import simics
+  import conf
+  my_dev = simics.pre_conf_object('dev', 'my_dev_class_name')
   my_dev.attr1 = 'foo'
   my_dev.attr2 = 4711
-  SIM_add_configuration([my_dev], None)
+  simics.SIM_add_configuration([my_dev], None)
   my_dev = conf.my_dev
   ```
 - Fake objects for dependencies (e.g., interrupt controllers):
@@ -460,10 +465,12 @@ class foo(pyobj.ConfObject):
   ```
 - Configure the model to connect to fake objects:
   ```python
-  fake_pic = pre_conf_object('fake_pic', 'FakePic')
-  my_dev = pre_conf_object('dev', 'my_dev_class_name')
+  import simics
+  import conf
+  fake_pic = simics.pre_conf_object('fake_pic', 'FakePic')
+  my_dev = simics.pre_conf_object('dev', 'my_dev_class_name')
   my_dev.pic = fake_pic
-  SIM_add_configuration([my_dev, fake_pic], None)
+  simics.SIM_add_configuration([my_dev, fake_pic], None)
   my_dev = conf.my_dev
   fake_pic = conf.fake_pic
   ```
@@ -473,12 +480,13 @@ class foo(pyobj.ConfObject):
 ### Accessing Device Registers from Tests
 - Use `dev_util.bank_regs(...)`:
   ```python
+  import simics
   import dev_util
   from stest import expect_equal
   
-  my_device = pre_conf_object('dev', 'my_device_class')
-  SIM_add_configuration([my_device], None)
-  regs = dev_util.bank_regs(conf.dev.bank.regs)
+  my_device = simics.pre_conf_object('dev', 'my_device_class')
+  simics.SIM_add_configuration([my_device], None)
+  regs = dev_util.bank_regs(conf.dev.bank.regs) # accessing the bank named `regs`
   
   regs.r1.write(0xdeadbeef)
   expect_equal(regs.r1.read(), 0xdeadbeef)
@@ -489,10 +497,11 @@ class foo(pyobj.ConfObject):
   ```
 - When verifying the correct endianness, offsets and bit-to-field mapping, use `dev_util.Register_LE` / `Register_BE` plus `Bitfield_LE` / `Bitfield_BE` and define these explicitly in the test. Any mismatch between test and model will cause failures.
 ```python
+import simics
 import dev_util
 from stest import expect_equal
-my_device = pre_conf_object('dev', 'my_device_class')
-SIM_add_configuration([my_device], None)
+my_device = simics.pre_conf_object('dev', 'my_device_class')
+simics.SIM_add_configuration([my_device], None)
 r1 = dev_util.Register_LE(conf.dev.bank.regs, # bank
                           0x0,                # offset in bank
                           size=4)
@@ -524,12 +533,13 @@ r2.status = 0
 ### Responding to Memory Accesses from Models
 - Use `dev_util.Memory` and `dev_util.Layout` classes for testing DMA transfers:
   ```python
+  import simics
   import dev_util
   from stest import expect_equal, expect_different
   mem = dev_util.Memory()
-  dma_dev = pre_conf_object('dev', 'my_dev_class')
+  dma_dev = simics.pre_conf_object('dev', 'my_dev_class')
   dma_dev.phys_mem = mem.obj
-  SIM_add_configuration([dma_dev], None)
+  simics.SIM_add_configuration([dma_dev], None)
   
   desc = dev_util.Layout_LE(
       mem, 0x1234,
@@ -547,32 +557,35 @@ r2.status = 0
 
 
 ### Calling Interfaces on Devices
-- Call interfaces directly:
-  ```python
-  # .. omit imports
-  dev = pre_conf_object('dev', 'my_dev_class')
-  SIM_add_configuration([dev], None)
-  dev = conf.dev
-  
-  dev.iface.signal.signal_raise()
-  dev.port.reset.iface.signal.signal_raise()
-  dev.port.reset.iface.signal.signal_lower()
-  dev.iface.signal.signal_lower()
-  ```
+Call interfaces directly:
+```python
+from simics import SIM_add_configuration, pre_conf_object
+import conf
+
+dev = pre_conf_object('dev', 'my_dev_class')
+SIM_add_configuration([dev], None)
+dev = conf.dev
+
+dev.iface.signal.signal_raise()
+dev.port.reset.iface.signal.signal_raise()
+dev.port.reset.iface.signal.signal_lower()
+dev.iface.signal.signal_lower()
+```
 
 ### Working with Transactions
-- Create and send transactions:
-  ```python
-  import simics
-  
-  dev = pre_conf_object('dev', 'my_dev_class')
-  SIM_add_configuration([dev], None)
-  dev = conf.dev
-  SIM_load_module('extended-id-atom')
-  
-  txn = simics.transaction_t(size=4, write=True, value_le=0xdeadbeef, extended_id=3000)
-  exc = simics.SIM_issue_transaction(dev.bank.regs, txn, 0x420)
-  ```
+Create and send transactions:
+```python
+import simics
+import conf
+
+dev = simics.pre_conf_object('dev', 'my_dev_class')
+simics.SIM_add_configuration([dev], None)
+dev = conf.dev
+simics.SIM_load_module('extended-id-atom')
+
+txn = simics.transaction_t(size=4, write=True, value_le=0xdeadbeef, extended_id=3000)
+exc = simics.SIM_issue_transaction(dev.bank.regs, txn, 0x420)
+```
 - To verify transactions sent *from* the device (e.g. custom atoms), you can insert a small `pyobj.ConfObject` in the path that:
   - implements the `transaction` interface,
   - records fields (like `txn.extended_id`) into a `SimpleAttribute`,
@@ -604,3 +617,26 @@ class txn_checker(pyobj.ConfObject):
 - Group related small tests to optimize runtime
 - Ensure clarity on what is tested and reasoning behind the design
 - When testing system with events, make sure the delay is within your expectation. A margin of 50% is reasonable to add since possible timing variations
+
+# stest
+`stest` mainly provides these functions. Search the doc if you are unsure:
+- `expect_true(cond, msg)`
+- `expect_false(cond, msg)`
+- `expect_equal(got, expected, msg)`
+- `expect_different(got, unexpected, msg)`
+- `expect_exception(fun, args, exc)`
+- `fail(msg)`: throw test failure
+- `trap_log(logtype, obj=None)`: trap log messages of `obj` → failure
+- `untrap_log(logtype, obj=None)`: untrap log messages of `obj`
+- `expect_log_mgr(...)`: context manager expecting a log
+```python
+# omit imports
+with stest.expect_log_mgr(log_type="spec-viol", msg="Check warning on read-only fields"):
+    reg_compute_units.write(0xffff_ffff)
+```
+- `expect_exception_mgr(exc)`: context manager expecting an exception
+```python
+# omit imports
+with stest.expect_exception_mgr(simics.SimExc_AttrNotWritable):
+    dev.read_only_attribute = False
+```

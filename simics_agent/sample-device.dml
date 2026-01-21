@@ -10,13 +10,39 @@ param documentation = "Longer description that will appear in the help";
 
 param dev_num = 8; // give `dev_num` parameter a default value of 8
 
+header %{
+    static double compute_delay(double throttle, int count); // You can add C headers. Not recommended to use C.
+%}
+
+extern double compute_delay(double throttle, int count); // also support extern declarations.
+
 import "simics/devs/signal.dml"; // import
 import "utility.dml"; // "utility.dml" contains some standard templates. 
 // DML has built-in templates as well.
 
+// types (available in this file. Define in a common DML and import it to use types in multiple files)
+typedef layout "big-endian" {
+    uint32 addr;
+    uint16 len;
+    uint16 reserved;
+} sg_list_head_t;
+
+constant DEFAULT_THROTTLE = 1e-6; // constant
+
+session bool external_disable; // session variable.
+
+
 // Adding `sreset` template to the device
 // more templates can be added to the device.
 is sreset;
+
+// example of declaring your own template.
+template spam is write {
+    method write(uint64 value) {
+        log error: "spam, spam, spam, ...";
+        default(value); // call the default implementation
+    }
+}
 
 // `connect` definitions
 // the sample connect a interrupt signal, like interrupt controller on board.
@@ -57,6 +83,8 @@ connect interrupt_signal {
 attribute freq_mhz is (uint64_attr, init) {
     // param type = "uint64"; // `uint64_attr` template actually gives this line
 
+    session int times;
+
     // `init` template gives an abstract method of `init()`.
     method init() {
         this.val = 125;
@@ -81,13 +109,16 @@ attribute freq_mhz is (uint64_attr, init) {
 method simple_method() {
     log info: "a simple method just print this word";
 
+    external_disable = false; // modify session variable
+    freq_mhz.times = 2; // modify an attribute's session variable
+
     // post: let event be triggered after 42 cycles, as the `timer_event` is simple_cycle_event.
     // If it is a simple_time_event, this will be seconds.
     timer_event.post(42);
 }
 
 
-// Register declarations.
+// A register bank called `regs`
 bank regs {
     param register_size = 4;
     // Register declarations. Containing size (optional), offset, any templates
@@ -103,8 +134,7 @@ bank regs {
 
 // Implementation of registers
 bank regs {
-    // you can use `read` and `write` templates
-    // which allows you to use `read()` and `write()` to manage the manipulation.
+    // `read` and `write` templates have `read()` and `write()` functions to manage the manipulation.
     register counter is (read, write) {
         method read () -> (uint64) {
             log info: "Reading register r returns a constant";
@@ -194,6 +224,9 @@ event timer_event is (simple_cycle_event) {
 method init() {
     // YOU SHOULD ONLY SET THE RESET STATE OF REGISTERS HERE !!
     // setting initial / reset state of the device, like register's initial / reset values
+
+    external_disable = true; // initiate session variable
+
     freq_mhz.val = 125; // setting attribute value
     // Assigning register's value
     regs.counter.val = 0x0;

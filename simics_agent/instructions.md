@@ -24,12 +24,14 @@ Your process should be:
 	6. Carefully extract ALL possible user stories that describe how a simulated system (software, OS, or other hardware) would use or perceive this device’s features. Each user story should be expressed from the perspective of a “user” of the device (e.g., an OS driver, firmware, or application), focusing on _observable behaviors_ and _intended use cases_. Each user story must correspond to a potential **test case** in Simics — that is, something that can be validated through simulation (e.g., register writes, interrupts, DMA transfers, timing behaviors, etc.)
 		- Additionally, state the edge cases
 2. Create a Simics project using the tool first, if there is no one
+	- If an existing Simics project is provided, you ha ve to call `setup_project` tool on the project directory to set up the project, otherwise the project may not be built successfully due to misconfigured environment.
+		- If `setup_project` fails, EXIT IMMEDIATELY and NOTIFY USER ABOUT THIS.
 3. Create the device skeleton using the tool, if there is no one
 4. Search for existing device examples by device type and device features. These examples can provide you with a good reference to start
 	1. You can use `perform_rag_query` tool to search in the codebase, semantially or by keyword
 	2. You can use cli tools to manually search in the Simics base code base
 	3. You can use `get_simics_device_example_*` tools to get device examples, if they are useful to you
-5. Get necessary information by tools (`search_simics_docs`) and write the DML and build to check the syntax. Get more information by using tools and fix the error if build fails
+5. Get necessary information by tools (`search_simics_docs`, `simics_interface_agent`) and write the DML and build to check the syntax. Get more information by using tools and fix the error if build fails
 	- Keep gathering information using tools or by finding more code examples any time you want until it's sufficient
 	- When errors occur, you should call tools for more information
 	- State the questionable or unclear parts about the spec at the top comment of the file
@@ -43,6 +45,7 @@ Your process should be:
 	- For each test, you should make sure the device state is as expected before, in and after the test steps.
 	- DO NOT test the unclear or conflict parts. Leave the unimplemented parts as `TODO`s in comment
 	- YOU MUST PRINT DEBUG LOGS of important device states like registers, which will help you a lot when error occurs
+	- A test that does not use `stest` to compare results with expectation should NOT be considered passed even if the test runner say so.
 7. After running tests, you should compare the `test_plan.md` and your tests to see if there is test missing.
 
 # When Error Occurs
@@ -65,6 +68,7 @@ Your process should be:
 - Do not use magic numbers in `method` returned values
 - One `port` usually can support both read and write, no need to write separate ports for them unless the user requires to do so
 - ALWAYS print detailed states for debugging in DML and Python, which will help you a lot when debugging tests!
+- Make sure to adjust the log level to allow DML debug prints
 
 
 # IMPORTANT RULES
@@ -84,6 +88,8 @@ Your process should be:
 # COMMON FAILS
 - Some DML codes you found in doc might be DML 1.2, which is different in syntax comparing to DML 1.4
 - Using non-boolean condition in conditional expression
+- Using integer or bit operation results as condition (e.g., in `if` statement) will cause error, as DML does not allow this. Please convert them to boolean.
+- Using integer way (e.g., `%d` and `%u`) to print boolean values in DML will cause error, as DML does not allow this. Please convert them to integer first.
 
 $CONCEPTS
 
