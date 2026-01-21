@@ -1012,8 +1012,19 @@ class CLIController(App):
 
     def action_request_quit(self) -> None:
         """Handle quit request - cleanup and exit."""
+        # Stop agent first - this sets agent_running=False
         self.stop_agent_process()
+        # Give worker thread time to see the flag and exit
+        time.sleep(0.5)
+        # Save session
         self.save_session()
+        # Close log file
+        if hasattr(self, 'log_file') and self.log_file:
+            try:
+                self.log_file.close()
+            except:
+                pass
+        # Exit cleanly
         self.exit()
 
     def start_agent_process(self) -> None:
@@ -1181,30 +1192,44 @@ class CLIController(App):
             return
 
         try:
+            # Set flag first to stop read_output loop
+            self.agent_running = False
+            
             if self.agent_process:
                 # Send appropriate quit command based on agent
                 # DSPy OpenSpec is non-interactive, so just terminate
                 if self.current_agent == 'dspy-openspec':
                     pass  # No quit command needed for non-interactive agents
                 elif self.current_agent in ['kiro-cli', 'qodercli']:
-                    self.send_command("/quit", log=False)
+                    try:
+                        self.send_command("/quit", log=False)
+                    except:
+                        pass  # Ignore errors if fd is already closed
                 else:
-                    self.send_command("/exit", log=False)
-                time.sleep(0.5)
+                    try:
+                        self.send_command("/exit", log=False)
+                    except:
+                        pass  # Ignore errors if fd is already closed
+                
+                # Give process a moment to exit gracefully
+                time.sleep(0.3)
                 
                 # Terminate process
-                self.agent_process.terminate()
-                try:
-                    self.agent_process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    self.agent_process.kill()
-                    self.agent_process.wait()
+                if self.agent_process.poll() is None:
+                    self.agent_process.terminate()
+                    try:
+                        self.agent_process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        self.agent_process.kill()
+                        self.agent_process.wait(timeout=1)
 
+            # Close file descriptor
             if self.master_fd:
-                os.close(self.master_fd)
+                try:
+                    os.close(self.master_fd)
+                except:
+                    pass  # Ignore if already closed
                 self.master_fd = None
-
-            self.agent_running = False
             
             agent_info = AGENTS[self.current_agent]
             self.log_output(f"{agent_info['name']} stopped")
@@ -1361,8 +1386,12 @@ class CLIController(App):
                 if self.master_fd is None:
                     break
                 
-                # Check if data is available
+                # Use shorter timeout to check agent_running flag more frequently
                 ready, _, _ = select.select([self.master_fd], [], [], 0.1)
+                
+                # Check flag again after select
+                if not self.agent_running or self.master_fd is None:
+                    break
                 
                 if ready:
                     data = os.read(self.master_fd, 4096).decode('utf-8', errors='ignore')
