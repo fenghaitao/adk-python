@@ -68,12 +68,19 @@ from textual.widgets import (
 from textual.widgets.option_list import Option
 from textual.screen import ModalScreen
 
-# Setup logging
+# Setup logging - redirect to file to avoid interfering with TUI
+log_dir = Path.home() / ".cli_controller" / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / f"cli_tui_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename=str(log_file),
+    filemode='a'
 )
 logger = logging.getLogger(__name__)
+logger.info(f"Logging initialized: {log_file}")
 
 
 # Agent configuration
@@ -1262,8 +1269,12 @@ class CLIController(App):
         """Read output from agent process."""
         terminal = self.query_one("#terminal-output", InteractiveTerminal)
         
-        while self.agent_running and self.master_fd:
+        while self.agent_running and self.master_fd is not None:
             try:
+                # Check if master_fd is still valid before using it
+                if self.master_fd is None:
+                    break
+                
                 # Check if data is available
                 ready, _, _ = select.select([self.master_fd], [], [], 0.1)
                 
