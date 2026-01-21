@@ -197,8 +197,30 @@ def create_model_callback(model: str, mcp_port: str = "8051"):
       shutil.rmtree(actual_output_parent)
     
     # Step 2: Copy input parent folder to actual_output parent location
+    # Use symlinks=True to copy symlinks as symlinks, and ignore_dangling_symlinks=True
+    # to skip broken symlinks instead of raising an error
     print(f"📁 Copying {input_parent} -> {actual_output_parent}")
-    shutil.copytree(input_parent, actual_output_parent)
+    try:
+      shutil.copytree(
+        input_parent, 
+        actual_output_parent,
+        symlinks=True,  # Copy symlinks as symlinks
+        ignore_dangling_symlinks=True  # Skip broken symlinks
+      )
+      print(f"✅ Successfully copied folder")
+    except Exception as e:
+      print(f"⚠️  Warning during copy: {e}")
+      # Try again with more permissive settings if first attempt fails
+      if actual_output_parent.exists():
+        shutil.rmtree(actual_output_parent)
+      shutil.copytree(
+        input_parent,
+        actual_output_parent,
+        symlinks=False,  # Resolve and copy symlink contents
+        ignore_dangling_symlinks=True,  # Skip broken symlinks
+        dirs_exist_ok=True  # Allow overwriting
+      )
+      print(f"✅ Copied folder with fallback method")
     
     # Step 3: Replace the apply_agent_instruction.md with optimized prompt
     # The original file is a symlink, so we need to remove it and create a new file
