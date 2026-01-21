@@ -14,182 +14,213 @@
 
 """Custom scorer for prompt optimization using our domain-specific metrics.
 
-This scorer wraps our custom metrics (CodeCorrectnessMetric, TestCoverageMetric, etc.)
-and provides a unified interface compatible with DeepEval's optimization algorithms.
+This scorer uses evaluate_score from score.py to perform comprehensive evaluation
+of DML implementations during prompt optimization.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from pathlib import Path
+import sys
 
-from deepeval.test_case import LLMTestCase
+from deepeval.dataset.golden import Golden, ConversationalGolden
+from deepeval.optimizer.scorer import Scorer
+from deepeval.optimizer.types import PromptConfiguration, ModuleId
 
-from .code_correctness import CodeCorrectnessMetric
-from .test_coverage import TestCoverageMetric
-from .code_style import CodeStyleMetric
-from .agent_behavior import AgentBehaviorMetric
-from .compilation_metric import CompilationMetric
-from .test_pass_rate_metric import TestPassRateMetric
+# Import evaluate_score from parent directory
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from score import evaluate_score
 
 
-class CustomScorer:
-    """Custom scorer using domain-specific metrics for DML code evaluation.
+class CustomScorer(Scorer):
+    """Custom scorer using comprehensive evaluation for DML code.
     
-    This scorer combines multiple metrics to evaluate the quality of generated
-    DML implementations based on specifications. It's designed to work with
-    DeepEval's prompt optimization algorithms.
+    This scorer overrides the parent Scorer class to use our domain-specific
+    evaluation system (score.py) instead of individual metrics. It integrates
+    with DeepEval's prompt optimization algorithms while providing detailed
+    feedback from multiple evaluation dimensions.
     
-    Metrics:
-    - CodeCorrectnessMetric: Evaluates if code correctly implements the spec
-    - TestCoverageMetric: Checks test coverage and quality
-    - CodeStyleMetric: Evaluates code style and best practices
-    - AgentBehaviorMetric: Evaluates agent's problem-solving approach
-    - CompilationMetric: Checks if code compiles successfully
-    - TestPassRateMetric: Measures test pass rate
+    The scorer:
+    1. Generates actual output using the model callback
+    2. Evaluates using score.py's evaluate_score function
+    3. Stores detailed results for feedback generation
+    4. Returns overall scores for optimization
     """
     
     def __init__(
         self,
-        model: str = "iflow/qwen3-coder-plus",
-        weights: Optional[Dict[str, float]] = None
+        model_callback,
+        metrics,
+        max_concurrent: int = 10,
+        throttle_seconds: float = 0.0,
+        evaluation_model: str = "iflow/qwen3-coder-plus",
+        scoring_mode: str = "llm",
+        agent: str = "adk-python",
+        mlflow_tracker=None,
     ):
         """Initialize the custom scorer.
         
         Args:
-            model: LLM model to use for evaluation
-            weights: Weight for each metric (must sum to 1.0)
-                    Default: equal weights for all metrics
+            model_callback: Callback function to generate outputs
+            metrics: List of metrics (kept for compatibility, not used)
+            max_concurrent: Maximum concurrent evaluations
+            throttle_seconds: Throttle between evaluations
+            evaluation_model: LLM model to use for evaluation
+            scoring_mode: Scoring mode (llm, deterministic, hybrid)
+            agent: Agent type for behavior evaluation
+            mlflow_tracker: Optional MLflow tracker for logging
         """
-        self.model = model
+        # Initialize parent class
+        super().__init__(
+            model_callback=model_callback,
+            metrics=metrics,
+            max_concurrent=max_concurrent,
+            throttle_seconds=throttle_seconds,
+            objective_scalar=None,
+        )
         
-        # Default weights if not provided
-        if weights is None:
-            weights = {
-                "Code Correctness": 0.25,
-                "Test Coverage": 0.20,
-                "Code Style": 0.15,
-                "Agent Behavior": 0.15,
-                "Compilation": 0.15,
-                "Test Pass Rate": 0.10
-            }
+        self.evaluation_model = evaluation_model
+        self.scoring_mode = scoring_mode
+        self.agent = agent
+        self.mlflow_tracker = mlflow_tracker
         
-        # Validate weights sum to 1.0
-        total_weight = sum(weights.values())
-        if abs(total_weight - 1.0) > 0.01:
-            raise ValueError(f"Weights must sum to 1.0 (got {total_weight})")
-        
-        self.weights = weights
-        
-        # Initialize metrics
-        self.metrics = {
-            "Code Correctness": CodeCorrectnessMetric(model=model, threshold=0.8),
-            "Test Coverage": TestCoverageMetric(model=model, threshold=0.7),
-            "Code Style": CodeStyleMetric(model=model, threshold=0.9),
-            "Agent Behavior": AgentBehaviorMetric(model=model, threshold=0.7),
-            "Compilation": CompilationMetric(model=model, threshold=1.0),
-            "Test Pass Rate": TestPassRateMetric(model=model, threshold=0.5)
-        }
+        # Store results for each golden to provide feedback
+        # Key: golden input path, Value: evaluation results
+        self.results: Dict[str, Dict] = {}
     
-    def score_implementation(
+    def _score_one(
         self,
-        project_path: str,
-        device_name: str
-    ) -> Dict[str, float]:
-        """Score a DML implementation at the given project path.
+        prompt_configuration: PromptConfiguration,
+        golden: Union[Golden, ConversationalGolden],
+    ) -> float:
+        """Score one golden example by generating output and evaluating.
+        
+        This method overrides the parent implementation to:
+        1. Generate actual output using model callback
+        2. Use evaluate_score to get comprehensive evaluation
+        3. Store results in self.results for feedback
+        4. Return overall score for optimization
         
         Args:
-            project_path: Path to the adk_openspec_project directory
-            device_name: Name of the device being implemented
+            prompt_configuration: Current prompt configuration
+            golden: Golden example with input/expected output
             
         Returns:
-            Dictionary containing:
-            - overall_score: Weighted average of all metrics
-            - metric_scores: Individual metric scores
-            - metric_reasons: Reasons for each metric score (if available)
+            Overall score (0.0 to 1.0)
         """
-        project_path = Path(project_path)
+        # Generate actual output using the model callback
+        actual_output = self.generate(prompt_configuration.prompts, golden)
         
-        # Create a test case for evaluation
-        # The actual_output will be populated from the project files
-        test_case = LLMTestCase(
-            input=str(project_path),
-            actual_output=None,  # Will be loaded by metrics
-            expected_output=str(project_path)  # Reference implementation path
-        )
+        # Extract workdir from golden input
+        # The golden.input should be the path to adk_openspec_project
+        workdir = str(golden.input)
         
-        # Evaluate each metric
-        metric_scores = {}
-        metric_reasons = {}
+        # Extract device name from the path
+        # Assuming path structure: .../device_name/adk_openspec_project
+        device_name = Path(workdir).parent.name
         
-        for metric_name, metric in self.metrics.items():
-            try:
-                # Measure the metric
-                metric.measure(test_case)
-                metric_scores[metric_name] = metric.score
+        try:
+            # Use evaluate_score to get comprehensive evaluation
+            eval_results = evaluate_score(
+                workdir=workdir,
+                device=device_name,
+                model=self.evaluation_model,
+                output="score_temp.md",  # Temporary output
+                format="json",
+                result_only=False,  # Include behavior evaluation
+                behavior_only=False,
+                scoring_mode=self.scoring_mode,
+                agent=self.agent,
+                reference_dir=str(golden.expected_output) if golden.expected_output else None,
+                mlflow_tracker=self.mlflow_tracker,  # Pass MLflow tracker
+            )
+            
+            # Store results for feedback generation
+            self.results[workdir] = eval_results
+            
+            # Return overall score
+            return eval_results["overall_score"]
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to evaluate {workdir}: {e}")
+            # Store error in results
+            self.results[workdir] = {
+                "overall_score": 0.0,
+                "error": str(e)
+            }
+            return 0.0
+    
+    def get_minibatch_feedback(
+        self,
+        prompt_configuration: PromptConfiguration,
+        module: ModuleId,
+        minibatch: Union[List[Golden], List[ConversationalGolden]],
+    ) -> str:
+        """Generate feedback from a minibatch of golden examples.
+        
+        This method overrides the parent implementation to:
+        1. Score each golden in the minibatch (calls _score_one)
+        2. Collect metric reasons from self.results
+        3. Return aggregated feedback for prompt improvement
+        
+        Args:
+            prompt_configuration: Current prompt configuration
+            module: Module identifier
+            minibatch: List of golden examples
+            
+        Returns:
+            Feedback string with metric reasons
+        """
+        reasons: List[str] = []
+        
+        for golden in minibatch:
+            # Score the golden (this will populate self.results)
+            self._score_one(prompt_configuration, golden)
+            
+            # Extract workdir from golden
+            workdir = str(golden.input)
+            
+            # Collect reasons from results
+            if workdir in self.results:
+                eval_results = self.results[workdir]
                 
-                # Get reason if available
-                if hasattr(metric, 'reason') and metric.reason:
-                    metric_reasons[metric_name] = metric.reason
-                    
-            except Exception as e:
-                print(f"⚠️  Warning: Failed to evaluate {metric_name}: {e}")
-                metric_scores[metric_name] = 0.0
-                metric_reasons[metric_name] = f"Evaluation failed: {str(e)}"
+                # Check for errors
+                if "error" in eval_results:
+                    reasons.append(f"Evaluation Error: {eval_results['error']}")
+                    continue
+                
+                # Collect reasons from code evaluation
+                if "code_results" in eval_results and eval_results["code_results"]:
+                    code_results = eval_results["code_results"]
+                    for metric_name, metric_result in code_results.get("metrics", {}).items():
+                        if "reason" in metric_result and metric_result["reason"]:
+                            reasons.append(f"{metric_name}: {metric_result['reason']}")
+                
+                # Collect reasons from behavior evaluation
+                if "behavior_results" in eval_results and eval_results["behavior_results"]:
+                    behavior_results = eval_results["behavior_results"]
+                    for metric_name, metric_result in behavior_results.get("metrics", {}).items():
+                        if "reason" in metric_result and metric_result["reason"]:
+                            reasons.append(f"{metric_name}: {metric_result['reason']}")
+                
+                # Collect reasons from deterministic evaluation
+                if "deterministic_results" in eval_results and eval_results["deterministic_results"]:
+                    det_results = eval_results["deterministic_results"]
+                    if "issues" in det_results:
+                        for issue in det_results["issues"][:3]:  # Limit to top 3 issues
+                            reasons.append(f"Deterministic Issue: {issue}")
         
-        # Calculate weighted overall score
-        overall_score = sum(
-            metric_scores.get(name, 0.0) * weight
-            for name, weight in self.weights.items()
-        )
+        # Remove duplicates while preserving order
+        if not reasons:
+            return ""
         
-        return {
-            "overall_score": overall_score,
-            "metric_scores": metric_scores,
-            "metric_reasons": metric_reasons,
-            "weights": self.weights
-        }
-    
-    def score_test_case(self, test_case: LLMTestCase) -> float:
-        """Score a single test case (for DeepEval compatibility).
+        unique: List[str] = []
+        seen = set()
+        for reason in reasons:
+            if reason not in seen:
+                unique.append(reason)
+                seen.add(reason)
         
-        Args:
-            test_case: LLMTestCase containing input and expected output
-            
-        Returns:
-            Overall weighted score (0.0 to 1.0)
-        """
-        # Extract project path from test case
-        project_path = test_case.input
-        device_name = Path(project_path).parent.name
-        
-        # Score the implementation
-        results = self.score_implementation(project_path, device_name)
-        return results["overall_score"]
-    
-    def get_metric_list(self) -> List:
-        """Get list of metric objects for DeepEval optimizer.
-        
-        Returns:
-            List of metric instances
-        """
-        return list(self.metrics.values())
-    
-    def get_metric_names(self) -> List[str]:
-        """Get list of metric names.
-        
-        Returns:
-            List of metric names
-        """
-        return list(self.metrics.keys())
-    
-    def __call__(self, test_case: LLMTestCase) -> float:
-        """Make scorer callable for DeepEval compatibility.
-        
-        Args:
-            test_case: LLMTestCase to evaluate
-            
-        Returns:
-            Overall weighted score
-        """
-        return self.score_test_case(test_case)
+        # Return top 8 reasons (configurable limit)
+        return "\n---\n".join(unique[:8])

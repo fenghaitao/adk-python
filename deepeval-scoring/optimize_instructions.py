@@ -56,7 +56,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from deepeval.optimizer import PromptOptimizer
 from deepeval.optimizer.algorithms import MIPROV2, GEPA, COPRO, SIMBA
@@ -76,13 +76,14 @@ from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
 
-def load_historical_sessions(data_path: Path) -> List[Golden]:
+def load_historical_sessions(data_path: Path, reference_dir: Optional[str] = None) -> List[Golden]:
   """Load historical session data as Golden dataset from multiple project folders.
   
   Args:
     data_path: Path to directory containing multiple project folders 
                (e.g., wdt_dbg132, wdt_dbg134, wdt_dbg137)
                Each folder should contain an adk_openspec_project subdirectory
+    reference_dir: Optional path to golden reference implementation for comparison
     
   Returns:
     List of Golden test cases with project paths
@@ -94,6 +95,9 @@ def load_historical_sessions(data_path: Path) -> List[Golden]:
     raise ValueError(f"Path does not exist or is not a directory: {data_path}")
 
   print(f"📁 Scanning directory for project folders: {data_path}")
+  
+  if reference_dir:
+    print(f"📚 Using reference directory: {reference_dir}")
 
   # Find all subdirectories that contain adk_openspec_project
   project_folders = []
@@ -108,16 +112,16 @@ def load_historical_sessions(data_path: Path) -> List[Golden]:
 
   print(f"✅ Found {len(project_folders)} project folders")
 
-  # Create Golden dataset entries with project paths only
+  # Create Golden dataset entries with project paths
   for folder_name, project_path in project_folders:
     print(f"  📂 Adding {folder_name}/adk_openspec_project...")
 
-    # Input and expected_output both point to the project path
-    # The optimizer will use these paths to evaluate the agent's performance
+    # Input points to the project path to be evaluated
+    # expected_output points to reference implementation if provided, otherwise same as input
     golden = Golden(
       input=str(project_path),
       actual_output=None,  # Will be filled by model during optimization
-      expected_output=str(project_path)  # Reference implementation path
+      expected_output=reference_dir if reference_dir else str(project_path)
     )
     golden_dataset.append(golden)
     print(f"    ✓ Added {folder_name}")
@@ -234,11 +238,13 @@ def create_optimizer(
     model: str,
     algorithm: str,
     iterations: int,
-    weights: Dict[str, float],
     max_concurrent: int = 5,
     throttle_seconds: float = 2.0,
     run_async: bool = False,
-    use_custom_scorer: bool = False
+    use_custom_scorer: bool = False,
+    scoring_mode: str = "llm",
+    agent: Optional[str] = None,
+    mlflow_tracker=None
 ) -> PromptOptimizer:
   """Create PromptOptimizer with specified configuration.
   
@@ -246,22 +252,19 @@ def create_optimizer(
     model: LLM model name
     algorithm: Algorithm name (miprov2, gepa, copro, simba)
     iterations: Number of optimization iterations
-    weights: Metric weights for weighted objective
     max_concurrent: Maximum concurrent API calls (default: 5 for rate limiting)
     throttle_seconds: Seconds to wait between batches (default: 2.0)
     run_async: Whether to run async (default: False to avoid pickle issues)
     use_custom_scorer: Use CustomScorer wrapper instead of individual metrics
+    scoring_mode: Scoring mode for custom scorer (llm, deterministic, hybrid)
+    agent: Agent type for behavior evaluation
+    mlflow_tracker: Optional MLflow tracker for logging
     
   Returns:
     Configured PromptOptimizer
   """
-  # Create metrics with weights
-  if use_custom_scorer:
-    # Use the CustomScorer which provides a unified interface
-    custom_scorer = CustomScorer(model=model, weights=weights)
-
   # Use individual metrics (original approach)
-  # Cheat it when using custom_scorer
+  # These are needed even with custom_scorer for compatibility
   metrics = [
     CodeCorrectnessMetric(model=model, threshold=0.8),
     TestCoverageMetric(model=model, threshold=0.7),
@@ -270,7 +273,11 @@ def create_optimizer(
     CompilationMetric(model=model, threshold=1.0),
     TestPassRateMetric(model=model, threshold=0.5)
   ]
-  print(f"📊 Using individual metrics: {len(metrics)} metrics")
+  
+  if use_custom_scorer:
+    print(f"📊 Using CustomScorer with {scoring_mode} mode")
+  else:
+    print(f"📊 Using individual metrics: {len(metrics)} metrics")
   
   # Select algorithm
   algorithm_map = {
@@ -321,7 +328,19 @@ def create_optimizer(
       throttle_value=throttle_seconds
     )
   )
+  
+  # Replace the scorer if using custom scorer
   if use_custom_scorer:
+    custom_scorer = CustomScorer(
+      model_callback=create_model_callback(model),
+      metrics=metrics,
+      max_concurrent=max_concurrent,
+      throttle_seconds=throttle_seconds,
+      evaluation_model=model,
+      scoring_mode=scoring_mode,
+      agent=agent,
+      mlflow_tracker=mlflow_tracker
+    )
     algo.scorer = custom_scorer
 
   return optimizer
@@ -398,42 +417,6 @@ def main():
     help="Number of optimization iterations (default: 5)"
   )
   parser.add_argument(
-    "--weight-correctness",
-    type=float,
-    default=0.25,
-    help="Weight for code correctness metric (default: 0.25)"
-  )
-  parser.add_argument(
-    "--weight-coverage",
-    type=float,
-    default=0.20,
-    help="Weight for test coverage metric (default: 0.20)"
-  )
-  parser.add_argument(
-    "--weight-style",
-    type=float,
-    default=0.15,
-    help="Weight for code style metric (default: 0.15)"
-  )
-  parser.add_argument(
-    "--weight-behavior",
-    type=float,
-    default=0.15,
-    help="Weight for agent behavior metric (default: 0.15)"
-  )
-  parser.add_argument(
-    "--weight-compilation",
-    type=float,
-    default=0.15,
-    help="Weight for compilation metric (default: 0.15)"
-  )
-  parser.add_argument(
-    "--weight-test-pass-rate",
-    type=float,
-    default=0.10,
-    help="Weight for test pass rate metric (default: 0.10)"
-  )
-  parser.add_argument(
     "--max-concurrent",
     type=int,
     default=3,
@@ -456,6 +439,21 @@ def main():
     help="Use CustomScorer wrapper for unified metric evaluation (default: False)"
   )
   parser.add_argument(
+    "--scoring-mode",
+    choices=["llm", "deterministic", "hybrid"],
+    default="llm",
+    help="Scoring mode for custom scorer: llm, deterministic, or hybrid (default: llm)"
+  )
+  parser.add_argument(
+    "--agent",
+    default="adk-python",
+    help="Agent type for behavior evaluation (default: adk-python)"
+  )
+  parser.add_argument(
+    "--reference-dir",
+    help="Directory containing golden reference implementation for comparison"
+  )
+  parser.add_argument(
     "--mlflow",
     action="store_true",
     help="Enable MLflow experiment tracking"
@@ -470,19 +468,6 @@ def main():
   )
   
   args = parser.parse_args()
-  
-  # Validate weights sum to 1.0
-  total_weight = (
-    args.weight_correctness +
-    args.weight_coverage +
-    args.weight_style +
-    args.weight_behavior +
-    args.weight_compilation +
-    args.weight_test_pass_rate
-  )
-  if abs(total_weight - 1.0) > 0.01:
-    print(f"❌ Error: Weights must sum to 1.0 (got {total_weight})")
-    sys.exit(1)
   
   # Initialize MLflow tracker if requested
   mlflow_tracker = None
@@ -503,7 +488,10 @@ def main():
   
   # Load data
   print(f"📂 Loading historical data from {args.historical_data}...")
-  historical_data = load_historical_sessions(Path(args.historical_data))
+  historical_data = load_historical_sessions(
+    Path(args.historical_data),
+    reference_dir=args.reference_dir
+  )
   print(f"✅ Loaded {len(historical_data)} sessions")
   
   print(f"📂 Loading current instructions from {args.current_instructions}...")
@@ -514,23 +502,17 @@ def main():
   # Create optimizer with rate limiting
   print(f"🔧 Creating optimizer with {args.algorithm} algorithm...")
   print(f"⏱️  Rate limiting: max_concurrent={args.max_concurrent}, throttle={args.throttle_seconds}s")
-  weights = {
-    "Code Correctness": args.weight_correctness,
-    "Test Coverage": args.weight_coverage,
-    "Code Style": args.weight_style,
-    "Agent Behavior": args.weight_behavior,
-    "Compilation": args.weight_compilation,
-    "Test Pass Rate": args.weight_test_pass_rate
-  }
   optimizer = create_optimizer(
     model=args.model,
     algorithm=args.algorithm,
     iterations=args.iterations,
-    weights=weights,
     max_concurrent=args.max_concurrent,
     throttle_seconds=args.throttle_seconds,
     run_async=not args.no_async,  # Invert the flag
-    use_custom_scorer=args.use_custom_scorer
+    use_custom_scorer=args.use_custom_scorer,
+    scoring_mode=args.scoring_mode,
+    agent=args.agent,
+    mlflow_tracker=mlflow_tracker
   )
   print(f"✅ Optimizer created")
   
@@ -540,7 +522,7 @@ def main():
       mlflow_tracker.start_run(
         device_name="prompt_optimization",
         model=args.model,
-        scoring_mode="optimization",
+        scoring_mode=args.scoring_mode if args.use_custom_scorer else "optimization",
         workdir=str(Path(args.historical_data)) if Path(args.historical_data).is_dir() else str(Path(args.historical_data).parent),
         algorithm=args.algorithm,
         iterations=args.iterations,
@@ -548,12 +530,7 @@ def main():
         max_concurrent=args.max_concurrent,
         throttle_seconds=args.throttle_seconds,
         use_custom_scorer=args.use_custom_scorer,
-        weight_correctness=args.weight_correctness,
-        weight_coverage=args.weight_coverage,
-        weight_style=args.weight_style,
-        weight_behavior=args.weight_behavior,
-        weight_compilation=args.weight_compilation,
-        weight_test_pass_rate=args.weight_test_pass_rate
+        agent=args.agent
       )
     except Exception as e:
       print(f"❌ Error starting MLflow run: {e}")
@@ -607,16 +584,6 @@ def main():
         "optimized_chars": len(optimized_instructions),
         "lines_change": len(optimized_lines) - len(original_lines),
         "chars_change": len(optimized_instructions) - len(current_instructions)
-      })
-      
-      # Log parameters/weights
-      mlflow.log_params({
-        "weight_correctness": args.weight_correctness,
-        "weight_coverage": args.weight_coverage,
-        "weight_style": args.weight_style,
-        "weight_behavior": args.weight_behavior,
-        "weight_compilation": args.weight_compilation,
-        "weight_test_pass_rate": args.weight_test_pass_rate
       })
       
       # Log artifacts

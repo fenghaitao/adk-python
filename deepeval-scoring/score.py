@@ -45,6 +45,167 @@ from tracking.mlflow_tracker import MLflowTracker
 from tracking.utils import is_mlflow_available
 
 
+def evaluate_score(
+    workdir: str,
+    device: str,
+    model: str = "iflow/qwen3-coder-plus",
+    output: str = "score.md",
+    format: str = "markdown",
+    result_only: bool = False,
+    behavior_only: bool = False,
+    scoring_mode: str = "llm",
+    agent: Optional[str] = None,
+    reference_dir: Optional[str] = None,
+    mlflow_tracker: Optional[MLflowTracker] = None
+) -> Dict[str, any]:
+  """Evaluate the implementation and return scoring results.
+  
+  Args:
+    workdir: Working directory containing the implementation
+    device: Device name (e.g., wdt)
+    model: LLM model for evaluation
+    output: Output report file
+    format: Output format (markdown, json, html)
+    result_only: Skip agent behavior evaluation
+    behavior_only: Skip code evaluation
+    scoring_mode: Scoring mode (llm, deterministic, hybrid)
+    agent: Agent type for behavior evaluation
+    reference_dir: Directory containing golden reference implementation
+    mlflow_tracker: Optional MLflow tracker instance
+    
+  Returns:
+    Dictionary containing:
+      - code_results: Code evaluation results (if applicable)
+      - behavior_results: Behavior evaluation results (if applicable)
+      - deterministic_results: Deterministic scoring results (if applicable)
+      - overall_score: Overall weighted score
+      - report: Generated report text
+      - output_path: Path where report was saved
+  """
+  # Initialize evaluators based on scoring mode and options
+  code_results = None
+  deterministic_results = None
+  
+  # Start MLflow run if enabled
+  if mlflow_tracker:
+    try:
+      mlflow_tracker.start_run(
+        device_name=device,
+        model=model,
+        scoring_mode=scoring_mode,
+        workdir=workdir,
+        agent=agent,
+        result_only=result_only,
+        behavior_only=behavior_only,
+        reference_dir=reference_dir
+      )
+    except Exception as e:
+      print(f"❌ Error starting MLflow run: {e}")
+      mlflow_tracker = None  # Disable tracking on error
+  
+  # Skip code evaluation if behavior-only mode
+  if not behavior_only:
+    if scoring_mode in ["llm", "hybrid"]:
+      # LLM-based evaluation (now includes reference comparison if available)
+      code_eval = CodeEvaluator(
+        workdir=workdir,
+        device_name=device,
+        model=model,
+        reference_dir=reference_dir  # Pass reference directory to CodeEvaluator
+      )
+      print("🔍 Evaluating code quality with LLM...")
+      code_results = code_eval.evaluate()
+    
+    if scoring_mode in ["deterministic", "hybrid"]:
+      # Deterministic evaluation
+      deterministic_scorer = DeterministicScorer(
+        workdir=workdir,
+        device_name=device
+      )
+      print("🔍 Evaluating code quality with deterministic scoring...")
+      deterministic_results = deterministic_scorer.score_implementation()
+  
+  # Skip behavior evaluation if result-only mode or deterministic-only mode
+  behavior_eval = None
+  if not result_only and scoring_mode != "deterministic":
+    behavior_eval = BehaviorEvaluator(
+      workdir=workdir,
+      device_name=device,
+      model=model,
+      agent=agent
+    )
+  
+  # Run behavior evaluation (only for LLM modes and when not skipped)
+  behavior_results = None
+  if behavior_eval:
+    print("🔍 Evaluating agent behavior with G-Eval...")
+    behavior_results = behavior_eval.evaluate()
+  
+  # Generate report
+  print("📝 Generating report...")
+  report_gen = ReportGenerator()
+  report = report_gen.generate(
+    code_results=code_results,
+    behavior_results=behavior_results,
+    deterministic_results=deterministic_results,
+    format=format,
+    device_name=device,
+    model=model,
+    scoring_mode=scoring_mode
+  )
+  
+  # Save report
+  output_path = Path(workdir) / output
+  output_path.write_text(report)
+  
+  print(f"✅ Report saved to: {output_path}")
+  
+  # Log to MLflow if enabled
+  if mlflow_tracker:
+    try:
+      # Log metrics
+      mlflow_tracker.log_metrics(
+        code_results=code_results,
+        behavior_results=behavior_results,
+        deterministic_results=deterministic_results,
+        scoring_mode=scoring_mode
+      )
+      
+      # Log artifacts
+      mlflow_tracker.log_artifacts(
+        workdir=workdir,
+        code_results=code_results,
+        behavior_results=behavior_results,
+        deterministic_results=deterministic_results
+      )
+      
+      print(f"🔬 Results logged to MLflow run: {mlflow_tracker.get_run_id()}")
+      
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to log to MLflow: {e}")
+  
+  # Calculate overall score
+  overall_score = calculate_overall_score(code_results, behavior_results, deterministic_results, scoring_mode)
+  
+  # End MLflow run
+  if mlflow_tracker:
+    try:
+      status = "FINISHED" if overall_score >= 0.7 else "FAILED"
+      mlflow_tracker.end_run(status=status)
+    except Exception as e:
+      print(f"⚠️  Warning: Failed to end MLflow run: {e}")
+  
+  # Return results
+  return {
+    "code_results": code_results,
+    "behavior_results": behavior_results,
+    "deterministic_results": deterministic_results,
+    "overall_score": overall_score,
+    "report": report,
+    "output_path": str(output_path)
+  }
+
+
 def main():
   parser = argparse.ArgumentParser(
     description="Score apply_agent implementation using DeepEval"
@@ -137,123 +298,31 @@ def main():
       print(f"❌ Error initializing MLflow: {e}")
       sys.exit(1)
   
-  # Initialize evaluators based on scoring mode and options
-  code_results = None
-  deterministic_results = None
-  
-  # Start MLflow run if enabled
-  if mlflow_tracker:
-    try:
-      mlflow_tracker.start_run(
-        device_name=args.device,
-        model=args.model,
-        scoring_mode=args.scoring_mode,
-        workdir=args.workdir,
-        agent=args.agent,
-        result_only=args.result_only,
-        behavior_only=args.behavior_only,
-        reference_dir=args.reference_dir
-      )
-    except Exception as e:
-      print(f"❌ Error starting MLflow run: {e}")
-      mlflow_tracker = None  # Disable tracking on error
-  
-  # Skip code evaluation if behavior-only mode
-  if not args.behavior_only:
-    if args.scoring_mode in ["llm", "hybrid"]:
-      # LLM-based evaluation (now includes reference comparison if available)
-      code_eval = CodeEvaluator(
-        workdir=args.workdir,
-        device_name=args.device,
-        model=args.model,
-        reference_dir=args.reference_dir  # Pass reference directory to CodeEvaluator
-      )
-      print("🔍 Evaluating code quality with LLM...")
-      code_results = code_eval.evaluate()
-    
-    if args.scoring_mode in ["deterministic", "hybrid"]:
-      # Deterministic evaluation
-      deterministic_scorer = DeterministicScorer(
-        workdir=args.workdir,
-        device_name=args.device
-      )
-      print("🔍 Evaluating code quality with deterministic scoring...")
-      deterministic_results = deterministic_scorer.score_implementation()
-  
-  # Skip behavior evaluation if result-only mode or deterministic-only mode
-  behavior_eval = None
-  if not args.result_only and args.scoring_mode != "deterministic":
-    behavior_eval = BehaviorEvaluator(
-      workdir=args.workdir,
-      device_name=args.device,
-      model=args.model,
-      agent=args.agent
-    )
-  
-  # Run behavior evaluation (only for LLM modes and when not skipped)
-  behavior_results = None
-  if behavior_eval:
-    print("🔍 Evaluating agent behavior with G-Eval...")
-    behavior_results = behavior_eval.evaluate()
-  
-  # Generate report
-  print("📝 Generating report...")
-  report_gen = ReportGenerator()
-  report = report_gen.generate(
-    code_results=code_results,
-    behavior_results=behavior_results,
-    deterministic_results=deterministic_results,
-    format=args.format,
-    device_name=args.device,
+  # Call evaluate_score with parsed arguments
+  results = evaluate_score(
+    workdir=args.workdir,
+    device=args.device,
     model=args.model,
-    scoring_mode=args.scoring_mode
+    output=args.output,
+    format=args.format,
+    result_only=args.result_only,
+    behavior_only=args.behavior_only,
+    scoring_mode=args.scoring_mode,
+    agent=args.agent,
+    reference_dir=args.reference_dir,
+    mlflow_tracker=mlflow_tracker
   )
   
-  # Save report
-  output_path = Path(args.workdir) / args.output
-  output_path.write_text(report)
-  
-  print(f"✅ Report saved to: {output_path}")
-  
-  # Log to MLflow if enabled
-  if mlflow_tracker:
-    try:
-      # Log metrics
-      mlflow_tracker.log_metrics(
-        code_results=code_results,
-        behavior_results=behavior_results,
-        deterministic_results=deterministic_results,
-        scoring_mode=args.scoring_mode
-      )
-      
-      # Log artifacts
-      mlflow_tracker.log_artifacts(
-        workdir=args.workdir,
-        code_results=code_results,
-        behavior_results=behavior_results,
-        deterministic_results=deterministic_results
-      )
-      
-      print(f"🔬 Results logged to MLflow run: {mlflow_tracker.get_run_id()}")
-      
-    except Exception as e:
-      print(f"⚠️  Warning: Failed to log to MLflow: {e}")
-  
   # Print summary
-  print_summary(code_results, behavior_results, deterministic_results, args.scoring_mode)
+  print_summary(
+    results["code_results"], 
+    results["behavior_results"], 
+    results["deterministic_results"], 
+    args.scoring_mode
+  )
   
   # Exit with appropriate code
-  overall_score = calculate_overall_score(code_results, behavior_results, deterministic_results, args.scoring_mode)
-  
-  # End MLflow run
-  if mlflow_tracker:
-    try:
-      status = "FINISHED" if overall_score >= 0.7 else "FAILED"
-      mlflow_tracker.end_run(status=status)
-    except Exception as e:
-      print(f"⚠️  Warning: Failed to end MLflow run: {e}")
-  
-  sys.exit(0 if overall_score >= 0.7 else 1)
+  sys.exit(0 if results["overall_score"] >= 0.7 else 1)
 
 
 def print_summary(

@@ -55,7 +55,7 @@ run_cmd_with_timing() {
 #                          Each folder must have an adk_openspec_project subdirectory
 #                          If not set, uses parent directory of current project
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
-#   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: hybrid)
+#   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: llm)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
 #   REFERENCE_DIR        - Directory containing golden reference implementation for comparison
 
@@ -196,6 +196,25 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         echo "📁 Using parent directory for optimization: $HISTORICAL_DATA_PATH" | tee -a "$log_dir/${proj_dir}.2.log"
     fi
     
+    # Set scoring mode (default: llm)
+    SCORING_MODE="${SCORING_MODE:-llm}"
+    echo "📊 Scoring mode: $SCORING_MODE" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Set agent type (default: adk-python)
+    AGENT_TYPE="${AGENT_TYPE:-adk-python}"
+    echo "🤖 Agent type: $AGENT_TYPE" | tee -a "$log_dir/${proj_dir}.2.log"
+    
+    # Set reference directory for golden comparison if specified
+    REFERENCE_ARGS=""
+    if [[ -n "${REFERENCE_DIR:-}" ]]; then
+        if [[ -d "$REFERENCE_DIR" ]]; then
+            echo "📚 Reference directory: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.2.log"
+            REFERENCE_ARGS="--reference-dir $REFERENCE_DIR"
+        else
+            echo "⚠️  Warning: REFERENCE_DIR not found: $REFERENCE_DIR" | tee -a "$log_dir/${proj_dir}.2.log"
+        fi
+    fi
+    
     set +e
     python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
         --historical-data "$HISTORICAL_DATA_PATH" \
@@ -206,7 +225,11 @@ if [[ "${run_stage[2]}" == "1" ]]; then
         --max-concurrent "$MAX_CONCURRENT" \
         --throttle-seconds "$THROTTLE_SECONDS" \
         --model "$model" \
+        --scoring-mode "$SCORING_MODE" \
+        --agent "$AGENT_TYPE" \
         --no-async \
+        --use-custom-scorer \
+        $REFERENCE_ARGS \
         $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir}.2.log"
     optimize_exit_code=$?
     set -e
