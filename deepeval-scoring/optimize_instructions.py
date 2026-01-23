@@ -427,7 +427,7 @@ def optimize_instructions(
     current_instructions: str,
     historical_data: List[Golden],
     optimizer: PromptOptimizer
-) -> str:
+) -> tuple[str, Any]:
   """Optimize instructions using PromptOptimizer.
   
   Args:
@@ -436,7 +436,7 @@ def optimize_instructions(
     optimizer: Configured PromptOptimizer
     
   Returns:
-    Optimized instruction text
+    Tuple of (optimized instruction text, optimization report)
   """
   # Create prompt with text_template (not 'template')
   # The prompt will be optimized based on historical data
@@ -447,14 +447,14 @@ def optimize_instructions(
   print(f"🔍 Optimizing instructions with {len(historical_data)} historical sessions...")
   print(f"📊 Using {len(optimizer.metrics)} metrics for evaluation")
   
-  # Run optimization
-  optimized_prompt = optimizer.optimize(
+  # Run optimization - returns (optimized_prompt, optimization_report)
+  optimized_prompt, optimization_report = optimizer.optimize(
     prompt=prompt,
     goldens=historical_data
   )
   
-  # Return the optimized text template
-  return optimized_prompt.text_template
+  # Return both the optimized text template and the report
+  return optimized_prompt.text_template, optimization_report
 
 
 def main():
@@ -633,7 +633,7 @@ def main():
   
   start_time = time.time()
   
-  optimized_instructions = optimize_instructions(
+  optimized_instructions, optimization_report = optimize_instructions(
     current_instructions=current_instructions,
     historical_data=minibatch_data,
     optimizer=optimizer
@@ -643,6 +643,16 @@ def main():
   
   print("="*60)
   print(f"✅ Optimization complete in {optimization_time:.1f} seconds!")
+  
+  # Print optimization report summary
+  if optimization_report:
+    print(f"\n📈 Optimization Report:")
+    print(f"  Optimization ID: {optimization_report.optimization_id}")
+    print(f"  Best Prompt ID: {optimization_report.best_id[:8]}...")
+    print(f"  Accepted Iterations: {len(optimization_report.accepted_iterations)}")
+    print(f"  Total Candidates Evaluated: {len(optimization_report.prompt_configurations)}")
+    if optimization_report.pareto_scores:
+      print(f"  Pareto Scores: {len(optimization_report.pareto_scores)} candidates")
   
   # Save optimized instructions
   output_path = Path(args.output)
@@ -679,10 +689,43 @@ def main():
         "throttle_seconds": 30.0
       })
       
+      # Log optimization report metrics if available
+      if optimization_report:
+        mlflow.log_metrics({
+          "accepted_iterations": len(optimization_report.accepted_iterations),
+          "total_candidates": len(optimization_report.prompt_configurations),
+          "pareto_candidates": len(optimization_report.pareto_scores) if optimization_report.pareto_scores else 0
+        })
+      
       # Log artifacts
       mlflow.log_artifact(args.goldens, "goldens")
       mlflow.log_artifact(args.current_instructions, "original_instructions")
       mlflow.log_artifact(str(output_path), "optimized_instructions")
+      
+      # Save and log optimization report as JSON
+      if optimization_report:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+          # Convert report to dict for JSON serialization
+          report_dict = {
+            "optimization_id": optimization_report.optimization_id,
+            "best_id": optimization_report.best_id,
+            "accepted_iterations": optimization_report.accepted_iterations,
+            "pareto_scores": optimization_report.pareto_scores if optimization_report.pareto_scores else {},
+            "parents": optimization_report.parents if hasattr(optimization_report, 'parents') else {},
+            "prompt_configurations": [
+              {
+                "id": pc.id,
+                "parent": pc.parent,
+                "prompts": {k: str(v.text_template or v.messages_template) for k, v in pc.prompts.items()}
+              }
+              for pc in optimization_report.prompt_configurations.values()
+            ] if hasattr(optimization_report, 'prompt_configurations') else []
+          }
+          json.dump(report_dict, f, indent=2)
+          report_file = f.name
+        mlflow.log_artifact(report_file, "optimization_report.json")
+        Path(report_file).unlink()
+        print(f"📊 Optimization report saved to MLflow")
       
       # Create and log a diff file
       import difflib
