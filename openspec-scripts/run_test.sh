@@ -49,6 +49,7 @@ run_cmd_with_timing() {
 #   ACTUAL_OUT_PATH      - Path to actual outputs directory (default: optimization_dir/actual_out)
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
 #   ENABLE_PROF=1        - Enable cProfile performance profiling
+#   ENABLE_CHKP=1        - Enable checkpoints in COPRO algorithm (waits for user confirmation at key points)
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: llm)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
 #   REFERENCE_DIR        - Directory containing golden reference implementation for comparison
