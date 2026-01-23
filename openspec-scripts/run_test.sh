@@ -48,6 +48,7 @@ run_cmd_with_timing() {
 #   GOLDENS_PATH         - Path to goldens directory (goldens/item1, goldens/item2, ...)
 #   ACTUAL_OUT_PATH      - Path to actual outputs directory (default: optimization_dir/actual_out)
 #   ENABLE_MLFLOW=1      - Enable MLflow tracking for collection and optimization
+#   ENABLE_PROF=1        - Enable cProfile performance profiling
 #   SCORING_MODE         - Scoring mode: llm, deterministic, or hybrid (default: llm)
 #   AGENT_TYPE           - Agent type for behavior evaluation (e.g., adk-python, kiro-cli, rovodev, copilot-cli)
 #   REFERENCE_DIR        - Directory containing golden reference implementation for comparison
@@ -161,6 +162,9 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     echo "Using model: $model" | tee -a "$log_dir/${proj_dir_name}.4.log"
     echo "This will collect historical sessions and optimize instructions" | tee -a "$log_dir/${proj_dir_name}.4.log"
     
+    # Start timing for stage 4
+    stage4_start_time=$(date +%s)
+    
     cd "$proj_dir_abs"
     
     # Create optimization directory with absolute path
@@ -185,6 +189,15 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         echo "✅ Stage 4 session data collection complete!" | tee -a "$log_dir/${proj_dir_name}.4.log"
         cd "$proj_dir_abs"
         exit 0
+    fi
+    
+    # Setup cProfile if enabled
+    PROFILE_CMD=""
+    if [[ "${ENABLE_PROF:-0}" == "1" ]]; then
+        PROFILE_OUTPUT="$OPTIMIZATION_DIR/optimize_instructions.prof"
+        PROFILE_CMD="-m cProfile -o $PROFILE_OUTPUT"
+        echo "📊 Performance profiling enabled" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Profile data will be saved to: $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
     fi
     
     # Enable MLflow tracking if requested
@@ -238,7 +251,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     fi
     
     set +e
-    python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
+    python3 $PROFILE_CMD "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
         --goldens "$GOLDENS_DIR" \
         --actual-out "$ACTUAL_OUT_DIR" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
@@ -255,6 +268,14 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         $MLFLOW_ARGS 2>&1 | tee -a "$log_dir/${proj_dir_name}.4.log"
     optimize_exit_code=$?
     set -e
+    
+    # Log profile file location if profiling was enabled
+    if [[ "${ENABLE_PROF:-0}" == "1" ]] && [[ -f "$PROFILE_OUTPUT" ]]; then
+        PROFILE_SIZE=$(du -h "$PROFILE_OUTPUT" | cut -f1)
+        echo "✅ Performance profile saved: $PROFILE_OUTPUT ($PROFILE_SIZE)" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Analyze with: python3 -m pstats $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Or use snakeviz for visualization: pip install snakeviz && snakeviz $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
+    fi
     
     if [[ $optimize_exit_code -ne 0 ]]; then
         echo "❌ Optimization failed (exit code: $optimize_exit_code)" | tee -a "$log_dir/${proj_dir_name}.4.log"
@@ -331,5 +352,10 @@ test cases and automated prompt engineering techniques." 2>&1 | tee -a "$log_dir
     fi
     
     cd "$proj_dir_abs"
+    
+    # Calculate and log total time for stage 4
+    stage4_end_time=$(date +%s)
+    stage4_elapsed=$((stage4_end_time - stage4_start_time))
     echo "✅ Stage 4 optimization complete!" | tee -a "$log_dir/${proj_dir_name}.4.log"
+    echo "⏱️  Total time for stage 4: $stage4_elapsed seconds" | tee -a "$log_dir/${proj_dir_name}.4.log"
 fi
