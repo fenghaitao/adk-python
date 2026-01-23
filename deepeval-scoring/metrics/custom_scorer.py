@@ -122,6 +122,8 @@ class CustomScorer(Scorer):
         # Use the actual_output path as workdir for evaluation
         # This should be the path to the adk_openspec_project folder
         workdir = actual_output
+        print("--- score_one for prompt_configuration ID:", prompt_configuration.id)
+        print("--- score_one on workdir:", workdir)
 
         # Use the device name passed during initialization
         device_name = self.device
@@ -209,6 +211,7 @@ class CustomScorer(Scorer):
             Feedback string with metric reasons
         """
         reasons: List[str] = []
+        print("--- Generating minibatch feedback ---")
 
         for golden in minibatch:
             # The workdir is returned by model_callback and used in _score_one
@@ -217,9 +220,11 @@ class CustomScorer(Scorer):
 
             # Create result key using prompt configuration ID and workdir
             result_key = (prompt_configuration.id, workdir)
+            print("--- result_key:", result_key)
 
             # Check if result already exists, if not, score the golden
             if result_key not in self.results:
+                print("--- result_key not found")
                 # Score the golden (this will populate self.results)
                 self._score_one(prompt_configuration, golden)
 

@@ -244,7 +244,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
         --output "$OPTIMIZATION_DIR/optimized_instructions.md" \
         --algorithm copro \
-        --iterations 3 \
+        --iterations 1 \
         --mcp-port "$mcp_server_port" \
         --model "$model" \
         --device "$device_name" \
