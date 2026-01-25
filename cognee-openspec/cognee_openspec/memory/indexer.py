@@ -113,9 +113,10 @@ class CogneeMemoryIndexer:
       documents.append(doc_with_metadata)
     
     # Add documents to Cognee
+    # Don't pass dataset_id to avoid permission checks when access control is disabled
     await cognee.add(
       data=documents,
-      dataset_id=self.dataset_name
+      dataset_name=self.dataset_name
     )
     
     # Run cognify to build knowledge graph

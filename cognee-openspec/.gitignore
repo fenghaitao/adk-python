@@ -43,6 +43,7 @@ htmlcov/
 # Cognee data
 .data_storage/
 .cognee_system/
+.cognee_data/
 .cognee_cache/
 *.html
 !examples/*.html
