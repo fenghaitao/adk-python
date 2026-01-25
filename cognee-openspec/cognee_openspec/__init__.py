@@ -16,6 +16,20 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+# Load cognee-openspec's .env file BEFORE importing cognee
+# This is the single source of configuration for cognee-openspec
+import dotenv
+
+_openspec_root = Path(__file__).parent.parent
+dotenv.load_dotenv(_openspec_root / ".env", override=False)
+
+# Note: cognee will also call load_dotenv() when imported, but since we
+# deleted cognee/.env, it will search from CWD and either find nothing
+# or find our cognee-openspec/.env. Using override=False ensures shell
+# environment variables always take precedence.
+
 __version__ = "0.1.0"
 
 from cognee_openspec.memory.indexer import CogneeMemoryIndexer
