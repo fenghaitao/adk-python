@@ -7,12 +7,15 @@ import sys
 from pathlib import Path
 
 # Configure BEFORE importing cognee
-os.environ["LLM_MODEL"] = "github_copilot/gpt-4o"
-os.environ["LLM_PROVIDER"] = "custom"
-os.environ["EMBEDDING_MODEL"] = "github_copilot/text-embedding-3-small"
-os.environ["EMBEDDING_DIMENSIONS"] = "1536"
+# CRITICAL: Set these FIRST to avoid importing fastapi_users/bcrypt
 os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 os.environ["REQUIRE_AUTHENTICATION"] = "false"
+
+os.environ["LLM_MODEL"] = "github_copilot/gpt-4o"
+os.environ["LLM_PROVIDER"] = "custom"
+os.environ["LLM_API_KEY"] = "oauth2"  # Dummy key for OAuth2 authentication
+os.environ["EMBEDDING_MODEL"] = "github_copilot/text-embedding-3-small"
+os.environ["EMBEDDING_DIMENSIONS"] = "1536"
 os.environ["LOG_LEVEL"] = "INFO"
 os.environ["TELEMETRY_DISABLED"] = "1"
 
@@ -44,10 +47,12 @@ async def main():
         print("✅ System pruned\n")
         
         # Step 2: Add single file
-        test_file = Path("../../openspec-memories/dml_basics.md")
+        script_dir = Path(__file__).parent
+        test_file = script_dir / "../../openspec-memories/dml_basics.md"
+        test_file = test_file.resolve()
         if not test_file.exists():
             # Try first file we can find
-            memory_dir = Path("../../openspec-memories")
+            memory_dir = (script_dir / "../../openspec-memories").resolve()
             test_file = next(memory_dir.glob("*.md"))
         
         print(f"📄 Adding single file: {test_file.name}")

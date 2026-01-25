@@ -9,7 +9,7 @@ from pathlib import Path
 # Configure BEFORE importing cognee
 os.environ["LLM_MODEL"] = "github_copilot/gpt-4o"
 os.environ["LLM_PROVIDER"] = "custom"
-os.environ["LLM_API_KEY"] = "placeholder"  # GitHub Copilot doesn't need a key
+os.environ["LLM_API_KEY"] = "oauth2"  # Dummy key for OAuth2 authentication
 os.environ["EMBEDDING_MODEL"] = "github_copilot/text-embedding-3-small"
 os.environ["EMBEDDING_DIMENSIONS"] = "1536"
 os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
@@ -45,7 +45,8 @@ from cognee.modules.search.types.SearchType import SearchType
 async def main():
     """Index and search openspec memories."""
     
-    memory_dir = Path("../../openspec-memories")
+    script_dir = Path(__file__).parent
+    memory_dir = (script_dir / "../../openspec-memories").resolve()
     if not memory_dir.exists():
         print(f"❌ Memory directory not found: {memory_dir}")
         return False
@@ -64,10 +65,13 @@ async def main():
         import time
         start_time = time.time()
         
-        await cognee.add(
-            data=str(memory_dir),
-            dataset_name="openspec_memories"
-        )
+        # Add files one by one
+        for md_file in md_files:
+            await cognee.add(
+                data=str(md_file),
+                dataset_name="openspec_memories"
+            )
+        
         add_time = time.time() - start_time
         print(f"✅ Files added in {add_time:.1f}s\n")
         
