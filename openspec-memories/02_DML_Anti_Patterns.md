@@ -154,22 +154,46 @@ register WDOGVALUE {
 
 ### The CORRECT Pattern - Complete Timer Implementation
 
-**Component 1: Lazy Evaluation** (calculate current value on-demand):
+**Component 1: Device Frequency Configuration** (REQUIRED for time-based events):
+```dml
+// ✅ REQUIRED: Define device operating frequency
+// This makes the device self-contained and independent of external clock signals
+constant DEVICE_FREQ_HZ = 12.0e+6;  // 12 MHz (example - use hardware spec value)
+
+// Optional: Make frequency configurable via attribute
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Timer device frequency in MHz";
+    param configuration = "optional";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
+// ✅ Helper method: Convert cycles to simulation time
+method cycles_to_time(uint64 cycles) -> (double) {
+    return cast(cycles, double) / DEVICE_FREQ_HZ;
+}
+```
+
+**Component 2: Lazy Evaluation** (calculate current value on-demand):
 ```dml
 register COUNTER {
     method read_register() -> (uint64) {
         if (!enabled) return saved_value;
-        local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
-        local uint64 current = saved_value - (elapsed / step_value);
+        
+        // Calculate elapsed time since start
+        local double elapsed_time = SIM_time(dev.obj) - start_time;
+        local uint64 elapsed_cycles = cast(elapsed_time * DEVICE_FREQ_HZ, uint64);
+        local uint64 current = saved_value - (elapsed_cycles / step_value);
         return current;
     }
 }
 ```
 
-**Component 2: Event Mechanism** (trigger actions when counter expires):
+**Component 3: Event Mechanism** (trigger actions when counter expires):
 ```dml
-// ✅ REQUIRED: Event to handle expiry/timeout
-event timeout_event is simple_cycle_event {
+// ✅ CORRECT: Use simple_time_event (self-contained, no external clock dependency)
+event timeout_event is simple_time_event {
     method event() {
         // Execute timeout actions
         raw_int = true;             // Set interrupt flag
@@ -178,7 +202,7 @@ event timeout_event is simple_cycle_event {
         // Handle auto-reload if needed
         if (auto_reload_enabled) {
             counter = reload_value;
-            start_time = SIM_cycle_count(dev.obj);
+            start_time = SIM_time(dev.obj);
             schedule_next_timeout();  // Re-post event
         }
     }
@@ -190,13 +214,14 @@ method schedule_next_timeout() {
         timeout_event.remove();
     
     if (enabled && counter > 0) {
-        local cycles_t cycles_to_zero = counter * step_value;
-        timeout_event.post(cycles_to_zero);
+        // Convert timer cycles to simulation time
+        local double timeout_seconds = cycles_to_time(counter * step_value);
+        timeout_event.post(timeout_seconds);
     }
 }
 ```
 
-**Component 3: Wire Them Together**:
+**Component 4: Wire Them Together**:
 ```dml
 register CONTROL {
     method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
@@ -204,14 +229,70 @@ register CONTROL {
         
         if (enable_bit.val) {
             counter = reload_value;
-            start_time = SIM_cycle_count(dev.obj);
-            schedule_next_timeout();  // ✅ Post event when enabled
+            start_time = SIM_time(dev.obj);  // Use SIM_time for time-based events
+            schedule_next_timeout();         // ✅ Post event when enabled
         } else {
             if (timeout_event.posted())
-                timeout_event.remove();  // Cancel event when disabled
+                timeout_event.remove();      // Cancel event when disabled
         }
     }
 }
+```
+
+### Why simple_time_event Is Better Than simple_cycle_event
+
+**❌ AVOID: `simple_cycle_event`** - Requires clock frequency to match device frequency:
+```dml
+// Problem: Clock frequency must match device frequency exactly
+event timeout_event is simple_cycle_event {
+    method event() { /* ... */ }
+}
+
+// Scheduling in cycles - assumes external clock runs at device frequency
+timeout_event.post(cycles);  // FRAGILE: Only correct if clock.freq_mhz == device freq
+
+// In test configuration, you MUST:
+// 1. Create clock with EXACT device frequency: clk.freq_mhz = 12.0  # Must match!
+// 2. Assign queue: dev.queue = clk
+// 3. If frequencies mismatch, timing calculations are wrong
+```
+
+**✅ PREFER: `simple_time_event`** - Device frequency independent of clock frequency:
+```dml
+// Solution: Device defines own frequency, converts internally
+constant DEVICE_FREQ_HZ = 12.0e+6;  // Device-specific frequency
+
+event timeout_event is simple_time_event {
+    method event() { /* ... */ }
+}
+
+// Scheduling in simulation time - clock can be any frequency
+local double timeout = cast(cycles, double) / DEVICE_FREQ_HZ;
+timeout_event.post(timeout);  // ROBUST: Works regardless of clock frequency
+
+// In test configuration, you still need:
+// 1. Create clock: clk.freq_mhz = <any value>  # Can be different from device!
+// 2. Assign queue: dev.queue = clk
+// 3. Device converts time using its own frequency - no mismatch possible
+```
+
+**Key Differences:**
+
+| Aspect | `simple_cycle_event` (❌ Avoid) | `simple_time_event` (✅ Prefer) |
+|--------|--------------------------------|-------------------------------|
+| **Clock Setup** | Required (clock + queue) | Required (clock + queue) |
+| **Frequency Coupling** | Clock freq MUST match device freq | Clock freq can be anything |
+| **Robustness** | Fragile - breaks if frequencies mismatch | Robust - device converts internally |
+| **Test Complexity** | Must ensure freq matching | Clock freq doesn't matter |
+| **Use Case** | Only when device uses exact CPU/bus cycles | Timer/watchdog with own oscillator (95% of cases) |
+
+**Both templates require clock/queue setup**, but the critical difference is:
+- **`simple_cycle_event`**: Cycle count depends on external clock frequency → tight coupling, fragile
+- **`simple_time_event`**: Device converts time using own frequency → loose coupling, robust
+
+**When to use each:**
+- **Use `simple_time_event`**: Timer/watchdog devices with their own oscillator frequency (most cases)
+- **Use `simple_cycle_event`**: Only for devices explicitly using CPU/bus cycle counts (rare)
 ```
 
 ### Detection Checklist
@@ -219,7 +300,9 @@ register CONTROL {
 - ❌ **INCOMPLETE:** Has lazy counter evaluation but no `event` object → Timer never triggers actions
 - ❌ **INCOMPLETE:** Has `event` object but never calls `.post()` → Event never fires
 - ❌ **INCOMPLETE:** Has `.post()` but no logic in `event()` method → No actions on timeout
-- ✅ **COMPLETE:** Has lazy evaluation + event object + `.post()` scheduling + timeout actions
+- ❌ **WRONG TEMPLATE:** Uses `simple_cycle_event` without external clock dependency justification → Use `simple_time_event`
+- ❌ **MISSING FREQUENCY:** Uses `simple_time_event` but no device frequency defined → Add `constant` or `attribute` for frequency
+- ✅ **COMPLETE:** Has device frequency + lazy evaluation + `simple_time_event` + `.post()` scheduling + timeout actions
 
 ---
 

@@ -148,6 +148,9 @@ Before running tests, verify you've implemented BEHAVIOR, not just structure:
      - Must set clk.freq_mhz BEFORE instantiation
      - Must assign dev.queue = clk for all timing-based devices
      - Wrong pattern causes SIM_cycle_count() and timing functions to fail
+     - **Key difference between event templates**:
+       * `simple_cycle_event`: Requires clock frequency to MATCH device frequency (tight coupling, fragile)
+       * `simple_time_event`: Device has own frequency, clock can be any frequency (loose coupling, robust)
 
 5. Quick reference for task-specific loading:
    
@@ -198,6 +201,12 @@ When implementing changes, your primary context sources are:
 
 - DML 1.4 syntax only
 - Event-based timing: use `after` statement or event object with `post()` method, NOT cycle-by-cycle updates
+- **Timer event templates**: 
+  - **PREFER `simple_time_event`** for timer/watchdog devices (device defines own frequency, no frequency matching required with clock)
+  - **AVOID `simple_cycle_event`** unless device must use exact CPU/bus cycles (requires clock frequency to match device frequency - fragile)
+  - Both require clock/queue setup, but `simple_time_event` is more robust as device converts time internally
+  - See Anti-Pattern #3 in `openspec-memories/02_DML_Anti_Patterns.md` for details
+- **Device frequency**: For time-based events, define device frequency as `constant DEVICE_FREQ_HZ` or `attribute freq_mhz`
 - Session state management (use `session` keyword for state variables)
 - Preserve ALL auto-generated imports in <device>.dml
 - NEVER edit auto-generated files: *-registers.dml
