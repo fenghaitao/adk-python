@@ -25,3 +25,6 @@
 [submodule "cognee"]
 	path = cognee
 	url = https://github.com/fenghaitao/cognee.git
+[submodule "superpowers"]
+	path = superpowers
+	url = https://github.com/fenghaitao/superpowers
