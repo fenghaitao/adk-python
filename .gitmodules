@@ -31,3 +31,6 @@
 [submodule "graphrag"]
 	path = graphrag
 	url = https://github.com/fenghaitao/graphrag
+[submodule "lightrag"]
+	path = lightrag
+	url = https://github.com/fenghaitao/lightrag
