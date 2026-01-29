@@ -28,3 +28,6 @@
 [submodule "superpowers"]
 	path = superpowers
 	url = https://github.com/fenghaitao/superpowers
+[submodule "graphrag"]
+	path = graphrag
+	url = https://github.com/fenghaitao/graphrag
