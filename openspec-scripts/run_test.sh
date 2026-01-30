@@ -252,7 +252,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     fi
     
     set +e
-    sudo $ADK_ROOT/.venv/bin/py-spy record -o profile.json --  $ADK_ROOT/.venv/bin/python3 $PROFILE_CMD "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
+    sudo -E $ADK_ROOT/.venv/bin/py-spy record -o profile.json -- $ADK_ROOT/.venv/bin/python3 $PROFILE_CMD "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
         --goldens "$GOLDENS_DIR" \
         --actual-out "$ACTUAL_OUT_DIR" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
