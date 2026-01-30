@@ -29,11 +29,12 @@ simics.SIM_continue(1000)  # Run 1000 steps/cycles
 ### Checking Current Time
 
 ```python
-# Get cycle count
-cycles = simics.SIM_cycle_count(conf.clock)
-
-# Get simulation time in seconds
+# Get simulation time in seconds (RECOMMENDED - robust and frequency-independent)
 sim_time = simics.SIM_time(conf.device)
+
+# For cycle-based validation, convert time to cycles manually if needed
+clock_freq_hz = 100e6  # Must know clock frequency
+cycles_approx = int(sim_time * clock_freq_hz)
 ```
 
 ### Measuring Elapsed Time
@@ -41,17 +42,17 @@ sim_time = simics.SIM_time(conf.device)
 ```python
 import stest
 
-# Measure cycles
-start_cycles = simics.SIM_cycle_count(conf.clock)
-simics.SIM_continue(1000)
-elapsed_cycles = simics.SIM_cycle_count(conf.clock) - start_cycles
-stest.expect_equal(elapsed_cycles, 1000, "Time did not advance correctly")
-
-# Measure simulation time
+# Measure simulation time (RECOMMENDED approach)
 start_time = simics.SIM_time(conf.device)
 simics.SIM_continue(1000)  # Run 1000 steps/cycles
 elapsed_time = simics.SIM_time(conf.device) - start_time
-# elapsed_time depends on clock frequency (e.g., 1000 cycles at 100MHz = 0.00001 seconds)
+
+# Convert to cycles if needed for validation
+clock_freq_hz = 100e6  # 100 MHz clock
+elapsed_cycles_approx = int(elapsed_time * clock_freq_hz)
+# Note: elapsed_cycles_approx should be close to 1000
+stest.expect_true(abs(elapsed_cycles_approx - 1000) < 10,
+                  "Time did not advance as expected")
 ```
 
 ---
@@ -162,7 +163,7 @@ regs.EVENT_CYCLES.write(1000)
 regs.EVENT_START.write(0x1)
 
 # Record start time
-start_cycles = simics.SIM_cycle_count(conf.clock)
+start_time = simics.SIM_time(conf.device)
 
 # Run until event should fire
 simics.SIM_continue(1000)
@@ -170,9 +171,11 @@ simics.SIM_continue(1000)
 # Verify event fired
 stest.expect_equal(fake_pic.raised, 1, "Event did not fire")
 
-# Verify timing
-elapsed = simics.SIM_cycle_count(conf.clock) - start_cycles
-stest.expect_equal(elapsed, 1000, "Event fired at wrong time")
+# Verify timing (convert to cycles for validation)
+clock_freq_hz = 100e6  # Must match clock configuration
+elapsed_time = simics.SIM_time(conf.device) - start_time
+elapsed_cycles = int(elapsed_time * clock_freq_hz)
+stest.expect_true(abs(elapsed_cycles - 1000) < 10, "Event fired at wrong time")
 ```
 
 ### Testing Event Cancellation
@@ -204,7 +207,10 @@ stest.expect_equal(fake_pic.raised, 0, "Cancelled event still fired")
 regs.EVENT_CYCLES.write(1000)
 regs.EVENT_START.write(0x1)
 
-# After 300 steps/cycles, change to 200 more steps/cycles
+# Record start time
+start_time = simics.SIM_time(conf.device)
+
+# After 300 steps, change to 200 more steps
 simics.SIM_continue(300)
 regs.EVENT_CYCLES.write(200)
 regs.EVENT_RESTART.write(0x1)
@@ -212,8 +218,14 @@ regs.EVENT_RESTART.write(0x1)
 # Event should now fire 200 steps/cycles from restart (500 total from original start)
 simics.SIM_continue(200)
 
-elapsed = simics.SIM_cycle_count(conf.clock)
+# Verify event fired
 stest.expect_equal(fake_pic.raised, 1, "Re-scheduled event did not fire")
+
+# Verify total elapsed time
+elapsed_time = simics.SIM_time(conf.device) - start_time
+clock_freq_hz = 100e6
+elapsed_cycles = int(elapsed_time * clock_freq_hz)
+stest.expect_true(abs(elapsed_cycles - 500) < 10, "Event timing incorrect")
 ```
 
 ---
@@ -228,20 +240,19 @@ def approx_equal(got, expected, tolerance, msg=""):
     if abs(got - expected) > tolerance:
         raise stest.fail(f"{msg}: got {got}, expected {expected} +/- {tolerance}")
 
-# Use with cycle counts
-start = simics.SIM_cycle_count(conf.clock)
-simics.SIM_continue(1000)
-elapsed = simics.SIM_cycle_count(conf.clock) - start
-approx_equal(elapsed, 1000, 10, "Cycle count mismatch")
-
-# Use with simulation time
+# Use with simulation time (RECOMMENDED)
 start_time = simics.SIM_time(conf.device)
 simics.SIM_continue(1000)  # Run 1000 steps/cycles
 elapsed_time = simics.SIM_time(conf.device) - start_time
-# Check elapsed_time based on clock frequency
-# At 100MHz: 1000 steps/cycles = 0.00001 seconds
-expected_time = 1000 / (100 * 1e6)  # steps/cycles / (freq_mhz * 1e6)
+
+# Check elapsed time based on clock frequency
+clock_freq_hz = 100e6  # 100 MHz - must match clock configuration
+expected_time = 1000 / clock_freq_hz  # steps / frequency
 approx_equal(elapsed_time, expected_time, 0.000001, "Sim time mismatch")
+
+# Or convert to cycles for validation
+elapsed_cycles = int(elapsed_time * clock_freq_hz)
+approx_equal(elapsed_cycles, 1000, 10, "Cycle count mismatch")
 ```
 
 ### Range Assertions

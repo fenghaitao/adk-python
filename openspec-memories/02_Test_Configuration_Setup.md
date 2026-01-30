@@ -340,18 +340,17 @@ simics.SIM_continue(1000)  # Run 1000 steps/cycles
 ```python
 import stest
 
-# Check cycles elapsed
-start_cycles = simics.SIM_cycle_count(conf.clk)
-simics.SIM_continue(1000)
-elapsed_cycles = simics.SIM_cycle_count(conf.clk) - start_cycles
-stest.expect_equal(elapsed_cycles, 1000, "Time did not advance correctly")
-
-# Check simulation time
+# Check simulation time elapsed
 start_time = simics.SIM_time(conf.dev)
 simics.SIM_continue(1000)  # Run 1000 steps/cycles
 elapsed_time = simics.SIM_time(conf.dev) - start_time
 # elapsed_time depends on clock frequency
 # At 100MHz: 1000 steps/cycles = 0.00001 seconds (10 microseconds)
+
+# For tests that need cycle-based validation, convert time to cycles
+clock_freq_hz = 100e6  # 100 MHz
+elapsed_cycles = int(elapsed_time * clock_freq_hz)
+stest.expect_equal(elapsed_cycles, 1000, "Time did not advance correctly")
 ```
 
 ### Time Functions

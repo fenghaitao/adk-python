@@ -41,13 +41,16 @@ method update_event() {
     if (step.val == 0)
         return;
 
-    local cycles_t now = SIM_cycle_count(dev.obj);
-    local cycles_t cycles_left =
-        (reference.val - counter_start_value) * step.val
-        - (now - counter_start_time);
+    local double now = SIM_time(dev.obj);
+    local double elapsed = now - counter_start_time;
+    local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
 
-    // Schedule callback after cycles_left cycles
-    after cycles_left cycles: on_match();
+    local double time_left =
+        cast((reference.val - counter_start_value) * step.val - elapsed_cycles, double)
+        / (freq_mhz.val * 1e6);
+
+    // Schedule callback after time_left seconds
+    after time_left s: on_match();
 }
 ```
 
@@ -106,11 +109,18 @@ Instead of updating a counter every cycle, calculate the current value on-demand
 
 **Pattern from sample-timer-device:**
 ```dml
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
 bank regs {
     // Records the time when the counter was started
-    saved cycles_t counter_start_time;
+    saved double counter_start_time;
     // Records the start value of the counter
-    saved cycles_t counter_start_value;
+    saved uint64 counter_start_value;
 
     register counter is (get, read, write) {
         param configuration = "none";  // Don not checkpoint raw value
@@ -120,9 +130,10 @@ bank regs {
                 return counter_start_value;  // Counter stopped
             }
 
-            local cycles_t now = SIM_cycle_count(dev.obj);
-            return (now - counter_start_time) / step.val
-                + counter_start_value;
+            local double now = SIM_time(dev.obj);
+            local double elapsed = now - counter_start_time;
+            local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+            return elapsed_cycles / step.val + counter_start_value;
         }
 
         method write(uint64 value) {
@@ -131,7 +142,7 @@ bank regs {
         }
 
         method restart() {
-            counter_start_time = SIM_cycle_count(dev.obj);
+            counter_start_time = SIM_time(dev.obj);
             update_event();
         }
     }
@@ -179,18 +190,26 @@ register main_cnt {
 Basic countdown timer implementation:
 
 ```dml
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
 attribute enabled is (bool_attr);
 
 register countdown {
-    saved cycles_t start_time;
+    saved double start_time;
     saved uint64 start_value;
 
     method get() -> (uint64) {
         if (!enabled.val)
             return start_value;
 
-        local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
-        local uint64 decremented = elapsed / prescaler.val;
+        local double elapsed = SIM_time(dev.obj) - start_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        local uint64 decremented = elapsed_cycles / prescaler.val;
 
         if (decremented >= start_value)
             return 0;  // Expired
@@ -199,15 +218,16 @@ register countdown {
 
     method write(uint64 value) {
         start_value = value;
-        start_time = SIM_cycle_count(dev.obj);
+        start_time = SIM_time(dev.obj);
         schedule_expiry();
     }
 
     method schedule_expiry() {
         cancel_after();
         if (enabled.val && start_value > 0) {
-            local cycles_t cycles_to_zero = start_value * prescaler.val;
-            after cycles_to_zero cycles: on_expired();
+            local double time_to_zero =
+                cast(start_value * prescaler.val, double) / (freq_mhz.val * 1e6);
+            after time_to_zero s: on_expired();
         }
     }
 
@@ -216,17 +236,20 @@ register countdown {
         // Trigger interrupt, reset, etc.
         if (auto_reload.val) {
             start_value = reload_value.val;
-            start_time = SIM_cycle_count(dev.obj);
+            start_time = SIM_time(dev.obj);
             schedule_expiry();
         }
     }
 }
-```
-
-### Watchdog Timer Pattern
+```### Watchdog Timer Pattern
 
 ```dml
-constant clock_freq = 12.0e+6; // 12 Mhz
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Watchdog clock frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
 
 event watchdog_event is simple_time_event {
     method event() {
@@ -257,7 +280,7 @@ method restart_watchdog() {
         watchdog_event.remove();
 
     if (watchdog_ctrl.enable.val) {
-        local double timeout = cast(timeout_cycles.val, double) / clock_freq;
+        local double timeout = cast(timeout_cycles.val, double) / (freq_mhz.val * 1e6);
         watchdog_event.post(timeout);
         log info, 4: "Watchdog restarted, timeout in %f seconds", timeout;
     }
@@ -269,38 +292,52 @@ method restart_watchdog() {
 For modeling CPU timestamp counters that return different values at different simulation times:
 
 ```dml
-// TSC-like counter that increments with CPU cycles
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "TSC frequency in MHz";
+    method init() {
+        val = 2000.0;  // Default to 2 GHz
+    }
+}
+
+// TSC-like counter that increments with device cycles
 register tsc {
     param configuration = "none";  // Calculated, not checkpointed directly
 
-    saved cycles_t tsc_base;      // Base value at last reset/write
-    saved cycles_t tsc_base_time; // Cycle count when base was set
+    saved uint64 tsc_base;      // Base value at last reset/write
+    saved double tsc_base_time; // Time when base was set
 
     method get() -> (uint64) {
-        local cycles_t now = SIM_cycle_count(dev.obj);
-        return tsc_base + (now - tsc_base_time);
+        local double now = SIM_time(dev.obj);
+        local double elapsed = now - tsc_base_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        return tsc_base + elapsed_cycles;
     }
 
     method read() -> (uint64) {
         local uint64 value = get();
-        log info, 4: "TSC read: 0x%x at cycle %d",
-            value, SIM_cycle_count(dev.obj);
+        log info, 4: "TSC read: 0x%x at time %f",
+            value, SIM_time(dev.obj);
         return value;
     }
 
     method write(uint64 value) {
         tsc_base = value;
-        tsc_base_time = SIM_cycle_count(dev.obj);
+        tsc_base_time = SIM_time(dev.obj);
     }
 }
 ```
 
 **TSC with Frequency Scaling:**
 ```dml
-param TSC_FREQ_MHZ = 2000.0;  // 2 GHz
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "TSC frequency in MHz";
+    method init() {
+        val = 2000.0;  // Default to 2 GHz
+    }
+}
 
 register tsc {
-    saved cycles_t tsc_base;
+    saved uint64 tsc_base;
     saved double tsc_base_time;
 
     method get() -> (uint64) {
@@ -317,7 +354,12 @@ register tsc {
 For timers that fire at regular intervals:
 
 ```dml
-constant clock_freq = 12.0e+6; // 12 Mhz
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Periodic timer frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
 
 event periodic_timer is simple_time_event {
     method event() {
@@ -326,7 +368,7 @@ event periodic_timer is simple_time_event {
 
         // Reschedule for next period
         if (timer_enabled.val) {
-            local double period = cast(period_reg.val, double) / clock_freq;
+            local double period = cast(period_reg.val, double) / (freq_mhz.val * 1e6);
             this.post(period);
         }
     }
@@ -335,7 +377,7 @@ event periodic_timer is simple_time_event {
 method start_periodic_timer() {
     stop_periodic_timer();
 
-    local double period = cast(period_reg.val, double) / clock_freq;
+    local double period = cast(period_reg.val, double) / (freq_mhz.val * 1e6);
     periodic_timer.post(period);
 }
 
@@ -388,8 +430,14 @@ param desc = "Hardware timer device with relative and absolute timer modes";
 // Define log group for timer messages
 loggroup timer_log;
 
-// Timer frequency: 100 MHz
-constant TIMER_FREQ_HZ = 100 * 1000 * 1000;
+// Timer frequency configuration
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Timer frequency in MHz";
+    param configuration = "optional";
+    method init() {
+        val = 100.0;  // Default to 100 MHz
+    }
+}
 
 // ============================================================================
 // Timer Event Definition
@@ -885,14 +933,11 @@ register counter {
 
 | Task | Method |
 |------|--------|
-| Schedule callback in N cycles | `after N cycles: method()` |
 | Schedule callback in N seconds | `after N s: method()` |
 | Schedule immediate callback | `after: method()` |
 | Cancel pending `after` | `cancel_after()` |
 | Get current simulation time | `SIM_time(dev.obj)` |
-| Get current cycle count | `SIM_cycle_count(dev.obj)` |
 | Post event (time) | `event.post(delay_seconds)` |
-| Post event (cycles) | `event.post(delay_cycles)` |
 | Remove posted event | `event.remove()` |
 | Check if event posted | `event.posted()` |
 | Get time to next event | `event.next()` |

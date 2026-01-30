@@ -41,14 +41,22 @@ event timer_tick is simple_cycle_event {
 ### The CORRECT Alternative - Lazy Evaluation Pattern
 
 ```dml
-saved cycles_t start_time;
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Timer device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
+saved double start_time;
 saved uint64 start_value;
 
 register COUNTER {
     method read_register() -> (uint64) {
-        local cycles_t now = SIM_cycle_count(dev.obj);
-        local cycles_t elapsed = now - start_time;
-        return start_value - cast(elapsed, uint64);  // Calculate on-demand, not every cycle
+        local double now = SIM_time(dev.obj);
+        local double elapsed = now - start_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        return start_value - elapsed_cycles;  // Calculate on-demand, not every cycle
     }
 }
 ```
@@ -64,17 +72,17 @@ If you see ANY of these patterns, it's WRONG:
 
 ---
 
-## CRITICAL Anti-Pattern 2: Calling SIM_cycle_count/SIM_time in init() or post_init()
+## CRITICAL Anti-Pattern 2: Calling SIM_time in init() or post_init()
 
 ### The Problem
 
-**NEVER call SIM_cycle_count() or SIM_time() in device initialization methods.**
+**NEVER call SIM_time() in device initialization methods.**
 
 ```dml
 // ❌ FORBIDDEN - Timing APIs in init():
 method init() {
     reload_value = 0xffffffff;
-    start_cycle = SIM_cycle_count(dev.obj);  // ❌ WRONG! Queue not ready yet
+    start_time = SIM_time(dev.obj);  // ❌ WRONG! Queue not ready yet
     enabled = 0;
 }
 
@@ -86,19 +94,19 @@ method post_init() {
 
 ### Why This FAILS
 
-1. **Queue Dependency**: `SIM_cycle_count()` and `SIM_time()` require a valid queue object
+1. **Queue Dependency**: `SIM_time()` requires a valid queue object
 2. **Initialization Order**: Queue is assigned AFTER device object creation, not during `init()`
 3. **Runtime Error**: Causes crashes or undefined behavior when queue is not yet configured
 
 ### The CORRECT Alternative - Initialize on First Use
 
 ```dml
-saved cycles_t start_cycle = 0;  // Default value
+saved double start_time = 0.0;  // Default value
 saved bool first_use = true;
 
 method start_timer() {
     if (first_use) {
-        start_cycle = SIM_cycle_count(dev.obj);  // ✅ CORRECT! Called at runtime
+        start_time = SIM_time(dev.obj);  // ✅ CORRECT! Called at runtime
         first_use = false;
     }
     // Continue timer logic
@@ -108,7 +116,7 @@ register CONTROL {
     method write_register(uint64 value, uint64 enabled_bytes, void *aux) {
         default(value, enabled_bytes, aux);
         if (enable_bit.val) {
-            start_cycle = SIM_cycle_count(dev.obj);  // ✅ CORRECT! Queue is ready
+            start_time = SIM_time(dev.obj);  // ✅ CORRECT! Queue is ready
         }
     }
 }
@@ -117,7 +125,7 @@ register CONTROL {
 ### Detection Rules
 
 If you see ANY of these patterns in init()/post_init(), it's WRONG:
-- `SIM_cycle_count(dev.obj)` in `method init()` or `method post_init()`
+- `SIM_time(dev.obj)` in `method init()` or `method post_init()`
 - `SIM_time(dev.obj)` in `method init()` or `method post_init()`
 - Any timing API that depends on queue in initialization methods
 
@@ -132,12 +140,20 @@ If you see ANY of these patterns in init()/post_init(), it's WRONG:
 **Common Mistake:** Implementing lazy evaluation (counter calculation) but forgetting the event mechanism for timeout/expiry actions.
 
 ```dml
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Timer device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
 // ❌ INCOMPLETE - Has lazy evaluation but NO event mechanism:
 register WDOGVALUE {
     method read_register() -> (uint64) {
         // ✅ Good: Lazy evaluation calculates current counter value
-        local cycles_t elapsed = SIM_cycle_count(dev.obj) - start_time;
-        return initial_value - cast(elapsed, uint32);
+        local double elapsed = SIM_time(dev.obj) - start_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        return initial_value - cast(elapsed_cycles, uint32);
     }
 }
 
@@ -158,9 +174,8 @@ register WDOGVALUE {
 ```dml
 // ✅ REQUIRED: Define device operating frequency
 // This makes the device self-contained and independent of external clock signals
-constant DEVICE_FREQ_HZ = 12.0e+6;  // 12 MHz (example - use hardware spec value)
 
-// Optional: Make frequency configurable via attribute
+// Method 1: Configurable frequency via attribute (RECOMMENDED)
 attribute freq_mhz is (double_attr, init) {
     param documentation = "Timer device frequency in MHz";
     param configuration = "optional";
@@ -171,7 +186,7 @@ attribute freq_mhz is (double_attr, init) {
 
 // ✅ Helper method: Convert cycles to simulation time
 method cycles_to_time(uint64 cycles) -> (double) {
-    return cast(cycles, double) / DEVICE_FREQ_HZ;
+    return cast(cycles, double) / (freq_mhz.val * 1e6);
 }
 ```
 
@@ -183,7 +198,7 @@ register COUNTER {
         
         // Calculate elapsed time since start
         local double elapsed_time = SIM_time(dev.obj) - start_time;
-        local uint64 elapsed_cycles = cast(elapsed_time * DEVICE_FREQ_HZ, uint64);
+        local uint64 elapsed_cycles = cast(elapsed_time * freq_mhz.val * 1e6, uint64);
         local uint64 current = saved_value - (elapsed_cycles / step_value);
         return current;
     }
@@ -260,14 +275,19 @@ timeout_event.post(cycles);  // FRAGILE: Only correct if clock.freq_mhz == devic
 **✅ PREFER: `simple_time_event`** - Device frequency independent of clock frequency:
 ```dml
 // Solution: Device defines own frequency, converts internally
-constant DEVICE_FREQ_HZ = 12.0e+6;  // Device-specific frequency
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Timer device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
 
 event timeout_event is simple_time_event {
     method event() { /* ... */ }
 }
 
 // Scheduling in simulation time - clock can be any frequency
-local double timeout = cast(cycles, double) / DEVICE_FREQ_HZ;
+local double timeout = cast(cycles, double) / (freq_mhz.val * 1e6);
 timeout_event.post(timeout);  // ROBUST: Works regardless of clock frequency
 
 // In test configuration, you still need:
@@ -301,8 +321,8 @@ timeout_event.post(timeout);  // ROBUST: Works regardless of clock frequency
 - ❌ **INCOMPLETE:** Has `event` object but never calls `.post()` → Event never fires
 - ❌ **INCOMPLETE:** Has `.post()` but no logic in `event()` method → No actions on timeout
 - ❌ **WRONG TEMPLATE:** Uses `simple_cycle_event` without external clock dependency justification → Use `simple_time_event`
-- ❌ **MISSING FREQUENCY:** Uses `simple_time_event` but no device frequency defined → Add `constant` or `attribute` for frequency
-- ✅ **COMPLETE:** Has device frequency + lazy evaluation + `simple_time_event` + `.post()` scheduling + timeout actions
+- ❌ **MISSING FREQUENCY:** Uses `simple_time_event` but no device frequency defined → Add `attribute freq_mhz`
+- ✅ **COMPLETE:** Has device frequency (`freq_mhz` attribute) + lazy evaluation + `simple_time_event` + `.post()` scheduling + timeout actions
 
 ---
 
@@ -320,13 +340,22 @@ event cycle_event is simple_cycle_event {
 }
 
 // ✅ DO: Use lazy evaluation
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
 register counter {
-    saved cycles_t counter_base_time;
+    saved double counter_base_time;
     saved uint64 counter_base_value;
     
     method get() -> (uint64) {
-        local cycles_t now = SIM_cycle_count(dev.obj);
-        return counter_base_value + (now - counter_base_time);
+        local double now = SIM_time(dev.obj);
+        local double elapsed = now - counter_base_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        return counter_base_value + elapsed_cycles;
     }
 }
 ```
@@ -394,7 +423,14 @@ register counter {
 }
 
 // ✅ DO: Checkpoint base values, mark calculated registers as "none"
-saved cycles_t counter_start_time;
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
+saved double counter_start_time;
 saved uint64 counter_start_value;
 
 register counter {
@@ -402,8 +438,10 @@ register counter {
     
     method get() -> (uint64) {
         // Calculate from saved base values
-        local cycles_t now = SIM_cycle_count(dev.obj);
-        return counter_start_value + (now - counter_start_time);
+        local double now = SIM_time(dev.obj);
+        local double elapsed = now - counter_start_time;
+        local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+        return counter_start_value + elapsed_cycles;
     }
 }
 ```
@@ -413,7 +451,7 @@ register counter {
 ## Summary: Key Rules to Remember
 
 1. **NEVER** model clock signals or update counters every cycle
-2. **NEVER** call `SIM_cycle_count()` or `SIM_time()` in `init()` or `post_init()`
+2. **NEVER** call `SIM_time()` `SIM_cycle_count()` or  in `init()` or `post_init()`
 3. **ALWAYS** implement both lazy evaluation AND event mechanisms for timers
 4. **ALWAYS** cancel pending events before posting new ones
 5. **ALWAYS** use explicit time unit conversions

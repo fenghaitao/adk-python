@@ -307,6 +307,13 @@ bank regs {
 
 **Example 2:**
 ```dml
+attribute freq_mhz is (double_attr, init) {
+    param documentation = "Device frequency in MHz";
+    method init() {
+        val = 12.0;  // Default to 12 MHz
+    }
+}
+
 bank regs {
     register counter is (get, read, write) {
         param configuration = "none";
@@ -321,9 +328,10 @@ bank regs {
                 return counter_start_value;
             }
 
-            local cycles_t now = SIM_cycle_count(dev.obj);
-            return (now - counter_start_time) / step.val
-                + counter_start_value;
+            local double now = SIM_time(dev.obj);
+            local double elapsed = now - counter_start_time;
+            local uint64 elapsed_cycles = cast(elapsed * freq_mhz.val * 1e6, uint64);
+            return elapsed_cycles / step.val + counter_start_value;
         }
 
         method read() -> (uint64) {
