@@ -343,7 +343,7 @@ register tsc {
     method get() -> (uint64) {
         local double now = SIM_time(dev.obj);
         local double elapsed = now - tsc_base_time;
-        local uint64 ticks = cast(elapsed * TSC_FREQ_MHZ * 1e6, uint64);
+        local uint64 ticks = cast(elapsed * freq_mhz.val * 1e6, uint64);
         return cast(tsc_base, uint64) + ticks;
     }
 }
@@ -489,16 +489,14 @@ event timer_event is (simple_time_event) {
 // ============================================================================
 
 template timer_helper {
-    param frequency_hz default TIMER_FREQ_HZ;
-    
     // Convert cycles to simulation time (seconds)
     method cycles_to_simtime(uint64 cycles) -> (double) {
-        return cast(cycles, double) / frequency_hz;
+        return cast(cycles, double) / (freq_mhz.val * 1e6);
     }
     
     // Convert simulation time to cycles
     method simtime_to_cycles(double simtime) -> (uint64) {
-        return cast(simtime * frequency_hz, uint64);
+        return cast(simtime * freq_mhz.val * 1e6, uint64);
     }
     
     // Get current time in cycles
@@ -686,7 +684,7 @@ event absolute_timer_event is (simple_time_event) {
 bank abs_timer_bank is (timer_helper) {
     
     // Free-running counter register (like a TSC counter)
-    register FREE_RUNNING_COUNTER size 8 @ 0x20 is (timer_helper) {
+    register FREE_RUNNING_COUNTER size 8 @ 0x20 {
         method read_register(uint64 enabled_bytes, void *aux) -> (uint64) {
             // Return current simulation time converted to cycles
             return get_current_cycles();
