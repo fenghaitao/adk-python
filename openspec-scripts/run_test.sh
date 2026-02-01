@@ -192,13 +192,14 @@ if [[ "${run_stage[4]}" == "1" ]]; then
         exit 0
     fi
     
-    # Setup cProfile if enabled
-    PROFILE_CMD=""
+    # Setup py-spy profiling if enabled
+    PYSPY_CMD=""
+    PYSPY_OUTPUT=""
     if [[ "${ENABLE_PROF:-0}" == "1" ]]; then
-        PROFILE_OUTPUT="$OPTIMIZATION_DIR/optimize_instructions.prof"
-        PROFILE_CMD="-m cProfile -o $PROFILE_OUTPUT"
-        echo "📊 Performance profiling enabled" | tee -a "$log_dir/${proj_dir_name}.4.log"
-        echo "   Profile data will be saved to: $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        PYSPY_OUTPUT="$OPTIMIZATION_DIR/profile.json"
+        PYSPY_CMD="sudo -E $ADK_ROOT/.venv/bin/py-spy record -o $PYSPY_OUTPUT --"
+        echo "📊 py-spy profiling enabled" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Profile data will be saved to: $PYSPY_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
     fi
     
     # Enable MLflow tracking if requested
@@ -252,7 +253,7 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     fi
     
     set +e
-    sudo -E $ADK_ROOT/.venv/bin/py-spy record -o profile.json -- $ADK_ROOT/.venv/bin/python3 $PROFILE_CMD "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
+    $PYSPY_CMD $ADK_ROOT/.venv/bin/python3 "$ADK_ROOT/deepeval-scoring/optimize_instructions.py" \
         --goldens "$GOLDENS_DIR" \
         --actual-out "$ACTUAL_OUT_DIR" \
         --current-instructions "$ADK_ROOT/contributing/samples/openspec_integration/apply_agent_instruction.md" \
@@ -270,12 +271,12 @@ if [[ "${run_stage[4]}" == "1" ]]; then
     optimize_exit_code=$?
     set -e
     
-    # Log profile file location if profiling was enabled
-    if [[ "${ENABLE_PROF:-0}" == "1" ]] && [[ -f "$PROFILE_OUTPUT" ]]; then
-        PROFILE_SIZE=$(du -h "$PROFILE_OUTPUT" | cut -f1)
-        echo "✅ Performance profile saved: $PROFILE_OUTPUT ($PROFILE_SIZE)" | tee -a "$log_dir/${proj_dir_name}.4.log"
-        echo "   Analyze with: python3 -m pstats $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
-        echo "   Or use snakeviz for visualization: pip install snakeviz && snakeviz $PROFILE_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
+    # Log py-spy profile file location if profiling was enabled
+    if [[ "${ENABLE_PROF:-0}" == "1" ]] && [[ -f "$PYSPY_OUTPUT" ]]; then
+        PROFILE_SIZE=$(du -h "$PYSPY_OUTPUT" | cut -f1)
+        echo "✅ py-spy profile saved: $PYSPY_OUTPUT ($PROFILE_SIZE)" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   View with: speedscope $PYSPY_OUTPUT" | tee -a "$log_dir/${proj_dir_name}.4.log"
+        echo "   Or upload to https://www.speedscope.app/" | tee -a "$log_dir/${proj_dir_name}.4.log"
     fi
     
     if [[ $optimize_exit_code -ne 0 ]]; then
