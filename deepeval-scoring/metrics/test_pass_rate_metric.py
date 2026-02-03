@@ -62,26 +62,32 @@ class TestPassRateMetric(BaseMetric):
     def measure(self, test_case: LLMTestCase) -> float:
         """Run tests and return pass rate score."""
         
-        # Navigate to device module directory
-        module_dir = (
-            self.workdir / 
-            "simics-project" / 
-            "modules" / 
-            self.device_name
-        )
-        
+        # Navigate to simics-project directory (not the module subdirectory)
+        # make test must be run from the project root
+        simics_project_dir = self.workdir / "simics-project"
+
+        # Verify the device module exists
+        module_dir = simics_project_dir / "modules" / self.device_name
+
         if not module_dir.exists():
             self.reason = f"Device module directory not found: {module_dir}"
             self.score = 0.0
             self.success = False
             return self.score
-        
+
+        if not simics_project_dir.exists():
+            self.reason = f"Simics project directory not found: {simics_project_dir}"
+            self.score = 0.0
+            self.success = False
+            return self.score
+
         try:
-            # Run make test
+            # Run make test from simics-project directory
+            # This tests the specific device module
             cmd = ["make", "test"]
             result = subprocess.run(
                 cmd,
-                cwd=module_dir,
+                cwd=simics_project_dir,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout
