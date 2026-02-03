@@ -1,5 +1,8 @@
 # GraphRAG generated files (in project directories)
+# Ignore in root and generated projects, but not in references/
 settings.yaml
+!references/settings.yaml
+
 input/
 output/
 cache/

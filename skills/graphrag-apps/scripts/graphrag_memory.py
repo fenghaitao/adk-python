@@ -272,15 +272,25 @@ def init(
     (root / "cache").mkdir(parents=True, exist_ok=True)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     
-    # Create default settings.yaml
-    console.print("[dim]Creating default settings.yaml...[/dim]")
+    # Copy settings.yaml from skill references
+    console.print("[dim]Creating settings.yaml...[/dim]")
     
-    default_settings = """### GraphRAG Configuration with GitHub Copilot
+    script_path = Path(__file__).resolve()
+    ref_settings = script_path.parent.parent / "references" / "settings.yaml"
+    
+    if ref_settings.exists():
+        import shutil
+        shutil.copy2(ref_settings, settings_file)
+        console.print("[dim]Copied settings from references[/dim]")
+    else:
+        # Fallback to embedded default
+        console.print("[dim]Creating default settings.yaml...[/dim]")
+        default_settings = """### GraphRAG Configuration with GitHub Copilot
 ### Edit this file to configure your LLM and embedding models
 
 ### LLM settings ###
-models:
-  default_chat_model:
+completion_models:
+  default_completion_model:
     type: chat
     model_provider: github_copilot
     auth_type: api_key
@@ -293,6 +303,7 @@ models:
     tokens_per_minute: 60000
     requests_per_minute: 30
     
+embedding_models:
   default_embedding_model:
     type: embedding
     model_provider: github_copilot
@@ -324,8 +335,7 @@ output:
   base_dir: "output"
     
 cache:
-  type: file
-  base_dir: "cache"
+  type: none
 
 reporting:
   type: file
@@ -343,12 +353,12 @@ embed_text:
   vector_store_id: default_vector_store
 
 extract_graph:
-  model_id: default_chat_model
+  model_id: default_completion_model
   entity_types: [organization,person,geo,event]
   max_gleanings: 1
 
 summarize_descriptions:
-  model_id: default_chat_model
+  model_id: default_completion_model
   max_length: 500
 
 cluster_graph:
@@ -356,27 +366,26 @@ cluster_graph:
 
 extract_claims:
   enabled: false
-  model_id: default_chat_model
+  model_id: default_completion_model
 
 community_reports:
-  model_id: default_chat_model
+  model_id: default_completion_model
   max_length: 2000
   max_input_length: 8000
 
 ### Query settings ###
 local_search:
-  chat_model_id: default_chat_model
+  completion_model_id: default_completion_model
   embedding_model_id: default_embedding_model
 
 global_search:
-  chat_model_id: default_chat_model
+  completion_model_id: default_completion_model
 
 drift_search:
-  chat_model_id: default_chat_model
+  completion_model_id: default_completion_model
   embedding_model_id: default_embedding_model
 """
-    
-    settings_file.write_text(default_settings)
+        settings_file.write_text(default_settings)
     
     # Copy default prompts from the skill's references folder
     console.print("[dim]Creating default prompts...[/dim]")
