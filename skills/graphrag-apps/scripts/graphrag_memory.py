@@ -79,9 +79,20 @@ app = typer.Typer(
 def run_graphrag_command(
     command: list[str],
     cwd: Optional[Path] = None,
-    verbose: bool = False
+    verbose: bool = False,
+    stream_output: bool = False
 ) -> tuple[int, str, str]:
-    """Run a graphrag CLI command and return results."""
+    """Run a graphrag CLI command and return results.
+    
+    Args:
+        command: GraphRAG command arguments (e.g., ["index", "--root", "path"])
+        cwd: Working directory for the command
+        verbose: Show the command being run
+        stream_output: Stream output in real-time (useful for long-running commands)
+    
+    Returns:
+        Tuple of (returncode, stdout, stderr)
+    """
     # Use python -m graphrag to ensure it runs in the same environment
     cmd = [sys.executable, "-m", "graphrag"] + command
     
@@ -89,14 +100,36 @@ def run_graphrag_command(
         console.print(f"[dim]Running: {' '.join(cmd)}[/dim]")
     
     try:
-        result = subprocess.run(
-            cmd,
-            cwd=cwd or Path.cwd(),
-            capture_output=True,
-            text=True,
-            check=False
-        )
-        return result.returncode, result.stdout, result.stderr
+        if stream_output:
+            # Stream output in real-time for long-running commands
+            process = subprocess.Popen(
+                cmd,
+                cwd=cwd or Path.cwd(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+            
+            output_lines = []
+            if process.stdout:
+                for line in process.stdout:
+                    print(line, end='')  # Print to console in real-time
+                    output_lines.append(line)
+            
+            process.wait()
+            full_output = ''.join(output_lines)
+            return process.returncode, full_output, ""
+        else:
+            # Capture output for short commands
+            result = subprocess.run(
+                cmd,
+                cwd=cwd or Path.cwd(),
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            return result.returncode, result.stdout, result.stderr
     except Exception as e:
         return 1, "", str(e)
 
@@ -549,7 +582,8 @@ def index(
     if verbose:
         cmd.append("--verbose")
     
-    returncode, stdout, stderr = run_graphrag_command(cmd, cwd=root, verbose=True)
+    # Stream output in real-time so users can see progress
+    returncode, stdout, stderr = run_graphrag_command(cmd, cwd=root, verbose=True, stream_output=True)
     
     if returncode != 0:
         console.print(f"\n❌ [red]Indexing failed[/red]")
@@ -611,16 +645,15 @@ def query(
     if verbose:
         cmd.append("--verbose")
     
-    returncode, stdout, stderr = run_graphrag_command(cmd, cwd=root, verbose=True)
+    # Stream output in real-time so users can see results as they're generated
+    console.print("\n[bold green]Results:[/bold green]")
+    returncode, stdout, stderr = run_graphrag_command(cmd, cwd=root, verbose=True, stream_output=True)
     
     if returncode != 0:
         console.print(f"\n❌ [red]Query failed[/red]")
-        console.print(f"[dim]{stderr}[/dim]")
+        if stderr:
+            console.print(f"[dim]{stderr}[/dim]")
         raise typer.Exit(1)
-    
-    # Print results
-    console.print("\n[bold green]Results:[/bold green]")
-    console.print(stdout)
 
 
 @app.command()
