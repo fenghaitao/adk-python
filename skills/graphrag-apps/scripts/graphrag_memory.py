@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10,<3.13"
 # dependencies = [
-#     "graphrag==2.7.0",
+#     "graphrag @ git+https://github.com/fenghaitao/graphrag.git",
 #     "pyyaml>=6.0.0",
 #     "typer>=0.16.0",
 # ]
@@ -11,7 +11,7 @@
 GraphRAG Memory - Knowledge Graph Indexing and Retrieval
 
 A self-contained script for building knowledge graphs from markdown documents
-and querying them with GraphRAG.
+and querying them with the forked GraphRAG installation.
 
 Usage:
     # Initialize GraphRAG project
@@ -27,11 +27,16 @@ Usage:
     uv run graphrag_memory.py query "What are the main concepts?" --method global
 
 Features:
+- Uses forked GraphRAG from github.com/fenghaitao/graphrag
 - GraphRAG knowledge graph construction
 - Multiple query methods (local, global, drift)
 - GitHub Copilot and OpenAI LLM support
 - Automatic prompt management
 - Self-contained with inline dependencies
+
+Note:
+    This script uses the forked GraphRAG from github.com/fenghaitao/graphrag
+    instead of the PyPI package to ensure compatibility with custom configurations.
 """
 
 # Copyright 2025 Google LLC
@@ -205,15 +210,21 @@ Preserve key information and remove redundancies.
 @app.command()
 def test():
     """Test if GraphRAG dependencies are available."""
-    console.print("🧪 [bold]Testing GraphRAG Memory Skill...[/bold]\n")
+    console.print("🧪 [bold]Testing GraphRAG Memory Skill...[/bold]\\n")
     
     # Test imports
     try:
         import graphrag
-        console.print("✅ GraphRAG import: [green]OK[/green]")
+        import importlib.metadata
+        version = importlib.metadata.version('graphrag')
+        console.print(f"✅ GraphRAG import: [green]OK (version {version})[/green]")
+        
+        # Check if it's from the forked repo
+        graphrag_file = graphrag.__file__
+        console.print(f"[dim]   Location: {graphrag_file}[/dim]")
     except ImportError:
         console.print("❌ GraphRAG import: [red]FAILED[/red]")
-        console.print("\n[yellow]Tip:[/yellow] Run with 'uv run' to auto-install dependencies")
+        console.print("\\n[yellow]Tip:[/yellow] Run with 'uv run' to auto-install dependencies")
         raise typer.Exit(1)
     
     try:
@@ -230,8 +241,8 @@ def test():
         console.print("❌ Typer import: [red]FAILED[/red]")
         raise typer.Exit(1)
     
-    console.print("\n✅ [bold green]All dependencies available![/bold green]")
-    console.print("\n[bold]Next steps:[/bold]")
+    console.print("\\n✅ [bold green]All dependencies available![/bold green]")
+    console.print("\\n[bold]Next steps:[/bold]")
     console.print("  1. Initialize: uv run graphrag_memory.py init")
     console.print("  2. Index: uv run graphrag_memory.py index --input openspec-memories")
     console.print("  3. Query: uv run graphrag_memory.py query 'your question'")
