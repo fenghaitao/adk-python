@@ -1,10 +1,13 @@
-# GraphRAG generated files
+# GraphRAG generated files (in project directories)
 settings.yaml
-prompts/
 input/
 output/
 cache/
 logs/
+
+# Ignore prompts in generated projects, but not in references/
+/**/prompts/
+!references/prompts/
 
 # Python
 __pycache__/
