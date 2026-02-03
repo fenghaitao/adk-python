@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10,<3.13"
 # dependencies = [
-#     "graphrag>=2.7.0",
+#     "graphrag==2.7.0",
 #     "pyyaml>=6.0.0",
 #     "typer>=0.16.0",
 # ]
@@ -289,8 +289,8 @@ def init(
 ### Edit this file to configure your LLM and embedding models
 
 ### LLM settings ###
-completion_models:
-  default_completion_model:
+models:
+  default_chat_model:
     type: chat
     model_provider: github_copilot
     auth_type: api_key
@@ -299,11 +299,11 @@ completion_models:
     model_supports_json: true
     concurrent_requests: 5
     async_mode: threaded
+    retry_strategy: exponential_backoff
     max_retries: 10
     tokens_per_minute: 60000
     requests_per_minute: 30
     
-embedding_models:
   default_embedding_model:
     type: embedding
     model_provider: github_copilot
@@ -312,6 +312,7 @@ embedding_models:
     model: text-embedding-3-small
     concurrent_requests: 5
     async_mode: threaded
+    retry_strategy: exponential_backoff
     max_retries: 10
     tokens_per_minute: 60000
     requests_per_minute: 30
@@ -335,7 +336,8 @@ output:
   base_dir: "output"
     
 cache:
-  type: none
+  type: file
+  base_dir: "cache"
 
 reporting:
   type: file
@@ -353,37 +355,70 @@ embed_text:
   vector_store_id: default_vector_store
 
 extract_graph:
-  model_id: default_completion_model
+  model_id: default_chat_model
+  prompt: "prompts/extract_graph.txt"
   entity_types: [organization,person,geo,event]
   max_gleanings: 1
 
 summarize_descriptions:
-  model_id: default_completion_model
+  model_id: default_chat_model
+  prompt: "prompts/summarize_descriptions.txt"
   max_length: 500
+
+extract_graph_nlp:
+  text_analyzer:
+    extractor_type: regex_english
+  async_mode: threaded
 
 cluster_graph:
   max_cluster_size: 10
 
 extract_claims:
   enabled: false
-  model_id: default_completion_model
+  model_id: default_chat_model
+  prompt: "prompts/extract_claims.txt"
+  description: "Any claims or facts that could be relevant to information discovery."
+  max_gleanings: 1
 
 community_reports:
-  model_id: default_completion_model
+  model_id: default_chat_model
+  graph_prompt: "prompts/community_report_graph.txt"
+  text_prompt: "prompts/community_report_text.txt"
   max_length: 2000
   max_input_length: 8000
 
+embed_graph:
+  enabled: false
+
+umap:
+  enabled: false
+
+snapshots:
+  graphml: false
+  embeddings: false
+
 ### Query settings ###
 local_search:
-  completion_model_id: default_completion_model
+  chat_model_id: default_chat_model
   embedding_model_id: default_embedding_model
+  prompt: "prompts/local_search_system_prompt.txt"
 
 global_search:
-  completion_model_id: default_completion_model
+  chat_model_id: default_chat_model
+  map_prompt: "prompts/global_search_map_system_prompt.txt"
+  reduce_prompt: "prompts/global_search_reduce_system_prompt.txt"
+  knowledge_prompt: "prompts/global_search_knowledge_system_prompt.txt"
 
 drift_search:
-  completion_model_id: default_completion_model
+  chat_model_id: default_chat_model
   embedding_model_id: default_embedding_model
+  prompt: "prompts/drift_search_system_prompt.txt"
+  reduce_prompt: "prompts/drift_search_reduce_prompt.txt"
+
+basic_search:
+  chat_model_id: default_chat_model
+  embedding_model_id: default_embedding_model
+  prompt: "prompts/basic_search_system_prompt.txt"
 """
         settings_file.write_text(default_settings)
     
