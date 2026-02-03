@@ -141,48 +141,14 @@ uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories
 uv run {baseDir}/scripts/chromadb_memory.py search "timer implementation" --category DML
 ```
 
-### Python API Usage
-```python
-from dspy_memory import MemoryRetriever
+### Multi-Category Search
+```bash
+# Search across all categories
+uv run {baseDir}/scripts/chromadb_memory.py search "register patterns"
 
-# Search
-retriever = MemoryRetriever(k=3)
-result = retriever(
-    task_description="How to implement watchdog timer?",
-    category="DML"
-)
-
-# Result is a dict with 'passages' key
-for passage in result["passages"]:
-    print(passage)
-```
-
-### Integration with DSPy
-```python
-import dspy
-from dspy_memory import MemoryRetriever
-
-# Wrap retriever for DSPy compatibility
-class DSPyMemoryRetriever(dspy.Module):
-    def __init__(self, k=3):
-        super().__init__()
-        self.retriever = MemoryRetriever(k=k)
-    
-    def forward(self, query):
-        result = self.retriever(query)
-        return dspy.Prediction(passages=result["passages"])
-
-# Use in RAG pipeline
-class RAGModule(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.retriever = DSPyMemoryRetriever(k=3)
-        self.generate = dspy.ChainOfThought("context, query -> answer")
-    
-    def forward(self, query):
-        retrieval = self.retriever(query)
-        context = "\n\n".join(retrieval.passages)
-        return self.generate(context=context, query=query)
+# Compare DML vs Test results
+uv run {baseDir}/scripts/chromadb_memory.py search "register" --category DML --k 3
+uv run {baseDir}/scripts/chromadb_memory.py search "register" --category Test --k 3
 ```
 
 ## Troubleshooting
@@ -209,10 +175,11 @@ uv run {baseDir}/scripts/chromadb_memory.py stats
 uv run {baseDir}/scripts/chromadb_memory.py search "timer" --k 10
 ```
 
-**Import errors**
+**Dependencies not found**
 ```bash
-# Reinstall dependencies
-uv pip install dspy-ai chromadb pyyaml
+# The script auto-installs dependencies via uv run
+# If issues persist, ensure uv is up to date:
+pip install --upgrade uv
 ```
 
 ## File Support
@@ -236,13 +203,11 @@ Indexes markdown files (`.md`) with:
 
 **Dependencies:**
 - Only 2 direct dependencies: `chromadb` and `pyyaml`
-- ~50 total packages (vs 1000+ with dspy-ai)
-- Fast startup: ~16 seconds with `uv run`
+- ~50 total packages
+- Fast startup with `uv run`
 
 ## References
 
 See `references/` directory for additional documentation:
 - ChromaDB configuration and tuning
-- DSPy retrieval patterns (RAG, ReAct, etc.)
-- Performance optimization
-- Advanced integration examples
+- Performance optimization tips

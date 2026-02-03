@@ -1,8 +1,6 @@
 # ChromaDB Memory - Knowledge Retrieval Skill
 
-This skill provides DSPy-based memory indexing and retrieval for OpenSpec workflows using ChromaDB vector storage.
-
-Source: Based on dspy-openspec memory system
+This skill provides memory indexing and retrieval for OpenSpec workflows using ChromaDB vector storage.
 
 ## What This Skill Does
 
@@ -26,12 +24,11 @@ uv run skills/chromadb-apps/scripts/chromadb_memory.py index openspec-memories
 uv run skills/chromadb-apps/scripts/chromadb_memory.py search "How to implement timer in DML?"
 ```
 
-## Files Created
+## Files
 
 - `SKILL.md` - Complete documentation for the skill
 - `scripts/chromadb_memory.py` - Main script with PEP 723 dependencies
 - `references/chromadb.md` - ChromaDB configuration guide
-- `references/dspy-retrieval.md` - DSPy retrieval patterns
 
 ## Key Features
 
@@ -39,7 +36,7 @@ uv run skills/chromadb-apps/scripts/chromadb_memory.py search "How to implement 
 ✅ ChromaDB vector storage with persistence
 ✅ Category-based filtering (DML/Test/General)
 ✅ Semantic search with configurable k results
-✅ DSPy module integration
+✅ Self-contained with PEP 723 inline dependencies
 ✅ Complete CLI with index, search, and stats commands
 
 ## Usage Examples
@@ -77,24 +74,12 @@ uv run skills/chromadb-apps/scripts/chromadb_memory.py search "DML registers" --
 uv run skills/chromadb-apps/scripts/chromadb_memory.py stats
 ```
 
-## Python API Usage
+## How It Works
 
-```python
-from chromadb_memory import MemoryRetriever
-
-# Create retriever
-retriever = MemoryRetriever(k=3)
-
-# Search
-result = retriever(
-    task_description="How do I implement watchdog timer?",
-    category="DML"
-)
-
-print(result["passages"])  # List of relevant passages
-```
-
-**DSPy Integration:** The retriever can be wrapped in a `dspy.Module` for use in DSPy pipelines. See `SKILL.md` for examples.
+1. **Index**: Parses markdown files, extracts metadata, chunks content
+2. **Store**: ChromaDB creates embeddings and stores vectors
+3. **Search**: Semantic search with optional category filtering
+4. **Retrieve**: Returns most relevant passages
 
 ## Technical Stack
 

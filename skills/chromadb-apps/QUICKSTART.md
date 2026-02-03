@@ -28,7 +28,7 @@ uv run skills/chromadb-apps/scripts/chromadb_memory.py test
 **Expected output:**
 ```
 🧪 Testing ChromaDB Memory Skill...
-✅ DSPy import: OK
+✅ ChromaDB import: OK
 ✅ ChromaDB import: OK
 ✅ YAML import: OK
 ✅ All dependencies available!
@@ -132,45 +132,41 @@ for passage in result["passages"]:
     print(passage)
 ```
 
-### DSPy Integration
+### Programmatic Usage
 
-If you want to use this with DSPy pipelines, wrap it in a DSPy module:
+The script is designed for CLI use. To integrate with Python code, use subprocess:
 
 ```python
-import dspy
-from chromadb_memory import MemoryRetriever
+import subprocess
+import json
 
-class DSPyMemoryRetriever(dspy.Module):
-    def __init__(self, k=3):
-        super().__init__()
-        self.retriever = MemoryRetriever(k=k)
+def search_memory(query, category=None, k=3):
+    """Search ChromaDB memory from Python."""
+    cmd = [
+        "uv", "run", 
+        "skills/chromadb-apps/scripts/chromadb_memory.py",
+        "search", query, "--k", str(k)
+    ]
+    if category:
+        cmd.extend(["--category", category])
     
-    def forward(self, query):
-        result = self.retriever(query)
-        return dspy.Prediction(passages=result["passages"])
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout
 
-# Use in RAG
-class RAGAgent(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.retriever = DSPyMemoryRetriever(k=3)
-        self.generate = dspy.ChainOfThought("context, query -> answer")
-    
-    def forward(self, query):
-        retrieval = self.retriever(query)
-        context = "\n\n".join(retrieval.passages)
-        return self.generate(context=context, query=query)
+# Example
+output = search_memory("timer implementation", category="DML")
+print(output)
 ```
 
 ## Troubleshooting
 
 ### Dependencies downloading slowly?
 
-First run downloads DSPy, ChromaDB, and dependencies (~100MB). Subsequent runs are instant.
+First run downloads ChromaDB and dependencies (~100MB). Subsequent runs are instant.
 
 ```bash
-# Pre-install if needed
-pip install dspy-ai chromadb pyyaml
+# The script uses uv run with inline dependencies (PEP 723)
+# No manual installation needed
 ```
 
 ### "Collection already exists" error?
@@ -220,9 +216,7 @@ Your documentation...
 ## Next Steps
 
 1. **Read full docs**: `skills/chromadb-apps/SKILL.md`
-2. **See examples**: `skills/chromadb-apps/examples/basic_usage.py`
-3. **ChromaDB config**: `skills/chromadb-apps/references/chromadb.md`
-4. **DSPy patterns**: `skills/chromadb-apps/references/dspy-retrieval.md`
+2. **ChromaDB config**: `skills/chromadb-apps/references/chromadb.md`
 
 ## Use Cases
 
@@ -262,9 +256,7 @@ context = retriever("user query").passages
 ## Getting Help
 
 - Full documentation: `SKILL.md`
-- Examples: `examples/basic_usage.py`
 - Configuration: `references/chromadb.md`
-- Patterns: `references/dspy-retrieval.md`
 
 ## Summary
 
