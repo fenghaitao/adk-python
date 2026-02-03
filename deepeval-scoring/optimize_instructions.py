@@ -443,16 +443,20 @@ def optimize_instructions(
   prompt = Prompt(
     text_template=current_instructions
   )
-  
+
   print(f"🔍 Optimizing instructions with {len(historical_data)} historical sessions...")
   print(f"📊 Using {len(optimizer.metrics)} metrics for evaluation")
-  
-  # Run optimization - returns (optimized_prompt, optimization_report)
-  optimized_prompt, optimization_report = optimizer.optimize(
+
+  # Run optimization - returns only the optimized prompt
+  # The optimization_report is stored in optimizer.optimization_report
+  optimized_prompt = optimizer.optimize(
     prompt=prompt,
     goldens=historical_data
   )
-  
+
+  # Get the optimization report from the optimizer instance
+  optimization_report = optimizer.optimization_report
+
   # Return both the optimized text template and the report
   return optimized_prompt.text_template, optimization_report
 
