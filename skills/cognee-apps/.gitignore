@@ -1,0 +1,17 @@
+# Storage directories
+cognee_storage/
+wiki_docs/
+
+# Swap files
+*.swp
+*.swo
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test outputs
+*.log
+results*.md
