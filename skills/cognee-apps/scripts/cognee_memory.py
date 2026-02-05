@@ -38,6 +38,13 @@ Features:
 Note:
     This script uses the forked Cognee from github.com/fenghaitao/cognee
     to ensure compatibility with GitHub Copilot and custom configurations.
+    
+Performance Note:
+    First run will be slow (~15-25 seconds) due to:
+    - Cognee import overhead (5-10 seconds)
+    - Database initialization (2-3 seconds)
+    - uv environment setup (2-3 seconds)
+    Subsequent runs in the same session will be faster.
 """
 
 import argparse
@@ -49,6 +56,13 @@ from pathlib import Path
 from typing import Optional, Set, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
+
+# Set critical environment variables BEFORE any other imports
+# This prevents importing fastapi_users/bcrypt which causes issues
+os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
+os.environ.setdefault("REQUIRE_AUTHENTICATION", "false")
+os.environ.setdefault("LOG_LEVEL", "ERROR")  # Reduce noise
+os.environ.setdefault("TELEMETRY_DISABLED", "1")
 
 try:
     from dotenv import load_dotenv
@@ -94,7 +108,7 @@ class Config:
     llm_rate_limit_interval: int = 60
     
     # Search settings
-    search_type: str = "GRAPH_COMPLETION"  # INSIGHTS, CHUNKS, GRAPH_COMPLETION
+    search_type: str = "CHUNKS"  # INSIGHTS, CHUNKS, GRAPH_COMPLETION (CHUNKS is faster)
     
     @classmethod
     def from_env(cls, **overrides) -> "Config":
@@ -183,9 +197,9 @@ class Config:
         os.environ["EMBEDDING_MODEL"] = self.embedding_model
         os.environ["EMBEDDING_DIMENSIONS"] = str(self.embedding_dimensions)
         
-        # Storage paths
-        os.environ["SYSTEM_ROOT_DIRECTORY"] = str(self.working_dir / "system")
-        os.environ["DATA_ROOT_DIRECTORY"] = str(self.working_dir / "data")
+        # Storage paths (must be absolute for Cognee)
+        os.environ["SYSTEM_ROOT_DIRECTORY"] = str(self.working_dir.resolve() / "system")
+        os.environ["DATA_ROOT_DIRECTORY"] = str(self.working_dir.resolve() / "data")
         
         # Rate limiting
         os.environ["EMBEDDING_RATE_LIMIT_ENABLED"] = str(self.embedding_rate_limit_enabled).lower()
@@ -196,7 +210,7 @@ class Config:
         os.environ["LLM_RATE_LIMIT_INTERVAL"] = str(self.llm_rate_limit_interval)
         
         # Other settings
-        os.environ["LOG_LEVEL"] = "INFO"
+        os.environ["LOG_LEVEL"] = "ERROR"  # Reduce noise
         os.environ["TELEMETRY_DISABLED"] = "1"
 
 
@@ -315,41 +329,65 @@ class RepositorySearch:
     
     async def search(self, query: str) -> list:
         """Search the knowledge graph"""
-        # Apply config to environment before importing cognee
-        self.config.apply_to_env()
-        
-        # Import cognee after setting environment
-        import cognee
-        from cognee.modules.search.types.SearchType import SearchType
-        self.cognee = cognee
+        import time
         
         print(f"\n🔍 Searching: {query}")
         print(f"   Dataset: {self.config.dataset_name}")
         print(f"   Search type: {self.config.search_type}")
         
+        # Apply config to environment
+        self.config.apply_to_env()
+        
+        # Import cognee and search types
+        if self.cognee is None:
+            print(f"\n   [1/3] ⏳ Loading Cognee library...")
+            import_start = time.time()
+            
+            import cognee
+            from cognee.modules.search.types.SearchType import SearchType
+            
+            self.cognee = cognee
+            self._SearchType = SearchType
+            
+            import_time = time.time() - import_start
+            print(f"   [1/3] ✅ Cognee loaded ({import_time:.2f}s)")
+        else:
+            from cognee.modules.search.types.SearchType import SearchType
+            self._SearchType = SearchType
+            print(f"   [1/3] ✅ Cognee already loaded (cached)")
+        
+        # Initialize search
+        print(f"   [2/3] ⏳ Initializing database...")
+        init_start = time.time()
+        
         # Map search type string to enum
         search_type_map = {
-            "INSIGHTS": SearchType.INSIGHTS,
-            "CHUNKS": SearchType.CHUNKS,
-            "GRAPH_COMPLETION": SearchType.GRAPH_COMPLETION,
+            "SUMMARIES": self._SearchType.SUMMARIES,
+            "CHUNKS": self._SearchType.CHUNKS,
+            "CHUNKS_LEXICAL": self._SearchType.CHUNKS_LEXICAL,
+            "GRAPH_COMPLETION": self._SearchType.GRAPH_COMPLETION,
+            "CODING_RULES": self._SearchType.CODING_RULES,
         }
         
-        search_type = search_type_map.get(self.config.search_type, SearchType.GRAPH_COMPLETION)
+        search_type = search_type_map.get(self.config.search_type, self._SearchType.GRAPH_COMPLETION)
+        
+        init_time = time.time() - init_start
+        print(f"   [2/3] ✅ Database ready ({init_time:.2f}s)")
         
         # Perform search
-        import time
-        start_time = time.time()
+        print(f"   [3/3] ⏳ Executing {self.config.search_type} search...")
+        search_start = time.time()
         
-        results = await cognee.search(
+        results = await self.cognee.search(
             query_text=query,
             query_type=search_type
         )
         
-        search_time = time.time() - start_time
+        search_time = time.time() - search_start
+        print(f"   [3/3] ✅ Search complete ({search_time:.2f}s)")
         
         print(f"\n📊 Results:")
         print(f"   Found: {len(results)} results")
-        print(f"   Time: {search_time:.2f}s")
         
         return results
 
@@ -369,12 +407,24 @@ async def run_index(config: Config):
 
 async def run_search(config: Config, query: str, output: Optional[Path] = None):
     """Run a search query"""
+    import time
+    total_start = time.time()
+    
     print("\n" + "=" * 80)
     print("SEARCHING REPOSITORY")
     print("=" * 80)
-    
+    print(f"\n⏱️  Performance Note:")
+    print(f"   This search involves multiple steps:")
+    print(f"   1. Loading Cognee library (~5-10s)")
+    print(f"   2. Initializing database (~2-3s)")
+    print(f"   3. Executing search (~3-8s)")
+    print(f"   Total expected time: ~10-20 seconds\n")
+
     searcher = RepositorySearch(config)
     results = await searcher.search(query)
+    
+    total_time = time.time() - total_start
+    print(f"\n⏱️  Total search time: {total_time:.2f}s")
     
     # Display results
     print("\n" + "=" * 80)
@@ -467,7 +517,7 @@ def main():
     search_parser.add_argument(
         "--type",
         type=str,
-        choices=["INSIGHTS", "CHUNKS", "GRAPH_COMPLETION"],
+        choices=["SUMMARIES", "CHUNKS", "CHUNKS_LEXICAL", "GRAPH_COMPLETION", "CODING_RULES"],
         help="Search type (default: GRAPH_COMPLETION)"
     )
     search_parser.add_argument(

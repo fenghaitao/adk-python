@@ -129,7 +129,7 @@ uv run cognee-apps/scripts/cognee_memory.py search "query" --dataset my_dataset
 - `query` - Your search query (required)
 - `--working-dir PATH` - Storage directory with indexed data
 - `--dataset NAME` - Dataset name (default: main)
-- `--type TYPE` - Search strategy: INSIGHTS, CHUNKS, or GRAPH_COMPLETION (default)
+- `--type TYPE` - Search strategy: SUMMARIES, CHUNKS, or GRAPH_COMPLETION (default)
 - `--output FILE` - Save results to markdown file
 
 **Example output:**
@@ -173,8 +173,10 @@ Cognee provides three search strategies optimized for different use cases.
 | Strategy | Best For | Speed | Use When |
 |----------|----------|-------|----------|
 | **GRAPH_COMPLETION** | General questions, explanations | Medium | "How does X work?" |
-| **INSIGHTS** | High-level summaries, architecture | Medium | "What are the main components?" |
-| **CHUNKS** | Specific code, exact matches | Fast | "Show me function X" |
+| **SUMMARIES** | High-level summaries, architecture | Medium | "What are the main components?" |
+| **CHUNKS** | Semantic code search | Fast | "Show me authentication code" |
+| **CHUNKS_LEXICAL** | Exact code matches | Fastest | "function named login" |
+| **CODING_RULES** | Coding patterns, best practices | Fast | "error handling patterns" |
 
 ### GRAPH_COMPLETION (Default)
 
@@ -192,17 +194,17 @@ uv run cognee-apps/scripts/cognee_memory.py search "What are the main components
 **Pros:** Contextual answers, understands relationships  
 **Cons:** Slower than CHUNKS, may not show exact code
 
-### INSIGHTS
+### SUMMARIES
 
 **Best for:** High-level summaries, architectural questions, patterns
 
-Extracts key insights and relationships from the knowledge graph, focusing on important concepts and connections.
+Extracts key summaries and relationships from the knowledge graph, focusing on important concepts and connections.
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "What are the key design patterns used?" --type INSIGHTS
-uv run cognee-apps/scripts/cognee_memory.py search "Summarize the system architecture" --type INSIGHTS
-uv run cognee-apps/scripts/cognee_memory.py search "What are the main dependencies?" --type INSIGHTS
+uv run cognee-apps/scripts/cognee_memory.py search "What are the key design patterns used?" --type SUMMARIES
+uv run cognee-apps/scripts/cognee_memory.py search "Summarize the system architecture" --type SUMMARIES
+uv run cognee-apps/scripts/cognee_memory.py search "What are the main dependencies?" --type SUMMARIES
 ```
 
 **Pros:** Great for overviews, identifies patterns  
@@ -210,26 +212,60 @@ uv run cognee-apps/scripts/cognee_memory.py search "What are the main dependenci
 
 ### CHUNKS
 
-**Best for:** Finding specific code snippets, exact matches, implementation details
+**Best for:** Finding specific code snippets semantically
 
-Returns relevant text chunks directly from indexed documents without graph traversal.
+Returns relevant code chunks using semantic search (meaning-based).
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "Find the login function implementation" --type CHUNKS
-uv run cognee-apps/scripts/cognee_memory.py search "Show me error handling code" --type CHUNKS
-uv run cognee-apps/scripts/cognee_memory.py search "database connection string" --type CHUNKS
+uv run cognee-apps/scripts/cognee_memory.py search "Find authentication code" --type CHUNKS
+uv run cognee-apps/scripts/cognee_memory.py search "Show me error handling" --type CHUNKS
+uv run cognee-apps/scripts/cognee_memory.py search "database connection logic" --type CHUNKS
 ```
 
-**Pros:** Fast, shows exact code, no hallucination  
-**Cons:** No context or explanation
+**Pros:** Fast, semantic understanding, finds related code  
+**Cons:** May not find exact names
+
+### CHUNKS_LEXICAL (Code-Specific)
+
+**Best for:** Finding exact code matches by name (functions, classes, variables)
+
+Returns code chunks using lexical search (exact text matching).
+
+**Examples:**
+```bash
+uv run cognee-apps/scripts/cognee_memory.py search "function named authenticate" --type CHUNKS_LEXICAL
+uv run cognee-apps/scripts/cognee_memory.py search "class UserManager" --type CHUNKS_LEXICAL
+uv run cognee-apps/scripts/cognee_memory.py search "validate_token" --type CHUNKS_LEXICAL
+```
+
+**Pros:** Fastest, finds exact names, no ambiguity  
+**Cons:** Must know exact names, no semantic understanding
+
+### CODING_RULES (Code-Specific)
+
+**Best for:** Finding coding patterns, conventions, and best practices
+
+Searches for extracted coding rules and patterns from the codebase.
+
+**Examples:**
+```bash
+uv run cognee-apps/scripts/cognee_memory.py search "What are the error handling patterns?" --type CODING_RULES
+uv run cognee-apps/scripts/cognee_memory.py search "How should I handle authentication?" --type CODING_RULES
+uv run cognee-apps/scripts/cognee_memory.py search "logging conventions" --type CODING_RULES
+```
+
+**Pros:** Learns from codebase, enforces consistency  
+**Cons:** Requires code to have established patterns
 
 ### Choosing the Right Strategy
 
 **Simple decision tree:**
 - Want to understand how something works? → **GRAPH_COMPLETION**
-- Want a high-level overview? → **INSIGHTS**
-- Want to find specific code? → **CHUNKS**
+- Want a high-level overview? → **SUMMARIES**
+- Want to find code by meaning? → **CHUNKS**
+- Want to find code by exact name? → **CHUNKS_LEXICAL**
+- Want to find coding patterns? → **CODING_RULES**
 
 ## Configuration
 
@@ -305,13 +341,13 @@ uv run cognee-apps/scripts/cognee_memory.py search "Where is validation performe
 ### 3. Refactoring Planning
 ```bash
 # Understand dependencies before refactoring
-uv run cognee-apps/scripts/cognee_memory.py search "What depends on the User class?" --type INSIGHTS
+uv run cognee-apps/scripts/cognee_memory.py search "What depends on the User class?" --type SUMMARIES
 uv run cognee-apps/scripts/cognee_memory.py search "How is authentication used across the codebase?"
 ```
 
 ### 4. Documentation
 ```bash
-# Generate documentation insights
+# Generate documentation summaries
 uv run cognee-apps/scripts/cognee_memory.py search "List all public APIs" --output api-docs.md
 uv run cognee-apps/scripts/cognee_memory.py search "Describe the configuration system" --output config-docs.md
 ```
@@ -336,7 +372,7 @@ uv run cognee-apps/scripts/cognee_memory.py test
 uv run cognee-apps/scripts/cognee_memory.py index
 
 # 3. Ask high-level questions
-uv run cognee-apps/scripts/cognee_memory.py search "What is the purpose of this project?" --type INSIGHTS
+uv run cognee-apps/scripts/cognee_memory.py search "What is the purpose of this project?" --type SUMMARIES
 
 # 4. Dive into specifics
 uv run cognee-apps/scripts/cognee_memory.py search "How does the main API work?"
@@ -398,15 +434,43 @@ uv run cognee-apps/scripts/cognee_memory.py index
 
 ## Troubleshooting
 
-### Import Errors
+### Search Hangs or Times Out
 
-**Problem:** `Cannot import Cognee`
+**Problem:** Search command hangs indefinitely
+
+**Cause:** Kuzu database lock from a previous crashed or hung process
 
 **Solution:**
 ```bash
-# Ensure cognee is installed
-pip install cognee
-# Or use uv which auto-installs from PEP 723 dependencies
+# Kill any existing cognee processes
+pkill -f cognee
+
+# Or find and kill specific process
+ps aux | grep cognee
+kill -9 <PID>
+
+# Then retry search
+uv run cognee-apps/scripts/cognee_memory.py search "query" --dataset your_dataset
+```
+
+**Prevention:**
+- Use different `--working-dir` for concurrent access
+- Use separate `--dataset` names for different projects
+- Always use Ctrl+C to cleanly stop processes
+
+### Database Lock Error
+
+**Problem:** `RuntimeError: IO exception: Could not set lock on file`
+
+**Cause:** Another process is using the Kuzu database
+
+**Solution:**
+```bash
+# Check what's locking the database
+lsof ~/path/to/cognee_storage/system/databases/cognee_graph_kuzu
+
+# Kill the locking process
+kill -9 <PID>
 ```
 
 ### Rate Limiting
@@ -447,11 +511,11 @@ uv run cognee-apps/scripts/cognee_memory.py index --working-dir /mnt/large-disk/
 # Index codebase
 uv run cognee-apps/scripts/cognee_memory.py index
 
-# Extract insights
-uv run cognee-apps/scripts/cognee_memory.py search "system architecture" --output insights.md
+# Extract summaries
+uv run cognee-apps/scripts/cognee_memory.py search "system architecture" --output summaries.md
 
 # Create presentation (use pptx-creator skill)
-# ... convert insights.md to presentation
+# ... convert summaries.md to presentation
 ```
 
 ### With lightrag-apps
@@ -496,7 +560,7 @@ cognee_memory.py
 | Feature | cognee-apps | lightrag-apps |
 |---------|-------------|---------------|
 | Primary use | Code search/Q&A | Wiki generation |
-| Search strategies | 3 types (INSIGHTS, CHUNKS, GRAPH_COMPLETION) | 5 modes (global, local, mix, hybrid, naive) |
+| Search strategies | 3 types (SUMMARIES, CHUNKS, GRAPH_COMPLETION) | 5 modes (global, local, mix, hybrid, naive) |
 | Output | Search results | Hierarchical wiki pages |
 | Incremental updates | Yes | No |
 | Graph structure | Cognee knowledge graph | LightRAG knowledge graph |

@@ -35,7 +35,7 @@ uv run cognee-apps/scripts/cognee_memory.py search "What is DML?"
 ✅ Self-contained script with PEP 723 dependencies  
 ✅ Flexible `--root` parameter to index any directory  
 ✅ GitHub Copilot integration (free with license)  
-✅ Multiple search strategies (INSIGHTS, CHUNKS, GRAPH_COMPLETION)  
+✅ Multiple search strategies (SUMMARIES, CHUNKS, GRAPH_COMPLETION)  
 ✅ Dataset support for organizing multiple projects  
 ✅ Simple CLI with index and search commands  
 
@@ -62,7 +62,7 @@ Searches the indexed knowledge graph.
 Options:
 - `--working-dir PATH` - Storage directory with indexed data
 - `--dataset NAME` - Dataset name (default: main)
-- `--type TYPE` - Search type: INSIGHTS, CHUNKS, or GRAPH_COMPLETION (default)
+- `--type TYPE` - Search type: SUMMARIES, CHUNKS, or GRAPH_COMPLETION (default)
 - `--output FILE` - Save results to markdown file
 
 ## Search Strategies
@@ -70,13 +70,16 @@ Options:
 | Strategy | Use When | Example Query |
 |----------|----------|---------------|
 | **GRAPH_COMPLETION** (default) | Understand how things work | "How does authentication work?" |
-| **INSIGHTS** | Get high-level overview | "What are the main components?" |
-| **CHUNKS** | Find specific code | "Show me the login function" |
+| **SUMMARIES** | Get high-level overview | "What are the main components?" |
+| **CHUNKS** | Find specific code semantically | "Show me the login function" |
+| **CHUNKS_LEXICAL** | Find exact code matches | "function named authenticate" |
+| **CODING_RULES** | Find coding patterns/rules | "What are the error handling patterns?" |
 
 **Quick tips:**
 - Use default (GRAPH_COMPLETION) for most questions
-- Add `--type CHUNKS` to find specific code
-- Add `--type INSIGHTS` for architectural overviews
+- Add `--type CHUNKS` to find code semantically
+- Add `--type CHUNKS_LEXICAL` for exact code matches
+- Add `--type CODING_RULES` for coding patterns and best practices
 
 See [SKILL.md](SKILL.md) for detailed strategy guide.
 
@@ -144,7 +147,7 @@ Can be used with other skills:
 
 This skill uses Cognee instead of LightRAG:
 1. **Knowledge representation**: Uses Cognee's graph structure
-2. **Search strategies**: INSIGHTS, CHUNKS, GRAPH_COMPLETION
+2. **Search strategies**: SUMMARIES, CHUNKS, GRAPH_COMPLETION
 3. **Incremental indexing**: Supports adding to existing graphs
 4. **No wiki generation**: Focused on search/retrieval (use lightrag-apps for wiki generation)
 
