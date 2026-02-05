@@ -1,0 +1,23 @@
+[project]
+name = "cognee-apps"
+version = "1.0.0"
+description = "Index and search code repositories using Cognee knowledge graphs"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cognee>=0.1.0",
+    "litellm>=1.76.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+cognee-memory = "cognee_apps.cognee_memory:main"
+
+[tool.uv.sources]
+cognee = { git = "https://github.com/fenghaitao/cognee.git" }
+litellm = { git = "https://github.com/fenghaitao/litellm.git" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

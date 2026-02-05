@@ -1,15 +1,6 @@
 #!/usr/bin/env python3.12
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "cognee @ git+https://github.com/fenghaitao/cognee.git",
-#     "litellm @ git+https://github.com/fenghaitao/litellm.git",
-#     "pyyaml>=6.0",
-#     "python-dotenv>=1.0.0",
-# ]
-# ///
 """
-Cognee Memory - Index and search current directory using Cognee knowledge graphs
+Cognee Memory - Index and search directories using Cognee knowledge graphs
 
 A self-contained script for indexing and searching code repositories using
 the forked Cognee installation with GitHub Copilot support.

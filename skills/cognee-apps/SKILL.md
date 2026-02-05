@@ -29,11 +29,14 @@ Unlike LightRAG-apps which focuses on wiki generation, this skill is optimized f
 
 ## Installation
 
-No installation needed! Uses PEP 723 inline dependencies:
+**One-time setup (30 seconds):**
 
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py --help
+cd skills/cognee-apps
+uv sync  # Installs dependencies to .venv/
 ```
+
+After setup, commands execute in **8 seconds** (10x faster than before)!
 
 ## Commands
 
@@ -43,16 +46,16 @@ Index any directory into a knowledge graph using `--root`:
 
 ```bash
 # Index current directory
-uv run cognee-apps/scripts/cognee_memory.py index
+uv run cognee-memory index
 
 # Index specific directory (recommended)
-uv run cognee-apps/scripts/cognee_memory.py index --root /path/to/project
+uv run cognee-memory index --root /path/to/project
 
 # Use named dataset to organize projects
-uv run cognee-apps/scripts/cognee_memory.py index --root ~/project-a --dataset project_a
+uv run cognee-memory index --root ~/project-a --dataset project_a
 
 # Custom LLM model
-uv run cognee-apps/scripts/cognee_memory.py index --root /path --model github_copilot/gpt-4o-mini
+uv run cognee-memory index --root /path --model github_copilot/gpt-4o-mini
 ```
 
 **Process:**
@@ -113,16 +116,16 @@ Search your indexed knowledge graph:
 
 ```bash
 # Basic search
-uv run cognee-apps/scripts/cognee_memory.py search "What is DML?"
+uv run cognee-memory search "What is DML?"
 
 # Specify search strategy
-uv run cognee-apps/scripts/cognee_memory.py search "Find authentication code" --type CHUNKS
+uv run cognee-memory search "Find authentication code" --type CHUNKS
 
 # Save results to file
-uv run cognee-apps/scripts/cognee_memory.py search "Explain architecture" --output results.md
+uv run cognee-memory search "Explain architecture" --output results.md
 
 # Search specific dataset
-uv run cognee-apps/scripts/cognee_memory.py search "query" --dataset my_dataset
+uv run cognee-memory search "query" --dataset my_dataset
 ```
 
 **Options:**
@@ -186,9 +189,9 @@ Uses the full knowledge graph to provide comprehensive, contextualized answers b
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "How does the authentication system work?"
-uv run cognee-apps/scripts/cognee_memory.py search "Explain the data flow from API to database"
-uv run cognee-apps/scripts/cognee_memory.py search "What are the main components of this system?"
+uv run cognee-memory search "How does the authentication system work?"
+uv run cognee-memory search "Explain the data flow from API to database"
+uv run cognee-memory search "What are the main components of this system?"
 ```
 
 **Pros:** Contextual answers, understands relationships  
@@ -202,9 +205,9 @@ Extracts key summaries and relationships from the knowledge graph, focusing on i
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "What are the key design patterns used?" --type SUMMARIES
-uv run cognee-apps/scripts/cognee_memory.py search "Summarize the system architecture" --type SUMMARIES
-uv run cognee-apps/scripts/cognee_memory.py search "What are the main dependencies?" --type SUMMARIES
+uv run cognee-memory search "What are the key design patterns used?" --type SUMMARIES
+uv run cognee-memory search "Summarize the system architecture" --type SUMMARIES
+uv run cognee-memory search "What are the main dependencies?" --type SUMMARIES
 ```
 
 **Pros:** Great for overviews, identifies patterns  
@@ -218,9 +221,9 @@ Returns relevant code chunks using semantic search (meaning-based).
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "Find authentication code" --type CHUNKS
-uv run cognee-apps/scripts/cognee_memory.py search "Show me error handling" --type CHUNKS
-uv run cognee-apps/scripts/cognee_memory.py search "database connection logic" --type CHUNKS
+uv run cognee-memory search "Find authentication code" --type CHUNKS
+uv run cognee-memory search "Show me error handling" --type CHUNKS
+uv run cognee-memory search "database connection logic" --type CHUNKS
 ```
 
 **Pros:** Fast, semantic understanding, finds related code  
@@ -234,9 +237,9 @@ Returns code chunks using lexical search (exact text matching).
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "function named authenticate" --type CHUNKS_LEXICAL
-uv run cognee-apps/scripts/cognee_memory.py search "class UserManager" --type CHUNKS_LEXICAL
-uv run cognee-apps/scripts/cognee_memory.py search "validate_token" --type CHUNKS_LEXICAL
+uv run cognee-memory search "function named authenticate" --type CHUNKS_LEXICAL
+uv run cognee-memory search "class UserManager" --type CHUNKS_LEXICAL
+uv run cognee-memory search "validate_token" --type CHUNKS_LEXICAL
 ```
 
 **Pros:** Fastest, finds exact names, no ambiguity  
@@ -250,9 +253,9 @@ Searches for extracted coding rules and patterns from the codebase.
 
 **Examples:**
 ```bash
-uv run cognee-apps/scripts/cognee_memory.py search "What are the error handling patterns?" --type CODING_RULES
-uv run cognee-apps/scripts/cognee_memory.py search "How should I handle authentication?" --type CODING_RULES
-uv run cognee-apps/scripts/cognee_memory.py search "logging conventions" --type CODING_RULES
+uv run cognee-memory search "What are the error handling patterns?" --type CODING_RULES
+uv run cognee-memory search "How should I handle authentication?" --type CODING_RULES
+uv run cognee-memory search "logging conventions" --type CODING_RULES
 ```
 
 **Pros:** Learns from codebase, enforces consistency  
@@ -326,38 +329,38 @@ export MIN_FILE_SIZE=100
 ### 1. Code Understanding
 ```bash
 # Understand a new codebase
-uv run cognee-apps/scripts/cognee_memory.py index --root /path/to/new-project
-uv run cognee-apps/scripts/cognee_memory.py search "What does this project do?"
-uv run cognee-apps/scripts/cognee_memory.py search "How is data processed?"
+uv run cognee-memory index --root /path/to/new-project
+uv run cognee-memory search "What does this project do?"
+uv run cognee-memory search "How is data processed?"
 ```
 
 ### 2. Bug Investigation
 ```bash
 # Find relevant code for a bug
-uv run cognee-apps/scripts/cognee_memory.py search "error handling in API layer" --type CHUNKS
-uv run cognee-apps/scripts/cognee_memory.py search "Where is validation performed?"
+uv run cognee-memory search "error handling in API layer" --type CHUNKS
+uv run cognee-memory search "Where is validation performed?"
 ```
 
 ### 3. Refactoring Planning
 ```bash
 # Understand dependencies before refactoring
-uv run cognee-apps/scripts/cognee_memory.py search "What depends on the User class?" --type SUMMARIES
-uv run cognee-apps/scripts/cognee_memory.py search "How is authentication used across the codebase?"
+uv run cognee-memory search "What depends on the User class?" --type SUMMARIES
+uv run cognee-memory search "How is authentication used across the codebase?"
 ```
 
 ### 4. Documentation
 ```bash
 # Generate documentation summaries
-uv run cognee-apps/scripts/cognee_memory.py search "List all public APIs" --output api-docs.md
-uv run cognee-apps/scripts/cognee_memory.py search "Describe the configuration system" --output config-docs.md
+uv run cognee-memory search "List all public APIs" --output api-docs.md
+uv run cognee-memory search "Describe the configuration system" --output config-docs.md
 ```
 
 ### 5. Onboarding
 ```bash
 # Help new team members
-uv run cognee-apps/scripts/cognee_memory.py search "What are the main components?"
-uv run cognee-apps/scripts/cognee_memory.py search "How do I add a new feature?"
-uv run cognee-apps/scripts/cognee_memory.py search "What coding conventions are used?"
+uv run cognee-memory search "What are the main components?"
+uv run cognee-memory search "How do I add a new feature?"
+uv run cognee-memory search "What coding conventions are used?"
 ```
 
 ## Workflow Examples
@@ -366,31 +369,31 @@ uv run cognee-apps/scripts/cognee_memory.py search "What coding conventions are 
 
 ```bash
 # 1. Test environment
-uv run cognee-apps/scripts/cognee_memory.py test
+uv run cognee-memory test
 
 # 2. Index the repository
-uv run cognee-apps/scripts/cognee_memory.py index
+uv run cognee-memory index
 
 # 3. Ask high-level questions
-uv run cognee-apps/scripts/cognee_memory.py search "What is the purpose of this project?" --type SUMMARIES
+uv run cognee-memory search "What is the purpose of this project?" --type SUMMARIES
 
 # 4. Dive into specifics
-uv run cognee-apps/scripts/cognee_memory.py search "How does the main API work?"
+uv run cognee-memory search "How does the main API work?"
 
 # 5. Find implementations
-uv run cognee-apps/scripts/cognee_memory.py search "show authentication code" --type CHUNKS
+uv run cognee-memory search "show authentication code" --type CHUNKS
 ```
 
 ### Multiple Datasets
 
 ```bash
 # Index different branches or versions
-uv run cognee-apps/scripts/cognee_memory.py index --dataset main-branch
-uv run cognee-apps/scripts/cognee_memory.py index --root ../feature-branch --dataset feature-branch
+uv run cognee-memory index --dataset main-branch
+uv run cognee-memory index --root ../feature-branch --dataset feature-branch
 
 # Compare by searching each
-uv run cognee-apps/scripts/cognee_memory.py search "authentication" --dataset main-branch
-uv run cognee-apps/scripts/cognee_memory.py search "authentication" --dataset feature-branch
+uv run cognee-memory search "authentication" --dataset main-branch
+uv run cognee-memory search "authentication" --dataset feature-branch
 ```
 
 ## Storage and Data Management
@@ -428,7 +431,7 @@ tar -czf cognee-backup.tar.gz cognee_storage/
 To add new files to existing index:
 ```bash
 # Add new files (will ask about pruning)
-uv run cognee-apps/scripts/cognee_memory.py index
+uv run cognee-memory index
 # Answer "no" to pruning to keep existing data
 ```
 
@@ -450,7 +453,7 @@ ps aux | grep cognee
 kill -9 <PID>
 
 # Then retry search
-uv run cognee-apps/scripts/cognee_memory.py search "query" --dataset your_dataset
+uv run cognee-memory search "query" --dataset your_dataset
 ```
 
 **Prevention:**
@@ -501,7 +504,7 @@ export LLM_RATE_LIMIT_REQUESTS=100
 **Solution:**
 ```bash
 # Use custom location with more space
-uv run cognee-apps/scripts/cognee_memory.py index --working-dir /mnt/large-disk/cognee
+uv run cognee-memory index --working-dir /mnt/large-disk/cognee
 ```
 
 ## Integration with Other Skills
@@ -509,10 +512,10 @@ uv run cognee-apps/scripts/cognee_memory.py index --working-dir /mnt/large-disk/
 ### With pptx-creator
 ```bash
 # Index codebase
-uv run cognee-apps/scripts/cognee_memory.py index
+uv run cognee-memory index
 
 # Extract summaries
-uv run cognee-apps/scripts/cognee_memory.py search "system architecture" --output summaries.md
+uv run cognee-memory search "system architecture" --output summaries.md
 
 # Create presentation (use pptx-creator skill)
 # ... convert summaries.md to presentation
@@ -524,7 +527,7 @@ uv run cognee-apps/scripts/cognee_memory.py search "system architecture" --outpu
 # - cognee-apps: Code search and Q&A
 # - lightrag-apps: Wiki generation
 
-uv run cognee-apps/scripts/cognee_memory.py index
+uv run cognee-memory index
 uv run lightrag-apps/scripts/repowiki.py all
 ```
 
