@@ -38,12 +38,15 @@ uv run cognee-memory search "What is DML?"
 
 **Run from anywhere:**
 ```bash
-# Use --directory flag
-uv run --directory ~/adk-python/skills/cognee-apps cognee-memory search "query"
+# Use --directory flag (must specify --working-dir with absolute path)
+uv run --directory ~/adk-python/skills/cognee-apps cognee-memory search "query" \
+  --working-dir ~/adk-python/cognee_storage
 
 # Or create an alias in ~/.bashrc
-alias cognee-memory='uv run --directory ~/adk-python/skills/cognee-apps cognee-memory'
+alias cognee-memory='uv run --directory ~/adk-python/skills/cognee-apps cognee-memory --working-dir ~/adk-python/cognee_storage'
 ```
+
+**Note:** When using `--directory`, you must specify `--working-dir` with an absolute path since the current directory changes.
 
 ## Files
 
@@ -107,7 +110,10 @@ See [SKILL.md](SKILL.md) for detailed strategy guide.
 
 ## Examples
 
+**From cognee-apps directory:**
 ```bash
+cd skills/cognee-apps
+
 # Index current directory
 uv run cognee-memory index
 
@@ -122,6 +128,18 @@ uv run cognee-memory search "Find all API endpoints" --type CHUNKS
 
 # Save search results
 uv run cognee-memory search "Explain the architecture" --output results.md
+```
+
+**From anywhere (specify absolute paths):**
+```bash
+# Index with absolute paths
+uv run --directory ~/adk-python/skills/cognee-apps cognee-memory index \
+  --root ~/myproject \
+  --working-dir ~/adk-python/cognee_storage
+
+# Search with absolute paths
+uv run --directory ~/adk-python/skills/cognee-apps cognee-memory search "query" \
+  --working-dir ~/adk-python/cognee_storage
 ```
 
 ## Configuration
