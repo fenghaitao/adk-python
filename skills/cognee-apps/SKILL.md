@@ -29,14 +29,16 @@ Unlike LightRAG-apps which focuses on wiki generation, this skill is optimized f
 
 ## Installation
 
-**One-time setup (30 seconds):**
+**Required: One-time setup (30 seconds)**
+
+Before using any commands, create the persistent `.venv`:
 
 ```bash
-cd skills/cognee-apps
-uv sync  # Installs dependencies to .venv/
+# Create .venv with all dependencies (required)
+uv sync --directory {baseDir}
 ```
 
-After setup, commands execute in **8 seconds** (10x faster than before)!
+This creates a persistent virtual environment for 10x faster execution (~8 seconds vs ~15-20 seconds per command).
 
 ## Commands
 
@@ -45,17 +47,20 @@ After setup, commands execute in **8 seconds** (10x faster than before)!
 Index any directory into a knowledge graph using `--root`:
 
 ```bash
+# First time: Create .venv (required)
+uv sync --directory {baseDir}
+
 # Index current directory
-uv run cognee-memory index
+uv run --directory {baseDir} cognee-memory index
 
 # Index specific directory (recommended)
-uv run cognee-memory index --root /path/to/project
+uv run --directory {baseDir} cognee-memory index --root /path/to/project
 
 # Use named dataset to organize projects
-uv run cognee-memory index --root ~/project-a --dataset project_a
+uv run --directory {baseDir} cognee-memory index --root ~/project-a --dataset project_a
 
 # Custom LLM model
-uv run cognee-memory index --root /path --model github_copilot/gpt-4o-mini
+uv run --directory {baseDir} cognee-memory index --root /path --model github_copilot/gpt-4o-mini
 ```
 
 **Process:**
@@ -115,17 +120,20 @@ If you run `index` again, it will ask if you want to prune existing data or add 
 Search your indexed knowledge graph:
 
 ```bash
+# First time: Create .venv (required)
+uv sync --directory {baseDir}
+
 # Basic search
-uv run cognee-memory search "What is DML?"
+uv run --directory {baseDir} cognee-memory search "What is DML?"
 
 # Specify search strategy
-uv run cognee-memory search "Find authentication code" --type CHUNKS
+uv run --directory {baseDir} cognee-memory search "Find authentication code" --type CHUNKS
 
 # Save results to file
-uv run cognee-memory search "Explain architecture" --output results.md
+uv run --directory {baseDir} cognee-memory search "Explain architecture" --output results.md
 
 # Search specific dataset
-uv run cognee-memory search "query" --dataset my_dataset
+uv run --directory {baseDir} cognee-memory search "query" --dataset my_dataset
 ```
 
 **Options:**
@@ -189,9 +197,9 @@ Uses the full knowledge graph to provide comprehensive, contextualized answers b
 
 **Examples:**
 ```bash
-uv run cognee-memory search "How does the authentication system work?"
-uv run cognee-memory search "Explain the data flow from API to database"
-uv run cognee-memory search "What are the main components of this system?"
+uv run --directory {baseDir} cognee-memory search "How does the authentication system work?"
+uv run --directory {baseDir} cognee-memory search "Explain the data flow from API to database"
+uv run --directory {baseDir} cognee-memory search "What are the main components of this system?"
 ```
 
 **Pros:** Contextual answers, understands relationships  
@@ -205,9 +213,9 @@ Extracts key summaries and relationships from the knowledge graph, focusing on i
 
 **Examples:**
 ```bash
-uv run cognee-memory search "What are the key design patterns used?" --type SUMMARIES
-uv run cognee-memory search "Summarize the system architecture" --type SUMMARIES
-uv run cognee-memory search "What are the main dependencies?" --type SUMMARIES
+uv run --directory {baseDir} cognee-memory search "What are the key design patterns used?" --type SUMMARIES
+uv run --directory {baseDir} cognee-memory search "Summarize the system architecture" --type SUMMARIES
+uv run --directory {baseDir} cognee-memory search "What are the main dependencies?" --type SUMMARIES
 ```
 
 **Pros:** Great for overviews, identifies patterns  
@@ -221,9 +229,9 @@ Returns relevant code chunks using semantic search (meaning-based).
 
 **Examples:**
 ```bash
-uv run cognee-memory search "Find authentication code" --type CHUNKS
-uv run cognee-memory search "Show me error handling" --type CHUNKS
-uv run cognee-memory search "database connection logic" --type CHUNKS
+uv run --directory {baseDir} cognee-memory search "Find authentication code" --type CHUNKS
+uv run --directory {baseDir} cognee-memory search "Show me error handling" --type CHUNKS
+uv run --directory {baseDir} cognee-memory search "database connection logic" --type CHUNKS
 ```
 
 **Pros:** Fast, semantic understanding, finds related code  
@@ -237,9 +245,9 @@ Returns code chunks using lexical search (exact text matching).
 
 **Examples:**
 ```bash
-uv run cognee-memory search "function named authenticate" --type CHUNKS_LEXICAL
-uv run cognee-memory search "class UserManager" --type CHUNKS_LEXICAL
-uv run cognee-memory search "validate_token" --type CHUNKS_LEXICAL
+uv run --directory {baseDir} cognee-memory search "function named authenticate" --type CHUNKS_LEXICAL
+uv run --directory {baseDir} cognee-memory search "class UserManager" --type CHUNKS_LEXICAL
+uv run --directory {baseDir} cognee-memory search "validate_token" --type CHUNKS_LEXICAL
 ```
 
 **Pros:** Fastest, finds exact names, no ambiguity  
@@ -253,9 +261,9 @@ Searches for extracted coding rules and patterns from the codebase.
 
 **Examples:**
 ```bash
-uv run cognee-memory search "What are the error handling patterns?" --type CODING_RULES
-uv run cognee-memory search "How should I handle authentication?" --type CODING_RULES
-uv run cognee-memory search "logging conventions" --type CODING_RULES
+uv run --directory {baseDir} cognee-memory search "What are the error handling patterns?" --type CODING_RULES
+uv run --directory {baseDir} cognee-memory search "How should I handle authentication?" --type CODING_RULES
+uv run --directory {baseDir} cognee-memory search "logging conventions" --type CODING_RULES
 ```
 
 **Pros:** Learns from codebase, enforces consistency  
@@ -328,39 +336,54 @@ export MIN_FILE_SIZE=100
 
 ### 1. Code Understanding
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Understand a new codebase
-uv run cognee-memory index --root /path/to/new-project
-uv run cognee-memory search "What does this project do?"
-uv run cognee-memory search "How is data processed?"
+uv run --directory {baseDir} cognee-memory index --root /path/to/new-project
+uv run --directory {baseDir} cognee-memory search "What does this project do?"
+uv run --directory {baseDir} cognee-memory search "How is data processed?"
 ```
 
 ### 2. Bug Investigation
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Find relevant code for a bug
-uv run cognee-memory search "error handling in API layer" --type CHUNKS
-uv run cognee-memory search "Where is validation performed?"
+uv run --directory {baseDir} cognee-memory search "error handling in API layer" --type CHUNKS
+uv run --directory {baseDir} cognee-memory search "Where is validation performed?"
 ```
 
 ### 3. Refactoring Planning
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Understand dependencies before refactoring
-uv run cognee-memory search "What depends on the User class?" --type SUMMARIES
-uv run cognee-memory search "How is authentication used across the codebase?"
+uv run --directory {baseDir} cognee-memory search "What depends on the User class?" --type SUMMARIES
+uv run --directory {baseDir} cognee-memory search "How is authentication used across the codebase?"
 ```
 
 ### 4. Documentation
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Generate documentation summaries
-uv run cognee-memory search "List all public APIs" --output api-docs.md
-uv run cognee-memory search "Describe the configuration system" --output config-docs.md
+uv run --directory {baseDir} cognee-memory search "List all public APIs" --output api-docs.md
+uv run --directory {baseDir} cognee-memory search "Describe the configuration system" --output config-docs.md
 ```
 
 ### 5. Onboarding
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Help new team members
-uv run cognee-memory search "What are the main components?"
-uv run cognee-memory search "How do I add a new feature?"
-uv run cognee-memory search "What coding conventions are used?"
+uv run --directory {baseDir} cognee-memory search "What are the main components?"
+uv run --directory {baseDir} cognee-memory search "How do I add a new feature?"
+uv run --directory {baseDir} cognee-memory search "What coding conventions are used?"
 ```
 
 ## Workflow Examples
@@ -368,32 +391,38 @@ uv run cognee-memory search "What coding conventions are used?"
 ### Complete Repository Analysis
 
 ```bash
-# 1. Test environment
-uv run cognee-memory test
+# 1. Setup (required first time)
+uv sync --directory {baseDir}
 
-# 2. Index the repository
-uv run cognee-memory index
+# 2. Test environment
+uv run --directory {baseDir} cognee-memory test
 
-# 3. Ask high-level questions
-uv run cognee-memory search "What is the purpose of this project?" --type SUMMARIES
+# 3. Index the repository
+uv run --directory {baseDir} cognee-memory index
 
-# 4. Dive into specifics
-uv run cognee-memory search "How does the main API work?"
+# 4. Ask high-level questions
+uv run --directory {baseDir} cognee-memory search "What is the purpose of this project?" --type SUMMARIES
 
-# 5. Find implementations
-uv run cognee-memory search "show authentication code" --type CHUNKS
+# 5. Dive into specifics
+uv run --directory {baseDir} cognee-memory search "How does the main API work?"
+
+# 6. Find implementations
+uv run --directory {baseDir} cognee-memory search "show authentication code" --type CHUNKS
 ```
 
 ### Multiple Datasets
 
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Index different branches or versions
-uv run cognee-memory index --dataset main-branch
-uv run cognee-memory index --root ../feature-branch --dataset feature-branch
+uv run --directory {baseDir} cognee-memory index --dataset main-branch
+uv run --directory {baseDir} cognee-memory index --root ../feature-branch --dataset feature-branch
 
 # Compare by searching each
-uv run cognee-memory search "authentication" --dataset main-branch
-uv run cognee-memory search "authentication" --dataset feature-branch
+uv run --directory {baseDir} cognee-memory search "authentication" --dataset main-branch
+uv run --directory {baseDir} cognee-memory search "authentication" --dataset feature-branch
 ```
 
 ## Storage and Data Management
@@ -431,7 +460,7 @@ tar -czf cognee-backup.tar.gz cognee_storage/
 To add new files to existing index:
 ```bash
 # Add new files (will ask about pruning)
-uv run cognee-memory index
+uv run --directory {baseDir} cognee-memory index
 # Answer "no" to pruning to keep existing data
 ```
 
@@ -453,7 +482,7 @@ ps aux | grep cognee
 kill -9 <PID>
 
 # Then retry search
-uv run cognee-memory search "query" --dataset your_dataset
+uv run --directory {baseDir} cognee-memory search "query" --dataset your_dataset
 ```
 
 **Prevention:**
@@ -511,11 +540,14 @@ uv run cognee-memory index --working-dir /mnt/large-disk/cognee
 
 ### With pptx-creator
 ```bash
+# Setup (required first time)
+uv sync --directory {baseDir}
+
 # Index codebase
-uv run cognee-memory index
+uv run --directory {baseDir} cognee-memory index
 
 # Extract summaries
-uv run cognee-memory search "system architecture" --output summaries.md
+uv run --directory {baseDir} cognee-memory search "system architecture" --output summaries.md
 
 # Create presentation (use pptx-creator skill)
 # ... convert summaries.md to presentation
@@ -527,8 +559,8 @@ uv run cognee-memory search "system architecture" --output summaries.md
 # - cognee-apps: Code search and Q&A
 # - lightrag-apps: Wiki generation
 
-uv run cognee-memory index
-uv run lightrag-apps/scripts/repowiki.py all
+uv run --directory {baseDir} cognee-memory index
+uv run --directory lightrag-apps lightrag-apps/scripts/repowiki.py all
 ```
 
 ## Technical Details
