@@ -24,8 +24,12 @@ import dspy
 
 # Maximum iterations for apply agent
 # Based on workflow: read docs, implement DML, create tests, validate
-# 50 provides buffer for complex devices with multiple files
-MAX_APPLY_ITERS = 50
+# Increased to 100 to provide sufficient buffer for:
+# - Reading multiple spec delta files
+# - Implementing DML and Python tests (two languages)
+# - Build and test cycles with error recovery
+# - Complex devices with multiple files
+MAX_APPLY_ITERS = 100
 
 from dspy_openspec.signatures.apply import ApplySignature
 from dspy_openspec.tools import get_file_tools

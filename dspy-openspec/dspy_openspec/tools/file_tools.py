@@ -336,6 +336,56 @@ def search_files(
   return result
 
 
+def build_simics_project(project_path: str, module: str) -> str:
+  """Build a Simics device module.
+  
+  Compiles DML code for the specified device module.
+  
+  Args:
+    project_path: Absolute path to simics-project directory
+    module: Device module name (e.g., 'sample-device-dml')
+    
+  Returns:
+    Build output (stdout and stderr combined)
+    
+  Raises:
+    subprocess.TimeoutExpired: If build times out
+    RuntimeError: If build command fails
+  """
+  return bash_command(
+    f"make {module}",
+    working_directory=project_path,
+    timeout=120
+  )
+
+
+def run_simics_test(project_path: str, module: str = "") -> str:
+  """Run tests for a Simics device module.
+  
+  Executes the test suite for the specified module or all tests if no module specified.
+  
+  Args:
+    project_path: Absolute path to simics-project directory
+    module: Device module name (optional, default: run all tests)
+    
+  Returns:
+    Test output (stdout and stderr combined)
+    
+  Raises:
+    subprocess.TimeoutExpired: If tests time out
+    RuntimeError: If test command fails
+  """
+  test_cmd = "./bin/test-runner"
+  if module:
+    test_cmd += f" {module}"
+  
+  return bash_command(
+    test_cmd,
+    working_directory=project_path,
+    timeout=180
+  )
+
+
 def get_file_tools():
   """Get list of file operation tools for DSPy ReAct.
   
@@ -350,4 +400,6 @@ def get_file_tools():
     replace_string_in_file,
     bash_command,
     search_files,
+    build_simics_project,
+    run_simics_test,
   ]
