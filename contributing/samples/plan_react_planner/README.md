@@ -43,12 +43,14 @@ Unlike `BuiltInPlanner`, `PlanReActPlanner` works with any LLM - it uses prompt 
 - Scenarios with iterative tool use (build → test → fix cycles)
 - When you need to debug agent reasoning
 - Tasks requiring adaptation based on intermediate results
+- **Using Gemini models** (best compatibility with structured outputs)
 
 ❌ **Not ideal for:**
 - Simple, single-step queries
 - Highly structured workflows already enforced by instructions
 - When you need maximum control over exact output format
 - Token-sensitive applications (planning adds overhead)
+- **Models that struggle with structured formats** (may output tags without actions)
 
 ## Comparison with Other Approaches
 
@@ -64,7 +66,25 @@ Unlike `BuiltInPlanner`, `PlanReActPlanner` works with any LLM - it uses prompt 
 
 This example uses `iflow/qwen3-coder-plus`, the same model used by OpenSpec agents. This demonstrates that PlanReActPlanner works with any LLM, not just Gemini models.
 
-### Basic Usage
+### Demo Scripts
+
+The example includes separate demo scripts to avoid async event loop conflicts:
+
+```bash
+# Run demo WITHOUT planner (baseline)
+python contributing/samples/plan_react_planner/demo_without_planner.py
+
+# Run demo WITH planner
+python contributing/samples/plan_react_planner/demo_with_planner.py
+```
+
+Each demo runs independently and shows:
+- Event structure and count
+- Tool calls made
+- Final response
+- Key characteristics of the approach
+
+### Interactive Usage
 
 ```bash
 # Run the agent interactively
@@ -75,6 +95,8 @@ adk run contributing/samples/plan_react_planner
 # 2. "Analyze the research trends in quantum computing and identify the most cited work"
 # 3. "Compare the research impact between machine learning and quantum computing"
 ```
+
+**Note:** When using `adk run`, you'll see `/*PLANNING*/`, `/*REASONING*/`, and `/*ACTION*/` tags, but the actual function calls won't be displayed in the terminal. This is normal - the tools are still being called. To see full event details including function calls, run the demo scripts instead.
 
 ### What to Observe
 
@@ -189,6 +211,49 @@ root_agent = Agent(
 - Ensure tool error messages are informative
 - The agent will replan if tools fail, but needs clear error signals
 - Check that your tools return meaningful error messages
+
+### `adk run` doesn't show function calls after `/*ACTION*/`
+
+When using `adk run`, you may see `/*ACTION*/` tags but not the actual function calls in the terminal output:
+
+**What you see:**
+```
+[research_assistant]: /*REASONING*/.../*ACTION*/
+[research_assistant]: /*REASONING*/.../*ACTION*/
+```
+
+**This is normal!** This is a display/logging behavior of `adk run`, not a bug. The function calls ARE happening (you can tell because the agent continues reasoning with new information), but `adk run` doesn't display them in the terminal by default.
+
+**To verify tools are being called:**
+1. Check that the agent's reasoning changes after each `/*ACTION*/` (it gets new information)
+2. Look at the final answer - it should contain specific data from tool calls
+3. Run the demo scripts (`demo_with_planner.py`) which show full event details including tool calls
+
+**This is different from a real problem** where the model outputs `/*ACTION*/` but doesn't actually generate a function call. Signs of that issue:
+- Agent gets stuck in a loop repeating the same reasoning
+- Final answer is generic without specific data
+- Agent says it will call a tool but never does
+
+### Agent truly not calling tools (rare issue)
+
+This can happen with some models that don't fully follow the structured format:
+
+**Symptoms:**
+- Agent repeats the same reasoning without progress
+- Final answer lacks specific data that tools would provide
+- Agent acknowledges it should use tools but doesn't
+
+**Causes:**
+- The model understands it should act but doesn't generate the function call
+- Some models work better without explicit planning structure
+
+**Solutions:**
+1. **Try without planner first**: Remove `planner=PlanReActPlanner()` to see if the agent calls tools naturally
+2. **Use a different model**: Gemini models are specifically trained for structured outputs
+3. **Simplify the query**: Start with direct tool-calling queries like "Search for papers on X"
+4. **Check tool descriptions**: Ensure your tool docstrings clearly explain when to use each tool
+
+If you consistently see this issue, the model may not be well-suited for PlanReActPlanner. Consider using the agent without a planner, or try a Gemini model which has better support for structured outputs.
 
 ## Related Samples
 

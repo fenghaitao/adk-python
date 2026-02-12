@@ -41,7 +41,7 @@ def test_agent_initialization():
 def test_agent_has_tools():
   """Test that the agent has the expected tools."""
   assert len(root_agent.tools) == 4
-  tool_names = [tool.name for tool in root_agent.tools]
+  tool_names = [tool.__name__ if hasattr(tool, '__name__') else tool.name for tool in root_agent.tools]
   assert 'search_papers' in tool_names
   assert 'get_citation_count' in tool_names
   assert 'analyze_research_trends' in tool_names
