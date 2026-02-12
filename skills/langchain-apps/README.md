@@ -42,6 +42,7 @@ uv run langchain-memory visualize my_graph.gml --output graph.png
 ## Key Features
 
 ✅ Managed dependencies with uv and pyproject.toml
+✅ Modern LCEL patterns (no deprecated code)
 ✅ LLM-based knowledge extraction (GPT-4o-mini)
 ✅ NetworkX graph storage with persistence
 ✅ Entity-centric queries with configurable depth

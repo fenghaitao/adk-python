@@ -277,18 +277,23 @@ Django is a web framework written in Python.
 ## Technical Details
 
 **Built with:**
-- [LangChain](https://python.langchain.com/) - LLM orchestration
+- [LangChain](https://python.langchain.com/) - LLM orchestration with LCEL
 - [LangChain Community](https://python.langchain.com/docs/integrations/graphs/) - Graph integrations
 - [NetworkX](https://networkx.org/) - Graph data structure
 - [Matplotlib](https://matplotlib.org/) - Visualization
 - [OpenAI](https://openai.com/) - GPT models
 
 **Architecture:**
-1. **Extractor** - LLM analyzes text and extracts triples
+1. **Extractor** - LLM analyzes text using LCEL chain (modern pattern)
 2. **Builder** - Constructs NetworkX directed graph
 3. **Storage** - Persists graph in GML format
 4. **Query** - Entity-centric queries with DFS traversal
 5. **Visualizer** - Spring layout rendering
+
+**Modern Implementation:**
+- Uses LCEL (LangChain Expression Language) instead of deprecated LLMChain
+- Pattern: `prompt | llm | output_parser`
+- Future-proof and optimized for performance
 
 **Dependencies:**
 - 5 direct dependencies (langchain, langchain-community, langchain-openai, networkx, matplotlib)
@@ -300,9 +305,9 @@ Django is a web framework written in Python.
 ### Python API
 
 ```python
-from langchain_knowledge_graph import KnowledgeGraphBuilder, KnowledgeGraphQuery
+from langchain_apps.langchain_memory import KnowledgeGraphBuilder, KnowledgeGraphQuery
 
-# Build graph
+# Build graph using modern LCEL patterns
 builder = KnowledgeGraphBuilder(model="gpt-4o-mini")
 graph = builder.build_from_directory("docs/")
 

@@ -53,8 +53,13 @@ from typing import List, Dict, Any, Optional
 
 try:
   from langchain_community.graphs import NetworkxEntityGraph
-  from langchain_community.graphs.index_creator import GraphIndexCreator
-  from langchain_community.graphs.networkx_graph import KnowledgeTriple
+  from langchain_community.graphs.networkx_graph import (
+    KnowledgeTriple,
+    KG_TRIPLE_DELIMITER,
+    parse_triples,
+  )
+  from langchain_core.output_parsers import StrOutputParser
+  from langchain_core.prompts import PromptTemplate
   from langchain_openai import ChatOpenAI
 except ImportError as e:
   print(f"❌ Missing dependency: {e}")
@@ -66,8 +71,43 @@ except ImportError as e:
 # Knowledge Graph Builder
 # ============================================================================
 
+# Knowledge triple extraction prompt template
+_KNOWLEDGE_TRIPLE_EXTRACTION_TEMPLATE = (
+  "You are a networked intelligence helping a human track knowledge triples"
+  " about all relevant people, things, concepts, etc. and integrating"
+  " them with your knowledge stored within your weights"
+  " as well as that stored in a knowledge graph."
+  " Extract all of the knowledge triples from the text."
+  " A knowledge triple is a clause that contains a subject, a predicate,"
+  " and an object. The subject is the entity being described,"
+  " the predicate is the property of the subject that is being"
+  " described, and the object is the value of the property.\n\n"
+  "EXAMPLE\n"
+  "It's a state in the US. It's also the number 1 producer of gold in the US.\n\n"
+  f"Output: (Nevada, is a, state){KG_TRIPLE_DELIMITER}(Nevada, is in, US)"
+  f"{KG_TRIPLE_DELIMITER}(Nevada, is the number 1 producer of, gold)\n"
+  "END OF EXAMPLE\n\n"
+  "EXAMPLE\n"
+  "I'm going to the store.\n\n"
+  "Output: NONE\n"
+  "END OF EXAMPLE\n\n"
+  "EXAMPLE\n"
+  "Oh huh. I know Descartes likes to drive antique scooters and play the mandolin.\n"
+  f"Output: (Descartes, likes to drive, antique scooters){KG_TRIPLE_DELIMITER}"
+  "(Descartes, plays, mandolin)\n"
+  "END OF EXAMPLE\n\n"
+  "EXAMPLE\n"
+  "{text}"
+  "Output:"
+)
+
+
 class KnowledgeGraphBuilder:
-  """Build knowledge graphs from documents using LangChain."""
+  """Build knowledge graphs from documents using LangChain.
+  
+  Uses modern LCEL (LangChain Expression Language) patterns instead of
+  deprecated LLMChain.
+  """
   
   def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.0):
     """Initialize the builder.
@@ -84,7 +124,16 @@ class KnowledgeGraphBuilder:
       )
     
     self.llm = ChatOpenAI(model=model, temperature=temperature, api_key=api_key)
-    self.index_creator = GraphIndexCreator(llm=self.llm)
+    
+    # Create extraction chain using LCEL (modern pattern)
+    self.extraction_chain = (
+      PromptTemplate(
+        input_variables=["text"],
+        template=_KNOWLEDGE_TRIPLE_EXTRACTION_TEMPLATE
+      )
+      | self.llm
+      | StrOutputParser()
+    )
   
   def build_from_text(self, text: str) -> NetworkxEntityGraph:
     """Build a knowledge graph from a single text.
@@ -95,7 +144,17 @@ class KnowledgeGraphBuilder:
     Returns:
       NetworkxEntityGraph with extracted triples
     """
-    return self.index_creator.from_text(text)
+    graph = NetworkxEntityGraph()
+    
+    # Extract triples using LCEL chain
+    output = self.extraction_chain.invoke({"text": text})
+    
+    # Parse and add triples to graph
+    triples = parse_triples(output)
+    for triple in triples:
+      graph.add_triple(triple)
+    
+    return graph
   
   def build_from_documents(
     self,
@@ -116,19 +175,16 @@ class KnowledgeGraphBuilder:
       
       try:
         text = doc_path.read_text(encoding="utf-8")
-        temp_graph = self.index_creator.from_text(text)
+        
+        # Extract triples using LCEL chain
+        output = self.extraction_chain.invoke({"text": text})
+        triples = parse_triples(output)
         
         # Add all triples to main graph
-        for subject, obj, predicate in temp_graph.get_triples():
-          triple = KnowledgeTriple(
-            subject=subject,
-            predicate=predicate,
-            object_=obj
-          )
+        for triple in triples:
           graph.add_triple(triple)
         
-        triples_count = len(temp_graph.get_triples())
-        print(f"    Extracted {triples_count} triples")
+        print(f"    Extracted {len(triples)} triples")
         
       except Exception as e:
         print(f"    ⚠ Error processing {doc_path.name}: {e}")
