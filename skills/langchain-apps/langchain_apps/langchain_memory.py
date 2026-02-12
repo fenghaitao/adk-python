@@ -61,6 +61,7 @@ try:
   from langchain_core.output_parsers import StrOutputParser
   from langchain_core.prompts import PromptTemplate
   from langchain_openai import ChatOpenAI
+  from langchain_community.chat_models import ChatLiteLLM
 except ImportError as e:
   print(f"❌ Missing dependency: {e}")
   print("Run 'uv sync' first to install dependencies")
@@ -113,17 +114,27 @@ class KnowledgeGraphBuilder:
     """Initialize the builder.
     
     Args:
-      model: OpenAI model to use for extraction
+      model: Model to use for extraction (supports OpenAI and GitHub Copilot)
       temperature: LLM temperature for extraction
     """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-      raise ValueError(
-        "OPENAI_API_KEY environment variable not set. "
-        "Set it with: export OPENAI_API_KEY='your-key-here'"
+    # Check if using GitHub Copilot model
+    if model.startswith("github_copilot/"):
+      # Use ChatLiteLLM for GitHub Copilot
+      self.llm = ChatLiteLLM(
+        model=model,
+        temperature=temperature,
+        api_key="oauth2"
       )
-    
-    self.llm = ChatOpenAI(model=model, temperature=temperature, api_key=api_key)
+    else:
+      # Use OpenAI directly
+      api_key = os.getenv("OPENAI_API_KEY")
+      if not api_key:
+        raise ValueError(
+          "OPENAI_API_KEY environment variable not set. "
+          "Set it with: export OPENAI_API_KEY='your-key-here'"
+        )
+      
+      self.llm = ChatOpenAI(model=model, temperature=temperature, api_key=api_key)
     
     # Create extraction chain using LCEL (modern pattern)
     self.extraction_chain = (

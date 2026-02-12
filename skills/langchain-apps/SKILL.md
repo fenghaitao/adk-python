@@ -1,8 +1,8 @@
 ---
 name: langchain-knowledge-graph
-description: Build and query knowledge graphs from documents using LangChain. Extract structured relationships with LLM-powered triple extraction, store in NetworkX graphs, and query with entity-centric traversal.
+description: Build and query knowledge graphs from documents using LangChain. Extract structured relationships with LLM-powered triple extraction, store in NetworkX graphs, and query with entity-centric traversal. Supports OpenAI and GitHub Copilot models.
 homepage: https://github.com/google/adk-python
-metadata: {"clawdbot":{"emoji":"🕸️","requires":{"bins":["uv"],"env":["OPENAI_API_KEY"]}}}
+metadata: {"clawdbot":{"emoji":"🕸️","requires":{"bins":["uv"]}}}
 ---
 
 # LangChain Knowledge Graph - Document to Knowledge Graph
@@ -12,80 +12,91 @@ Build and query knowledge graphs from documents using LangChain's LLM-powered ex
 ## Quick Start
 
 ### One-Time Setup
+
+Before using any commands, install dependencies:
+
 ```bash
-cd {baseDir}
-uv sync
-export OPENAI_API_KEY='your-api-key-here'
+# Create .venv with all dependencies (required)
+uv sync --directory {baseDir}
 ```
 
 ### Test Setup
 ```bash
-uv run langchain-memory test
+uv run --directory {baseDir} langchain-memory test
 ```
 
 ### Build and Query
 ```bash
-# Build graph from documents
-uv run langchain-memory build docs/ --output knowledge.gml
+# Build graph from documents (uses gpt-4o-mini by default)
+uv run --directory {baseDir} langchain-memory build docs/ --output knowledge.gml
+
+# Use GitHub Copilot (free for GitHub Copilot Business users)
+uv run --directory {baseDir} langchain-memory build docs/ --model github_copilot/gpt-4o-mini --output knowledge.gml
 
 # Query entity
-uv run langchain-memory query knowledge.gml --entity "Python"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --entity "Python"
 
 # Visualize graph
-uv run langchain-memory visualize knowledge.gml --output graph.png
+uv run --directory {baseDir} langchain-memory visualize knowledge.gml --output graph.png
 ```
 
 ## Features
 
-✅ **LLM-powered extraction** - GPT-4o-mini extracts subject-predicate-object triples  
+✅ **LLM-powered extraction** - Supports OpenAI (gpt-4o-mini) and GitHub Copilot models  
 ✅ **NetworkX storage** - Efficient graph data structure with persistence  
 ✅ **Entity-centric queries** - Depth-first traversal for relationship discovery  
 ✅ **Graph visualization** - Matplotlib rendering with customizable layouts  
-✅ **Managed dependencies** - uv with pyproject.toml  
+✅ **Managed dependencies** - uv with pyproject.toml, includes forked litellm  
 ✅ **Multiple formats** - Supports markdown, text, and more
 
 ## Commands
 
 ### Test Setup
 ```bash
-uv run langchain-memory test
+uv run --directory {baseDir} langchain-memory test
 ```
 Validates dependencies and checks for OPENAI_API_KEY.
 
 ### Build Knowledge Graph
 ```bash
-# From directory
-uv run langchain-memory build docs/ --output knowledge.gml
+# From directory (uses gpt-4o-mini by default)
+uv run --directory {baseDir} langchain-memory build docs/ --output knowledge.gml
 
 # From single file
-uv run langchain-memory build article.md --output article.gml
+uv run --directory {baseDir} langchain-memory build article.md --output article.gml
 
-# Custom model
-uv run langchain-memory build docs/ --model gpt-4 --output knowledge.gml
+# Use GitHub Copilot (free for GitHub Copilot Business users)
+uv run --directory {baseDir} langchain-memory build docs/ --model github_copilot/gpt-4o-mini --output knowledge.gml
+
+# Use GitHub Copilot with gpt-4o
+uv run --directory {baseDir} langchain-memory build docs/ --model github_copilot/gpt-4o --output knowledge.gml
+
+# Custom OpenAI model
+uv run --directory {baseDir} langchain-memory build docs/ --model gpt-4 --output knowledge.gml
 
 # Custom file extensions
-uv run langchain-memory build docs/ --extensions .md,.rst,.txt
+uv run --directory {baseDir} langchain-memory build docs/ --extensions .md,.rst,.txt
 ```
 
 **Options:**
 - `--output, -o`: Output graph file (default: knowledge_graph.gml)
-- `--model`: OpenAI model (default: gpt-4o-mini)
+- `--model`: Model to use - supports OpenAI (gpt-4o-mini, gpt-4) and GitHub Copilot (github_copilot/gpt-4o-mini, github_copilot/gpt-4o)
 - `--temperature`: LLM temperature (default: 0.0)
 - `--extensions`: File extensions to process (default: .md,.txt)
 
 ### Query Knowledge Graph
 ```bash
 # Query specific entity
-uv run langchain-memory query knowledge.gml --entity "Marie Curie"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --entity "Marie Curie"
 
 # Search for entities
-uv run langchain-memory query knowledge.gml --search "Python"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --search "Python"
 
 # Show statistics
-uv run langchain-memory query knowledge.gml --stats
+uv run --directory {baseDir} langchain-memory query knowledge.gml --stats
 
 # Deep traversal
-uv run langchain-memory query knowledge.gml --entity "Python" --depth 2
+uv run --directory {baseDir} langchain-memory query knowledge.gml --entity "Python" --depth 2
 ```
 
 **Options:**
@@ -97,10 +108,10 @@ uv run langchain-memory query knowledge.gml --entity "Python" --depth 2
 ### Visualize Graph
 ```bash
 # Basic visualization
-uv run langchain-memory visualize knowledge.gml --output graph.png
+uv run --directory {baseDir} langchain-memory visualize knowledge.gml --output graph.png
 
 # Custom size
-uv run langchain-memory visualize knowledge.gml --output graph.png --figsize 16,10
+uv run --directory {baseDir} langchain-memory visualize knowledge.gml --output graph.png --figsize 16,10
 ```
 
 **Options:**
@@ -112,11 +123,14 @@ uv run langchain-memory visualize knowledge.gml --output graph.png --figsize 16,
 ### Environment Variables
 
 ```bash
-# Required
+# For OpenAI models
 export OPENAI_API_KEY='your-api-key-here'
 
+# For GitHub Copilot models (no setup needed, uses oauth2)
+# Just use --model github_copilot/gpt-4o-mini
+
 # Optional
-export OPENAI_MODEL='gpt-4o-mini'  # Default model
+export OPENAI_MODEL='gpt-4o-mini'  # Default model for OpenAI
 ```
 
 ### Default Settings
@@ -126,6 +140,18 @@ export OPENAI_MODEL='gpt-4o-mini'  # Default model
 - **File Extensions**: .md, .txt
 - **Graph Format**: GML (Graph Modeling Language)
 - **Visualization**: Spring layout with matplotlib
+
+### Supported Models
+
+**OpenAI (requires OPENAI_API_KEY):**
+- `gpt-4o-mini` (default, recommended)
+- `gpt-4o`
+- `gpt-4`
+- `gpt-3.5-turbo`
+
+**GitHub Copilot (no API key needed):**
+- `github_copilot/gpt-4o-mini` (recommended)
+- `github_copilot/gpt-4o`
 
 ## Knowledge Triple Format
 
@@ -174,44 +200,44 @@ Marie Curie --[discovered]--> Polonium
 ### Build from Research Papers
 ```bash
 # Extract knowledge from papers
-uv run langchain-memory build research_papers/ --output research.gml
+uv run --directory {baseDir} langchain-memory build research_papers/ --output research.gml
 
 # Query specific researcher
-uv run langchain-memory query research.gml --entity "Albert Einstein"
+uv run --directory {baseDir} langchain-memory query research.gml --entity "Albert Einstein"
 
 # Find related concepts
-uv run langchain-memory query research.gml --search "relativity"
+uv run --directory {baseDir} langchain-memory query research.gml --search "relativity"
 ```
 
 ### Build from Technical Documentation
 ```bash
 # Build from API docs
-uv run langchain-memory build api_docs/ --output api_graph.gml
+uv run --directory {baseDir} langchain-memory build api_docs/ --output api_graph.gml
 
 # Query API relationships
-uv run langchain-memory query api_graph.gml --entity "REST API" --depth 2
+uv run --directory {baseDir} langchain-memory query api_graph.gml --entity "REST API" --depth 2
 
 # Visualize architecture
-uv run langchain-memory visualize api_graph.gml --output api_architecture.png
+uv run --directory {baseDir} langchain-memory visualize api_graph.gml --output api_architecture.png
 ```
 
 ### Build from Company Knowledge Base
 ```bash
 # Index company docs
-uv run langchain-memory build company_docs/ --output company_kg.gml
+uv run --directory {baseDir} langchain-memory build company_docs/ --output company_kg.gml
 
 # Show statistics
-uv run langchain-memory query company_kg.gml --stats
+uv run --directory {baseDir} langchain-memory query company_kg.gml --stats
 
 # Search for products
-uv run langchain-memory query company_kg.gml --search "product"
+uv run --directory {baseDir} langchain-memory query company_kg.gml --search "product"
 ```
 
 ## Troubleshooting
 
 ### Check Setup
 ```bash
-uv run langchain-memory test
+uv run --directory {baseDir} langchain-memory test
 ```
 
 ### Common Issues
@@ -232,23 +258,23 @@ export OPENAI_API_KEY='your-api-key-here'
 ls -la knowledge.gml
 
 # Rebuild if needed
-uv run langchain-memory build docs/ --output knowledge.gml
+uv run --directory {baseDir} langchain-memory build docs/ --output knowledge.gml
 ```
 
 **Entity not found**
 ```bash
 # Search for similar entities
-uv run langchain-memory query knowledge.gml --search "partial_name"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --search "partial_name"
 
 # Show all entities
-uv run langchain-memory query knowledge.gml --stats
+uv run --directory {baseDir} langchain-memory query knowledge.gml --stats
 ```
 
 **Visualization fails**
 ```bash
 # Ensure matplotlib is installed (auto-installed with uv sync)
 # If issues persist, check graph size:
-uv run langchain-memory query knowledge.gml --stats
+uv run --directory {baseDir} langchain-memory query knowledge.gml --stats
 ```
 
 ## Document Format
@@ -332,10 +358,10 @@ def query_knowledge_graph(entity: str) -> str:
     """Query knowledge graph for entity information."""
     skill_dir = Path("skills/langchain-apps")
     result = subprocess.run(
-        ["uv", "run", "langchain-memory", "query", "knowledge.gml", "--entity", entity],
+        ["uv", "run", "--directory", str(skill_dir), 
+         "langchain-memory", "query", "knowledge.gml", "--entity", entity],
         capture_output=True,
-        text=True,
-        cwd=skill_dir
+        text=True
     )
     return result.stdout
 ```

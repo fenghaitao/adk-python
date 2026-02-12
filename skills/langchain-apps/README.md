@@ -14,27 +14,28 @@ This skill provides knowledge graph construction and querying from documents usi
 ## Quick Start
 
 ```bash
-# One-time setup
-cd adk-python/skills/langchain-apps
-uv sync
+# One-time setup (required)
+uv sync --directory {baseDir}
 
 # Test the skill
-uv run langchain-memory test
+uv run --directory {baseDir} langchain-memory test
 
 # Build graph from documents
-uv run langchain-memory build docs/ --output my_graph.gml
+uv run --directory {baseDir} langchain-memory build docs/ --output my_graph.gml
 
 # Query the graph
-uv run langchain-memory query my_graph.gml --entity "Python"
+uv run --directory {baseDir} langchain-memory query my_graph.gml --entity "Python"
 
 # Visualize the graph
-uv run langchain-memory visualize my_graph.gml --output graph.png
+uv run --directory {baseDir} langchain-memory visualize my_graph.gml --output graph.png
 ```
 
 ## Files
 
 - `SKILL.md` - Complete documentation for the skill
-- `QUICKSTART.md` - Quick start guide
+- `ARCHITECTURE.md` - Technical details on how the system works
+- `SEARCH_BEHAVIOR.md` - Understanding search behavior and limitations
+- `USE_CASES.md` - Practical use cases and value proposition
 - `pyproject.toml` - Project dependencies and configuration
 - `langchain_apps/langchain_memory.py` - Main script
 - `references/langchain.md` - LangChain configuration guide
@@ -43,7 +44,7 @@ uv run langchain-memory visualize my_graph.gml --output graph.png
 
 ✅ Managed dependencies with uv and pyproject.toml
 ✅ Modern LCEL patterns (no deprecated code)
-✅ LLM-based knowledge extraction (GPT-4o-mini)
+✅ LLM-based knowledge extraction (supports OpenAI and GitHub Copilot)
 ✅ NetworkX graph storage with persistence
 ✅ Entity-centric queries with configurable depth
 ✅ Graph visualization with matplotlib
@@ -56,39 +57,42 @@ uv run langchain-memory visualize my_graph.gml --output graph.png
 
 ```bash
 # From a directory
-uv run langchain-memory build docs/ --output knowledge.gml
+uv run --directory {baseDir} langchain-memory build docs/ --output knowledge.gml
 
 # From a single file
-uv run langchain-memory build article.md --output article_graph.gml
+uv run --directory {baseDir} langchain-memory build article.md --output article_graph.gml
 
-# Custom model
-uv run langchain-memory build docs/ --model gpt-4 --output knowledge.gml
+# Custom model (OpenAI)
+uv run --directory {baseDir} langchain-memory build docs/ --model gpt-4 --output knowledge.gml
+
+# Use GitHub Copilot (free for GitHub Copilot Business users)
+uv run --directory {baseDir} langchain-memory build docs/ --model github_copilot/gpt-4o-mini --output knowledge.gml
 ```
 
 ### Query Knowledge Graph
 
 ```bash
 # Query specific entity
-uv run langchain-memory query knowledge.gml --entity "Marie Curie"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --entity "Marie Curie"
 
 # Search for entities
-uv run langchain-memory query knowledge.gml --search "Python"
+uv run --directory {baseDir} langchain-memory query knowledge.gml --search "Python"
 
 # Show statistics
-uv run langchain-memory query knowledge.gml --stats
+uv run --directory {baseDir} langchain-memory query knowledge.gml --stats
 
 # Deep traversal
-uv run langchain-memory query knowledge.gml --entity "Python" --depth 2
+uv run --directory {baseDir} langchain-memory query knowledge.gml --entity "Python" --depth 2
 ```
 
 ### Visualize Graph
 
 ```bash
 # Basic visualization
-uv run langchain-memory visualize knowledge.gml --output graph.png
+uv run --directory {baseDir} langchain-memory visualize knowledge.gml --output graph.png
 
 # Custom size
-uv run langchain-memory visualize knowledge.gml --output graph.png --figsize 16,10
+uv run --directory {baseDir} langchain-memory visualize knowledge.gml --output graph.png --figsize 16,10
 ```
 
 ## How It Works
@@ -126,8 +130,11 @@ uv run langchain-memory visualize knowledge.gml --output graph.png --figsize 16,
 ## Environment Setup
 
 ```bash
-# Required: OpenAI API key
+# For OpenAI models: Set API key
 export OPENAI_API_KEY='your-api-key-here'
+
+# For GitHub Copilot models: No setup needed (uses oauth2)
+# Just use --model github_copilot/gpt-4o-mini
 
 # Optional: Custom model
 export OPENAI_MODEL='gpt-4o-mini'
@@ -145,31 +152,33 @@ export OPENAI_MODEL='gpt-4o-mini'
 ### Documentation Understanding
 ```bash
 # Build graph from technical docs
-uv run langchain-memory build technical_docs/ --output tech_graph.gml
+uv run --directory {baseDir} langchain-memory build technical_docs/ --output tech_graph.gml
 
 # Query relationships
-uv run langchain-memory query tech_graph.gml --entity "API"
+uv run --directory {baseDir} langchain-memory query tech_graph.gml --entity "API"
 ```
 
 ### Research Paper Analysis
 ```bash
 # Extract knowledge from papers
-uv run langchain-memory build papers/ --output research_graph.gml
+uv run --directory {baseDir} langchain-memory build papers/ --output research_graph.gml
 
 # Find related concepts
-uv run langchain-memory query research_graph.gml --search "machine learning"
+uv run --directory {baseDir} langchain-memory query research_graph.gml --search "machine learning"
 ```
 
 ### Knowledge Base Construction
 ```bash
 # Build company knowledge graph
-uv run langchain-memory build company_docs/ --output company_kg.gml
+uv run --directory {baseDir} langchain-memory build company_docs/ --output company_kg.gml
 
 # Visualize relationships
-uv run langchain-memory visualize company_kg.gml --output company_graph.png
+uv run --directory {baseDir} langchain-memory visualize company_kg.gml --output company_graph.png
 ```
 
 ## See Also
 
-See SKILL.md for complete documentation with all commands and options.
-See QUICKSTART.md for a step-by-step tutorial.
+- `SKILL.md` - Complete documentation with all commands and options
+- `ARCHITECTURE.md` - Technical details on how the system works
+- `SEARCH_BEHAVIOR.md` - Understanding search behavior and limitations
+- `USE_CASES.md` - Practical use cases and value proposition

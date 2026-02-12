@@ -10,10 +10,14 @@ dependencies = [
     "langchain-openai>=0.2.0",
     "networkx>=3.0",
     "matplotlib>=3.7.0",
+    "litellm>=1.76.0",
 ]
 
 [project.scripts]
 langchain-memory = "langchain_apps.langchain_memory:main"
+
+[tool.uv.sources]
+litellm = { git = "https://github.com/fenghaitao/litellm.git" }
 
 [build-system]
 requires = ["hatchling"]
