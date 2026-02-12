@@ -1,0 +1,20 @@
+[project]
+name = "langchain-apps"
+version = "1.0.0"
+description = "Build and query knowledge graphs from documents using LangChain"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "langchain>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "networkx>=3.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.scripts]
+langchain-memory = "langchain_apps.langchain_memory:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
