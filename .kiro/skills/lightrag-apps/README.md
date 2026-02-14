@@ -1,71 +1,151 @@
-# RepoWiki - LightRAG Wiki Generator Skill
+# RepoWiki - LightRAG Wiki Generator
 
-This ClawdHub skill generates comprehensive hierarchical wiki documentation from any code repository using LightRAG knowledge graphs.
+Generate comprehensive hierarchical wiki documentation from any code repository using LightRAG knowledge graphs.
 
-Source: https://github.com/fenghaitao/repowiki
+## What is RepoWiki?
 
-## What This Skill Does
+RepoWiki uses LightRAG to build a knowledge graph from your code repository and generates well-structured, hierarchical wiki documentation. It understands your code's structure, relationships, and context to create comprehensive documentation automatically.
 
-- **Indexes repositories** into LightRAG knowledge graphs
-- **Generates hierarchical wiki** with 3-4 levels of organization
-- **Supports multiple query modes** (global, local, mix, hybrid, naive)
-- **Works out of the box** with GitHub Copilot models
-- **Auto-detects repository info** from git or directory name
+## Quick Links
 
-## Quick Test
+- [QUICKSTART.md](QUICKSTART.md) - Get started in 5 minutes
+- [SKILL.md](SKILL.md) - Complete documentation
+- [LightRAG](https://github.com/HKUDS/LightRAG) - Knowledge graph framework
+
+## Installation
 
 ```bash
-# Test the skill
-cd /path/to/any/repository
-uv run lightrag-apps/scripts/repowiki.py test
-
-# Generate wiki
-uv run lightrag-apps/scripts/repowiki.py all --extended
+# One-time setup
+uv sync --directory .kiro/skills/lightrag-apps
 ```
 
-**Note:** You may see a harmless warning about `llama-index` installation failing. This is expected - the script uses `llama-index-core` which is already installed. The warning can be safely ignored.
+## Basic Usage
 
-## Files Created
+```bash
+# Navigate to your repository
+cd /path/to/your/project
 
-- `SKILL.md` - Complete documentation for the skill
-- `_meta.json` - Metadata for ClawdHub skill registry
-- `scripts/repowiki.py` - Main script (804 lines)
-- `references/query-modes.md` - LightRAG query mode documentation
-- `references/configuration.md` - Configuration guide
+# Generate wiki
+uv run --directory .kiro/skills/lightrag-apps repowiki all --extended
+```
 
-## Key Features
+## Features
 
-✅ Self-contained script with PEP 723 dependencies
-✅ Works with any git repository
-✅ GitHub Copilot integration (free with license)
-✅ Optimized parallel processing (48/96/48)
-✅ Base mode (~13 pages) and Extended mode (~19 pages)
-✅ Complete CLI with test, index, generate, and all commands
+✅ Works with any repository  
+✅ Auto-detects repository name  
+✅ Uses GitHub Copilot by default (FREE)  
+✅ Hierarchical organization (3-4 levels deep)  
+✅ Multiple query modes (global, local, mix, hybrid, naive)  
+✅ Persistent .venv for fast execution  
+✅ Breadcrumb navigation  
+✅ Category indexes
 
-## Differences from pptx-creator
+## Wiki Modes
 
-This skill follows the pptx-creator pattern but adapts it for wiki generation:
+### Base Mode (~13 pages, 2-3 min)
+- Home page
+- Overview & architecture
+- Design decisions
 
-1. **Single main script** instead of multiple specialized scripts
-2. **Async operations** for LightRAG integration
-3. **Knowledge graph** instead of template-based generation
-4. **Hierarchical structure** instead of slide layouts
-5. **Query modes** instead of chart types
+### Extended Mode (~19 pages, 5-10 min, recommended)
+- Home page
+- Overview & architecture
+- Getting started
+- Core concepts
+- API reference
+- Development guide
 
-## Usage Examples
+## When to Use RepoWiki
 
-See SKILL.md for complete documentation with all commands and options.
+**Use RepoWiki when:**
+- You need comprehensive documentation for a codebase
+- You want hierarchical, well-organized wiki structure
+- You have GitHub Copilot (FREE) or OpenAI API access
+- You want to understand code relationships and architecture
 
-## Integration
+**Use other tools when:**
+- You need simple API docs → Use docstring generators
+- You need quick Q&A → Use ChromaDB-apps
+- You need complex reasoning → Use GraphRAG-apps
 
-Can be used with other dbhurley skills:
-- Generate wiki docs, then create presentations with **pptx-creator**
-- Export metrics with **excel** skill
-- Create PRs with **github-pr** skill
+## Configuration
 
-## Technical Stack
+### Default (GitHub Copilot)
+Works out of the box - no API key needed!
 
-- LightRAG for knowledge graphs
-- GitHub Copilot for LLM/embeddings
-- NetworkX for graph operations
-- Async/await for performance
+### Custom Model
+```bash
+export LLM_MODEL="gpt-4o-mini"
+uv run --directory .kiro/skills/lightrag-apps repowiki all --extended
+```
+
+## Performance
+
+- **Indexing**: First-time indexing may take longer for large repos
+- **Generation**: ~30 seconds with warm cache
+- **Parallelism**: Optimized for GitHub Copilot Business (48/96/48 concurrent)
+
+## Migration from PEP 723
+
+This skill was migrated from PEP 723 inline dependencies to `pyproject.toml` for:
+- Persistent virtual environment (faster execution)
+- Better dependency management
+- Consistent with other skills
+
+Old usage: `uv run scripts/repowiki.py`  
+New usage: `uv run --directory .kiro/skills/lightrag-apps repowiki`
+
+## Documentation
+
+- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
+- [SKILL.md](SKILL.md) - Complete documentation with all features
+- [pyproject.toml](pyproject.toml) - Package configuration
+
+## Examples
+
+### Document Your Project
+```bash
+cd ~/my-project
+uv run --directory ~/.kiro/skills/lightrag-apps repowiki all --extended
+```
+
+### Document Open Source Project
+```bash
+git clone https://github.com/user/awesome-project
+cd awesome-project
+uv run --directory ~/.kiro/skills/lightrag-apps repowiki all --extended
+```
+
+### CI/CD Integration
+```yaml
+- name: Generate Wiki
+  run: |
+    uv sync --directory .kiro/skills/lightrag-apps
+    uv run --directory .kiro/skills/lightrag-apps repowiki all --extended
+    
+- name: Deploy Wiki
+  uses: peaceiris/actions-gh-pages@v3
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    publish_dir: ./wiki_docs
+```
+
+## Support
+
+For issues or questions:
+1. Check [SKILL.md](SKILL.md) troubleshooting section
+2. Review [LightRAG documentation](https://github.com/HKUDS/LightRAG)
+3. Open an issue in the repository
+
+## Technical Details
+
+Built with:
+- LightRAG - Knowledge graph framework
+- GitHub Copilot models - LLM and embeddings
+- NetworkX - Graph operations
+- Nano-VectorDB - Vector storage
+
+Architecture:
+1. Indexer scans repository and builds knowledge graph
+2. Generator queries graph with multiple modes
+3. Wiki builder creates hierarchical documentation

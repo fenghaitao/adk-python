@@ -1,22 +1,28 @@
-#!/usr/bin/env python3.12
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "lightrag-hku>=1.4.9,<2.0.0",
-#     "openai>=1.0.0",
-#     "tiktoken>=0.5.0",
-#     "numpy>=1.24.0",
-#     "networkx>=3.0.0",
-#     "nano-vectordb>=0.0.4",
-#     "python-dotenv>=1.0.0",
-#     "llama-index-core>=0.10.0",
-#     "llama-index-llms-litellm>=0.1.0",
-#     "llama-index-embeddings-litellm>=0.1.0",
-#     "litellm @ git+https://github.com/fenghaitao/litellm.git"
-# ]
-# ///
+#!/usr/bin/env python3
 """
 LightRAG Wiki Generator - Generate comprehensive hierarchical documentation from code repositories
+
+Usage:
+    # First time: Create .venv (required)
+    uv sync --directory /path/to/lightrag-apps
+    
+    # Index repository
+    uv run --directory /path/to/lightrag-apps repowiki index --repo /path/to/repo
+    
+    # Generate wiki
+    uv run --directory /path/to/lightrag-apps repowiki generate
+    
+    # Index and generate in one command
+    uv run --directory /path/to/lightrag-apps repowiki all --repo /path/to/repo
+    
+    # Generate extended wiki (~19 pages)
+    uv run --directory /path/to/lightrag-apps repowiki all --repo /path/to/repo --extended
+
+Features:
+- Uses LightRAG for knowledge graph construction
+- Supports GitHub Copilot and OpenAI models
+- Generates hierarchical wiki documentation
+- Base mode (~7 pages) or extended mode (~19 pages)
 """
 
 import argparse

@@ -11,26 +11,34 @@ Generate comprehensive hierarchical wiki documentation from any code repository 
 
 ## Quick Start
 
+### One-Time Setup (Required)
+```bash
+# Create persistent .venv with all dependencies
+uv sync --directory {baseDir}
+```
+
+This creates a persistent virtual environment for faster execution.
+
 ### Generate Wiki from Current Repository
 ```bash
 # Test setup
-uv run {baseDir}/scripts/repowiki.py test
+uv run --directory {baseDir} repowiki test
 
 # Index and generate wiki (all-in-one)
-uv run {baseDir}/scripts/repowiki.py all --extended
+uv run --directory {baseDir} repowiki all --extended
 
 # Basic wiki (faster, ~13 pages)
-uv run {baseDir}/scripts/repowiki.py all
+uv run --directory {baseDir} repowiki all
 ```
 
 ### Index Specific Repository
 ```bash
-uv run {baseDir}/scripts/repowiki.py index --repo /path/to/project
+uv run --directory {baseDir} repowiki index --repo /path/to/project
 ```
 
 ### Generate from Existing Index
 ```bash
-uv run {baseDir}/scripts/repowiki.py generate --extended
+uv run --directory {baseDir} repowiki generate --extended
 ```
 
 ## Features
@@ -39,6 +47,7 @@ uv run {baseDir}/scripts/repowiki.py generate --extended
 ✅ **Auto-detects repo name** - From git remote or directory name  
 ✅ **Works out of the box** - Uses GitHub Copilot models by default  
 ✅ **Maximum parallel processing** - Optimized for GitHub Copilot Business  
+✅ **Persistent .venv** - Fast execution with managed dependencies  
 ✅ **Hierarchical organization** - 3-4 level deep structure  
 ✅ **Smart query modes** - global, local, mix, hybrid, naive  
 ✅ **Breadcrumb navigation** - Easy to navigate  
@@ -48,47 +57,47 @@ uv run {baseDir}/scripts/repowiki.py generate --extended
 
 ### Test Setup
 ```bash
-uv run {baseDir}/scripts/repowiki.py test
+uv run --directory {baseDir} repowiki test
 ```
 Validates configuration, checks dependencies, and verifies repository access.
 
 ### Index Repository
 ```bash
 # Index current directory
-uv run {baseDir}/scripts/repowiki.py index
+uv run --directory {baseDir} repowiki index
 
 # Index specific repository
-uv run {baseDir}/scripts/repowiki.py index --repo /path/to/project
+uv run --directory {baseDir} repowiki index --repo /path/to/project
 
 # Custom working directory
-uv run {baseDir}/scripts/repowiki.py index --working-dir ./storage
+uv run --directory {baseDir} repowiki index --working-dir ./storage
 ```
 
 ### Generate Wiki
 ```bash
 # Base wiki (~13 pages, faster)
-uv run {baseDir}/scripts/repowiki.py generate
+uv run --directory {baseDir} repowiki generate
 
 # Extended wiki (~19 pages, comprehensive)
-uv run {baseDir}/scripts/repowiki.py generate --extended
+uv run --directory {baseDir} repowiki generate --extended
 
 # Custom model
-uv run {baseDir}/scripts/repowiki.py generate --model gpt-4o
+uv run --directory {baseDir} repowiki generate --model gpt-4o
 
 # Custom output directory
-uv run {baseDir}/scripts/repowiki.py generate --output ./wiki
+uv run --directory {baseDir} repowiki generate --output ./wiki
 ```
 
 ### All-in-One (Index + Generate)
 ```bash
 # Base wiki
-uv run {baseDir}/scripts/repowiki.py all
+uv run --directory {baseDir} repowiki all
 
 # Extended wiki (recommended)
-uv run {baseDir}/scripts/repowiki.py all --extended
+uv run --directory {baseDir} repowiki all --extended
 
 # Specific repository
-uv run {baseDir}/scripts/repowiki.py all --repo /path/to/project --extended
+uv run --directory {baseDir} repowiki all --repo /path/to/project --extended
 ```
 
 ## Wiki Structure
@@ -142,11 +151,11 @@ Uses GitHub Copilot models by default (free with GitHub Copilot license):
 
 ```bash
 # Use different model
-uv run {baseDir}/scripts/repowiki.py generate --model gpt-4o-mini
+uv run --directory {baseDir} repowiki generate --model gpt-4o-mini
 
 # Or set environment variable
 export LLM_MODEL="gpt-4o-mini"
-uv run {baseDir}/scripts/repowiki.py generate
+uv run --directory {baseDir} repowiki generate
 ```
 
 ## Query Modes
@@ -177,23 +186,23 @@ The generator automatically selects appropriate modes for different sections.
 ### Document Your Own Project
 ```bash
 cd /path/to/your/project
-uv run /path/to/lightrag-apps/scripts/repowiki.py all --extended
+uv run --directory /path/to/lightrag-apps repowiki all --extended
 ```
 
 ### Document Open Source Project
 ```bash
 git clone https://github.com/user/project
 cd project
-uv run /path/to/lightrag-apps/scripts/repowiki.py all --extended
+uv run --directory /path/to/lightrag-apps repowiki all --extended
 ```
 
 ### Re-generate After Code Changes
 ```bash
 # Re-index updated files
-uv run {baseDir}/scripts/repowiki.py index
+uv run --directory {baseDir} repowiki index
 
 # Generate fresh wiki
-uv run {baseDir}/scripts/repowiki.py generate --extended
+uv run --directory {baseDir} repowiki generate --extended
 ```
 
 ## File Support
@@ -209,7 +218,7 @@ Skips files smaller than 50 bytes (configurable via `MIN_FILE_SIZE` environment 
 
 ### Check Setup
 ```bash
-uv run {baseDir}/scripts/repowiki.py test
+uv run --directory {baseDir} repowiki test
 ```
 
 ### Common Issues
@@ -217,13 +226,14 @@ uv run {baseDir}/scripts/repowiki.py test
 **Repository not found**
 ```bash
 # Specify path explicitly
-uv run {baseDir}/scripts/repowiki.py index --repo /full/path/to/project
+uv run --directory {baseDir} repowiki index --repo /full/path/to/project
 ```
 
 **Import errors**
 ```bash
-# Reinstall dependencies
-uv pip install lightrag-hku openai tiktoken numpy networkx
+# Recreate .venv
+rm -rf {baseDir}/.venv
+uv sync --directory {baseDir}
 ```
 
 **GitHub Copilot not working**
@@ -257,7 +267,7 @@ wiki_docs/            # Generated wiki documentation
 export MAX_PARALLEL_INSERT=48
 export LLM_MODEL_MAX_ASYNC=96
 export EMBEDDING_FUNC_MAX_ASYNC=48
-uv run {baseDir}/scripts/repowiki.py all --extended
+uv run --directory {baseDir} repowiki all --extended
 ```
 
 ### Custom File Extensions
@@ -269,7 +279,7 @@ Edit the script's `code_extensions` configuration to include additional file typ
 ```bash
 # Different workspace for experimental features
 export WORKSPACE="experimental"
-uv run {baseDir}/scripts/repowiki.py index --repo /path/to/project
+uv run --directory {baseDir} repowiki index --repo /path/to/project
 ```
 
 ## Integration
@@ -279,7 +289,7 @@ uv run {baseDir}/scripts/repowiki.py index --repo /path/to/project
 Add to `.git/hooks/post-commit`:
 ```bash
 #!/bin/bash
-uv run /path/to/lightrag-apps/scripts/repowiki.py all --extended
+uv run --directory /path/to/lightrag-apps repowiki all --extended
 ```
 
 ### CI/CD Pipeline
@@ -309,6 +319,22 @@ uv run /path/to/lightrag-apps/scripts/repowiki.py all --extended
 1. **Indexer** - Scans repository, builds knowledge graph
 2. **Generator** - Queries graph, generates hierarchical documentation
 3. **Knowledge Graph** - Stores entities, relationships, and context
+
+**Dependencies:**
+- Managed via `pyproject.toml`
+- 11 direct dependencies including LightRAG, OpenAI, LiteLLM
+- ~114 total packages (including transitive dependencies)
+- Persistent `.venv` for fast execution
+
+**Package Structure:**
+```
+lightrag-apps/
+├── pyproject.toml           # Project configuration
+├── lightrag_apps/           # Package directory
+│   ├── __init__.py
+│   └── repowiki.py          # Main script
+└── .venv/                   # Created by uv sync
+```
 
 ## References
 
