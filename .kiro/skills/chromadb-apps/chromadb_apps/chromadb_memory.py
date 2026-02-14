@@ -1,29 +1,21 @@
-#!/usr/bin/env python3.12
-# /// script
-# requires-python = ">=3.10"
-# dependencies = [
-#     "chromadb>=0.4.0",
-#     "pyyaml>=6.0.0",
-# ]
-# ///
+#!/usr/bin/env python3
 """
 ChromaDB Memory - Knowledge Indexing and Retrieval
 
-A self-contained script for indexing markdown documents into ChromaDB
-and retrieving them with semantic search.
+Index markdown documents into ChromaDB and retrieve them with semantic search.
 
 Usage:
-    # Test installation
-    uv run chromadb_memory.py test
+    # First time: Create .venv (required)
+    uv sync --directory /path/to/chromadb-apps
     
     # Index memories
-    uv run chromadb_memory.py index openspec-memories
+    uv run --directory /path/to/chromadb-apps chromadb-memory index openspec-memories
     
     # Search memories
-    uv run chromadb_memory.py search "How to implement timer?"
+    uv run --directory /path/to/chromadb-apps chromadb-memory search "How to implement timer?"
     
     # Show statistics
-    uv run chromadb_memory.py stats
+    uv run --directory /path/to/chromadb-apps chromadb-memory stats
 
 Features:
 - ChromaDB vector storage with persistence

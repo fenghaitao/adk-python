@@ -1,0 +1,17 @@
+[project]
+name = "chromadb-apps"
+version = "1.0.0"
+description = "Index and retrieve knowledge from markdown documents using ChromaDB"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "chromadb>=0.4.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.scripts]
+chromadb-memory = "chromadb_apps.chromadb_memory:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

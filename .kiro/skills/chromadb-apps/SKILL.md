@@ -11,21 +11,24 @@ Index and retrieve knowledge from markdown documents using ChromaDB vector stora
 
 ## Quick Start
 
-### Test Setup
+### One-Time Setup (Required)
 ```bash
-uv run {baseDir}/scripts/chromadb_memory.py test
+# Create persistent .venv with all dependencies
+uv sync --directory {baseDir}
 ```
+
+This creates a persistent virtual environment for 10x faster execution (~2-3s vs ~15-20s per command).
 
 ### Index and Search
 ```bash
 # Index memories
-uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories
+uv run --directory {baseDir} chromadb-memory index openspec-memories
 
 # Search with category filter
-uv run {baseDir}/scripts/chromadb_memory.py search "timer implementation" --category DML
+uv run --directory {baseDir} chromadb-memory search "timer implementation" --category DML
 
 # View statistics
-uv run {baseDir}/scripts/chromadb_memory.py stats
+uv run --directory {baseDir} chromadb-memory stats
 ```
 
 ## Features
@@ -33,45 +36,46 @@ uv run {baseDir}/scripts/chromadb_memory.py stats
 ✅ **Fast semantic search** - Sub-200ms queries with ChromaDB vectors  
 ✅ **Category-aware retrieval** - Filter by DML, Test, or General  
 ✅ **Lightweight** - Only ChromaDB + YAML dependencies  
-✅ **Self-contained** - PEP 723 inline dependencies  
+✅ **Persistent .venv** - 10x faster execution after one-time setup  
 ✅ **Frontmatter parsing** - Automatic metadata extraction  
 ✅ **Configurable chunking** - Adjust chunk size and overlap
 
 ## Commands
 
-### Test Setup
+### One-Time Setup
 ```bash
-uv run {baseDir}/scripts/chromadb_memory.py test
+# Create persistent .venv (required first time)
+uv sync --directory {baseDir}
 ```
-Validates dependencies and verifies the skill is ready to use.
+Creates a persistent virtual environment with all dependencies. This is required before running any commands and makes subsequent runs 10x faster.
 
 ### Index Documents
 ```bash
 # Index current directory's memories
-uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories
+uv run --directory {baseDir} chromadb-memory index openspec-memories
 
 # Force reindex
-uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories --force
+uv run --directory {baseDir} chromadb-memory index openspec-memories --force
 
 # Custom database location
-uv run {baseDir}/scripts/chromadb_memory.py index docs/ --persist-dir ./my_db
+uv run --directory {baseDir} chromadb-memory index docs/ --persist-dir ./my_db
 ```
 
 ### Search Memories
 ```bash
 # Basic search
-uv run {baseDir}/scripts/chromadb_memory.py search "How to implement timers?"
+uv run --directory {baseDir} chromadb-memory search "How to implement timers?"
 
 # Category filter
-uv run {baseDir}/scripts/chromadb_memory.py search "register access" --category DML
+uv run --directory {baseDir} chromadb-memory search "register access" --category DML
 
 # More results
-uv run {baseDir}/scripts/chromadb_memory.py search "test patterns" --k 5
+uv run --directory {baseDir} chromadb-memory search "test patterns" --k 5
 ```
 
 ### View Statistics
 ```bash
-uv run {baseDir}/scripts/chromadb_memory.py stats
+uv run --directory {baseDir} chromadb-memory stats
 ```
 
 ## Configuration
@@ -80,11 +84,45 @@ uv run {baseDir}/scripts/chromadb_memory.py stats
 
 Uses ChromaDB with sensible defaults:
 
-- **Persist Directory**: `.chromadb`
+- **Persist Directory**: `.chromadb` (in current working directory)
 - **Collection Name**: `openspec_memories`
 - **Chunk Size**: 500 characters
 - **Chunk Overlap**: 50 characters
 - **Results (k)**: 3 passages
+
+### Storage Location Best Practices
+
+The `.chromadb` folder contains your indexed data and should be stored in your **project directory**, not in the skill directory:
+
+**✅ Recommended:**
+```bash
+# Index from your project directory
+cd /path/to/your-project
+uv run --directory /path/to/.kiro/skills/chromadb-apps chromadb-memory index docs/
+
+# Creates: /path/to/your-project/.chromadb/
+```
+
+**❌ Not recommended:**
+```bash
+# Don't use --persist-dir to put it in the skill directory
+uv run --directory {baseDir} chromadb-memory index docs/ --persist-dir {baseDir}/.chromadb
+```
+
+**Why?**
+- Each project should have its own `.chromadb` folder
+- Makes it easy to delete/recreate indexes per project
+- Keeps skill directory clean and portable
+- Allows multiple projects to have separate indexes
+
+**Custom locations:**
+```bash
+# Use a shared location for multiple related projects
+uv run --directory {baseDir} chromadb-memory index docs/ --persist-dir ~/shared-indexes/project-a
+
+# Use project-specific subdirectory
+uv run --directory {baseDir} chromadb-memory index docs/ --persist-dir ./.indexes/chromadb
+```
 
 ### Environment Variables (Optional)
 
@@ -132,30 +170,51 @@ Your documentation...
 
 ### Index OpenSpec Memories
 ```bash
+# First time: Create .venv (required)
+uv sync --directory {baseDir}
+
+# Index memories
 cd /path/to/project
-uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories
+uv run --directory {baseDir} chromadb-memory index openspec-memories
 ```
 
 ### Search for DML Patterns
 ```bash
-uv run {baseDir}/scripts/chromadb_memory.py search "timer implementation" --category DML
+uv run --directory {baseDir} chromadb-memory search "timer implementation" --category DML
 ```
 
 ### Multi-Category Search
 ```bash
 # Search across all categories
-uv run {baseDir}/scripts/chromadb_memory.py search "register patterns"
+uv run --directory {baseDir} chromadb-memory search "register patterns"
 
 # Compare DML vs Test results
-uv run {baseDir}/scripts/chromadb_memory.py search "register" --category DML --k 3
-uv run {baseDir}/scripts/chromadb_memory.py search "register" --category Test --k 3
+uv run --directory {baseDir} chromadb-memory search "register" --category DML --k 3
+uv run --directory {baseDir} chromadb-memory search "register" --category Test --k 3
 ```
 
 ## Troubleshooting
 
+### Setup Issues
+
+**Problem:** Command not found or import errors
+
+**Solution:**
+```bash
+# Ensure .venv is created
+uv sync --directory {baseDir}
+
+# Verify installation
+uv run --directory {baseDir} chromadb-memory --help
+```
+
 ### Check Setup
 ```bash
-uv run {baseDir}/scripts/chromadb_memory.py test
+# First time: Create .venv
+uv sync --directory {baseDir}
+
+# Verify it works
+uv run --directory {baseDir} chromadb-memory stats
 ```
 
 ### Common Issues
@@ -163,23 +222,23 @@ uv run {baseDir}/scripts/chromadb_memory.py test
 **Collection already exists**
 ```bash
 # Force reindex
-uv run {baseDir}/scripts/chromadb_memory.py index openspec-memories --force
+uv run --directory {baseDir} chromadb-memory index openspec-memories --force
 ```
 
 **No results found**
 ```bash
 # Check if indexed
-uv run {baseDir}/scripts/chromadb_memory.py stats
+uv run --directory {baseDir} chromadb-memory stats
 
 # Try broader search
-uv run {baseDir}/scripts/chromadb_memory.py search "timer" --k 10
+uv run --directory {baseDir} chromadb-memory search "timer" --k 10
 ```
 
 **Dependencies not found**
 ```bash
-# The script auto-installs dependencies via uv run
-# If issues persist, ensure uv is up to date:
-pip install --upgrade uv
+# Recreate .venv
+rm -rf {baseDir}/.venv
+uv sync --directory {baseDir}
 ```
 
 ## File Support
@@ -202,9 +261,20 @@ Indexes markdown files (`.md`) with:
 3. **Retriever** - Semantic search with category filtering
 
 **Dependencies:**
+- Managed via `pyproject.toml`
 - Only 2 direct dependencies: `chromadb` and `pyyaml`
-- ~50 total packages
-- Fast startup with `uv run`
+- ~80 total packages (including transitive dependencies)
+- Fast startup with persistent `.venv` (~2-3s vs ~15-20s with inline deps)
+
+**Package Structure:**
+```
+chromadb-apps/
+├── pyproject.toml           # Project configuration
+├── chromadb_apps/           # Package directory
+│   ├── __init__.py
+│   └── chromadb_memory.py   # Main script
+└── .venv/                   # Created by uv sync
+```
 
 ## References
 
