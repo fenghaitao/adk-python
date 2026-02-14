@@ -11,27 +11,35 @@ Build and query knowledge graphs from markdown documents using Microsoft's Graph
 
 ## Quick Start
 
+### One-Time Setup (Required)
+```bash
+# Create persistent .venv with all dependencies
+uv sync --directory {baseDir}
+```
+
+This creates a persistent virtual environment for faster execution.
+
 ### Test Setup
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py test
+uv run --directory {baseDir} graphrag-memory test
 ```
 
 ### Initialize and Query
 ```bash
 # Initialize project
-uv run {baseDir}/scripts/graphrag_memory.py init
+uv run --directory {baseDir} graphrag-memory init
 
 # Index documents
-uv run {baseDir}/scripts/graphrag_memory.py index --input openspec-memories
+uv run --directory {baseDir} graphrag-memory index --input openspec-memories
 
 # Query with local search
-uv run {baseDir}/scripts/graphrag_memory.py query "How to implement timer?" --method local
+uv run --directory {baseDir} graphrag-memory query "How to implement timer?" --method local
 
 # Query with global search
-uv run {baseDir}/scripts/graphrag_memory.py query "What are the main concepts?" --method global
+uv run --directory {baseDir} graphrag-memory query "What are the main concepts?" --method global
 
 # Check status
-uv run {baseDir}/scripts/graphrag_memory.py status
+uv run --directory {baseDir} graphrag-memory status
 ```
 
 ## Features
@@ -41,27 +49,27 @@ uv run {baseDir}/scripts/graphrag_memory.py status
 ✅ **Community detection** - Hierarchical understanding of document structure  
 ✅ **GitHub Copilot support** - Use your existing Copilot subscription  
 ✅ **OpenAI compatible** - Works with OpenAI API  
-✅ **Self-contained** - PEP 723 inline dependencies  
+✅ **Persistent .venv** - Fast execution with managed dependencies  
 ✅ **Caching built-in** - Save LLM costs by caching responses
 
 ## Commands
 
 ### Test Setup
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py test
+uv run --directory {baseDir} graphrag-memory test
 ```
 Validates dependencies and verifies the skill is ready to use.
 
 ### Initialize Project
 ```bash
 # Initialize in current directory
-uv run {baseDir}/scripts/graphrag_memory.py init
+uv run --directory {baseDir} graphrag-memory init
 
 # Initialize in custom directory
-uv run {baseDir}/scripts/graphrag_memory.py init --root ./my_graphrag
+uv run --directory {baseDir} graphrag-memory init --root ./my_graphrag
 
 # Force reinitialize
-uv run {baseDir}/scripts/graphrag_memory.py init --force
+uv run --directory {baseDir} graphrag-memory init --force
 ```
 
 Creates project structure:
@@ -74,13 +82,13 @@ Creates project structure:
 ### Index Documents
 ```bash
 # Index from directory
-uv run {baseDir}/scripts/graphrag_memory.py index --input openspec-memories
+uv run --directory {baseDir} graphrag-memory index --input openspec-memories
 
 # Index with verbose output
-uv run {baseDir}/scripts/graphrag_memory.py index --input docs/ --verbose
+uv run --directory {baseDir} graphrag-memory index --input docs/ --verbose
 
 # Index with custom root
-uv run {baseDir}/scripts/graphrag_memory.py index --root ./my_kb --input docs/
+uv run --directory {baseDir} graphrag-memory index --root ./my_kb --input docs/
 ```
 
 **Indexing Process:**
@@ -94,28 +102,68 @@ uv run {baseDir}/scripts/graphrag_memory.py index --root ./my_kb --input docs/
 ### Query Knowledge Graph
 ```bash
 # Local search - detailed, entity-focused
-uv run {baseDir}/scripts/graphrag_memory.py query "How to implement timer?" --method local
+uv run --directory {baseDir} graphrag-memory query "How to implement timer?" --method local
 
 # Global search - high-level, community-focused
-uv run {baseDir}/scripts/graphrag_memory.py query "What are the main patterns?" --method global
+uv run --directory {baseDir} graphrag-memory query "What are the main patterns?" --method global
 
 # Drift search - exploratory
-uv run {baseDir}/scripts/graphrag_memory.py query "Explain the architecture" --method drift
+uv run --directory {baseDir} graphrag-memory query "Explain the architecture" --method drift
 
 # With custom root
-uv run {baseDir}/scripts/graphrag_memory.py query "..." --root ./my_kb
+uv run --directory {baseDir} graphrag-memory query "..." --root ./my_kb
 ```
 
 ### Check Status
 ```bash
 # Show project status
-uv run {baseDir}/scripts/graphrag_memory.py status
+uv run --directory {baseDir} graphrag-memory status
 
 # With custom root
-uv run {baseDir}/scripts/graphrag_memory.py status --root ./my_kb
+uv run --directory {baseDir} graphrag-memory status --root ./my_kb
 ```
 
 ## Configuration
+
+### Storage Location Best Practices
+
+GraphRAG creates several directories for its operation. These should be stored in your **project directory**, not in the skill directory:
+
+**✅ Recommended:**
+```bash
+# Initialize from your project directory
+cd /path/to/your-project
+uv run --directory /path/to/.kiro/skills/graphrag-apps graphrag-memory init
+
+# Creates in current directory:
+# - settings.yaml
+# - prompts/
+# - input/
+# - output/
+# - cache/
+```
+
+**❌ Not recommended:**
+```bash
+# Don't initialize in the skill directory
+cd {baseDir}
+uv run --directory {baseDir} graphrag-memory init
+```
+
+**Why?**
+- Each project should have its own GraphRAG workspace
+- Makes it easy to manage project-specific knowledge graphs
+- Keeps skill directory clean and portable
+- Allows multiple projects to have separate indexes
+
+**Custom locations:**
+```bash
+# Use a shared location for multiple related projects
+uv run --directory {baseDir} graphrag-memory init --root ~/shared-kb/project-a
+
+# Use project-specific subdirectory
+uv run --directory {baseDir} graphrag-memory init --root ./.graphrag
+```
 
 ### Default Settings
 
@@ -217,7 +265,7 @@ export OPENAI_API_KEY="sk-..."
 - "Explain the relationship between events and methods"
 
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py query \
+uv run --directory {baseDir} graphrag-memory query \
   "How to implement timer in DML?" \
   --method local
 ```
@@ -237,7 +285,7 @@ uv run {baseDir}/scripts/graphrag_memory.py query \
 - "What are the core concepts in the documentation?"
 
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py query \
+uv run --directory {baseDir} graphrag-memory query \
   "What are the main concepts in DML?" \
   --method global
 ```
@@ -257,7 +305,7 @@ uv run {baseDir}/scripts/graphrag_memory.py query \
 - "Explore the implementation patterns"
 
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py query \
+uv run --directory {baseDir} graphrag-memory query \
   "Explain the DML modeling approach" \
   --method drift
 ```
@@ -286,25 +334,25 @@ uv run {baseDir}/scripts/graphrag_memory.py query \
 
 ```bash
 cd /path/to/project
-uv run {baseDir}/scripts/graphrag_memory.py init
+uv run --directory {baseDir} graphrag-memory init
 ```
 
 ### Index OpenSpec Memories
 
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py index --input openspec-memories
+uv run --directory {baseDir} graphrag-memory index --input openspec-memories
 ```
 
 ### Search for Specific Information
 
 ```bash
 # Detailed answer about timers
-uv run {baseDir}/scripts/graphrag_memory.py query \
+uv run --directory {baseDir} graphrag-memory query \
   "What are the best practices for implementing timers?" \
   --method local
 
 # Overview of testing approaches
-uv run {baseDir}/scripts/graphrag_memory.py query \
+uv run --directory {baseDir} graphrag-memory query \
   "Summarize the testing methodology" \
   --method global
 ```
@@ -312,14 +360,14 @@ uv run {baseDir}/scripts/graphrag_memory.py query \
 ### Check What's Indexed
 
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py status
+uv run --directory {baseDir} graphrag-memory status
 ```
 
 ## Troubleshooting
 
 ### Check Setup
 ```bash
-uv run {baseDir}/scripts/graphrag_memory.py test
+uv run --directory {baseDir} graphrag-memory test
 ```
 
 ### Common Issues
@@ -327,19 +375,19 @@ uv run {baseDir}/scripts/graphrag_memory.py test
 **Project not found**
 ```bash
 # Initialize first
-uv run {baseDir}/scripts/graphrag_memory.py init
+uv run --directory {baseDir} graphrag-memory init
 
 # Or specify root
-uv run {baseDir}/scripts/graphrag_memory.py query "..." --root ./my_project
+uv run --directory {baseDir} graphrag-memory query "..." --root ./my_project
 ```
 
 **No indexed data**
 ```bash
 # Run indexing first
-uv run {baseDir}/scripts/graphrag_memory.py index --input openspec-memories
+uv run --directory {baseDir} graphrag-memory index --input openspec-memories
 
 # Check status
-uv run {baseDir}/scripts/graphrag_memory.py status
+uv run --directory {baseDir} graphrag-memory status
 ```
 
 **Indexing fails**
@@ -347,7 +395,7 @@ uv run {baseDir}/scripts/graphrag_memory.py status
 # Check LLM configuration in settings.yaml
 # Verify API keys are set
 # Try with verbose flag
-uv run {baseDir}/scripts/graphrag_memory.py index --input docs/ --verbose
+uv run --directory {baseDir} graphrag-memory index --input docs/ --verbose
 ```
 
 **LLM rate limits**
@@ -362,9 +410,9 @@ models:
 
 **Dependencies not found**
 ```bash
-# The script auto-installs dependencies via uv run
-# If issues persist, ensure uv is up to date:
-pip install --upgrade uv
+# Recreate .venv
+rm -rf {baseDir}/.venv
+uv sync --directory {baseDir}
 ```
 
 ## Cost Considerations
@@ -401,9 +449,20 @@ pip install --upgrade uv
 6. **Query** - Combines graph and vector search for answers
 
 **Dependencies:**
-- 3 direct dependencies via PEP 723
-- ~100 total packages (including GraphRAG dependencies)
-- ~200MB download on first run
+- Managed via `pyproject.toml`
+- 3 direct dependencies: `graphrag`, `pyyaml`, `typer`
+- ~100 total packages (including transitive dependencies)
+- Persistent `.venv` for fast execution
+
+**Package Structure:**
+```
+graphrag-apps/
+├── pyproject.toml           # Project configuration
+├── graphrag_apps/           # Package directory
+│   ├── __init__.py
+│   └── graphrag_memory.py   # Main script
+└── .venv/                   # Created by uv sync
+```
 
 ## Comparison with ChromaDB-apps
 

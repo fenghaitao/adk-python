@@ -1,30 +1,24 @@
 #!/usr/bin/env python3
-# /// script
-# requires-python = ">=3.10,<3.13"
-# dependencies = [
-#     "graphrag @ git+https://github.com/fenghaitao/graphrag.git",
-#     "pyyaml>=6.0.0",
-#     "typer>=0.16.0",
-# ]
-# ///
 """
 GraphRAG Memory - Knowledge Graph Indexing and Retrieval
 
-A self-contained script for building knowledge graphs from markdown documents
-and querying them with the forked GraphRAG installation.
+Build knowledge graphs from markdown documents and query them with GraphRAG.
 
 Usage:
+    # First time: Create .venv (required)
+    uv sync --directory /path/to/graphrag-apps
+    
     # Initialize GraphRAG project
-    uv run graphrag_memory.py init
+    uv run --directory /path/to/graphrag-apps graphrag-memory init
     
     # Index documents
-    uv run graphrag_memory.py index --input openspec-memories
+    uv run --directory /path/to/graphrag-apps graphrag-memory index --input openspec-memories
     
     # Query with local search
-    uv run graphrag_memory.py query "How to implement timer?" --method local
+    uv run --directory /path/to/graphrag-apps graphrag-memory query "How to implement timer?" --method local
     
     # Query with global search
-    uv run graphrag_memory.py query "What are the main concepts?" --method global
+    uv run --directory /path/to/graphrag-apps graphrag-memory query "What are the main concepts?" --method global
 
 Features:
 - Uses forked GraphRAG from github.com/fenghaitao/graphrag
@@ -32,7 +26,6 @@ Features:
 - Multiple query methods (local, global, drift)
 - GitHub Copilot and OpenAI LLM support
 - Automatic prompt management
-- Self-contained with inline dependencies
 
 Note:
     This script uses the forked GraphRAG from github.com/fenghaitao/graphrag

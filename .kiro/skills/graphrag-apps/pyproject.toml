@@ -1,0 +1,21 @@
+[project]
+name = "graphrag-apps"
+version = "1.0.0"
+description = "Build and query knowledge graphs from markdown documents using GraphRAG"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "graphrag",
+    "pyyaml>=6.0.0",
+    "typer>=0.16.0",
+]
+
+[project.scripts]
+graphrag-memory = "graphrag_apps.graphrag_memory:app"
+
+[tool.uv.sources]
+graphrag = { git = "https://github.com/fenghaitao/graphrag.git" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

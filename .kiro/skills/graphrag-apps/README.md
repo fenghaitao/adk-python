@@ -1,132 +1,89 @@
-# GraphRAG Memory - Knowledge Graph Retrieval Skill
+# GraphRAG Memory Skill
 
-This skill provides GraphRAG-based knowledge graph construction and retrieval for document analysis using Microsoft's GraphRAG system.
+Build and query knowledge graphs from markdown documents using Microsoft GraphRAG.
 
-## What This Skill Does
+## What is GraphRAG?
 
-- **Builds knowledge graphs** from markdown documents
-- **Multiple query methods** (local, global, drift search)
-- **LLM-powered extraction** of entities and relationships
-- **Community detection** for hierarchical understanding
-- **Works with GitHub Copilot or OpenAI**
+GraphRAG extracts entities, relationships, and communities from documents using LLMs to build a knowledge graph. This enables sophisticated retrieval-augmented generation with:
 
-## Quick Test
+- **Entity extraction** - Identifies people, places, concepts
+- **Relationship mapping** - Understands connections between entities
+- **Community detection** - Hierarchical clustering for high-level understanding
+- **Multiple query methods** - Local (detailed), global (overview), drift (exploratory)
+
+## Quick Links
+
+- [QUICKSTART.md](QUICKSTART.md) - Get started in 5 minutes
+- [SKILL.md](SKILL.md) - Complete documentation
+- [GraphRAG Documentation](https://microsoft.github.io/graphrag/)
+- [GraphRAG Research Paper](https://arxiv.org/pdf/2404.16130)
+
+## Installation
 
 ```bash
-# Test the skill
-cd /path/to/your/project
-uv run skills/graphrag-apps/scripts/graphrag_memory.py test
+# One-time setup
+uv sync --directory .kiro/skills/graphrag-apps
+```
 
+## Basic Usage
+
+```bash
 # Initialize project
-uv run skills/graphrag-apps/scripts/graphrag_memory.py init
+uv run --directory .kiro/skills/graphrag-apps graphrag-memory init
 
-# Index memories
-uv run skills/graphrag-apps/scripts/graphrag_memory.py index --input openspec-memories
+# Index documents
+uv run --directory .kiro/skills/graphrag-apps graphrag-memory index --input docs/
 
 # Query
-uv run skills/graphrag-apps/scripts/graphrag_memory.py query "What are the main concepts?"
+uv run --directory .kiro/skills/graphrag-apps graphrag-memory query "your question" --method local
 ```
 
-## Files
+## When to Use GraphRAG
 
-- `SKILL.md` - Complete documentation for the skill
-- `scripts/graphrag_memory.py` - Main script with PEP 723 dependencies
-- `QUICKSTART.md` - 5-minute getting started guide
-- `references/prompts/` - 13 production-ready prompt templates (864 lines)
+**Use GraphRAG when:**
+- You need to understand relationships between concepts
+- Documents have interconnected information
+- You want hierarchical/community understanding
+- You have budget for LLM processing
 
-## Key Features
+**Use ChromaDB when:**
+- You need fast, simple retrieval
+- Budget is limited
+- Straightforward Q&A is sufficient
 
-✅ Self-contained script with PEP 723 inline dependencies
-✅ Knowledge graph construction with entity/relationship extraction
-✅ Multiple search methods (local, global, drift)
-✅ GitHub Copilot and OpenAI LLM support
-✅ Automatic prompt management
-✅ Complete CLI with init, index, query, and status commands
+## Features
 
-## Usage Examples
+✅ Knowledge graph construction with LLM  
+✅ Multiple query methods (local/global/drift)  
+✅ Community detection for hierarchical understanding  
+✅ GitHub Copilot support (no API key needed)  
+✅ OpenAI compatible  
+✅ Persistent .venv for fast execution  
+✅ Built-in caching to save LLM costs
 
-### Initialize Project
+## Cost Warning
 
-```bash
-# Create GraphRAG project structure
-uv run skills/graphrag-apps/scripts/graphrag_memory.py init
+⚠️ GraphRAG uses LLMs extensively. Start with 5-10 files to test before indexing large document sets.
 
-# Or specify custom root
-uv run skills/graphrag-apps/scripts/graphrag_memory.py init --root ./my_graphrag
-```
+## Migration from PEP 723
 
-### Index Documents
+This skill was migrated from PEP 723 inline dependencies to `pyproject.toml` for:
+- Persistent virtual environment (faster execution)
+- Better dependency management
+- Consistent with other skills
 
-```bash
-# Index from directory
-uv run skills/graphrag-apps/scripts/graphrag_memory.py index --input openspec-memories
+Old usage: `uv run scripts/graphrag_memory.py`  
+New usage: `uv run --directory .kiro/skills/graphrag-apps graphrag-memory`
 
-# With verbose output
-uv run skills/graphrag-apps/scripts/graphrag_memory.py index --input docs/ --verbose
-```
+## Documentation
 
-### Query Knowledge Graph
+- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
+- [SKILL.md](SKILL.md) - Complete documentation with all features
+- [pyproject.toml](pyproject.toml) - Package configuration
 
-```bash
-# Local search (detailed, entity-focused)
-uv run skills/graphrag-apps/scripts/graphrag_memory.py query "How to implement timer?" --method local
+## Support
 
-# Global search (high-level, community-focused)
-uv run skills/graphrag-apps/scripts/graphrag_memory.py query "What are the main patterns?" --method global
-
-# Drift search (exploratory)
-uv run skills/graphrag-apps/scripts/graphrag_memory.py query "Explain the architecture" --method drift
-```
-
-### Check Status
-
-```bash
-# Show project status
-uv run skills/graphrag-apps/scripts/graphrag_memory.py status
-```
-
-## How It Works
-
-1. **Initialize**: Sets up project structure with settings.yaml and prompts
-2. **Index**: Processes markdown files to extract entities, relationships, and communities
-3. **Store**: Creates knowledge graph in LanceDB with embeddings
-4. **Query**: Uses LLM to reason over graph structure for answers
-
-## Technical Stack
-
-- [GraphRAG](https://github.com/microsoft/graphrag) - Knowledge graph construction
-- [LanceDB](https://lancedb.com/) - Vector storage
-- [Typer](https://typer.tiangolo.com/) - CLI framework
-- [Rich](https://rich.readthedocs.io/) - Terminal formatting
-- Only 3 direct dependencies via PEP 723
-
-## Query Methods Comparison
-
-| Method | Best For | Speed | Detail Level |
-|--------|----------|-------|--------------|
-| **Local** | Specific questions about entities | Fast | High detail |
-| **Global** | Broad questions about themes | Slow | High-level overview |
-| **Drift** | Exploratory analysis | Medium | Contextual exploration |
-
-## Differences from ChromaDB-apps
-
-GraphRAG provides more sophisticated analysis:
-
-1. **Knowledge Graph** instead of simple vector search
-2. **Entity and relationship extraction** using LLM
-3. **Community detection** for hierarchical understanding
-4. **Multiple query strategies** optimized for different question types
-5. **Better for complex reasoning** over interconnected information
-
-## Configuration
-
-Edit `settings.yaml` to configure:
-- LLM provider (GitHub Copilot or OpenAI)
-- Embedding model
-- Chunk sizes
-- Community detection parameters
-- Query prompts
-
-## See Also
-
-See SKILL.md for complete documentation with all commands and options.
+For issues or questions:
+1. Check [SKILL.md](SKILL.md) troubleshooting section
+2. Review [GraphRAG documentation](https://microsoft.github.io/graphrag/)
+3. Open an issue in the repository
