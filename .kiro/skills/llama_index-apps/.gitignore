@@ -1,0 +1,21 @@
+# Storage directories
+pg_storage/
+code_graph_output/
+
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Swap files
+*.swp
+*.swo
+*~
+
+# Output files
+*.log
+repo_map*.md
+results*.md
