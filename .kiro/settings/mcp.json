@@ -3,12 +3,44 @@
     "sse-server": {
       "transport": "sse",
       "url": "http://localhost:8056/sse",
-      "disabled": false,
+      "disabled": true,
       "autoApprove": [
         "perform_rag_query",
         "get_simics_version",
         "build_simics_project",
         "run_simics_test"
+      ],
+      "disabledTools": [
+        "get_concepts_doc",
+        "get_test_example",
+        "search_simics_docs",
+        "start_simulation",
+        "stop_simulation",
+        "pause_simulation",
+        "resume_simulation",
+        "create_checkpoint",
+        "load_checkpoint",
+        "list_simulations",
+        "get_simulation_logs",
+        "install_simics_package",
+        "list_installed_packages",
+        "list_simics_platforms",
+        "uninstall_simics_package",
+        "get_simics_version",
+        "get_simics_device_example_i2c",
+        "get_simics_device_example_ds12887",
+        "get_simics_dml_template",
+        "create_simics_project",
+        "add_dml_device_skeleton",
+        "build_simics_project",
+        "run_simics_test",
+        "checkout_and_build_dmlc",
+        "check_with_dmlc",
+        "generate_dml_registers",
+        "perform_rag_query",
+        "save_memory",
+        "get_all_memories",
+        "search_memories"
       ]
     }
   }
