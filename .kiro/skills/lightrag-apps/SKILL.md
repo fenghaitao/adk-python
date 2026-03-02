@@ -11,14 +11,6 @@ Generate comprehensive hierarchical wiki documentation from any code repository 
 
 ## Quick Start
 
-### One-Time Setup (Required)
-```bash
-# Create persistent .venv with all dependencies
-uv sync --directory {baseDir}
-```
-
-This creates a persistent virtual environment for faster execution.
-
 ### Generate Wiki from Current Repository
 ```bash
 # Test setup
@@ -230,12 +222,6 @@ uv run --directory {baseDir} repowiki index --repo /full/path/to/project
 ```
 
 **Import errors**
-```bash
-# Recreate .venv
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
-```
-
 **GitHub Copilot not working**
 - Ensure you have an active GitHub Copilot license
 - Check that you're signed in to GitHub in your IDE
@@ -333,7 +319,7 @@ lightrag-apps/
 ├── lightrag_apps/           # Package directory
 │   ├── __init__.py
 │   └── repowiki.py          # Main script
-└── .venv/                   # Created by uv sync
+└── .venv/                   # Created automatically by uv run
 ```
 
 ## References

@@ -21,13 +21,6 @@ GraphRAG extracts entities, relationships, and communities from documents using 
 ## Installation
 
 ```bash
-# One-time setup
-uv sync --directory .kiro/skills/graphrag-apps
-```
-
-## Basic Usage
-
-```bash
 # Initialize project
 uv run --directory .kiro/skills/graphrag-apps graphrag-memory init
 

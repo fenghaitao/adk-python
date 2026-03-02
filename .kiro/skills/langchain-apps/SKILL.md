@@ -11,15 +11,6 @@ Build and query knowledge graphs from documents using LangChain's LLM-powered ex
 
 ## Quick Start
 
-### One-Time Setup
-
-Before using any commands, install dependencies:
-
-```bash
-# Create .venv with all dependencies (required)
-uv sync --directory {baseDir}
-```
-
 ### Test Setup
 ```bash
 uv run --directory {baseDir} langchain-memory test

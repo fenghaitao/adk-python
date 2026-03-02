@@ -10,10 +10,7 @@ Generate comprehensive wiki documentation from your code repository in minutes.
 ## Setup (One-Time)
 
 ```bash
-# 1. Create persistent .venv
-uv sync --directory {baseDir}
-
-# 2. Test setup
+# Test setup
 uv run --directory {baseDir} repowiki test
 ```
 
@@ -123,12 +120,6 @@ uv run --directory {baseDir} repowiki generate --extended
 ### Check Setup
 ```bash
 uv run --directory {baseDir} repowiki test
-```
-
-### Dependencies Not Found
-```bash
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
 ```
 
 ### Repository Not Found

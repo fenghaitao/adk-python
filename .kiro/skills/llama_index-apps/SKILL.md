@@ -15,12 +15,6 @@ Two complementary graph tools built on LlamaIndex:
 1. **code-graph** — Parses source code into a navigable scope hierarchy using tree-sitter. No LLM needed for parsing.
 2. **property-graph** — Extracts typed entities and relations from any documents using an LLM. Persists as JSON with no external DB.
 
-## Installation
-
-```bash
-uv sync --directory {baseDir}
-```
-
 ## code-graph
 
 ### Overview
@@ -210,8 +204,6 @@ rm -rf pg_storage/
 
 ### Code navigation with code-graph
 ```bash
-uv sync --directory {baseDir}
-
 # Understand a new codebase
 uv run --directory {baseDir} code-graph map --root ~/new-project --output repo_map.md
 
@@ -224,8 +216,6 @@ uv run --directory {baseDir} code-graph query --root ~/new-project <uuid-from-st
 
 ### Knowledge extraction with property-graph
 ```bash
-uv sync --directory {baseDir}
-
 # Extract knowledge from research papers
 uv run --directory {baseDir} property-graph build papers/ --extractor dynamic
 

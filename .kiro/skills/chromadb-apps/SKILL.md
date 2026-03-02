@@ -11,14 +11,6 @@ Index and retrieve knowledge from markdown documents using ChromaDB vector stora
 
 ## Quick Start
 
-### One-Time Setup (Required)
-```bash
-# Create persistent .venv with all dependencies
-uv sync --directory {baseDir}
-```
-
-This creates a persistent virtual environment for 10x faster execution (~2-3s vs ~15-20s per command).
-
 ### Index and Search
 ```bash
 # Index memories
@@ -41,13 +33,6 @@ uv run --directory {baseDir} chromadb-memory stats
 ✅ **Configurable chunking** - Adjust chunk size and overlap
 
 ## Commands
-
-### One-Time Setup
-```bash
-# Create persistent .venv (required first time)
-uv sync --directory {baseDir}
-```
-Creates a persistent virtual environment with all dependencies. This is required before running any commands and makes subsequent runs 10x faster.
 
 ### Index Documents
 ```bash
@@ -170,10 +155,6 @@ Your documentation...
 
 ### Index OpenSpec Memories
 ```bash
-# First time: Create .venv (required)
-uv sync --directory {baseDir}
-
-# Index memories
 cd /path/to/project
 uv run --directory {baseDir} chromadb-memory index openspec-memories
 ```
@@ -201,19 +182,11 @@ uv run --directory {baseDir} chromadb-memory search "register" --category Test -
 
 **Solution:**
 ```bash
-# Ensure .venv is created
-uv sync --directory {baseDir}
-
-# Verify installation
 uv run --directory {baseDir} chromadb-memory --help
 ```
 
 ### Check Setup
 ```bash
-# First time: Create .venv
-uv sync --directory {baseDir}
-
-# Verify it works
 uv run --directory {baseDir} chromadb-memory stats
 ```
 
@@ -232,13 +205,6 @@ uv run --directory {baseDir} chromadb-memory stats
 
 # Try broader search
 uv run --directory {baseDir} chromadb-memory search "timer" --k 10
-```
-
-**Dependencies not found**
-```bash
-# Recreate .venv
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
 ```
 
 ## File Support
@@ -273,7 +239,7 @@ chromadb-apps/
 ├── chromadb_apps/           # Package directory
 │   ├── __init__.py
 │   └── chromadb_memory.py   # Main script
-└── .venv/                   # Created by uv sync
+└── .venv/                   # Created automatically by uv run
 ```
 
 ## References

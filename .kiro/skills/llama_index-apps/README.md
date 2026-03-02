@@ -8,9 +8,6 @@ Two graph tools powered by LlamaIndex:
 ## Quick Start
 
 ```bash
-# One-time setup
-uv sync --directory {baseDir}
-
 # Parse a Python codebase and print its repo map
 uv run --directory {baseDir} code-graph map --root /path/to/project
 

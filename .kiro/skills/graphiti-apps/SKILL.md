@@ -11,15 +11,6 @@ Index documents and query a Neo4j knowledge graph using [Graphiti](https://githu
 
 ## Quick Start
 
-### One-Time Setup (Required)
-```bash
-# Create persistent .venv with all dependencies
-uv sync --directory {baseDir}
-```
-
-This pre-builds the venv so every subsequent `uv run` skips dependency
-resolution and starts fast (~2s vs ~20s+ without it).
-
 ### Test Setup
 ```bash
 uv run --directory {baseDir} graphiti-memory test
@@ -261,12 +252,6 @@ Graphiti retries automatically with exponential back-off. To reduce pressure:
 ```bash
 # Lower concurrency in .env
 MAX_CONCURRENT_CHUNKS=1
-```
-
-### Dependencies missing
-```bash
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
 ```
 
 ### Empty query results

@@ -34,8 +34,6 @@ Unlike LightRAG-apps which focuses on wiki generation, this skill is optimized f
 Before using any commands, create the persistent `.venv`:
 
 ```bash
-# Create .venv with all dependencies (required)
-uv sync --directory {baseDir}
 ```
 
 This creates a persistent virtual environment for 10x faster execution (~8 seconds vs ~15-20 seconds per command).
@@ -47,8 +45,6 @@ This creates a persistent virtual environment for 10x faster execution (~8 secon
 Index any directory into a knowledge graph using `--root`:
 
 ```bash
-# First time: Create .venv (required)
-uv sync --directory {baseDir}
 
 # Index current directory
 uv run --directory {baseDir} cognee-memory index
@@ -120,8 +116,6 @@ If you run `index` again, it will ask if you want to prune existing data or add 
 Search your indexed knowledge graph:
 
 ```bash
-# First time: Create .venv (required)
-uv sync --directory {baseDir}
 
 # Basic search
 uv run --directory {baseDir} cognee-memory search "What is DML?"
@@ -336,8 +330,6 @@ export MIN_FILE_SIZE=100
 
 ### 1. Code Understanding
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Understand a new codebase
 uv run --directory {baseDir} cognee-memory index --root /path/to/new-project
@@ -347,8 +339,6 @@ uv run --directory {baseDir} cognee-memory search "How is data processed?"
 
 ### 2. Bug Investigation
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Find relevant code for a bug
 uv run --directory {baseDir} cognee-memory search "error handling in API layer" --type CHUNKS
@@ -357,8 +347,6 @@ uv run --directory {baseDir} cognee-memory search "Where is validation performed
 
 ### 3. Refactoring Planning
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Understand dependencies before refactoring
 uv run --directory {baseDir} cognee-memory search "What depends on the User class?" --type SUMMARIES
@@ -367,8 +355,6 @@ uv run --directory {baseDir} cognee-memory search "How is authentication used ac
 
 ### 4. Documentation
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Generate documentation summaries
 uv run --directory {baseDir} cognee-memory search "List all public APIs" --output api-docs.md
@@ -377,8 +363,6 @@ uv run --directory {baseDir} cognee-memory search "Describe the configuration sy
 
 ### 5. Onboarding
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Help new team members
 uv run --directory {baseDir} cognee-memory search "What are the main components?"
@@ -391,8 +375,6 @@ uv run --directory {baseDir} cognee-memory search "What coding conventions are u
 ### Complete Repository Analysis
 
 ```bash
-# 1. Setup (required first time)
-uv sync --directory {baseDir}
 
 # 2. Test environment
 uv run --directory {baseDir} cognee-memory test
@@ -413,8 +395,6 @@ uv run --directory {baseDir} cognee-memory search "show authentication code" --t
 ### Multiple Datasets
 
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Index different branches or versions
 uv run --directory {baseDir} cognee-memory index --dataset main-branch
@@ -540,8 +520,6 @@ uv run cognee-memory index --working-dir /mnt/large-disk/cognee
 
 ### With pptx-creator
 ```bash
-# Setup (required first time)
-uv sync --directory {baseDir}
 
 # Index codebase
 uv run --directory {baseDir} cognee-memory index

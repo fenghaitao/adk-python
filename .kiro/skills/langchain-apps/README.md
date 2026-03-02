@@ -14,9 +14,6 @@ This skill provides knowledge graph construction and querying from documents usi
 ## Quick Start
 
 ```bash
-# One-time setup (required)
-uv sync --directory {baseDir}
-
 # Test the skill
 uv run --directory {baseDir} langchain-memory test
 

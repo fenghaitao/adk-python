@@ -11,14 +11,6 @@ Build and query knowledge graphs from markdown documents using Microsoft's Graph
 
 ## Quick Start
 
-### One-Time Setup (Required)
-```bash
-# Create persistent .venv with all dependencies
-uv sync --directory {baseDir}
-```
-
-This creates a persistent virtual environment for faster execution.
-
 ### Test Setup
 ```bash
 uv run --directory {baseDir} graphrag-memory test
@@ -409,12 +401,6 @@ models:
 ```
 
 **Dependencies not found**
-```bash
-# Recreate .venv
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
-```
-
 ## Cost Considerations
 
 ⚠️ **GraphRAG uses LLMs extensively - costs can add up!**
@@ -461,7 +447,7 @@ graphrag-apps/
 ├── graphrag_apps/           # Package directory
 │   ├── __init__.py
 │   └── graphrag_memory.py   # Main script
-└── .venv/                   # Created by uv sync
+└── .venv/                   # Created automatically by uv run
 ```
 
 ## Comparison with ChromaDB-apps

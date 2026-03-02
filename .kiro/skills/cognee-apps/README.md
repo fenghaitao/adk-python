@@ -14,51 +14,31 @@ Source: Based on [cognee-openspec](../../cognee-openspec)
 
 ## Installation
 
-**One-time setup:**
-```bash
-cd skills/cognee-apps
-uv sync  # Installs dependencies to .venv/ (~30 seconds)
-```
+**One-time setup:** No setup needed — `uv run --directory` handles it automatically.
 
 ## Quick Start
 
 ```bash
-# From the cognee-apps directory
-cd skills/cognee-apps
-
 # Index current directory
-uv run cognee-memory index
+uv run --directory {baseDir} cognee-memory index
 
 # Index specific directory
-uv run cognee-memory index --root /path/to/project
+uv run --directory {baseDir} cognee-memory index --root /path/to/project
 
-# Search (fast - 8 seconds!)
-uv run cognee-memory search "What is DML?"
+# Search
+uv run --directory {baseDir} cognee-memory search "What is DML?"
 ```
-
-**Run from anywhere:**
-```bash
-# Use --directory flag (must specify --working-dir with absolute path)
-uv run --directory ~/adk-python/skills/cognee-apps cognee-memory search "query" \
-  --working-dir ~/adk-python/cognee_storage
-
-# Or create an alias in ~/.bashrc
-alias cognee-memory='uv run --directory ~/adk-python/skills/cognee-apps cognee-memory --working-dir ~/adk-python/cognee_storage'
-```
-
-**Note:** When using `--directory`, you must specify `--working-dir` with an absolute path since the current directory changes.
 
 ## Files
 
 - `SKILL.md` - Complete documentation for the skill
 - `pyproject.toml` - Project dependencies and configuration
 - `cognee_apps/cognee_memory.py` - Main command-line script
-- `.venv/` - Virtual environment (created by `uv sync`)
+- `.venv/` - Virtual environment (created automatically by `uv run`)
 
 ## Key Features
 
 ✅ **10x faster** - 8 seconds per search (was 90s)  
-✅ Project-based with `uv sync` (one-time install)  
 ✅ Flexible `--root` parameter to index any directory  
 ✅ GitHub Copilot integration (free with license)  
 ✅ 5 search strategies including code-specific  

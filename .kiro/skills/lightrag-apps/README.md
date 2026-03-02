@@ -14,11 +14,6 @@ RepoWiki uses LightRAG to build a knowledge graph from your code repository and 
 
 ## Installation
 
-```bash
-# One-time setup
-uv sync --directory .kiro/skills/lightrag-apps
-```
-
 ## Basic Usage
 
 ```bash
@@ -120,7 +115,6 @@ uv run --directory ~/.kiro/skills/lightrag-apps repowiki all --extended
 ```yaml
 - name: Generate Wiki
   run: |
-    uv sync --directory .kiro/skills/lightrag-apps
     uv run --directory .kiro/skills/lightrag-apps repowiki all --extended
     
 - name: Deploy Wiki

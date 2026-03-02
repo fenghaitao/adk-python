@@ -193,7 +193,7 @@ def test():
   if missing:
     console.print(
         f"\n[red]Missing packages: {', '.join(missing)}[/red]\n"
-        "Run: uv sync --directory {baseDir}"
+        "Run: uv run --directory {baseDir} <command>"
     )
     raise typer.Exit(1)
 

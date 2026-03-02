@@ -10,10 +10,7 @@ Get started with GraphRAG knowledge graph indexing in 5 minutes.
 ## Setup (One-Time)
 
 ```bash
-# 1. Create persistent .venv
-uv sync --directory {baseDir}
-
-# 2. Test setup
+# Test setup
 uv run --directory {baseDir} graphrag-memory test
 ```
 
@@ -120,12 +117,6 @@ export OPENAI_API_KEY="sk-..."
 **Start small!** Test with 5-10 files first.
 
 ## Troubleshooting
-
-### Dependencies not found
-```bash
-rm -rf {baseDir}/.venv
-uv sync --directory {baseDir}
-```
 
 ### Project not found
 ```bash
