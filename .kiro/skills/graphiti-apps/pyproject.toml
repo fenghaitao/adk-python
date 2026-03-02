@@ -1,0 +1,22 @@
+[project]
+name = "graphiti-apps"
+version = "1.0.0"
+description = "Build and query knowledge graphs using Graphiti and Neo4j with LLM-powered entity/relationship extraction"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "graphiti-core>=0.3.0",
+    "neo4j>=5.28.1",
+    "litellm>=1.82.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "typer>=0.16.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+graphiti-memory = "graphiti_apps.graphiti_memory:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
